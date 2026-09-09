@@ -109,9 +109,7 @@ test("Advanced options keeps the Restaurant plan and Draft application manual", 
 
   await page.goto("/");
   await page.getByText("Advanced options", { exact: true }).click();
-  await page
-    .getByLabel("Review the Restaurant plan and delivery steps myself")
-    .check();
+  await page.getByLabel("Review the plan and delivery steps myself").check();
   await submitRestaurantDescribe(page);
 
   const chooseStandard = page.getByRole("button", {

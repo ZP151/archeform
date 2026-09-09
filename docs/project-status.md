@@ -2,6 +2,52 @@
 
 Updated: 2026-09-09
 
+## Active continuation: approval delivery and hosted decision
+
+The long-task goal continues on `codex/consumer-delivery-roadmap` from D1.10
+`2c2815c0`. The [D2 plan](superpowers/plans/2026-09-09-approval-consumer-delivery.md)
+prioritizes the second usable business journey ahead of catalog expansion.
+D2.1 now automatically adopts an eligible standard approval composition and
+runs the existing immutable delivery lifecycle; unsupported or ambiguous
+semantics remain manual. Local demo roles do not provide real-user identity
+or requester-owned record privacy.
+
+D2.1/D2.2 is accepted locally after 17 deterministic consumer browser cases,
+579 Workbench tests plus 67 affected tests for an import-concurrency correction,
+final Workbench build/types, 656 compiler tests plus 34 affected tests for the
+final native-date focus/layout correction, and one clean independent review.
+The generated form's reproduced date-serialization failure is corrected. Typed
+controls, readable declared fields, state-valid actions, safe feedback and seven
+reused pinned Lucide icons now support the complete approval journey.
+
+Both mandatory actual browser lanes passed without retries: the emitted Expense
+app (1/1) and fixed interpretation through real composition, immutable delivery,
+ten-step verification and generated UI (1/1). Two requests were created and
+submitted in the UI, then approved/rejected and read after requester reload;
+unauthorized requester approval returned 403. At 390/768/1440 px, axe reported no
+violations and horizontal overflow was absent. Exact generated-runtime cleanup
+passed. The fixture consumer lane measured 170.538 seconds to ready and 174.406
+seconds to business completion, with 0 questions and 0 technical handoffs in a
+prepared local environment. This is not a real-model reliability or cold-start
+benchmark. Earlier failed attempts remain in the ledger.
+
+The separate real-provider first attempt failed the one-step outcome: one request
+returned HTTP 200, but manual plan choices remained and no automatic delivery
+started (109.924 s to failure, 0 lifecycle operations, no retry). The specific
+semantic mismatch is not established by the safe diagnostic evidence. This is a
+first-request product gap, not a generated runtime regression. Its result is
+not combined with the fixture pass.
+D2 still needs ten representative approval cases and ordinary-user validation.
+The generated interface is now functional and readable; further visual hierarchy
+and business-specific summaries should be judged by faster task completion.
+
+Proposed ADR-0047 specifies an invited-user hosted experiment and required
+account, domain, host, access and spend decisions. No hosted infrastructure has
+been provisioned. Next priorities are first-request generation reliability,
+approval case coverage and cross-device access. Private real-user identity and
+requester-owned record privacy remain explicit gaps; this local acceptance does
+not close the full D2 or H1 milestone.
+
 ## Current authoritative checkpoint — consumer generation
 
 The founder approved the consumer product correction on September 7. The

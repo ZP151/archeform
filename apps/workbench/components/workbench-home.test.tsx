@@ -217,6 +217,7 @@ describe("WorkbenchHome", () => {
     const journey = {
       ...briefJourney(),
       consumer: {
+        family: "restaurant-ordering",
         manualReview: false,
         setManualReview: vi.fn(),
         active: true,
@@ -248,6 +249,43 @@ describe("WorkbenchHome", () => {
       container.querySelector<HTMLAnchorElement>(
         'a[href="http://127.0.0.1:34123"]',
       ),
+    ).not.toBeNull();
+  });
+
+  it("presents approval delivery as a local demo with selectable roles", () => {
+    act(() =>
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            consumer: {
+              family: "approval",
+              manualReview: false,
+              setManualReview: vi.fn(),
+              active: true,
+              status: "Your local Approval app is ready.",
+              readyUrl: "http://127.0.0.1:34123",
+              retry: vi.fn(),
+            },
+          })}
+        />,
+      ),
+    );
+    const delivery = container.querySelector(
+      '[aria-label="Approval delivery"]',
+    );
+    expect(delivery).not.toBeNull();
+    expect(delivery?.textContent).toContain("local demo");
+    expect(delivery?.textContent).toContain("Select a demo role");
+    expect(delivery?.textContent).toContain("declared role permissions");
+    expect(delivery?.textContent).not.toMatch(
+      /Restaurant|private|hosted|authenticated|tenant/i,
+    );
+    expect(
+      delivery?.querySelector('a[href="http://127.0.0.1:34123"]'),
     ).not.toBeNull();
   });
 

@@ -290,6 +290,7 @@ export function useWorkbenchController({
   // Draft after the user has left the Workbench.
   useEffect(() => {
     return () => {
+      ++bootstrapRequest.current;
       ++consumerReleaseRequest.current;
     };
   }, []);
@@ -324,6 +325,8 @@ export function useWorkbenchController({
     [graph.flow],
   );
   const journey = useProductJourney(controlPlaneUrl);
+  const latestReviewId = useRef<string | null>(null);
+  latestReviewId.current = journey.state?.review?.id ?? null;
 
   const refreshApplications = useCallback(async (): Promise<void> => {
     const request = ++applicationsRequest.current;
@@ -423,9 +426,23 @@ export function useWorkbenchController({
   );
 
   const bootstrapGraph = useCallback(
-    async (nextGraph: ApplicationGraphV1): Promise<void> => {
+    async (
+      nextGraph: ApplicationGraphV1,
+      consumerApply?: {
+        readonly request: number;
+        readonly reviewId: string | null;
+        readonly applied: WorkbenchProductApplied;
+      },
+    ): Promise<WorkbenchDraft | null> => {
       const request = ++bootstrapRequest.current;
-      ++consumerReleaseRequest.current;
+      if (consumerApply === undefined) ++consumerReleaseRequest.current;
+      const consumerRequest =
+        consumerApply?.request ?? consumerReleaseRequest.current;
+      const isCurrent = () =>
+        request === bootstrapRequest.current &&
+        consumerRequest === consumerReleaseRequest.current &&
+        (consumerApply === undefined ||
+          consumerApply.reviewId === latestReviewId.current);
       setConsumerReleaseTarget(null);
       setGraph(nextGraph);
       setRemoteDraft(null);
@@ -440,7 +457,19 @@ export function useWorkbenchController({
 
       try {
         const draft = await controlPlane.bootstrapLocalDraft(nextGraph);
-        if (request !== bootstrapRequest.current) return;
+        if (!isCurrent()) return null;
+        if (
+          consumerApply !== undefined &&
+          (draft.applicationGraphId !==
+            consumerApply.applied.applicationGraphId ||
+            draft.revisionNumber !== consumerApply.applied.revisionNumber)
+        ) {
+          setConnectionState("offline");
+          setOperationError(
+            "The composed product Draft no longer matches this request.",
+          );
+          return null;
+        }
         setRemoteDraft(draft);
         setGraph(draft.graph);
         dispatch({
@@ -448,10 +477,10 @@ export function useWorkbenchController({
           revision: `r.${draft.revisionNumber}`,
         });
         setConnectionState("ready");
+        return draft;
       } catch (error) {
-        if (request === bootstrapRequest.current) {
-          setConnectionState("offline");
-        }
+        if (!isCurrent()) return null;
+        setConnectionState("offline");
         throw error;
       }
     },
@@ -462,6 +491,7 @@ export function useWorkbenchController({
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const attemptBootstrap = async (retriesLeft: number): Promise<void> => {
+      const request = bootstrapRequest.current + 1;
       try {
         await bootstrapGraph(initialGraph);
       } catch {
@@ -469,8 +499,14 @@ export function useWorkbenchController({
         // instead of wedging the shell in "offline". The bootstrap is
         // idempotent (GET-first, create-on-404), so retries are safe, and a
         // newer request superseding this one resolves the loop naturally.
-        if (cancelled || retriesLeft <= 0) return;
+        if (
+          cancelled ||
+          request !== bootstrapRequest.current ||
+          retriesLeft <= 0
+        )
+          return;
         timer = setTimeout(() => {
+          if (cancelled || request !== bootstrapRequest.current) return;
           void attemptBootstrap(retriesLeft - 1);
         }, BOOTSTRAP_RETRY_DELAY_MS);
       }
@@ -912,14 +948,24 @@ export function useWorkbenchController({
 
   const importPublishedGraph = useCallback(
     (file: File) => {
+      const request = ++bootstrapRequest.current;
+      const consumerRequest = ++consumerReleaseRequest.current;
+      const isCurrent = () =>
+        request === bootstrapRequest.current &&
+        consumerRequest === consumerReleaseRequest.current;
+      setConsumerReleaseTarget(null);
+      // V1 consumer delivery also has a remote Draft fallback. Suspend it
+      // immediately so importing cannot keep advancing the replaced target.
+      if (consumerReleaseTarget !== null) setRemoteDraft(null);
       setOperationError(null);
       setExchangeStatus("Validating Graph exchange…");
       void file
         .text()
-        .then(parseGraphExchangeText)
-        .then((exchange) => controlPlane.importPublishedGraph(exchange))
-        .then((draft) => {
-          ++bootstrapRequest.current;
+        .then(async (text) => {
+          if (!isCurrent()) return;
+          const exchange = parseGraphExchangeText(text);
+          const draft = await controlPlane.importPublishedGraph(exchange);
+          if (!isCurrent()) return;
           setGraph(draft.graph);
           setRemoteDraft(draft);
           setPublishedRevision(null);
@@ -934,13 +980,14 @@ export function useWorkbenchController({
           setExchangeStatus(`Imported as Draft r.${draft.revisionNumber}.`);
         })
         .catch((error) => {
+          if (!isCurrent()) return;
           setExchangeStatus(null);
           setOperationError(
             error instanceof Error ? error.message : "Graph import failed.",
           );
         });
     },
-    [controlPlane],
+    [consumerReleaseTarget, controlPlane],
   );
 
   const changePageModel = useCallback((page: PageModel) => {
@@ -1014,9 +1061,13 @@ export function useWorkbenchController({
       readonly resetJourney?: boolean;
     }): Promise<ReleaseTarget | null> => {
       const request = ++consumerReleaseRequest.current;
+      const reviewId = latestReviewId.current;
+      const isCurrent = () =>
+        request === consumerReleaseRequest.current &&
+        reviewId === latestReviewId.current;
       const applied = await journey.applyProduct();
       if (applied === null) return null; // failed; the composer shows the bounded error
-      if (request !== consumerReleaseRequest.current) return null;
+      if (!isCurrent()) return null;
       const apiVersion = (
         applied.graph as unknown as { readonly apiVersion?: string }
       ).apiVersion;
@@ -1062,17 +1113,33 @@ export function useWorkbenchController({
         return null;
       }
       try {
-        await bootstrapGraph(applied.graph);
+        const draft = await bootstrapGraph(applied.graph, {
+          request,
+          reviewId,
+          applied,
+        });
+        if (draft === null || !isCurrent()) return null;
+        await refreshApplications();
+        if (!isCurrent()) return null;
+        const target = {
+          applicationGraphId: draft.applicationGraphId,
+          draftRevisionId: draft.draftRevisionId,
+        };
+        if (options?.resetJourney === false) setConsumerReleaseTarget(target);
+        if (options?.resetJourney !== false) journey.reset();
+        dispatch({
+          type: "open",
+          surface: options?.resetJourney === false ? "home" : "page",
+        });
+        return target;
       } catch (error) {
+        if (request !== consumerReleaseRequest.current) return null;
         setOperationError(
           error instanceof Error
             ? error.message
             : "The composed product could not be opened.",
         );
       }
-      await refreshApplications();
-      if (options?.resetJourney !== false) journey.reset();
-      dispatch({ type: "open", surface: "page" });
       return null;
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
@@ -1081,6 +1148,7 @@ export function useWorkbenchController({
 
   const openApplication = useCallback(
     (applicationKey: string) => {
+      ++bootstrapRequest.current;
       ++consumerReleaseRequest.current;
       setConsumerReleaseTarget(null);
       setOperationError(null);
@@ -1432,6 +1500,9 @@ export function useWorkbenchController({
     dispatch({ type: "toggle-library" });
   }, []);
   const commandFocus = useCallback(() => {
+    ++bootstrapRequest.current;
+    ++consumerReleaseRequest.current;
+    setConsumerReleaseTarget(null);
     setTemplateDraft(null);
     setTemplateError(null);
     dispatch({ type: "open", surface: "home" });

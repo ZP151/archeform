@@ -387,6 +387,13 @@ external action; local feature work, definitions, and test preparation continue.
 
 ## D2 — prove reuse with intake and approval
 
+**September 9 checkpoint:** The bounded D2.1/D2.2 local slice is accepted; see
+[approval delivery plan](2026-09-09-approval-consumer-delivery.md). Standard
+approval now uses automatic delivery and a complete typed submit/decision/result
+UI, with zero technical handoffs in the actual fixed-interpretation runtime lane.
+The ten-case exit, real-provider reliability, private identity and hosted use
+remain open; do not equate this slice with completion of all D2 criteria.
+
 **Inspect/reuse:** `packages/graph/test/profile-recipe-catalog.test.ts`,
 `packages/capabilities/`, `packages/screen-recipes/`,
 `packages/product-recipes/`, `packages/adapters/src/composition/`, and the D1

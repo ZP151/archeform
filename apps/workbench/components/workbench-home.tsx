@@ -11,6 +11,7 @@ import type {
   WorkbenchCuratedTemplate,
 } from "../lib/control-plane-client";
 import type { ProductJourneyStage } from "../lib/product-journey/journey-model";
+import type { ConsumerFamily } from "../lib/product-journey/consumer-family";
 import type { ProductJourneyFailure } from "../lib/product-journey/interpret-contract";
 import { ClarificationPanel } from "./journey/clarification-panel";
 import { GraphDiffReview } from "./journey/graph-diff-review";
@@ -49,8 +50,9 @@ export type WorkbenchHomeJourneyProps = {
   readonly onChoose: (key: string) => void;
   readonly diffChecksum: string | null;
   readonly onApply: () => void;
-  /** The short-lived default Restaurant delivery state, if this tab started it. */
+  /** The short-lived consumer delivery state, if this tab started it. */
   readonly consumer?: {
+    readonly family: ConsumerFamily | null;
     readonly suppliedMenu?: boolean;
     readonly manualReview: boolean;
     readonly setManualReview: (manual: boolean) => void;
@@ -161,19 +163,30 @@ function ConsumerDelivery({
   const consumer = journey.consumer;
   if (consumer === undefined) return null;
   const paused = consumer.status?.startsWith("Delivery paused") ?? false;
+  const approval = consumer.family === "approval";
+  const label = approval ? "Approval" : "Restaurant";
   return (
-    <section aria-label="Restaurant delivery" className="consumer-delivery">
-      <h2>Your Restaurant app</h2>
-      <p role="status">{consumer.status ?? "Preparing your Restaurant app…"}</p>
-      <p>
-        This uses the standard Restaurant configuration in a local demo.
-        Includes a customer menu, table orders, and a merchant workspace. Uses
-        {journey.consumer?.suppliedMenu
-          ? "supplied menu items"
-          : "sample menu items"}{" "}
-        and simulated payments on this computer. Custom rules and live
-        integrations still need setup.
-      </p>
+    <section aria-label={`${label} delivery`} className="consumer-delivery">
+      <h2>Your {label} app</h2>
+      <p role="status">{consumer.status ?? `Preparing your ${label} app…`}</p>
+      {approval ? (
+        <p>
+          This is a local demo of your approval workflow on this computer.
+          Select a demo role to submit requests, review them, and read results.
+          Reviewers can approve or reject records according to declared role
+          permissions.
+        </p>
+      ) : (
+        <p>
+          This uses the standard Restaurant configuration in a local demo.
+          Includes a customer menu, table orders, and a merchant workspace. Uses
+          {journey.consumer?.suppliedMenu
+            ? "supplied menu items"
+            : "sample menu items"}{" "}
+          and simulated payments on this computer. Custom rules and live
+          integrations still need setup.
+        </p>
+      )}
       {consumer.readyUrl !== null && (
         <a
           className="primary-action"

@@ -1,7 +1,11 @@
 import { canonicalRestaurantMenuParameters } from "@factory/capabilities";
 import { FixtureRequirementInterpreter } from "@factory/adapters";
-import { planProductAlternatives } from "@factory/capabilities/node";
 import {
+  composeProductDraft,
+  planProductAlternatives,
+} from "@factory/capabilities/node";
+import {
+  applyGraphDiffToDraft,
   createBlankApplicationDraft,
   hashRequirementSpec,
 } from "@factory/graph";
@@ -22,7 +26,34 @@ const compilationId = "compilation-restaurant";
 const verificationRunId = "verify-restaurant";
 const previewRunId = "preview-restaurant";
 
+export const approvalFixtureBrief =
+  "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
+
+export async function approvalInterpretationFixture(requirementId?: string) {
+  const result = await new FixtureRequirementInterpreter().interpret({
+    brief: approvalFixtureBrief,
+    answers: {},
+  });
+  if (requirementId === undefined) return result;
+  const spec = { ...result.interpretation.spec, requirementId };
+  return {
+    ...result,
+    interpretation: {
+      ...result.interpretation,
+      spec,
+      blueprint: {
+        ...result.interpretation.blueprint,
+        requirementChecksum: hashRequirementSpec(spec),
+      },
+    },
+  };
+}
+
 export type ConsumerGenerationFixtureOptions = {
+  readonly family?: "restaurant-ordering" | "approval";
+  readonly approvalMissingRead?: boolean;
+  readonly openedRevision?: number;
+  readonly holdAppliedDraft?: boolean;
   readonly alternatives?:
     "standard" | "missing-standard" | "duplicate-standard";
   readonly holdChoice?: boolean;
@@ -40,6 +71,7 @@ export type ConsumerGenerationFixture = {
   readonly selectedAlternativeKeys: string[];
   readonly releaseChoice: () => void;
   readonly releaseInterpretation: () => void;
+  readonly releaseAppliedDraft: () => void;
 };
 
 function response(
@@ -87,16 +119,11 @@ export async function installConsumerGenerationFixture(
   page: Page,
   options: ConsumerGenerationFixtureOptions = {},
 ): Promise<ConsumerGenerationFixture> {
-  const interpreted = (
-    await new FixtureRequirementInterpreter().interpret({
-      brief:
-        "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
-      answers: {},
-    })
-  ).interpretation;
+  const approval = options.family === "approval";
+  const interpreted = (await approvalInterpretationFixture()).interpretation;
   const requirement = {
     ...interpreted.spec,
-    productType: "restaurant-ordering",
+    ...(approval ? {} : { productType: "restaurant-ordering" }),
   } as typeof interpreted.spec;
   const requirementChecksum = hashRequirementSpec(requirement);
   const interpretation = {
@@ -105,16 +132,34 @@ export async function installConsumerGenerationFixture(
     blueprint: {
       ...interpreted.blueprint,
       requirementChecksum,
+      ...(options.approvalMissingRead
+        ? {
+            actors: interpreted.blueprint.actors.map((actor) =>
+              actor.key === "manager"
+                ? {
+                    ...actor,
+                    permissions: actor.permissions.map((permission) => ({
+                      ...permission,
+                      actions: permission.actions.filter(
+                        (action) => action !== "read",
+                      ),
+                    })),
+                  }
+                : actor,
+            ),
+          }
+        : {}),
     },
   };
+  const baseDraft = createBlankApplicationDraft({
+    applicationId: applicationGraphId,
+    workspaceId: "local-workspace",
+    name: approval ? "Expense Approval" : "Restaurant ordering",
+  });
   const alternatives = planProductAlternatives({
-    requirement: interpreted.spec,
-    blueprint: interpreted.blueprint,
-    baseDraft: createBlankApplicationDraft({
-      applicationId: applicationGraphId,
-      workspaceId: "local-workspace",
-      name: "Restaurant ordering",
-    }),
+    requirement: approval ? interpretation.spec : interpreted.spec,
+    blueprint: approval ? interpretation.blueprint : interpreted.blueprint,
+    baseDraft,
   }).map(({ key, label, plan }) => ({ key, label, plan }));
   const standard = alternatives.find(
     (alternative) => alternative.key === "standard",
@@ -129,6 +174,16 @@ export async function installConsumerGenerationFixture(
         ? [minimal, standard, { ...standard }]
         : [minimal, standard];
   const template = templateDraftResponse(2);
+  const appliedGraph = approval
+    ? applyGraphDiffToDraft(
+        baseDraft,
+        composeProductDraft({
+          plan: standard.plan,
+          blueprint: interpretation.blueprint,
+          baseDraft,
+        }).diff,
+      ).graph
+    : template.draft.graph;
   const previewUrl = options.previewUrl ?? "http://127.0.0.1:3210";
   const pageErrors: string[] = [];
   const requests: string[] = [];
@@ -145,6 +200,12 @@ export async function installConsumerGenerationFixture(
   const choiceGate = options.holdChoice
     ? new Promise<void>((resolve) => {
         releaseChoice = resolve;
+      })
+    : null;
+  let releaseAppliedDraft: () => void = () => {};
+  const appliedDraftGate = options.holdAppliedDraft
+    ? new Promise<void>((resolve) => {
+        releaseAppliedDraft = resolve;
       })
     : null;
   page.on("pageerror", (error) => {
@@ -206,7 +267,9 @@ export async function installConsumerGenerationFixture(
       response({
         apiVersion: "factory.requirement-interpretation-result/v1",
         interpretation: nextInterpretation,
-        businessParameters: canonicalRestaurantMenuParameters(),
+        businessParameters: approval
+          ? null
+          : canonicalRestaurantMenuParameters(),
       }),
     );
   });
@@ -292,9 +355,34 @@ export async function installConsumerGenerationFixture(
           draftRevision: {
             id: draftRevisionId,
             revisionNumber: 2,
-            graph: template.draft.graph,
+            graph: appliedGraph,
           },
           review: { applicationGraphId, status: "applied" },
+        }),
+      );
+      return;
+    }
+    if (
+      approval &&
+      method === "GET" &&
+      path === `/workspaces/local/application-graphs/${applicationGraphId}`
+    ) {
+      record("open-draft");
+      await appliedDraftGate;
+      await route.fulfill(
+        response({
+          id: applicationGraphId,
+          draftRevisions: [
+            {
+              id:
+                options.openedRevision === undefined
+                  ? draftRevisionId
+                  : `draft-approval-r${options.openedRevision}`,
+              revisionNumber: options.openedRevision ?? 2,
+              graph: appliedGraph,
+            },
+          ],
+          publishedRevisions: [],
         }),
       );
       return;
@@ -458,5 +546,6 @@ export async function installConsumerGenerationFixture(
     selectedAlternativeKeys,
     releaseChoice,
     releaseInterpretation,
+    releaseAppliedDraft,
   };
 }

@@ -49,6 +49,7 @@ import {
 import { databaseTargetPlugin } from "./targets/database/target.js";
 import { documentationTargetPlugin } from "./targets/documentation/target.js";
 import { policyTargetPlugin } from "./targets/policy/target.js";
+import { getCustomerIconAssets } from "./targets/restaurant-v3/customer-icons.js";
 import { generateRestaurantProductApplicationBundle } from "./targets/restaurant-v3/product-target.js";
 
 /**
@@ -2653,11 +2654,38 @@ function renderFaviconRoute(): string {
   ].join("\n");
 }
 
+type GeneratedPresentationProfile = "legacy" | "approval-v1";
+
+function presentationProfileFor(
+  graph: ApplicationGraphV1,
+): GeneratedPresentationProfile {
+  const matches = graph.flow.flows.flatMap((flow) =>
+    flow.transitions
+      .filter((transition) => transition.event === "approve")
+      .flatMap((approve) =>
+        flow.transitions.filter(
+          (reject) =>
+            reject.event === "reject" &&
+            reject.from === approve.from &&
+            flow.transitions.some(
+              (submit) =>
+                submit.event === "submit" &&
+                submit.to === approve.from &&
+                submit.from !== approve.from,
+            ),
+        ),
+      ),
+  );
+  return matches.length === 1 ? "approval-v1" : "legacy";
+}
+
 function renderPageRuntime(
   graph: ApplicationGraphV1,
   orderEntityKey: string | undefined,
   useFixtureSessions: boolean,
+  profile: GeneratedPresentationProfile,
 ): string {
+  const approval = profile === "approval-v1";
   const projection = createGeneratedPageRuntimeProjection(graph, {
     ...(orderEntityKey ? { orderEntity: orderEntityKey } : {}),
   });
@@ -2673,6 +2701,9 @@ function renderPageRuntime(
           key: field.key,
           required: field.required,
           type: field.type,
+          ...(approval && field.type === "enum"
+            ? { values: field.values }
+            : {}),
         })),
     })),
     policy: graph.policy,
@@ -2702,18 +2733,117 @@ function renderPageRuntime(
   return [
     '"use client";',
     "",
-    'import { useEffect, useState } from "react";',
+    approval
+      ? 'import { useCallback, useEffect, useRef, useState } from "react";'
+      : 'import { useEffect, useState } from "react";',
     "",
     "type JsonRecord = Record<string, unknown>;",
     "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout' | 'stats' | 'list' | 'detail' | 'calendar' | 'settings'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
     "type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
-    "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string }[] };",
+    approval
+      ? "type RuntimeField = { readonly key: string; readonly required: boolean; readonly type: string; readonly values?: readonly string[] }; type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly RuntimeField[] };"
+      : "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string }[] };",
     "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly checkoutRoute: string | null; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly configureLine: (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]) => Promise<JsonRecord>; readonly checkoutCart: () => Promise<void> };",
     "",
     `const projection: PageRuntimeProjection = ${serializedProjection};`,
     `const definition: RuntimeDefinition = ${serializedDefinition};`,
     "",
+    ...(approval
+      ? [
+          `const approvalIcons = ${JSON.stringify(Object.fromEntries((["house", "receipt-text", "user-round", "refresh-cw", "clock", "circle-check", "circle-x"] as const).map((key) => [key, getCustomerIconAssets().icons[key]]))).replaceAll("<", "\\u003c")};`,
+          "type ApprovalIconKey = 'house' | 'receipt-text' | 'user-round' | 'refresh-cw' | 'clock' | 'circle-check' | 'circle-x';",
+          "function ApprovalIcon({ name }: { readonly name: ApprovalIconKey }) {",
+          "  if (!Object.hasOwn(approvalIcons, name)) return null;",
+          "  return <span className='approval-icon' aria-hidden={true} dangerouslySetInnerHTML={{ __html: approvalIcons[name] }} />;",
+          "}",
+          "function actionIcon(event: string): ApprovalIconKey | null {",
+          "  if (event === 'submit') return 'receipt-text';",
+          "  if (event === 'approve') return 'circle-check';",
+          "  if (event === 'reject') return 'circle-x';",
+          "  return null;",
+          "}",
+          "function stateIcon(entityKey: string, status: unknown): ApprovalIconKey | null {",
+          "  const transitions = definition.flow.flows.filter((flow) => flow.entity === entityKey).flatMap((flow) => flow.transitions);",
+          "  if (transitions.some((transition) => transition.event === 'approve' && transition.to === status)) return 'circle-check';",
+          "  if (transitions.some((transition) => transition.event === 'reject' && transition.to === status)) return 'circle-x';",
+          "  if (transitions.some((transition) => transition.event === 'approve' && transition.from === status)) return 'clock';",
+          "  return null;",
+          "}",
+          "class SafeUiError extends Error {}",
+          "function safeResponseMessage(status: number): string {",
+          "  if (status === 400 || status === 409) return 'This record has changed or contains invalid values. Refresh and try again.';",
+          "  if (status === 401 || status === 403) return 'This action is unavailable for your selected role or the current record state.';",
+          "  if (status >= 500) return 'The service is unavailable. Please try again.';",
+          "  return 'The request could not be completed. Please try again.';",
+          "}",
+          "function fieldLabel(key: string): string {",
+          "  const words = key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2').replace(/[_-]+/g, ' ');",
+          "  return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();",
+          "}",
+          "function calendarDateToPrisma(value: string): string {",
+          "  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) throw new Error('Invalid date');",
+          "  const candidate = value + 'T00:00:00.000Z';",
+          "  const date = new Date(candidate);",
+          "  if (!Number.isFinite(date.getTime()) || date.toISOString() !== candidate) throw new Error('Invalid date');",
+          "  return candidate;",
+          "}",
+          "function formPayload(fields: readonly RuntimeField[], values: Readonly<Record<string, string | boolean>>): JsonRecord {",
+          "  const payload: JsonRecord = {};",
+          "  for (const field of fields) {",
+          "    const raw = values[field.key] ?? (field.type === 'boolean' ? false : '');",
+          "    if (field.type === 'boolean') { payload[field.key] = raw === true; continue; }",
+          "    const value = String(raw);",
+          "    if (value === '' && !field.required) continue;",
+          "    try {",
+          "      if (value === '' && field.required) throw new Error();",
+          "      if (field.type === 'integer' || field.type === 'decimal') {",
+          "        const number = Number(value);",
+          "        if (!value.trim() || !Number.isFinite(number) || (field.type === 'integer' && !Number.isInteger(number))) throw new Error();",
+          "        payload[field.key] = number;",
+          "      } else if (field.type === 'json') payload[field.key] = JSON.parse(value) as unknown;",
+          "      else if (field.type === 'date') payload[field.key] = calendarDateToPrisma(value);",
+          "      else if (field.type === 'datetime') {",
+          "        const date = new Date(value);",
+          "        if (!Number.isFinite(date.getTime())) throw new Error();",
+          "        payload[field.key] = date.toISOString();",
+          "      } else if (field.type === 'enum') {",
+          "        if (!field.values?.includes(value)) throw new Error();",
+          "        payload[field.key] = value;",
+          "      } else payload[field.key] = value;",
+          "    } catch { throw new SafeUiError('Enter a valid value for ' + fieldLabel(field.key) + '.'); }",
+          "  }",
+          "  return payload;",
+          "}",
+          "function formatValue(field: Pick<RuntimeField, 'type'>, value: unknown) {",
+          "  if (value === null || value === undefined || value === '') return 'Not provided';",
+          "  if (field.type === 'boolean') return value === true ? 'Yes' : 'No';",
+          "  if (field.type === 'date' || field.type === 'datetime') {",
+          "    const text = String(value);",
+          "    // A date-only business value must not shift to yesterday in western timezones.",
+          "    return <time dateTime={text}>{field.type === 'date' ? text.slice(0, 10) : text.replace('T', ' ').replace(/\\.000Z$/, ' UTC')}</time>;",
+          "  }",
+          "  return typeof value === 'object' ? JSON.stringify(value) : String(value);",
+          "}",
+          "function FieldControl({ field, value, onChange, id }: { readonly field: RuntimeField; readonly value: string | boolean; readonly onChange: (value: string | boolean) => void; readonly id: string }) {",
+          "  const common = { id, name: field.key, required: field.required, value: String(value), onChange: (event: { target: { value: string } }) => onChange(event.target.value) };",
+          "  if (field.type === 'boolean') return <input id={id} name={field.key} type='checkbox' checked={value === true} onChange={(event) => onChange(event.target.checked)} />;",
+          "  if (field.type === 'text' || field.type === 'json') return <textarea {...common} rows={3} />;",
+          "  if (field.type === 'enum') return <select {...common}><option value=''>Choose {fieldLabel(field.key).toLowerCase()}</option>{field.values?.map((option) => <option key={option} value={option}>{option}</option>)}</select>;",
+          "  if (field.type === 'integer' || field.type === 'decimal') return <input {...common} type='number' step={field.type === 'integer' ? 1 : 'any'} />;",
+          "  return <input {...common} type={field.type === 'datetime' ? 'datetime-local' : field.type === 'string' ? 'text' : field.type} />;",
+          "}",
+          "function validTransitions(role: string, entityKey: string, recordStatus: unknown) {",
+          "  const seen = new Set<string>();",
+          "  return definition.flow.flows.filter((flow) => flow.entity === entityKey).flatMap((flow) => flow.transitions).filter((transition) => {",
+          "    if (transition.from !== recordStatus || seen.has(transition.event)) return false;",
+          "    const allowed = transition.roles.length ? transition.roles.includes(role) && (can(role, entityKey, transition.event) || can(role, entityKey, 'update')) : can(role, entityKey, 'read');",
+          "    if (allowed) seen.add(transition.event);",
+          "    return allowed;",
+          "  });",
+          "}",
+        ]
+      : []),
     "function can(role: string, entity: string, action: string): boolean {",
     "  return definition.policy.permissions.some((permission) => permission.role === role && (permission.resource === entity || permission.resource === '*') && permission.actions.includes(action));",
     "}",
@@ -2734,7 +2864,9 @@ function renderPageRuntime(
     "}",
     "",
     "function errorMessage(reason: unknown): string {",
-    "  return reason instanceof Error ? reason.message : 'The request could not be completed.';",
+    approval
+      ? "  return reason instanceof SafeUiError ? reason.message : 'The request could not be completed. Please try again.'"
+      : "  return reason instanceof Error ? reason.message : 'The request could not be completed.';",
     "}",
     "",
     "function transitionBody(entityKey: string, record: JsonRecord, event: string): string {",
@@ -2745,54 +2877,151 @@ function renderPageRuntime(
     "  return JSON.stringify({ expectedVersion: version, idempotencyKey: `generated-web-${recordId}-${event}-${version}` });",
     "}",
     "",
-    "function useEntityRecords(entity: RuntimeEntity, role: string, allowed: boolean) {",
-    "  const [records, setRecords] = useState<readonly JsonRecord[]>([]);",
-    "  const [error, setError] = useState<string | null>(null);",
-    "  const refresh = async () => {",
-    "    if (!allowed) { setRecords([]); return; }",
-    "    const response = await fetch(\`/api/${entity.key}\`, { headers: requestHeaders(role) });",
-    "    if (!response.ok) throw new Error(await response.text());",
-    "    setRecords(await response.json() as readonly JsonRecord[]);",
-    "  };",
-    "  useEffect(() => {",
-    "    if (!allowed) { setRecords([]); return; }",
-    "    void refresh().catch((reason) => setError(errorMessage(reason)));",
-    "  }, [entity.key, role, allowed]);",
-    "  return { records, error, refresh };",
-    "}",
-    "",
+    ...(approval
+      ? [
+          "function useEntityRecords(entity: RuntimeEntity, role: string, allowed: boolean) {",
+          "  const [records, setRecords] = useState<readonly JsonRecord[]>([]);",
+          "  const [error, setError] = useState<string | null>(null);",
+          "  const [loading, setLoading] = useState(true);",
+          "  const request = useRef(0);",
+          "  const refresh = useCallback(async (): Promise<readonly JsonRecord[]> => {",
+          "    const current = ++request.current;",
+          "    if (!allowed) { setRecords([]); setLoading(false); setError(null); return []; }",
+          "    setLoading(true); setError(null);",
+          "    try {",
+          "      const response = await fetch(`/api/${entity.key}`, { headers: requestHeaders(role) });",
+          "      if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));",
+          "      const next = await response.json() as readonly JsonRecord[];",
+          "      if (current === request.current) setRecords(next);",
+          "      return next;",
+          "    } catch (reason) {",
+          "      const message = errorMessage(reason);",
+          "      if (current === request.current) setError(message);",
+          "      throw new SafeUiError(message);",
+          "    } finally { if (current === request.current) setLoading(false); }",
+          "  }, [entity.key, role, allowed]);",
+          "  useEffect(() => {",
+          "    setRecords([]);",
+          "    void refresh().catch(() => undefined);",
+          "    return () => { request.current++; };",
+          "  }, [refresh]);",
+          "  return { records, error, loading, refresh };",
+          "}",
+        ]
+      : [
+          "function useEntityRecords(entity: RuntimeEntity, role: string, allowed: boolean) {",
+          "  const [records, setRecords] = useState<readonly JsonRecord[]>([]);",
+          "  const [error, setError] = useState<string | null>(null);",
+          "  const refresh = async () => {",
+          "    if (!allowed) { setRecords([]); return; }",
+          "    const response = await fetch(\`/api/${entity.key}\`, { headers: requestHeaders(role) });",
+          "    if (!response.ok) throw new Error(await response.text());",
+          "    setRecords(await response.json() as readonly JsonRecord[]);",
+          "  };",
+          "  useEffect(() => {",
+          "    if (!allowed) { setRecords([]); return; }",
+          "    void refresh().catch((reason) => setError(errorMessage(reason)));",
+          "  }, [entity.key, role, allowed]);",
+          "  return { records, error, refresh };",
+          "}",
+          "",
+        ]),
     "function HeroBlock({ block }: { readonly block: PageRuntimeBlock }) {",
     "  const primaryNavigation = projection.navigation[0];",
     "  return <section className='generated-hero'><p>{block.props.eyebrow ?? 'Published Graph'}</p><h1>{block.props.heading ?? block.props.title ?? projection.applicationName}</h1>{primaryNavigation ? <a className='generated-primary' href={primaryNavigation.route}>{primaryNavigation.label}</a> : null}</section>;",
     "}",
     "",
-    "function FormBlock({ block, entity, role, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly reportError: (reason: unknown) => void }) {",
-    "  const [values, setValues] = useState<Record<string, string>>({});",
-    "  const fields = entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status');",
-    "  if (!can(role, entity.key, 'create')) return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><p>Your selected role cannot create this record.</p></section>;",
-    "  const createRecord = async () => {",
-    "    const payload = Object.fromEntries(fields.map((field) => [field.key, values[field.key] ?? '']));",
-    "    const response = await fetch(\`/api/${entity.key}\`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify(payload) });",
-    "    if (!response.ok) throw new Error(await response.text());",
-    "    setValues({});",
-    "  };",
-    "  return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><form onSubmit={(event) => { event.preventDefault(); void createRecord().catch(reportError); }}>{fields.map((field) => <label key={field.key}>{field.key}<input required={field.required} value={values[field.key] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}<button className='generated-primary' type='submit'>Create {entity.label}</button></form></section>;",
-    "}",
-    "",
-    "function EntityRecords({ block, entity, role, formRoute, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly formRoute?: string; readonly reportError: (reason: unknown) => void }) {",
-    "  const allowed = can(role, entity.key, 'read');",
-    "  const { records, error, refresh } = useEntityRecords(entity, role, allowed);",
-    "  const events = definition.flow.flows.find((flow) => flow.entity === entity.key)?.transitions.map((transition) => transition.event) ?? [];",
-    "  const transition = async (record: JsonRecord, event: string) => {",
-    "    const recordId = String(record.id);",
-    "    const response = await fetch(\`/api/${entity.key}/${recordId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(entity.key, record, event) });",
-    "    if (!response.ok) throw new Error(await response.text());",
-    "    await refresh();",
-    "  };",
-    "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read these records.</p></section>;",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.type}</p><h2>{block.props.title ?? entity.label}</h2></div><div>{formRoute ? <a href={formRoute}>New {entity.label.toLowerCase()}</a> : null}<button type='button' onClick={() => void refresh().catch(reportError)}>Refresh</button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code><span>{events.filter((event) => canTriggerEvent(role, entity.key, event)).map((event) => <button key={event} type='button' onClick={() => void transition(record, event).catch(reportError)}>{event}</button>)}</span></li>)}</ul></section>;",
-    "}",
-    "",
+    ...(approval
+      ? [
+          "type SubmissionState = 'idle' | 'pending' | 'success' | 'error';",
+          "function FormBlock({ block, entity, role }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly reportError: (reason: unknown) => void }) {",
+          "  const [values, setValues] = useState<Record<string, string | boolean>>({});",
+          "  const [state, setState] = useState<SubmissionState>('idle');",
+          "  const [message, setMessage] = useState('');",
+          "  const pending = useRef(false);",
+          "  const fields = entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status');",
+          "  if (!can(role, entity.key, 'create')) return <section className='generated-card'><h2>{block.props.title ?? `Create ${entity.label}`}</h2><p>Your selected role cannot create this record.</p></section>;",
+          "  const createRecord = async () => {",
+          "    if (pending.current) return;",
+          "    pending.current = true; setState('pending'); setMessage('Creating ' + entity.label + '\u2026');",
+          "    try {",
+          "      const payload = formPayload(fields, values);",
+          "      const response = await fetch(`/api/${entity.key}`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify(payload) });",
+          "      if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));",
+          "      await response.json();",
+          "      setValues({}); setState('success'); setMessage('Created ' + entity.label + '.');",
+          "    } catch (reason) { setState('error'); setMessage(errorMessage(reason)); }",
+          "    finally { pending.current = false; }",
+          "  };",
+          "  return <section className='generated-card'><h2>{block.props.title ?? `Create ${entity.label}`}</h2><form aria-busy={state === 'pending'} onSubmit={(event) => { event.preventDefault(); void createRecord(); }}><fieldset disabled={state === 'pending'}>{fields.map((field) => <div className='approval-field' key={field.key}><label htmlFor={block.id + '-' + field.key}>{fieldLabel(field.key)}</label><FieldControl id={block.id + '-' + field.key} field={field} value={values[field.key] ?? (field.type === 'boolean' ? false : '')} onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))} /></div>)}</fieldset><button className='generated-primary' disabled={state === 'pending'} type='submit'>Create {entity.label}</button></form>{message ? <p className={state === 'error' ? 'generated-error' : undefined} role={state === 'error' ? 'alert' : 'status'} aria-live={state === 'error' ? 'assertive' : 'polite'}>{message}</p> : null}</section>;",
+          "}",
+        ]
+      : [
+          "function FormBlock({ block, entity, role, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly reportError: (reason: unknown) => void }) {",
+          "  const [values, setValues] = useState<Record<string, string>>({});",
+          "  const fields = entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status');",
+          "  if (!can(role, entity.key, 'create')) return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><p>Your selected role cannot create this record.</p></section>;",
+          "  const createRecord = async () => {",
+          "    const payload = Object.fromEntries(fields.map((field) => [field.key, values[field.key] ?? '']));",
+          "    const response = await fetch(\`/api/${entity.key}\`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify(payload) });",
+          "    if (!response.ok) throw new Error(await response.text());",
+          "    setValues({});",
+          "  };",
+          "  return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><form onSubmit={(event) => { event.preventDefault(); void createRecord().catch(reportError); }}>{fields.map((field) => <label key={field.key}>{field.key}<input required={field.required} value={values[field.key] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}<button className='generated-primary' type='submit'>Create {entity.label}</button></form></section>;",
+          "}",
+          "",
+        ]),
+    ...(approval
+      ? [
+          "type MutationStatus = 'pending' | 'success' | 'error';",
+          "type MutationState = { event: string; status: MutationStatus; message: string } | null;",
+          "function EntityRecords({ block, entity, role, formRoute }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly formRoute?: string; readonly reportError: (reason: unknown) => void }) {",
+          "  const allowed = can(role, entity.key, 'read');",
+          "  const { records, error, loading, refresh } = useEntityRecords(entity, role, allowed);",
+          "  const [mutations, setMutations] = useState<Record<string, MutationState>>({});",
+          "  const pending = useRef(new Set<string>());",
+          "  const transition = async (record: JsonRecord, event: string) => {",
+          "    const recordId = String(record.id);",
+          "    if (pending.current.has(recordId)) return;",
+          "    pending.current.add(recordId);",
+          "    setMutations((current) => ({ ...current, [recordId]: { event, status: 'pending', message: fieldLabel(event) + ' in progress\u2026' } }));",
+          "    try {",
+          "      const response = await fetch(`/api/${entity.key}/${encodeURIComponent(recordId)}/events/${encodeURIComponent(event)}`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(entity.key, record, event) });",
+          "      if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));",
+          "      const updated = await response.json() as JsonRecord;",
+          "      await refresh();",
+          "      setMutations((current) => ({ ...current, [recordId]: { event, status: 'success', message: entity.label + ': ' + fieldLabel(String(updated.status ?? 'updated')) + '.' } }));",
+          "    } catch (reason) {",
+          "      setMutations((current) => ({ ...current, [recordId]: { event, status: 'error', message: errorMessage(reason) } }));",
+          "    } finally { pending.current.delete(recordId); }",
+          "  };",
+          "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read these records.</p></section>;",
+          "  return <section className='generated-card'><div className='generated-section-heading'><h2>{block.props.title ?? entity.label}</h2><div className='approval-actions'>{formRoute && can(role, entity.key, 'create') ? <a href={formRoute}>New {entity.label.toLowerCase()}</a> : null}<button type='button' disabled={loading} onClick={() => void refresh().catch(() => undefined)}><ApprovalIcon name='refresh-cw' />Refresh</button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{loading ? <p role='status' aria-live='polite'>Loading records\u2026</p> : null}{!loading && !error && records.length === 0 ? <div role='status' className='approval-empty'><ApprovalIcon name='receipt-text' /><p>No {entity.label.toLowerCase()} records yet.</p>{formRoute && can(role, entity.key, 'create') ? <a href={formRoute}>Create {entity.label}</a> : null}</div> : null}<ul className='generated-records'>{records.map((record) => {",
+          "    const mutation = mutations[String(record.id)];",
+          "    const icon = stateIcon(entity.key, record.status);",
+          "    return <li key={String(record.id)} aria-busy={mutation?.status === 'pending'}><dl className='approval-values'><div><dt>ID</dt><dd>{String(record.id ?? 'Not provided')}</dd></div><div><dt>Status</dt><dd><span className='approval-badge'>{icon ? <ApprovalIcon name={icon} /> : null}{fieldLabel(String(record.status ?? 'Not provided'))}</span></dd></div>{entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status').map((field) => <div key={field.key}><dt>{fieldLabel(field.key)}</dt><dd>{formatValue(field, record[field.key])}</dd></div>)}</dl><div className='approval-actions'>{validTransitions(role, entity.key, record.status).map((action) => {",
+          "      const actionAsset = actionIcon(action.event);",
+          "      return <button key={action.event} type='button' disabled={mutation?.status === 'pending'} onClick={() => void transition(record, action.event)}>{actionAsset ? <ApprovalIcon name={actionAsset} /> : null}{fieldLabel(action.event)}</button>;",
+          "    })}</div>{mutation ? <p className={mutation.status === 'error' ? 'generated-error' : undefined} role={mutation.status === 'error' ? 'alert' : 'status'} aria-live={mutation.status === 'error' ? 'assertive' : 'polite'}>{mutation.message}</p> : null}</li>;",
+          "  })}</ul></section>;",
+          "}",
+        ]
+      : [
+          "function EntityRecords({ block, entity, role, formRoute, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly formRoute?: string; readonly reportError: (reason: unknown) => void }) {",
+          "  const allowed = can(role, entity.key, 'read');",
+          "  const { records, error, refresh } = useEntityRecords(entity, role, allowed);",
+          "  const events = definition.flow.flows.find((flow) => flow.entity === entity.key)?.transitions.map((transition) => transition.event) ?? [];",
+          "  const transition = async (record: JsonRecord, event: string) => {",
+          "    const recordId = String(record.id);",
+          "    const response = await fetch(\`/api/${entity.key}/${recordId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(entity.key, record, event) });",
+          "    if (!response.ok) throw new Error(await response.text());",
+          "    await refresh();",
+          "  };",
+          "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read these records.</p></section>;",
+          "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.type}</p><h2>{block.props.title ?? entity.label}</h2></div><div>{formRoute ? <a href={formRoute}>New {entity.label.toLowerCase()}</a> : null}<button type='button' onClick={() => void refresh().catch(reportError)}>Refresh</button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code><span>{events.filter((event) => canTriggerEvent(role, entity.key, event)).map((event) => <button key={event} type='button' onClick={() => void transition(record, event).catch(reportError)}>{event}</button>)}</span></li>)}</ul></section>;",
+          "}",
+          "",
+        ]),
     "function CollectionBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
     "  return <EntityRecords block={block} entity={entity} role={context.role} formRoute={context.formRouteByEntity[entity.key]} reportError={context.reportError} />;",
     "}",
@@ -2815,14 +3044,18 @@ function renderPageRuntime(
     "  const dateField = entity.fields.find((field) => field.type === 'date' || field.type === 'datetime');",
     "  const groups = dateField ? records.reduce((grouped, record) => { const label = String(record[dateField.key] ?? '').slice(0, 10); if (!label) return grouped; const bucket = grouped.find((entry) => entry.label === label); if (bucket) bucket.records.push(record); else grouped.push({ label, records: [record] }); return grouped; }, [] as { label: string; records: JsonRecord[] }[]) : null;",
     "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? 'Schedule'}</h2><p>Your selected role cannot read this schedule.</p></section>;",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{dateField ? 'calendar' : 'schedule'}</p><h2>{block.props.title ?? 'Schedule'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{groups ? <ul className='generated-calendar'>{groups.map((group) => <li key={group.label}><strong>{group.label}</strong><ul className='generated-records'>{group.records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul></li>)}</ul> : <ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul>}</section>;",
+    approval
+      ? "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{dateField ? 'calendar' : 'schedule'}</p><h2>{block.props.title ?? 'Schedule'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}><ApprovalIcon name='refresh-cw' />Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{groups ? <ul className='generated-calendar'>{groups.map((group) => <li key={group.label}><strong>{group.label}</strong><ul className='generated-records'>{group.records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul></li>)}</ul> : <ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul>}</section>;"
+      : "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{dateField ? 'calendar' : 'schedule'}</p><h2>{block.props.title ?? 'Schedule'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{groups ? <ul className='generated-calendar'>{groups.map((group) => <li key={group.label}><strong>{group.label}</strong><ul className='generated-records'>{group.records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul></li>)}</ul> : <ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul>}</section>;",
     "}",
     "",
     "function StatsBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity?: RuntimeEntity; readonly context: BlockContext }) {",
     "  if (!entity) return <section className='generated-card generated-stats'><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? 'Overview'}</h2><span>No entity bound</span></section>;",
     "  const allowed = can(context.role, entity.key, 'read');",
     "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? `Overview`}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<div className='generated-stats'><strong>{allowed ? records.length : '–'}</strong><span>{entity.label.toLowerCase()} records</span></div></section>;",
+    approval
+      ? "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? `Overview`}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}><ApprovalIcon name='refresh-cw' />Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<div className='generated-stats'><strong>{allowed ? records.length : '–'}</strong><span>{entity.label.toLowerCase()} records</span></div></section>;"
+      : "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? `Overview`}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<div className='generated-stats'><strong>{allowed ? records.length : '–'}</strong><span>{entity.label.toLowerCase()} records</span></div></section>;",
     "}",
     "",
     "function SettingsBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity?: RuntimeEntity; readonly context: BlockContext }) {",
@@ -2835,7 +3068,9 @@ function renderPageRuntime(
     "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
     "  const mayAddToCart = definition.commerce.orderEntity !== null && can(context.role, definition.commerce.orderEntity, 'create');",
     "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read this catalog.</p></section>;",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>catalog</p><h2>{block.props.title ?? entity.label}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code>{mayAddToCart ? <button className='generated-primary' type='button' onClick={() => void context.addToCart(entity.key, String(record.id)).catch(context.reportError)}>Add to cart</button> : null}</li>)}</ul><CartSummary context={context} /></section>;",
+    approval
+      ? "  return <section className='generated-card'><div className='generated-section-heading'><div><p>catalog</p><h2>{block.props.title ?? entity.label}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}><ApprovalIcon name='refresh-cw' />Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code>{mayAddToCart ? <button className='generated-primary' type='button' onClick={() => void context.addToCart(entity.key, String(record.id)).catch(context.reportError)}>Add to cart</button> : null}</li>)}</ul><CartSummary context={context} /></section>;"
+      : "  return <section className='generated-card'><div className='generated-section-heading'><div><p>catalog</p><h2>{block.props.title ?? entity.label}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code>{mayAddToCart ? <button className='generated-primary' type='button' onClick={() => void context.addToCart(entity.key, String(record.id)).catch(context.reportError)}>Add to cart</button> : null}</li>)}</ul><CartSummary context={context} /></section>;",
     "}",
     "",
     "function CatalogConfiguratorBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
@@ -2846,7 +3081,9 @@ function renderPageRuntime(
     "  const [configured, setConfigured] = useState<JsonRecord | null>(null);",
     "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? 'Configure options'}</h2><p>Your selected role cannot read this catalog.</p></section>;",
     "  const submit = async () => { const selected = optionIds.split(',').map((option) => option.trim()).filter(Boolean); setConfigured(await context.configureLine(entity.key, catalogRecordId, selected)); };",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>Server-authoritative selection</p><h2>{block.props.title ?? 'Configure options'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<form onSubmit={(event) => { event.preventDefault(); void submit().catch(context.reportError); }}><label>Catalog item<select required value={catalogRecordId} onChange={(event) => setCatalogRecordId(event.target.value)}><option value=''>Choose an item</option>{records.map((record) => <option key={String(record.id)} value={String(record.id)}>{String(record.name ?? record.id)}</option>)}</select></label><label>Option identifiers<input value={optionIds} onChange={(event) => setOptionIds(event.target.value)} placeholder='option-a, option-b' /></label><button className='generated-primary' type='submit'>Validate selection</button></form>{configured ? <pre className='generated-records'>{JSON.stringify(configured, null, 2)}</pre> : null}</section>;",
+    approval
+      ? "  return <section className='generated-card'><div className='generated-section-heading'><div><p>Server-authoritative selection</p><h2>{block.props.title ?? 'Configure options'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}><ApprovalIcon name='refresh-cw' />Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<form onSubmit={(event) => { event.preventDefault(); void submit().catch(context.reportError); }}><label>Catalog item<select required value={catalogRecordId} onChange={(event) => setCatalogRecordId(event.target.value)}><option value=''>Choose an item</option>{records.map((record) => <option key={String(record.id)} value={String(record.id)}>{String(record.name ?? record.id)}</option>)}</select></label><label>Option identifiers<input value={optionIds} onChange={(event) => setOptionIds(event.target.value)} placeholder='option-a, option-b' /></label><button className='generated-primary' type='submit'>Validate selection</button></form>{configured ? <pre className='generated-records'>{JSON.stringify(configured, null, 2)}</pre> : null}</section>;"
+      : "  return <section className='generated-card'><div className='generated-section-heading'><div><p>Server-authoritative selection</p><h2>{block.props.title ?? 'Configure options'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<form onSubmit={(event) => { event.preventDefault(); void submit().catch(context.reportError); }}><label>Catalog item<select required value={catalogRecordId} onChange={(event) => setCatalogRecordId(event.target.value)}><option value=''>Choose an item</option>{records.map((record) => <option key={String(record.id)} value={String(record.id)}>{String(record.name ?? record.id)}</option>)}</select></label><label>Option identifiers<input value={optionIds} onChange={(event) => setOptionIds(event.target.value)} placeholder='option-a, option-b' /></label><button className='generated-primary' type='submit'>Validate selection</button></form>{configured ? <pre className='generated-records'>{JSON.stringify(configured, null, 2)}</pre> : null}</section>;",
     "}",
     "",
     "function CartSummary({ context, checkout = false }: { readonly context: BlockContext; readonly checkout?: boolean }) {",
@@ -2894,14 +3131,18 @@ function renderPageRuntime(
     "  const refreshCart = async (activeCartId: string) => {",
     "    if (!definition.commerce.orderEntity) return;",
     "    const response = await fetch(\`/api/commerce/${definition.commerce.orderEntity}/${activeCartId}/items\`, { headers: requestHeaders(role) });",
-    "    if (!response.ok) throw new Error(await response.text());",
+    approval
+      ? "    if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));"
+      : "    if (!response.ok) throw new Error(await response.text());",
     "    setCartItems(await response.json() as readonly JsonRecord[]);",
     "  };",
     "  useEffect(() => {",
     "    const storedCartId = window.sessionStorage.getItem('factory.generated.cart-id');",
     "    if (!storedCartId || !definition.commerce.orderEntity) return;",
     "    setCartId(storedCartId);",
-    "    void fetch(`/api/commerce/${definition.commerce.orderEntity}/${storedCartId}/items`, { headers: requestHeaders(role) }).then(async (response) => { if (!response.ok) throw new Error(await response.text()); setCartItems(await response.json() as readonly JsonRecord[]); }).catch(reportError);",
+    approval
+      ? "    void fetch(`/api/commerce/${definition.commerce.orderEntity}/${storedCartId}/items`, { headers: requestHeaders(role) }).then(async (response) => { if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status)); setCartItems(await response.json() as readonly JsonRecord[]); }).catch(reportError);"
+      : "    void fetch(`/api/commerce/${definition.commerce.orderEntity}/${storedCartId}/items`, { headers: requestHeaders(role) }).then(async (response) => { if (!response.ok) throw new Error(await response.text()); setCartItems(await response.json() as readonly JsonRecord[]); }).catch(reportError);",
     "  }, [role]);",
     "  const addToCart = async (catalogEntity: string, catalogRecordId: string) => {",
     "    const orderEntity = definition.commerce.orderEntity;",
@@ -2909,19 +3150,25 @@ function renderPageRuntime(
     "    let activeCartId = cartId;",
     "    if (!activeCartId) {",
     "      const created = await fetch(\`/api/${orderEntity}\`, { method: 'POST', headers: requestHeaders(role), body: '{}' });",
-    "      if (!created.ok) throw new Error(await created.text());",
+    approval
+      ? "      if (!created.ok) throw new SafeUiError(safeResponseMessage(created.status));"
+      : "      if (!created.ok) throw new Error(await created.text());",
     "      const cart = await created.json() as JsonRecord;",
     "      activeCartId = String(cart.id);",
     "      setCartId(activeCartId);",
     "      window.sessionStorage.setItem('factory.generated.cart-id', activeCartId);",
     "    }",
     "    const response = await fetch(\`/api/commerce/${orderEntity}/${activeCartId}/items\`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify({ catalogEntity, catalogRecordId, quantity: 1 }) });",
-    "    if (!response.ok) throw new Error(await response.text());",
+    approval
+      ? "    if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));"
+      : "    if (!response.ok) throw new Error(await response.text());",
     "    await refreshCart(activeCartId);",
     "  };",
     "  const configureLine = async (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]): Promise<JsonRecord> => {",
     "    const response = await fetch('/api/commerce/configure-line', { method: 'POST', headers: requestHeaders(role), body: JSON.stringify({ catalogEntity, catalogRecordId, optionIds, quantity: 1 }) });",
-    "    if (!response.ok) throw new Error(await response.text());",
+    approval
+      ? "    if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));"
+      : "    if (!response.ok) throw new Error(await response.text());",
     "    return await response.json() as JsonRecord;",
     "  };",
     "  const checkoutCart = async () => {",
@@ -2929,11 +3176,15 @@ function renderPageRuntime(
     "    const paymentEvent = definition.commerce.paymentEvent;",
     "    if (!orderEntity || !paymentEvent || !cartId || !canTriggerEvent(role, orderEntity, paymentEvent)) throw new Error('Checkout is not available for your selected role.');",
     "    const orders = await fetch(\`/api/${orderEntity}\`, { headers: requestHeaders(role) });",
-    "    if (!orders.ok) throw new Error(await orders.text());",
+    approval
+      ? "    if (!orders.ok) throw new SafeUiError(safeResponseMessage(orders.status));"
+      : "    if (!orders.ok) throw new Error(await orders.text());",
     "    let order = (await orders.json() as readonly JsonRecord[]).find((candidate) => String(candidate.id) === cartId);",
     "    if (!order) throw new Error('The checkout cart no longer exists.');",
     "    const transitions = definition.flow.flows.find((flow) => flow.entity === orderEntity)?.transitions ?? [];",
-    "    const trigger = async (event: string) => { const response = await fetch(\`/api/${orderEntity}/${cartId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(orderEntity, order!, event) }); if (!response.ok) throw new Error(await response.text()); order = await response.json() as JsonRecord; };",
+    approval
+      ? "    const trigger = async (event: string) => { const response = await fetch(\`/api/${orderEntity}/${cartId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(orderEntity, order!, event) }); if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status)); order = await response.json() as JsonRecord; };"
+      : "    const trigger = async (event: string) => { const response = await fetch(\`/api/${orderEntity}/${cartId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(orderEntity, order!, event) }); if (!response.ok) throw new Error(await response.text()); order = await response.json() as JsonRecord; };",
     "    if (order.status === 'cart') { const submit = transitions.find((transition) => transition.from === 'cart' && transition.to === 'submitted'); if (!submit || !canTriggerEvent(role, orderEntity, submit.event)) throw new Error('The declared order flow cannot submit this cart.'); await trigger(submit.event); }",
     "    if (order.status === 'submitted') await trigger(paymentEvent);",
     "    if (order.status !== 'paid') throw new Error('The declared order flow did not reach a paid state.');",
@@ -2945,7 +3196,9 @@ function renderPageRuntime(
     "  const activePage = projection.pages.find((page) => page.route === requestedRoute);",
     "  if (!activePage) return <main className='generated-app' data-theme={definition.themeMode}><section className='generated-card'><p>Not found</p><h1>Declared route unavailable</h1><a href={projection.routeFallback.rootRoute ?? '/'}>Return to the application</a></section></main>;",
     "  const context: BlockContext = { role, formRouteByEntity, checkoutRoute, cartItems, cartId, reportError, addToCart, configureLine, checkoutCart };",
-    "  return <main className='generated-app' data-theme={definition.themeMode}><header className='generated-header'><div><p>Published Graph application</p><h1>{definition.applicationName}</h1></div><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></label></header><nav aria-label='Application routes'>{projection.navigation.map((item) => <a href={item.route} key={item.id}>{item.label}</a>)}</nav>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'>{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></main>;",
+    approval
+      ? "  return <main className='generated-app' data-theme={definition.themeMode}><header className='generated-header'><div><p>Requests and approvals</p><h1>{definition.applicationName}</h1></div><div><label htmlFor='demo-role'><ApprovalIcon name='user-round' />Demo role</label><select id='demo-role' value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></div></header><nav aria-label='Application routes'>{projection.navigation.map((item) => <a href={item.route} key={item.id}><ApprovalIcon name={item.route === projection.routeFallback.rootRoute ? 'house' : 'receipt-text'} />{item.label}</a>)}</nav>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'>{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></main>;"
+      : "  return <main className='generated-app' data-theme={definition.themeMode}><header className='generated-header'><div><p>Published Graph application</p><h1>{definition.applicationName}</h1></div><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></label></header><nav aria-label='Application routes'>{projection.navigation.map((item) => <a href={item.route} key={item.id}>{item.label}</a>)}</nav>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'>{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></main>;",
     "}",
     "",
   ].join("\n");
@@ -2993,7 +3246,10 @@ function renderWebProxyRoute(
   ].join("\n");
 }
 
-function renderWebStyles(graph: ApplicationGraphV1): string {
+function renderWebStyles(
+  graph: ApplicationGraphV1,
+  profile: GeneratedPresentationProfile,
+): string {
   // The generated application styles come entirely from the resolved
   // Experience Design System: every token group (colour, typography,
   // spacing, radius, elevation, motion) becomes a CSS variable, and the
@@ -3037,6 +3293,15 @@ function renderWebStyles(graph: ApplicationGraphV1): string {
     ".generated-stats { display: grid; gap: var(--factory-spacing-space-2); align-items: baseline; grid-auto-flow: column; justify-content: start; } .generated-stats strong { font-size: var(--factory-typography-font-size-xl); } .generated-stats span { color: var(--factory-muted); }",
     ".generated-calendar { display: grid; gap: var(--factory-spacing-space-4); padding: 0; margin: 0; list-style: none; } .generated-calendar > li { display: grid; gap: var(--factory-spacing-space-2); } .generated-calendar > li > strong { color: var(--factory-muted); text-transform: uppercase; font-size: var(--factory-typography-font-size-sm); }",
     "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
+    ...(profile === "approval-v1"
+      ? [
+          ".approval-icon { display: inline-flex !important; flex: 0 0 auto; width: 1.125rem; height: 1.125rem; vertical-align: middle; margin-inline-end: .4rem; } .approval-icon svg { width: 100%; height: 100%; }",
+          ".approval-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 1rem; width: 100%; min-width: 0; margin: 0; } .approval-values dt { color: var(--factory-muted); font-size: .875rem; } .approval-values dd { margin: .25rem 0 0; overflow-wrap: anywhere; } .approval-badge { display: inline-flex !important; align-items: center; width: fit-content; border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-base); padding: .25rem .5rem; } .approval-actions { display: flex; flex-wrap: wrap; gap: .5rem; } .approval-empty { display: grid; gap: .75rem; justify-items: start; }",
+          ".generated-card fieldset { display: grid; gap: 1rem; border: 0; margin: 0; padding: 0; min-width: 0; } .approval-field { display: grid; gap: .5rem; min-width: 0; } .approval-field textarea { font: inherit; resize: vertical; min-width: 0; width: 100%; padding: .5rem; background: var(--factory-surface); color: inherit; border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-base); } .approval-field input[type='checkbox'] { width: 1.5rem; height: 1.5rem; } .generated-header > div:last-child { min-width: 0; } .generated-header select { margin-top: .5rem; } .generated-app :is(a, button, input, select, textarea):focus-visible { outline: 3px solid var(--factory-accent); outline-offset: 3px; } .generated-card, .generated-records li { min-width: 0; } .generated-records li > p { width: 100%; overflow-wrap: anywhere; }",
+          ".generated-header label[for='demo-role'] { display: inline-flex; align-items: center; gap: .4rem; } .generated-header label[for='demo-role'] .approval-icon { margin-inline-end: 0; } .generated-app input:is([type='date'], [type='datetime-local']):focus-within { outline: 3px solid var(--factory-accent); outline-offset: 3px; }",
+          "@media (max-width: 720px) { .generated-app :is(a, button, input, select) { min-height: 44px; min-width: 44px; } .generated-app nav a, .approval-actions button { display: inline-flex; align-items: center; } .generated-header > div:last-child { width: 100%; } .approval-field input[type='checkbox'] { width: 44px; height: 44px; } }",
+        ]
+      : []),
     "",
   ].join("\n");
 }
@@ -3425,6 +3690,7 @@ export function generateApplicationBundle(
   const compilationInput = buildCompilationInput(input, options);
   const graph = compilationInput.graph;
   const rendererGraph = compilationInput.rendererGraph;
+  const presentationProfile = presentationProfileFor(graph);
   const {
     restaurantRuntimeEnabled,
     useGenericOrderOperationsPersistence,
@@ -3518,6 +3784,14 @@ export function generateApplicationBundle(
   );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
+    ...(presentationProfile === "approval-v1"
+      ? [
+          {
+            path: "THIRD_PARTY_NOTICES.md",
+            render: () => getCustomerIconAssets().notice,
+          },
+        ]
+      : []),
     {
       path: "package.json",
       render: () =>
@@ -3628,7 +3902,12 @@ export function generateApplicationBundle(
       render: () =>
         restaurantRuntimeEnabled
           ? renderRestaurantPageRuntime(rendererGraph)
-          : renderPageRuntime(graph, orderEntityKey, !!identityPolicy),
+          : renderPageRuntime(
+              graph,
+              orderEntityKey,
+              !!identityPolicy,
+              presentationProfile,
+            ),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -3658,7 +3937,7 @@ export function generateApplicationBundle(
     },
     {
       path: "web/app/globals.css",
-      render: () => renderWebStyles(rendererGraph),
+      render: () => renderWebStyles(rendererGraph, presentationProfile),
     },
     {
       path: "api/package.json",

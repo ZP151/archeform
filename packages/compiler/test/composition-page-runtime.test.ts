@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { transpileModule, ModuleKind, JsxEmit } from "typescript";
+import { getCustomerIconAssets } from "../src/targets/restaurant-v3/customer-icons.js";
+import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -21,6 +25,7 @@ import {
 import { createGeneratedPageRuntimeProjection } from "../src/page-runtime-projection.js";
 import {
   generateApplicationBundle,
+  generateRestaurantProductApplicationBundle,
   type PublishedGraphInput,
 } from "../src/index.js";
 
@@ -275,51 +280,416 @@ describe("composition page runtime round trip", () => {
       }
     });
 
-    it("emits a type-checkable runtime for the calendar product", async () => {
-      // The isolated preview build type-checks the emitted bundle (that is
-      // where the runtime bug was found), so the unit suite must catch a
-      // non-compiling emission before any pipeline run. The check runs inside
-      // this package so "react" resolves to the @types/react devDependency;
-      // the emitted file is otherwise self-contained.
-      const graph = await composedGraphFor(bookingBrief);
-      const bundle = generateApplicationBundle(bundleInputFor(graph));
-      const runtime = bundle.files.find(
-        (file) => file.path === "web/app/page-runtime.tsx",
-      );
-      expect(runtime).toBeDefined();
+    it.each([bookingBrief, expenseBrief])(
+      "emits a strictly type-checkable runtime for %s",
+      async (brief) => {
+        // The isolated preview build type-checks the emitted bundle (that is
+        // where the runtime bug was found), so the unit suite must catch a
+        // non-compiling emission before any pipeline run. The check runs inside
+        // this package so "react" resolves to the @types/react devDependency;
+        // the emitted file is otherwise self-contained.
+        const graph = await composedGraphFor(brief);
+        const bundle = generateApplicationBundle(bundleInputFor(graph));
+        const runtime = bundle.files.find(
+          (file) => file.path === "web/app/page-runtime.tsx",
+        );
+        expect(runtime).toBeDefined();
 
-      const directory = join(__dirname, ".typecheck", `runtime-${Date.now()}`);
-      mkdirSync(directory, { recursive: true });
-      generatedDirectories.push(directory);
-      writeFileSync(
-        join(directory, "tsconfig.json"),
-        JSON.stringify({
-          compilerOptions: {
-            noEmit: true,
-            strict: true,
-            target: "es2022",
-            module: "esnext",
-            moduleResolution: "bundler",
-            jsx: "react-jsx",
-            lib: ["es2022", "dom"],
-            skipLibCheck: true,
-            types: [],
-          },
-          include: ["page-runtime.tsx"],
+        const directory = join(
+          __dirname,
+          ".typecheck",
+          `runtime-${Date.now()}`,
+        );
+        mkdirSync(directory, { recursive: true });
+        generatedDirectories.push(directory);
+        writeFileSync(
+          join(directory, "tsconfig.json"),
+          JSON.stringify({
+            compilerOptions: {
+              noEmit: true,
+              strict: true,
+              target: "es2022",
+              module: "esnext",
+              moduleResolution: "bundler",
+              jsx: "react-jsx",
+              lib: ["es2022", "dom"],
+              skipLibCheck: true,
+              types: [],
+            },
+            include: ["page-runtime.tsx"],
+          }),
+        );
+        writeFileSync(
+          join(directory, "page-runtime.tsx"),
+          runtime?.content ?? "",
+        );
+
+        const tsc = require.resolve("typescript/bin/tsc");
+        const check = spawnSync(
+          process.execPath,
+          [tsc, "--noEmit", "-p", join(directory, "tsconfig.json")],
+          { encoding: "utf8" },
+        );
+        expect(check.status, check.stderr + check.stdout).toBe(0);
+      },
+    );
+  });
+});
+
+function nonApprovalGraph(): ApplicationGraphV1 {
+  const graph = structuredClone(
+    createBlankApplicationDraft({
+      applicationId: "non-approval",
+      workspaceId: "local-workspace",
+      name: "Request tracker",
+    }).graph,
+  );
+  graph.domain.entities = [
+    {
+      key: "request",
+      label: "Request",
+      indexes: [],
+      fields: [{ key: "title", type: "string", required: true }],
+    },
+  ];
+  graph.page = {
+    pages: [
+      {
+        id: "requests",
+        route: "/requests",
+        title: "Requests",
+        blocks: [
+          { id: "requests-list", type: "collection", entity: "request" },
+        ],
+      },
+    ],
+    navigation: [{ id: "requests-nav", label: "Requests", pageId: "requests" }],
+  };
+  return graph;
+}
+
+function orderedBundleDigest(
+  files: readonly { readonly path: string; readonly content: string }[],
+): string {
+  return createHash("sha256")
+    .update(JSON.stringify(files.map(({ path, content }) => [path, content])))
+    .digest("hex");
+}
+
+function runtimeFor(graph: ApplicationGraphV1): string {
+  return generateApplicationBundle(bundleInputFor(graph)).files.find(
+    (file) => file.path === "web/app/page-runtime.tsx",
+  )!.content;
+}
+
+describe("approval presentation compatibility", () => {
+  it("freezes ordered legacy bundles before the approval change", async () => {
+    const restaurant = restaurantProductV3Fixture();
+    const digests = {
+      appointment: orderedBundleDigest(
+        generateApplicationBundle(
+          bundleInputFor(await composedGraphFor(bookingBrief)),
+        ).files,
+      ),
+      nonApproval: orderedBundleDigest(
+        generateApplicationBundle(bundleInputFor(nonApprovalGraph())).files,
+      ),
+      restaurant: orderedBundleDigest(
+        generateRestaurantProductApplicationBundle({
+          publishedGraph: restaurant.publishedGraph,
+          compositionLock: restaurant.compositionLock,
+        }).files,
+      ),
+    };
+    expect(digests).toEqual({
+      appointment:
+        "b4fc337106c8f005766922c3455cc9c514274f0fb317be38d514b4875c7623ba",
+      nonApproval:
+        "7166ed888c49123210dd2e91f2eead02f16203d27cc6c3db9d4e86e5ae35e9e6",
+      restaurant:
+        "4f04d9026038e4bf86bc052e8075e9f15a0ee332ff6eb0a53371db0c556aace3",
+    });
+  });
+});
+
+function approvalModule(runtime: string) {
+  const source =
+    runtime +
+    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, EntityRecords, definition };";
+  const compiled = transpileModule(source, {
+    compilerOptions: { module: ModuleKind.CommonJS, jsx: JsxEmit.ReactJSX },
+  }).outputText;
+  const exports: Record<string, any> = {};
+  const reactRequire = (name: string) =>
+    require(
+      require.resolve(name, {
+        paths: [join(__dirname, "../../../apps/workbench")],
+      }),
+    );
+  new Function("require", "exports", compiled)(reactRequire, exports);
+  return { exports, compiled };
+}
+
+describe("approval runtime behavior", () => {
+  it("selects only an unambiguous structural approval flow independent of naming or order", async () => {
+    const graph = await composedGraphFor(expenseBrief);
+    expect(runtimeFor(graph)).toContain("Requests and approvals");
+    const renamed = structuredClone(graph);
+    renamed.metadata.name = "Appointment booking";
+    renamed.domain.entities.reverse();
+    renamed.flow.flows.reverse();
+    for (const flow of renamed.flow.flows) flow.transitions.reverse();
+    expect(runtimeFor(renamed)).toContain("Requests and approvals");
+    const noApproval = structuredClone(graph);
+    for (const flow of noApproval.flow.flows)
+      flow.transitions = flow.transitions.filter(
+        (transition) => transition.event !== "reject",
+      );
+    expect(runtimeFor(noApproval)).not.toContain("Requests and approvals");
+    const ambiguous = structuredClone(graph);
+    ambiguous.flow.flows.push({
+      ...structuredClone(graph.flow.flows[0]!),
+      id: "other-approval",
+    });
+    expect(runtimeFor(ambiguous)).not.toContain("Requests and approvals");
+    expect(runtimeFor(nonApprovalGraph())).not.toContain(
+      "Requests and approvals",
+    );
+    expect(runtimeFor(await composedGraphFor(bookingBrief))).not.toContain(
+      "Requests and approvals",
+    );
+  });
+
+  it("converts typed values and validates impossible dates before submission in both timezones", async () => {
+    const { exports: runtime, compiled } = approvalModule(
+      runtimeFor(await composedGraphFor(expenseBrief)),
+    );
+    const fields = [
+      { key: "amount", type: "decimal", required: true },
+      { key: "count", type: "integer", required: true },
+      { key: "isRequired", type: "boolean", required: true },
+      { key: "isOptional", type: "boolean", required: false },
+      { key: "date", type: "date", required: true },
+      { key: "notes", type: "text", required: false },
+      { key: "metadata", type: "json", required: false },
+      {
+        key: "category",
+        type: "enum",
+        values: ["travel", "other"],
+        required: true,
+      },
+    ];
+    const values = {
+      amount: "128.50",
+      count: "2",
+      date: "2026-09-09",
+      notes: "",
+      metadata: '{"ok":true}',
+      category: "travel",
+    };
+    expect(runtime.formPayload(fields, values)).toEqual({
+      amount: 128.5,
+      count: 2,
+      isRequired: false,
+      isOptional: false,
+      date: "2026-09-09T00:00:00.000Z",
+      metadata: { ok: true },
+      category: "travel",
+    });
+    expect(
+      runtime.formPayload(fields, { ...values, isRequired: true }).isRequired,
+    ).toBe(true);
+    for (const [key, value] of [
+      ["amount", "Infinity"],
+      ["count", "1.5"],
+      ["metadata", "{"],
+      ["category", "invented"],
+      ["date", "2026-02-30"],
+    ]) {
+      expect(() =>
+        runtime.formPayload(fields, { ...values, [key!]: value }),
+      ).toThrow(runtime.fieldLabel(key));
+    }
+    expect(runtime.fieldLabel("receiptURL_value-name")).toBe(
+      "Receipt url value name",
+    );
+    for (const timezone of ["UTC", "America/Los_Angeles"]) {
+      const script = `const out = {}; new Function('require','exports', ${JSON.stringify(compiled)})(name => require(require.resolve(name, { paths: [${JSON.stringify(join(__dirname, "../../../apps/workbench"))}] })), out); const values = ['2026-09-09','2024-02-29','2026-02-29','2026-02-30','2026-13-01','2026-9-09','not-a-date','2026-09-09T00:00:00Z']; process.stdout.write(JSON.stringify(values.map(value => { try { return out.calendarDateToPrisma(value); } catch { return 'invalid'; } })));`;
+      const check = spawnSync(process.execPath, ["-"], {
+        input: script,
+        encoding: "utf8",
+        env: { ...process.env, TZ: timezone },
+      });
+      expect(check.status, check.stderr).toBe(0);
+      expect(JSON.parse(check.stdout)).toEqual([
+        "2026-09-09T00:00:00.000Z",
+        "2024-02-29T00:00:00.000Z",
+        "invalid",
+        "invalid",
+        "invalid",
+        "invalid",
+        "invalid",
+        "invalid",
+      ]);
+    }
+  });
+
+  it("renders native controls, declared values, and role-and-state valid actions", async () => {
+    const graph = await composedGraphFor(expenseBrief);
+    const { exports: runtime } = approvalModule(runtimeFor(graph));
+    for (const [type, tag, htmlType] of [
+      ["string", "input", "text"],
+      ["text", "textarea", undefined],
+      ["json", "textarea", undefined],
+      ["integer", "input", "number"],
+      ["decimal", "input", "number"],
+      ["boolean", "input", "checkbox"],
+      ["date", "input", "date"],
+      ["datetime", "input", "datetime-local"],
+      ["email", "input", "email"],
+      ["url", "input", "url"],
+      ["enum", "select", undefined],
+    ]) {
+      const control = runtime.FieldControl({
+        field: { key: "example", type, required: true, values: ["one", "two"] },
+        value: "",
+        onChange: () => {},
+        id: "example",
+      });
+      expect(control.type).toBe(tag);
+      expect(control.props.type).toBe(htmlType);
+      expect(control.props.required).toBe(
+        type === "boolean" ? undefined : true,
+      );
+      if (type === "boolean") expect(control.props.checked).toBe(false);
+      if (type === "integer") expect(control.props.step).toBe(1);
+      if (type === "decimal") expect(control.props.step).toBe("any");
+    }
+    expect(runtime.formatValue({ type: "boolean" }, false)).toBe("No");
+    expect(runtime.formatValue({ type: "text" }, null)).toBe("Not provided");
+    const date = runtime.formatValue(
+      { type: "date" },
+      "2026-09-09T00:00:00.000Z",
+    );
+    expect(date.type).toBe("time");
+    expect(date.props.children).toBe("2026-09-09");
+    const flow = graph.flow.flows.find((candidate) =>
+      candidate.transitions.some(
+        (transition) => transition.event === "approve",
+      ),
+    )!;
+    const submit = flow.transitions.find(
+      (transition) => transition.event === "submit",
+    )!;
+    const approve = flow.transitions.find(
+      (transition) => transition.event === "approve",
+    )!;
+    expect(
+      runtime
+        .validTransitions(submit.roles![0], flow.entity, submit.from)
+        .map((transition: any) => transition.event),
+    ).toEqual(["submit"]);
+    expect(
+      runtime.validTransitions(submit.roles![0], flow.entity, approve.from),
+    ).toEqual([]);
+    expect(
+      runtime
+        .validTransitions(approve.roles![0], flow.entity, approve.from)
+        .map((transition: any) => transition.event)
+        .sort(),
+    ).toEqual(["approve", "reject"]);
+    expect(
+      runtime.validTransitions(approve.roles![0], flow.entity, approve.to),
+    ).toEqual([]);
+  });
+
+  it("keeps native date focus visible and the demo role label in one row", async () => {
+    const graph = await composedGraphFor(expenseBrief);
+    const styles = generateApplicationBundle(bundleInputFor(graph)).files.find(
+      (file) => file.path === "web/app/globals.css",
+    )!.content;
+    expect
+      .soft(styles)
+      .toMatch(
+        /input:is\(\[type='date'\], \[type='datetime-local'\]\):focus-within[^{}]*\{[^}]*outline: 3px solid var\(--factory-accent\)/,
+      );
+    expect
+      .soft(styles)
+      .toMatch(
+        /label\[for='demo-role'\]\s*\{[^}]*display: inline-flex;[^}]*align-items: center/,
+      );
+  });
+
+  it("renders one refresh icon and sentence-case labels", async () => {
+    const { exports: runtime } = approvalModule(
+      runtimeFor(await composedGraphFor(expenseBrief)),
+    );
+    expect.soft(runtime.fieldLabel("dueDate")).toBe("Due date");
+    expect(runtime.fieldLabel("review_status-code")).toBe("Review status code");
+    const resolveReact = (name: string) =>
+      require(
+        require.resolve(name, {
+          paths: [join(__dirname, "../../../apps/workbench")],
         }),
       );
-      writeFileSync(
-        join(directory, "page-runtime.tsx"),
-        runtime?.content ?? "",
-      );
+    const { createElement } = resolveReact("react");
+    const { renderToStaticMarkup } = resolveReact("react-dom/server");
+    const entity = runtime.definition.entities.find(
+      (candidate: any) => candidate.key === "expense",
+    );
+    const markup = renderToStaticMarkup(
+      createElement(runtime.EntityRecords, {
+        block: { id: "expenses", type: "collection", props: {} },
+        entity,
+        role: "employee",
+        reportError: () => {},
+      }),
+    );
+    expect(markup.match(/lucide-refresh-cw/g)).toHaveLength(1);
+  });
 
-      const tsc = require.resolve("typescript/bin/tsc");
-      const check = spawnSync(
-        process.execPath,
-        [tsc, "--noEmit", "-p", join(directory, "tsconfig.json")],
-        { encoding: "utf8" },
+  it("embeds the seven fixed decorative assets and exact notice with deterministic safe output", async () => {
+    const graph = await composedGraphFor(expenseBrief);
+    const bundle = generateApplicationBundle(bundleInputFor(graph));
+    expect(generateApplicationBundle(bundleInputFor(graph)).files).toEqual(
+      bundle.files,
+    );
+    const { exports: runtime } = approvalModule(runtimeFor(graph));
+    for (const key of [
+      "house",
+      "receipt-text",
+      "user-round",
+      "refresh-cw",
+      "clock",
+      "circle-check",
+      "circle-x",
+    ] as const) {
+      const icon = runtime.ApprovalIcon({ name: key });
+      expect(icon.props.dangerouslySetInnerHTML.__html).toBe(
+        getCustomerIconAssets().icons[key],
       );
-      expect(check.status, check.stderr + check.stdout).toBe(0);
-    });
+      expect(icon.props["aria-hidden"]).toBe(true);
+    }
+    expect(runtime.ApprovalIcon({ name: "constructor" })).toBeNull();
+    expect(runtime.actionIcon("submit")).toBe("receipt-text");
+    expect(runtime.actionIcon("approve")).toBe("circle-check");
+    expect(runtime.actionIcon("reject")).toBe("circle-x");
+    expect(runtime.actionIcon("other")).toBeNull();
+    expect(
+      bundle.files.filter((file) => file.path === "THIRD_PARTY_NOTICES.md"),
+    ).toEqual([
+      {
+        path: "THIRD_PARTY_NOTICES.md",
+        content: getCustomerIconAssets().notice,
+      },
+    ]);
+    expect(
+      bundle.files.find((file) => file.path === "web/package.json")!.content,
+    ).not.toContain("lucide");
+    for (const status of [400, 409, 401, 403, 500, 503, 418])
+      expect(runtime.safeResponseMessage(status)).toMatch(
+        /record|role|service|again/i,
+      );
+    expect(runtimeFor(graph)).not.toContain("await response.text()");
   });
 });

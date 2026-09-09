@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { parseCompositionPlan } from "@factory/graph";
+import { consumerFamilyFor, type ConsumerFamily } from "./consumer-family";
 
 import type { ProductJourneyController } from "./use-product-journey";
 import type {
@@ -9,11 +9,12 @@ import type {
 } from "./use-release-journey";
 
 /**
- * The short-lived consumer bridge for the one accepted Restaurant default.
+ * The short-lived consumer bridge for the accepted consumer families.
  * It owns no server state: it only advances the existing product and release
  * controllers after their preceding authoritative state has succeeded.
  */
 export interface ConsumerGenerationController {
+  readonly family: ConsumerFamily | null;
   readonly suppliedMenu: boolean;
   readonly manualReview: boolean;
   readonly setManualReview: (manual: boolean) => void;
@@ -32,57 +33,6 @@ type Input = {
   }) => Promise<ReleaseTarget | null>;
 };
 
-function sessionKeyOf(state: ProductJourneyController["state"]): string | null {
-  const reviewId = state.review?.id;
-  const productType = state.interpretation?.interpretation.spec.productType;
-  return reviewId !== undefined && productType === "restaurant-ordering"
-    ? `${reviewId}@${productType}`
-    : null;
-}
-
-function hasOneStandardAlternative(journey: ProductJourneyController): boolean {
-  const alternatives = journey.state.alternatives;
-  if (
-    journey.openQuestions.length !== 0 ||
-    alternatives === null ||
-    !Array.isArray(alternatives) ||
-    alternatives.length === 0 ||
-    alternatives.length > 2
-  ) {
-    return false;
-  }
-  const keys = new Set<string>();
-  for (const alternative of alternatives) {
-    if (
-      alternative === null ||
-      typeof alternative !== "object" ||
-      Array.isArray(alternative)
-    ) {
-      return false;
-    }
-    const candidate = alternative as unknown as {
-      readonly key?: unknown;
-      readonly label?: unknown;
-      readonly plan?: unknown;
-    };
-    if (
-      (candidate.key !== "standard" && candidate.key !== "minimal") ||
-      keys.has(candidate.key) ||
-      typeof candidate.label !== "string" ||
-      candidate.label.length === 0
-    ) {
-      return false;
-    }
-    try {
-      parseCompositionPlan(candidate.plan);
-    } catch {
-      return false;
-    }
-    keys.add(candidate.key);
-  }
-  return keys.has("standard");
-}
-
 function isLoopbackPreviewUrl(url: string | null | undefined): url is string {
   if (url === null || url === undefined) return false;
   try {
@@ -100,30 +50,34 @@ function isLoopbackPreviewUrl(url: string | null | undefined): url is string {
   }
 }
 
-function statusFor(release: ReleaseJourneyController["release"]): string {
+function statusFor(
+  release: ReleaseJourneyController["release"],
+  family: ConsumerFamily | null,
+): string {
+  const label = family === "approval" ? "Approval" : "Restaurant";
   switch (release?.phase) {
     case "publishing":
-      return "Preparing your Restaurant app…";
+      return `Preparing your ${label} app…`;
     case "compiling":
-      return "Building your Restaurant app…";
+      return `Building your ${label} app…`;
     case "verifying":
-      return "Checking your Restaurant app…";
+      return `Checking your ${label} app…`;
     case "starting-preview":
-      return "Starting your local Restaurant app…";
+      return `Starting your local ${label} app…`;
     case "preview":
-      return "Your local Restaurant app is ready.";
+      return `Your local ${label} app is ready.`;
     case "failed":
       return "Delivery paused. Review the delivery and try again.";
     case "cleaned-up":
-      return "Your local Restaurant preview has stopped.";
+      return `Your local ${label} preview has stopped.`;
     default:
-      return "Preparing your Restaurant app…";
+      return `Preparing your ${label} app…`;
   }
 }
 
 /**
- * Automatically selects only the deterministic Restaurant `standard` plan,
- * applies the fresh V3 Draft, then advances the existing local lifecycle one
+ * Automatically selects only an eligible deterministic `standard` plan,
+ * applies the exact fresh Draft, then advances the existing local lifecycle one
  * phase at a time. Refs are session and phase latches, so React StrictMode,
  * repeated renders, late work, and a changed target cannot duplicate calls.
  */
@@ -136,6 +90,7 @@ export function useConsumerGeneration({
   const [manualReview, setManualReview] = useState(false);
   const [target, setTarget] = useState<ReleaseTarget | null>(null);
   const [targetSuppliedMenu, setTargetSuppliedMenu] = useState(false);
+  const [targetFamily, setTargetFamily] = useState<ConsumerFamily | null>(null);
   const [adoptionFailureSession, setAdoptionFailureSession] = useState<
     string | null
   >(null);
@@ -147,7 +102,10 @@ export function useConsumerGeneration({
   const awaitingReleaseTargetRef = useRef<string | null>(null);
   const latestTargetKeyRef = useRef<string | null>(null);
 
-  const sessionKey = sessionKeyOf(journey.state);
+  const family = consumerFamilyFor(journey);
+  const reviewId = journey.state.review?.id;
+  const sessionKey =
+    reviewId !== undefined && family !== null ? `${reviewId}@${family}` : null;
   const journeyBusy = journey.busy;
   latestSessionRef.current = sessionKey;
 
@@ -158,11 +116,7 @@ export function useConsumerGeneration({
     };
   }, []);
 
-  const eligible =
-    !manualReview &&
-    journey.state.interpretation?.interpretation.spec.productType ===
-      "restaurant-ordering" &&
-    hasOneStandardAlternative(journey);
+  const eligible = !manualReview && family !== null;
 
   useEffect(() => {
     if (
@@ -207,6 +161,7 @@ export function useConsumerGeneration({
       setTargetSuppliedMenu(
         journey.state.interpretation?.businessParameters?.mode === "provided",
       );
+      setTargetFamily(family);
       setTarget(freshTarget);
       awaitingReleaseTargetRef.current = `${freshTarget.applicationGraphId}@${freshTarget.draftRevisionId}`;
       journey.reset();
@@ -215,6 +170,7 @@ export function useConsumerGeneration({
     adoptionFailureSession,
     applyComposedProduct,
     eligible,
+    family,
     journey,
     journeyBusy,
     sessionKey,
@@ -331,7 +287,11 @@ export function useConsumerGeneration({
       (journey.state.stage === "applied" &&
         applyingSessionRef.current === sessionKey));
 
+  const activeFamily = target !== null ? targetFamily : family;
+  const label = activeFamily === "approval" ? "Approval" : "Restaurant";
+
   return {
+    family: activeFamily,
     suppliedMenu:
       target !== null
         ? targetSuppliedMenu
@@ -342,11 +302,14 @@ export function useConsumerGeneration({
     status:
       target === null
         ? adoptionFailureSession === sessionKey
-          ? "Delivery paused. Start a new Restaurant request to try again."
+          ? `Delivery paused. Start a new ${label} request to try again.`
           : automaticInFlight
-            ? "Preparing your Restaurant app…"
+            ? `Preparing your ${label} app…`
             : null
-        : statusFor(releaseMatchesTarget ? release.release : null),
+        : statusFor(
+            releaseMatchesTarget ? release.release : null,
+            activeFamily,
+          ),
     readyUrl,
     retry,
   };

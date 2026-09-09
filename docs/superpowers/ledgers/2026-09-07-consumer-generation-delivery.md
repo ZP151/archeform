@@ -1901,3 +1901,436 @@ Restaurant polish or catalog-count expansion. The first real sample remains
 2/3 supported successes plus unsupported 1/1; corrected runtime acceptance does
 not rewrite that measurement. Ordinary-user trials, cold starts, cross-device
 hosting and the separate main Candidate baseline remain open.
+
+## H1 / D2 continuation — 2026-09-09
+
+The founder explicitly requested continued roadmap iteration driven by a new
+long-task goal. D1.10 delivery is verified at
+`2c2815c0c21723c563e83f56c054491300681608`; the iteration worktree started clean.
+The new goal covers a concrete hosted-delivery decision/external prerequisites
+and the next authorized intake/approval consumer slice, with useful role-journey
+evidence and bounded branch delivery. It does not grant cloud provisioning or
+claim hosted acceptance from a local result.
+
+PM dispatches Tech Lead `h1_hosted_decision` to read the current technology and
+threat-model authorities and own only proposed
+`docs/adr/adr-0047-invited-hosted-delivery.md` (after checking vacancy). No code,
+acceptance, provider/resource/credential mutation or Git write is assigned.
+Spark explorer `d2_approval_explore` has read-only ownership of a bounded reuse
+and test map for existing Expense Approval and the common consumer journey.
+Root owns this ledger, plan/status reconciliation and D2 scope definition.
+There is no production write wave yet. The already approved roadmap is the
+product design authority; ordinary reversible implementation choices do not
+require another founder confirmation. Any new shared/security/runtime contract
+still needs its exact accepted technology decision.
+
+Spark exploration was unavailable because the model quota is exhausted through
+September 15; it made no changes. Root takes over bounded exploration without
+waiting for a quota reset. Existing Expense Approval uses the generic validated
+blueprint/composer and core approval/workflow/identity assets; the consumer hook
+is Restaurant-only and generic apply currently returns no fresh release target.
+
+PM dispatches Tech Lead `d2_consumer_decision`, owning only proposed
+`docs/adr/adr-0048-approval-consumer-orchestration.md`, to freeze the smallest
+Workbench-only extension: semantic approval eligibility over the existing
+validated blueprint/standard plan, exact fresh V1 Draft binding, reused local
+release orchestration and family-appropriate business copy. No production
+writes are authorized until the exact decision is accepted. The private generic
+identity/runtime limits must be inspected rather than silently treating local
+demo roles as hosted authentication. H1 and D2 decision documents have disjoint
+ownership; all production and shared-contract integration remain serialized.
+
+The Tech Lead finalized proposed ADR-0048 (KEEP), SHA-256
+`dab46a99706a22d24c10f3c1403ae867a801780f4133d61e24f1994332a4d38b`.
+PM dispatches independent read-only Sol `d2_decision_review` for the existing
+standing founder gate. The actual generic catalog does not select
+`core.approvals`; the proposal reuses its current workflow/policy locks and
+structural submit/decision semantics instead of adding an unnecessary asset.
+The detailed D2.1 execution plan is
+`docs/superpowers/plans/2026-09-09-approval-consumer-delivery.md`. The existing
+consumer/controller/Home baseline passed 33 tests in 3 files, 28.09 s, before
+implementation. Existing controller tests emit React act warnings; updating
+their race coverage may correct those test boundaries without a separate gate.
+
+Root confirmed the generic generated runtime still displays raw record JSON,
+uses text inputs for all field types and clears forms without success feedback.
+These are concrete D2.2 usability gaps, not evidence of missing UI dependencies.
+D2.1 acceptance removes technical handoffs and proves the demo role journey;
+it does not close presentation, authenticated privacy or hosted readiness.
+
+H1 Tech Lead completed proposed ADR-0047, SHA-256
+`b3c558f2a98a580d226dea8dcb7d9486810b3798959a836c8378ea9f778c98c2`,
+recommending an invited single-app hosted experiment. It is not accepted:
+provider/account/region/hostname/invite/spend and deployment authority remain
+external founder choices. The optional infrastructure preference question has
+no reply yet; the proposal assumes no existing infrastructure, not approval.
+
+While D2.1 proceeds, PM assigns Tech Lead `h1_hosted_decision` a new disjoint
+proposal-only task: `docs/adr/adr-0049-generated-approval-usability.md`, after
+checking vacancy. It must reuse approved UI patterns and existing generated
+blocks to address the confirmed raw-JSON, typed-input, current-state action and
+feedback gaps. No compiler or other production write is authorized by this
+dispatch; it keeps the next functional correction ready without widening the
+current implementation wave.
+
+### ADR-0048 accepted; D2.1 implementation assigned
+
+Independent read-only Sol `d2_decision_review` verified exact ADR-0048 SHA-256
+`dab46a99706a22d24c10f3c1403ae867a801780f4133d61e24f1994332a4d38b`,
+reported P0/P1/P2 0/0/0 and `APPROVED_FOR_STANDING_ACCEPTANCE: yes`.
+It confirmed all six decision-gate requirements and the canonical Expense
+fixture against actual current standard locks/bindings. PM records founder
+acceptance under the September 1 standing policy in `docs/tech-governance.md`.
+This accepts the bounded reversible proposal, not an implementation or any
+external action.
+
+PM authorizes strongest-model `d21_lifecycle` as sole production writer for
+ADR-0048 MIG-002's eight Workbench paths. The initial worker dispatch failed
+before work because its default Spark quota was exhausted; it made no edits.
+The new strongest-model assignment follows AGENTS' lifecycle requirement.
+Root owns MIG-003's four fixture/browser/E2E paths and this plan/ledger/status.
+The local family interface is frozen as in ADR-0048 PRO-013; root fixtures
+consume it without altering production. Browser execution and runtime smoke
+are serialized after source freeze. No shared/backend/compiler/identity wave
+is authorized. Use focused RED/GREEN, affected package checks and one
+independent in-contract review; a discovered boundary change stops this scope.
+
+Root's provider-free browser RED reproduced the same missing handoff: the
+new approval fixture stopped after interpretation/review/plan, without choice,
+apply or Draft open. It uses the real complete Expense interpretation and
+standard composition, not Restaurant metadata relabeled as approval. The
+four new browser cases cover automatic V1 delivery, a missing reviewer read
+grant, manual Page Studio retention and a newer Draft revision refusal.
+
+The actual business harness `e2e/consumer-approval.spec.ts` uses deterministic
+interpretation only, with real composition, Publish, Compilation, verification
+and generated services. It is frozen to two synthetic requests, both decision
+outcomes, denied requester approval and requester-visible persisted results.
+Root owns temporary Compose project `factory-t9-consumer-d21-20260909` with
+loopback PostgreSQL 15440, Redis 16380, Control Plane 13020 and Workbench 15180.
+The ignored D2 plan workspace holds its exact override. PostgreSQL/Redis are
+started; unchanged Control Plane/worker sources are being rebuilt for this
+acceptance. No cloud action or model-provider call has occurred.
+
+D2.1 focused implementation GREEN is 57 tests in 4 files (8.95 s), with
+typecheck (7.02 s), owned-path formatting and whitespace checks passing.
+Additional focused RED/GREEN closed an obsolete scheduled initial bootstrap
+retry and a manual-save regression: only automatic apply retains the explicit
+consumer release target; a manual save continues to select the latest remote
+Draft revision. The final controller SHA-256 is
+`44ca34986fd86d0073e06d5ff28807392510780228b000a8385e5f6dbd2608a7`.
+Root's ignored `d21-final-source-freeze.json` binds all 12 code/test paths.
+
+The 17 provider-free browser cases passed in 41.9 s: 4 new approval, 5 existing
+Restaurant and 8 recovery cases. Their unchanged automatic/manual entry paths
+are retained with fresh focused evidence for the subsequent manual-save-only
+correction. Full Workbench regression then passed 579 tests in 47 files,
+17.05 s. Existing shell-test act/DNS warnings remain; no unrelated warning
+cleanup wave is assigned. Root is rebuilding the final Workbench image after the
+manual-save correction before actual runtime acceptance.
+
+Independent Sol `d21_review` owns one read-only in-contract review of the 12
+frozen paths. It has the exact accepted ADR, plan, focused and package evidence;
+runtime acceptance is still pending and cannot be inferred from the mocks.
+
+The first actual D2.1 attempt compiled successfully but verification failed
+with `runtime.preview_artifact_failed`. Root's isolated test override had
+incorrectly carried forward the Restaurant-only acceptance profile, whose
+admission requires kitchen/cashier services absent from a generic approval
+bundle. The failed verification is retained on immutable compilation
+`cmtu417s6000do14tg49xvkqp`. No preview resources started. Root removed the
+test-only profile setting and verified that its environment key is absent in
+the recreated worker; production runner and compiler are unchanged. The test
+worker was stopped after the terminal failure because its original ready wait
+would continue until timeout. The harness now fails promptly on terminal paused
+delivery; the interrupted first result is not represented as a pass. A fresh
+provider-free replay under the correct default profile is in progress.
+
+The independent review found one P1: Graph import did not invalidate the
+consumer request/target, so an import and automatic apply could overwrite each
+other or leave release on an older Draft. PM assigns `d21_lifecycle` the scoped
+controller/test correction with focused late-apply/import, active-target/import
+and late-import supersession cases. No other code-level P1/P2 was found. This
+is the same in-contract review/fix cycle, not a new architecture gate.
+
+Tech Lead completed proposed D2.2 ADR-0049 and revised it to reuse the already
+accepted hash-checked Lucide icons, with no new dependency or source copy.
+Current proposed hash is
+`ca30adb1281cc948fb79427a460086a76d84825d33f48663721b073ff8ae331e`.
+It remains unaccepted pending actual D2.1 presentation evidence and the existing
+standing independent decision gate. No compiler writer is assigned yet.
+
+D2.1 scoped import P1 is corrected. The final controller/test SHA-256 values
+are `da1554928bee274ca6aad7ce990abcf17f537214d7e25945987e2a5e80b6abd5`
+and `9aafc537bd0ec694207abba7ac184a792bca61d7fe29c08f06a882fe5f472b13`.
+Nine focused RED cases reproduced pending/late import hazards, then controller
+24/24 and affected 67/67 in four files passed (9.43 s). The final type-only test
+correction passed controller 24/24 again and typecheck (5.97 s). Independent
+`d21_review` rechecked the exact two hashes and found no remaining code finding.
+Final Workbench production build exited zero, including Next compilation,
+static generation, lint and types. Prior 17-browser and 579-package evidence
+is reused for unchanged paths; the runtime Docker image predates only the
+import correction, which the runtime's automatic Describe entry does not use.
+
+The second actual-runtime attempt exposed a test fixture identity collision
+with the preserved failed application. The harness now rebinds each fixture to
+a fresh requirement ID and matching blueprint checksum. The third attempt
+passed real compilation, all ten generated verification steps and preview
+startup, then stalled on the test's exact `Role` label selector. A separate
+read-only Playwright probe reproduced that selector timeout; the existing
+`generated-expense` harness uses the non-exact label. Root aligned this harness
+and capped normal browser actions at 30 seconds. The known worker was stopped,
+and its exact preview stop API removed the temporary container set. All three
+unsuccessful attempts remain separate; none is a business pass. The fourth
+unique-application replay runs with zero automatic retries.
+
+ADR-0049's final proposed hash is
+`b3d8fc88d5308c0441039db641a008e0c7c97d8c4651a8f1594ebad2bdcbf142`.
+It clarifies valid unchecked booleans, approval-only `Requests and approvals`
+and `Demo role` copy, and safe status-only failures for record loads as well
+as mutations. Independent `d2_decision_review` may assess the proposal now;
+standing acceptance remains conditional on successful D2.1 actual business
+and rough-presentation evidence. No compiler implementation is authorized yet.
+
+D2.1 actual fourth browser run fails at request creation after successful
+single Publish/Compile/Verify/Preview (178,747 ms to the failed business step).
+Its finally cleanup removed the exact preview. Root reopened that same immutable
+compilation `cmtu4qdcd004lo14te4ak8c77` only for bounded diagnosis, not another
+interpretation or compilation. A four-case real API matrix proves the cause:
+calendar-only date strings fail with the existing 403 ISO date error regardless
+of numeric or string amount; UTC-midnight ISO dates succeed (201) with both
+amount representations. The generated form passes a calendar-only string to
+the existing Prisma DateTime field without conversion. This is a product P1.
+
+A distinct API-only diagnostic journey then created two synthetic requests,
+submitted both, denied requester approval (403), approved/rejected as manager,
+and read both final states as requester. This is backend role/workflow evidence,
+not successful UI delivery. Root inspected synthetic baseline form and result
+screens at 390/768/1440 px: raw JSON records, text-only date/enum controls and no
+icons reproduce the D2.2 gaps. No horizontal overflow was found. Screens are
+local evidence in `docs/acceptance/evidence/consumer-approval`.
+
+The sole independent D2.1 review closes the import finding but retains the real
+creation P1; D2.1 is not accepted for business delivery and is not committed as
+passing work. PM prioritizes the already planned D2.2 correction. Tech Lead is
+revising the same proposed ADR-0049 to explicitly serialize valid calendar dates
+to UTC midnight ISO and replace its impossible prerequisite of an already
+working form with the reproduced UI failure plus distinct successful API role
+journey. Final implementation acceptance still requires the complete unassisted
+UI business journey. No Graph, API, server status, identity or database change
+is proposed. The single independent decision reviewer will recheck only those
+changed proposal clauses before the compiler writer starts.
+
+### D2.2 standing decision acceptance and serialized implementation
+
+Independent non-author/non-writer Sol `d2_decision_review` verified revised
+ADR-0049 SHA-256
+`9f56c6aced1f46b935e10d0031cc15084ede423a2c89ecd2dc9653f3028fdca5`,
+reused its clean six-item decision review, and rechecked the changed date,
+prerequisite and evidence clauses with P0/P1 0/0 and
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`. PM records founder acceptance under
+the September 1 standing policy in `docs/tech-governance.md`. This accepts the
+bounded reversible client correction; it does not accept its implementation,
+UI business journey, or any external action.
+
+PM assigns fresh strongest-model `d22_compiler` as sole writer of exactly
+`packages/compiler/src/index.ts`,
+`packages/compiler/test/composition-page-runtime.test.ts`, and
+`e2e/generated-expense.spec.ts`. Root owns the later serialized update to
+`e2e/consumer-approval.spec.ts`, temporary runtime/evidence, plan/ledger/status
+and Git. No other compiler, Graph/API, capability, package, database, Compose,
+identity or helper path may change. The existing consumer paths remain frozen.
+The accepted ADR is the frozen shared local contract; no parallel compiler
+writer is authorized. Spark is still unavailable, so the compiler emission
+and byte-preservation task uses the strongest assigned model. Focused TDD,
+relevant package checks and one independent in-contract review apply; do not
+create an unrelated whole-product or repository-release audit wave.
+
+D2.2 implementation is frozen after 4 initial behavior RED cases and a scoped
+SSR RED/GREEN correction for sentence-case field labels and a duplicate Refresh
+icon. Focused GREEN is 33/33 (19 composition-page-runtime, 9 Restaurant V3,
+5 customer icons), with strict emitted Expense/Appointment checks, compiler
+typecheck/build, owned formatting, diff check and five retained notices passing.
+The final compiler source hash is
+`88c1f664de6d7fc8a28ec2e5d77c57fa96f3201af6323108cc0b966006faa6a5`.
+Test and emitted-browser hashes are
+`8ca9c528710725740036ac4b3164fb66d9596bb268dfd988d8d76fbb84ab7f6d`
+and `897b8614edb6e3137e05fd40cd1b4d45982c9bfece2007ef82d32c650bec6c3f`.
+
+Ordered JSON([path, content]) bundle SHA-256 remains unchanged before/after:
+Appointment `b4fc337106c8f005766922c3455cc9c514274f0fb317be38d514b4875c7623ba`;
+hand-built non-approval
+`7166ed888c49123210dd2e91f2eead02f16203d27cc6c3db9d4e86e5ae35e9e6`;
+Restaurant V3
+`4f04d9026038e4bf86bc052e8075e9f15a0ee332ff6eb0a53371db0c556aace3`.
+
+Root updated the existing actual consumer harness after focused checks to use
+labelled fields/status, native typed form input, ISO request assertions,
+state-valid actions, visible decorative icons, persisted approved/rejected
+results and required axe/overflow checks. The standalone emitted Expense
+fixture reuses the authored hand-built profile with one required existing Graph
+date field and valid synthetic seed dates before normal Draft/Publish. This
+bounded fixture addition is not a shared Graph contract change.
+
+The previous worker image build was cancelled before image export when the
+scoped icon/casing correction was identified; no runtime consumed it. Root is
+building the final source and running one full compiler package regression.
+Independent `d21_review` reuses its clean D2.1 review and reviews only the four
+D2.2 paths under the same proportionate in-contract cycle. Actual emitted and
+consumer browser acceptance remain pending. No model-provider call or external
+provisioning has occurred.
+
+Final compiler package regression passed 656 tests in 39 files (131.88 s).
+Final worker image build exited zero; its config digest is
+`sha256:6aac3089cdffc1aaa35ff31f6a2139953a7006a311e6a726e192bc1fe8e38003`
+and manifest-list digest is
+`sha256:f1b697ab366b3322d1531eed9dab84c141f716d3e2971a470ab7d3321db4d82c`.
+After recreation, the in-container compiler source matches the frozen
+`88c1f664de6d7fc8a28ec2e5d77c57fa96f3201af6323108cc0b966006faa6a5`.
+The standalone emitted runtime now starts through the real immutable lifecycle.
+This is not yet a browser pass. Workbench/Control Plane remain on their existing
+validated paths; no unrelated image or package wave is required.
+
+The first emitted browser run found a test-only selector collision with Next's
+route announcer; scoping product feedback/controls to `main.generated-app`
+corrected it without changing the runtime. The second run completed both real
+UI creations with typed UTC dates, submission, denied requester approval,
+manager approve/reject, persisted requester results, safe failure recovery and
+empty state, then failed its final keyboard-focus assertion. It is not recorded
+as an overall pass.
+
+A read-only 16-Tab probe reproduced the remaining focus issue: Chromium's date
+picker subcontrol leaves its host input active but not `:focus-visible`, losing
+the outer outline. Inspected mobile screenshots also place the role icon above
+its label because the inherited header label is a grid. PM assigns the same
+compiler owner two approval-only CSS corrections: retain date/datetime focus
+within the native composite control, and align the existing role icon beside
+its label. Keep the keyboard assertion. No generated immutable file is edited.
+The independent reviewer had found no other code issue and will recheck only
+these final deltas. Existing 656 compiler tests and business assertions remain
+valid for unchanged behavior; affected checks and the fresh final UI runs will
+cover the CSS correction. Root stops the exact emitted preview before replay.
+
+### D2.2 final generated runtime verification
+
+The focused native-date focus and role-label alignment correction is frozen at
+compiler source `2db225252578c585442383a3ca1d02e2c8e1272a1d76f874ea6f8e42cc7d3f17`,
+compiler test `ffde2a8d5c7c9a1ed3755e380976c2f539c5bcefa7e3f81205c3f8b3cb4b0693`,
+and emitted browser test
+`c0b5b3bdc63556bd459e5ed1b3508fe644b2e7dff159f241846c6e728f0907ff`.
+The added focus/layout regression was RED, then 34 affected tests passed;
+compiler types/build, emitted strict typechecks and formatting also passed.
+The previous 656-test result remains valid for unchanged behavior, and all
+three legacy bundle digests above remain unchanged. The existing independent
+reviewer rechecked this delta with no P0/P1/P2 finding.
+
+The final worker image config is
+`sha256:719b9ca0410d471c655e3f5c847d2ca2530b85945a232e52494d70f716a00616`,
+manifest list
+`sha256:eeb02d0d430a7525be0540a80352c47303dcc82f5bdb9e279667d27914b3679e`.
+After recreation, its compiler source matched the final hash above. A fresh
+published hand-built Expense fixture compiled as
+`cmtu6dz1m008lo14t6pru4wfw`; preview
+`preview-6c53ea25-87ae-4810-94dd-0f93fd69f88a` reached ready.
+`pnpm exec playwright test e2e/generated-expense.spec.ts --workers=1 --retries=0`
+passed 1/1, zero retries (3.0 s test, 4.2 s runner). Both UI-created requests,
+UTC date conversion, success/retained failure/pending/empty feedback, duplicate
+submit prevention, unauthorized decision denial, approve/reject persistence,
+44px mobile controls, keyboard focus and same-row role icon passed. The exact
+preview was stopped through the API; labeled containers (including stopped),
+networks and volumes are all zero. Final emitted mobile form/list screenshots
+replace the interim CSS-failure images and contain synthetic data only.
+
+Root freezes separate consumer interpretation lanes in the existing harness:
+default fixture interpretation through real composition/runtime, and explicit
+`FACTORY_APPROVAL_REAL_ACCEPTANCE=1` for a real provider with at most one
+consolidated clarification and no automatic retry. The latter requires a fresh
+isolated database and safe provider-present/fixture-off/test-off preflight.
+Provider output and authored input are not logged; metrics, screenshot names
+and outcomes distinguish the lanes. Neither lane authorizes cloud provisioning.
+The mandatory ADR-0049 consumer run continues using the deterministic lane.
+
+### D2.1/D2.2 mandatory consumer acceptance: passed locally
+
+Final consumer harness SHA-256 is
+`4830214859d3fe47505865a435f56267b80cddf0b074ded5e49f576e0ace32c1`.
+With explicit isolated Factory project, loopback URLs and fixture interpretation,
+`pnpm exec playwright test e2e/consumer-approval.spec.ts --workers=1 --retries=0`
+passed 1/1 without retries (3.2 min runner). Compilation
+`cmtu6g41a00ano14t7nbx8epr` and its ten-step verification succeeded; preview
+`preview-494646ed-d50a-45cb-8af0-4197230b8b14` reached ready.
+One Describe action automatically applied the standard composition and performed
+exactly one Publish, Compile, Verify and Preview. Measurements: 0 business
+questions, 0 technical handoffs, 1 fixture interpretation call, 170538 ms to
+ready and 174406 ms to the complete business/presentation assertions. These
+numbers describe the prepared local environment, not a cold-start benchmark.
+
+Two typed requests were created and submitted through the actual generated UI;
+a manager approved one and rejected one. Requester reload retained both results,
+and a requester decision returned 403. The UI showed declared business fields,
+calendar dates, valid actions and readable status/icon pairs instead of raw JSON.
+At 390/768/1440 px, overflow was false and axe violation IDs were empty. Inspected
+`docs/acceptance/evidence/consumer-approval/d22-results-*.png` contains only
+declared synthetic test data. The page remains a straightforward generated
+business UI; this is not a claim of final visual polish or private identity.
+The test stopped the exact preview and verified zero labeled containers,
+networks and volumes. All six recorded preview runs were stopped; Factory stack
+was stopped before the separate provider lane, preserving its evidence volumes
+until final teardown.
+
+Independent nonwriter `d21_review` closes the same in-contract review with
+P0/P1/P2 0/0/0 after final source, relevant retained tests, both required actual
+browser passes, responsive/accessibility results and exact preview cleanup.
+This is not a repository-release or hosted-delivery verdict. PM accepts the
+bounded local D2.1/D2.2 behavior for iteration-branch delivery; provider outcome
+is a separately reported product metric. Earlier failed attempts remain above.
+
+### Separate real-provider first outcome: not yet one-step delivery
+
+The fresh isolated project `factory-t9-consumer-d22-real-20260909` reused the
+same images with a new empty database/artifact volume. Safe preflight required
+provider configured, fixture mode false and test mode false. One real
+interpretation request returned HTTP 200; no mock route was installed and no
+provider retry or clarification request was sent. The test recognized manual
+plan choices, then failed to find the automatic Approval delivery surface after
+60 seconds. Total elapsed time was 109924 ms, interpretation calls 1,
+questions 0, lifecycle operations 0. Database inspection confirmed 0 Compilations
+and 0 PreviewRuns. No generated business journey started in this lane.
+
+This is 0/1 real-provider first-result success, not a provider outage and not a
+successful consumer delivery. Existing safe diagnostics do not identify the
+specific semantic eligibility mismatch; no raw response was retained to invent
+that explanation. Do not loosen permission checks or silently choose an
+ineligible plan to make the test green. D2.3 first priority is safe structural
+eligibility diagnostics and provider-free reproduction, followed by deterministic
+supported-definition binding where the accepted contracts permit it. A new
+interpretation or shared contract requires one consolidated technology decision.
+Do not repeat unchanged real requests, hide the manual handoff, or report this
+result in the deterministic runtime pass count. The emitted runtime and D2.1
+supported-plan slice remain accepted locally, while full D2 and the product's
+ordinary-user first-result objective remain open.
+
+No screenshot, trace or raw provider input/output was captured for this failed
+entry. The provider lane is an explicitly gated measurement rather than a
+mandatory default CI test. The mandatory fixed-interpretation real-runtime
+acceptance remains the passed source-delivery gate under ADR-0049. H1 remains
+proposed; no hosted resource, account, invite or deployment was created.
+
+### D2 bounded delivery closeout
+
+Both owned Factory projects were removed with their isolated volumes after safe
+outcomes were recorded. An exact-label check across the two Factory projects
+and six generated preview projects found zero containers (including stopped),
+networks and volumes. No unrelated Docker resources were removed. Root's final
+15 code/test paths pass Prettier, five third-party notices pass, and the complete
+diff passes whitespace checks. The three ADR documents retain their recorded
+hashes; only the local D2 decisions are accepted. The roadmap and scorecard
+preserve the separate real-provider failure and H1 external prerequisites.
+
+Root authorizes one bounded iteration-branch commit for the reviewed D2.1/D2.2
+local behavior, associated reproducible tests, synthetic before/after evidence
+and the governing D2/H1 decision/plan records. This does not mark all D2, the
+consumer first-result goal, main integration or a repository release complete.
+Remote tip equality is required immediately after the normal branch push. The
+long task remains active for the demonstrated real-input handoff gap and its
+next focused correction, with no unchanged provider rerun authorized here.

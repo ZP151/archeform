@@ -116,7 +116,7 @@ export function RequirementComposer({
             disabled={busy}
             onChange={(event) => onManualReviewChange?.(event.target.checked)}
           />
-          Review the Restaurant plan and delivery steps myself
+          Review the plan and delivery steps myself
         </label>
       </details>
       <button

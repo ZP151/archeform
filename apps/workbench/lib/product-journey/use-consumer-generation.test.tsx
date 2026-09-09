@@ -27,6 +27,7 @@ import {
   useConsumerGeneration,
   type ConsumerGenerationController,
 } from "./use-consumer-generation";
+import { consumerFamilyFor } from "./consumer-family";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -41,6 +42,9 @@ const TARGET: ReleaseTarget = {
 };
 
 let validAlternatives: readonly ProductPlanAlternative[] = [];
+let expenseInterpretation: Awaited<
+  ReturnType<FixtureRequirementInterpreter["interpret"]>
+>;
 
 function journeyFor(
   overrides: Partial<ProductJourneyController["state"]> = {},
@@ -179,13 +183,14 @@ describe("useConsumerGeneration", () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
-    const fixture = (
-      await new FixtureRequirementInterpreter().interpret({
+    expenseInterpretation = await new FixtureRequirementInterpreter().interpret(
+      {
         brief:
           "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
         answers: {},
-      })
-    ).interpretation;
+      },
+    );
+    const fixture = expenseInterpretation.interpretation;
     validAlternatives = planProductAlternatives({
       requirement: fixture.spec,
       blueprint: fixture.blueprint,
@@ -197,6 +202,92 @@ describe("useConsumerGeneration", () => {
     });
   });
 
+  it("selects the canonical approval standard plan and retains its family through journey reset", async () => {
+    const journey = journeyFor({ interpretation: expenseInterpretation });
+    const approvalTarget = {
+      applicationGraphId: "approval-application",
+      draftRevisionId: "draft-approval-r2",
+    };
+    let release = releaseFor({
+      release: {
+        ...releaseFor().release!,
+        phase: "publishing",
+        ...approvalTarget,
+      },
+    });
+    const applyComposedProduct = vi.fn().mockResolvedValue(approvalTarget);
+    const render = async (next: ProductJourneyController) => {
+      await act(async () => {
+        root.render(
+          <Harness
+            journey={next}
+            release={release}
+            applyComposedProduct={applyComposedProduct}
+          />,
+        );
+      });
+    };
+    await render(journey);
+    expect(journey.chooseAlternative).toHaveBeenCalledTimes(1);
+    expect(journey.chooseAlternative).toHaveBeenCalledWith("standard");
+    await render({
+      ...journey,
+      state: {
+        ...journey.state,
+        stage: "reviewing",
+        selectedAlternativeKey: "standard",
+      },
+    });
+    expect(applyComposedProduct).toHaveBeenCalledTimes(1);
+    expect(applyComposedProduct).toHaveBeenCalledWith({ resetJourney: false });
+    await render(
+      journeyFor({
+        stage: "brief",
+        interpretation: null,
+        review: null,
+        alternatives: null,
+      }),
+    );
+    expect(globalThis.__consumerGeneration).toMatchObject({
+      family: "approval",
+      active: true,
+      status: "Preparing your Approval app…",
+    });
+    expect(release.publishRelease).toHaveBeenCalledTimes(1);
+    const idle = journeyFor({
+      stage: "brief",
+      interpretation: null,
+      review: null,
+      alternatives: null,
+    });
+    for (const phase of [
+      "compiling",
+      "verifying",
+      "starting-preview",
+      "preview",
+    ] as const) {
+      release = {
+        ...release,
+        release: {
+          ...release.release!,
+          phase,
+          previewUrl: "http://127.0.0.1:3210",
+          evidenceSummary: { steps: 3, passed: 3, failed: 0 },
+        },
+      };
+      await render(idle);
+      await render(idle);
+    }
+    expect(release.compileRelease).toHaveBeenCalledTimes(1);
+    expect(release.verifyRelease).toHaveBeenCalledTimes(1);
+    expect(release.previewRelease).toHaveBeenCalledTimes(1);
+    expect(globalThis.__consumerGeneration).toMatchObject({
+      family: "approval",
+      readyUrl: "http://127.0.0.1:3210",
+      status: "Your local Approval app is ready.",
+    });
+  });
+
   afterEach(() => {
     globalThis.__consumerGeneration = undefined;
     globalThis.__freshJourney = undefined;
@@ -204,6 +295,356 @@ describe("useConsumerGeneration", () => {
     container.remove();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("rejects incomplete, ambiguous, or unbound approval semantics without consulting business names", () => {
+    const fixture = () => ({
+      interpretation: structuredClone(expenseInterpretation),
+      alternatives: structuredClone(
+        validAlternatives,
+      ) as ProductPlanAlternative[],
+    });
+    type Fixture = ReturnType<typeof fixture>;
+    const setProductType = (
+      value: Fixture,
+      productType: "commerce" | "custom",
+    ) => {
+      value.interpretation.interpretation.spec.productType = productType;
+      const checksum = hashRequirementSpec(
+        value.interpretation.interpretation.spec,
+      );
+      value.interpretation.interpretation.blueprint.requirementChecksum =
+        checksum;
+      value.alternatives[0].plan.requirementChecksum = checksum;
+    };
+    const cases: readonly [string, (value: Fixture) => void][] = [
+      [
+        "commerce",
+        (v) => {
+          setProductType(v, "commerce");
+        },
+      ],
+      [
+        "custom",
+        (v) => {
+          setProductType(v, "custom");
+        },
+      ],
+      [
+        "malformed spec",
+        (v) => {
+          v.interpretation = {
+            ...v.interpretation,
+            interpretation: {
+              ...v.interpretation.interpretation,
+              spec: {} as never,
+            },
+          };
+        },
+      ],
+      [
+        "malformed blueprint",
+        (v) => {
+          v.interpretation = {
+            ...v.interpretation,
+            interpretation: {
+              ...v.interpretation.interpretation,
+              blueprint: {} as never,
+            },
+          };
+        },
+      ],
+      [
+        "blueprint checksum",
+        (v) => {
+          v.interpretation.interpretation.blueprint.requirementChecksum = `sha256:${"a".repeat(64)}`;
+        },
+      ],
+      [
+        "plan checksum",
+        (v) => {
+          v.alternatives[0].plan.requirementChecksum = `sha256:${"a".repeat(64)}`;
+        },
+      ],
+      [
+        "incompatible plan",
+        (v) => {
+          v.alternatives[0].plan.compatibility.result = "conflict";
+        },
+      ],
+      [
+        "missing standard",
+        (v) => {
+          v.alternatives = v.alternatives.filter(
+            ({ key }) => key !== "standard",
+          );
+        },
+      ],
+      [
+        "duplicate standard",
+        (v) => {
+          v.alternatives = [v.alternatives[0], v.alternatives[0]];
+        },
+      ],
+      [
+        "malformed alternative",
+        (v) => {
+          v.alternatives = [null] as never;
+        },
+      ],
+      [
+        "missing lock",
+        (v) => {
+          v.alternatives[0].plan.capabilityLocks.pop();
+        },
+      ],
+      [
+        "duplicate lock",
+        (v) => {
+          v.alternatives[0].plan.capabilityLocks[1] =
+            v.alternatives[0].plan.capabilityLocks[0];
+        },
+      ],
+      [
+        "wrong lock version",
+        (v) => {
+          v.alternatives[0].plan.capabilityLocks[0].version = "9.0.0";
+        },
+      ],
+      [
+        "unrelated approvals asset",
+        (v) => {
+          v.alternatives[0].plan.capabilityLocks.push({
+            ...v.alternatives[0].plan.capabilityLocks[0],
+            key: "core.approvals",
+            version: "1.0.0",
+          });
+        },
+      ],
+      ...(["read", "submit", "create"] as const).map(
+        (action): [string, (v: Fixture) => void] => [
+          `missing requester ${action}`,
+          (v) => {
+            const p =
+              v.interpretation.interpretation.blueprint.actors[0]
+                .permissions[0];
+            p.actions = p.actions.filter((a) => a !== action);
+          },
+        ],
+      ),
+      ...(["read", "approve", "reject"] as const).map(
+        (action): [string, (v: Fixture) => void] => [
+          `missing reviewer ${action}`,
+          (v) => {
+            const p =
+              v.interpretation.interpretation.blueprint.actors[1]
+                .permissions[0];
+            p.actions = p.actions.filter((a) => a !== action);
+          },
+        ],
+      ),
+      [
+        "same requester and reviewer",
+        (v) => {
+          const b = v.interpretation.interpretation.blueprint;
+          b.actors[0].permissions[0].actions.push("approve", "reject");
+          b.actors[1].permissions[0].actions = ["read"];
+          b.workflows[0].transitions.forEach((t) => {
+            t.actorKey = b.actors[0].key;
+          });
+        },
+      ],
+      [
+        "ambiguous requester",
+        (v) => {
+          const b = v.interpretation.interpretation.blueprint;
+          b.actors.push({ ...b.actors[0], key: "another-requester" });
+        },
+      ],
+      [
+        "ambiguous reviewer",
+        (v) => {
+          const b = v.interpretation.interpretation.blueprint;
+          b.actors.push({ ...b.actors[1], key: "another-reviewer" });
+        },
+      ],
+      [
+        "ambiguous workflow",
+        (v) => {
+          const b = v.interpretation.interpretation.blueprint;
+          b.workflows.push({ ...b.workflows[0], key: "another-approval" });
+        },
+      ],
+      [
+        "missing decision transition",
+        (v) => {
+          const w = v.interpretation.interpretation.blueprint.workflows[0];
+          w.transitions = w.transitions.filter(({ key }) => key !== "reject");
+        },
+      ],
+      [
+        "different review states",
+        (v) => {
+          v.interpretation.interpretation.blueprint.workflows[0].transitions[2].from =
+            "draft";
+        },
+      ],
+      [
+        "same outcome",
+        (v) => {
+          const w = v.interpretation.interpretation.blueprint.workflows[0];
+          w.transitions[2].to = w.transitions[1].to;
+        },
+      ],
+      ...(["form", "queue", "list"] as const).map(
+        (intent): [string, (v: Fixture) => void] => [
+          `missing ${intent} surface`,
+          (v) => {
+            const b = v.interpretation.interpretation.blueprint;
+            b.pageIntents = b.pageIntents.filter((p) => p.intent !== intent);
+          },
+        ],
+      ),
+      [
+        "unbound form",
+        (v) => {
+          delete v.interpretation.interpretation.blueprint.pageIntents.find(
+            ({ intent }) => intent === "form",
+          )!.entityKey;
+        },
+      ],
+      [
+        "misbound queue",
+        (v) => {
+          v.interpretation.interpretation.blueprint.pageIntents.find(
+            ({ intent }) => intent === "queue",
+          )!.entityKey = "employee";
+        },
+      ],
+      [
+        "ambiguous list",
+        (v) => {
+          const b = v.interpretation.interpretation.blueprint;
+          b.pageIntents.push({
+            ...b.pageIntents.find(({ intent }) => intent === "list")!,
+            key: "another-list",
+          });
+        },
+      ],
+      ...(["flowKey", "entityKey", "routeKey"] as const).flatMap(
+        (key): [string, (v: Fixture) => void][] => [
+          [
+            `missing ${key} binding`,
+            (v) => {
+              v.alternatives[0].plan.graphBindings =
+                v.alternatives[0].plan.graphBindings.filter(
+                  ({ inputKey }) => inputKey !== key,
+                );
+            },
+          ],
+          [
+            `wrong ${key} binding`,
+            (v) => {
+              const binding = v.alternatives[0].plan.graphBindings.find(
+                ({ inputKey }) => inputKey === key,
+              )!;
+              binding.graphSymbol = binding.graphSymbol.replace(
+                /[^.]+$/,
+                "unrelated",
+              );
+            },
+          ],
+          [
+            `duplicate ${key} binding`,
+            (v) => {
+              v.alternatives[0].plan.graphBindings.push(
+                v.alternatives[0].plan.graphBindings.find(
+                  ({ inputKey }) => inputKey === key,
+                )!,
+              );
+            },
+          ],
+        ],
+      ),
+    ];
+    for (const [label, mutate] of cases) {
+      const value = fixture();
+      mutate(value);
+      expect(consumerFamilyFor(journeyFor(value)), label).toBeNull();
+    }
+    const renamed = fixture();
+    renamed.interpretation.interpretation.spec.requirementId =
+      "unrelated-product";
+    renamed.interpretation.interpretation.spec.productType = "workflow";
+    renamed.interpretation.interpretation.blueprint.title =
+      "Unrelated business title";
+    const checksum = hashRequirementSpec(
+      renamed.interpretation.interpretation.spec,
+    );
+    renamed.interpretation.interpretation.blueprint.requirementChecksum =
+      checksum;
+    renamed.alternatives[0].plan.requirementChecksum = checksum;
+    renamed.interpretation.interpretation.blueprint.entities.reverse();
+    renamed.interpretation.interpretation.blueprint.actors.reverse();
+    renamed.interpretation.interpretation.blueprint.pageIntents.reverse();
+    expect(consumerFamilyFor(journeyFor(renamed))).toBe("approval");
+    const material = journeyFor(fixture());
+    expect(
+      consumerFamilyFor({ ...material, openQuestions: [{}] as never }),
+    ).toBeNull();
+  });
+
+  it("keeps the complete appointment fixture in manual review", async () => {
+    const interpretation = await new FixtureRequirementInterpreter().interpret({
+      brief:
+        "Build an appointment booking application. Customers choose a service and an available time, staff confirm or reschedule appointments, and administrators manage services, schedules, and cancellations.",
+      answers: {},
+    });
+    const { spec, blueprint } = interpretation.interpretation;
+    const alternatives = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft: createBlankApplicationDraft({
+        applicationId: spec.requirementId,
+        workspaceId: "local-workspace",
+        name: "Appointment booking",
+      }),
+    });
+    expect(
+      consumerFamilyFor(journeyFor({ interpretation, alternatives })),
+    ).toBeNull();
+  });
+
+  it("keeps an approval manual opt-out from selecting or applying a plan", async () => {
+    const release = releaseFor();
+    const applyComposedProduct = vi.fn();
+    await act(async () => {
+      root.render(
+        <Harness
+          journey={journeyFor({
+            stage: "brief",
+            interpretation: null,
+            review: null,
+          })}
+          release={release}
+          applyComposedProduct={applyComposedProduct}
+        />,
+      );
+    });
+    act(() => globalThis.__consumerGeneration?.setManualReview(true));
+    const journey = journeyFor({ interpretation: expenseInterpretation });
+    await act(async () => {
+      root.render(
+        <Harness
+          journey={journey}
+          release={release}
+          applyComposedProduct={applyComposedProduct}
+        />,
+      );
+    });
+    expect(journey.chooseAlternative).not.toHaveBeenCalled();
+    expect(applyComposedProduct).not.toHaveBeenCalled();
+    expect(globalThis.__consumerGeneration?.active).toBe(false);
   });
 
   it("selects the one standard Restaurant alternative once before applying the fresh Draft", async () => {
