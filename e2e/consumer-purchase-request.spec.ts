@@ -19,7 +19,7 @@ import {
 // compilation, verification, preview, form submission and persistence are real.
 const evidence = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-purchase-request",
+  "docs/acceptance/evidence/consumer-record-finding",
 );
 type Preview = {
   id: string;
@@ -184,7 +184,9 @@ async function layout(page: Page, width: number): Promise<void> {
   if (width === 390)
     for (const control of await page
       .locator("main.generated-app")
-      .locator("a:visible, button:visible, select:visible, summary:visible")
+      .locator(
+        "a:visible, button:visible, input:visible, select:visible, summary:visible",
+      )
       .all()) {
       const box = await control.boundingBox();
       expect(box?.height, "mobile target height").toBeGreaterThanOrEqual(44);
@@ -218,7 +220,18 @@ async function verifyRecoverableListStates(page: Page): Promise<void> {
   });
   try {
     await page.getByRole("button", { name: "Refresh", exact: true }).click();
-    await expect(page.getByRole("status")).toHaveText("Loading records…");
+    await expect(
+      app.getByRole("status").filter({ hasText: /^Loading records…$/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("Search records", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Status filter", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Clear filters", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Refresh", exact: true }),
     ).toBeDisabled();
@@ -227,11 +240,25 @@ async function verifyRecoverableListStates(page: Page): Promise<void> {
     await expect(app.getByRole("alert")).toHaveText(
       "The service is unavailable. Please try again.",
     );
+    await expect(
+      page.getByLabel("Search records", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Status filter", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Clear filters", exact: true }),
+    ).toBeVisible();
     mode = "empty";
     await page.getByRole("button", { name: "Refresh", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText(
-      "No purchase request records yet.",
-    );
+    await expect(
+      app
+        .getByRole("status")
+        .filter({ hasText: "No purchase request records yet." }),
+    ).toBeVisible();
+    await expect(
+      app.getByText("No matching records.", { exact: true }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Create Purchase request", exact: true }),
     ).toBeVisible();
@@ -242,6 +269,109 @@ async function verifyRecoverableListStates(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.locator(".generated-records > li")).toHaveCount(3);
   await expect(app.getByRole("alert")).toHaveCount(0);
+}
+
+async function verifyRecordFinding(
+  page: Page,
+  approvedItem: string,
+): Promise<void> {
+  const app = page.locator("main.generated-app");
+  const search = app.getByLabel("Search records", { exact: true });
+  const status = app.getByRole("combobox", {
+    name: "Status filter",
+    exact: true,
+  });
+  const clear = app.getByRole("button", { name: "Clear filters", exact: true });
+  await page.setViewportSize({ width: 390, height: 900 });
+  await search.fill("  ADJUSTABLE DESK  ");
+  await expect(search).toBeFocused();
+  await status.selectOption("approved");
+  await expect(app.locator(".generated-records > li")).toHaveCount(1);
+  await expect(record(page, approvedItem)).toBeVisible();
+  await expect(
+    app.getByRole("status").filter({ hasText: /^1 of 3 records$/ }),
+  ).toBeVisible();
+  const refreshed = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      new URL(response.url()).pathname === "/api/purchase-request" &&
+      response.request().headers()["x-factory-fixture-session"] ===
+        "fixture-session-requester",
+  );
+  const refresh = app.getByRole("button", { name: "Refresh", exact: true });
+  await refresh.click();
+  expect((await refreshed).ok()).toBe(true);
+  await expect(refresh).toBeEnabled();
+  await expect(app.locator(".generated-records > li")).toHaveCount(1);
+  await expect(record(page, approvedItem)).toBeVisible();
+  await expect(search).toHaveValue("  ADJUSTABLE DESK  ");
+  await expect(status).toHaveValue("approved");
+  await layout(page, 390);
+  await page.screenshot({
+    path: resolve(evidence, "b2-search-390.png"),
+    fullPage: true,
+  });
+  await search.fill("No such synthetic item");
+  await expect(
+    app.getByText("No matching records.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    app.getByRole("status").filter({ hasText: /^0 of 3 records$/ }),
+  ).toBeVisible();
+  await expect(app.locator(".generated-records > li")).toHaveCount(0);
+  await expect(
+    app.getByText("No purchase request records yet.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(status.locator("option")).toHaveText([
+    "All statuses",
+    "Draft",
+    "Submitted",
+    "Approved",
+    "Rejected",
+  ]);
+  await layout(page, 390);
+  await page.screenshot({
+    path: resolve(evidence, "b2-no-match-390.png"),
+    fullPage: true,
+  });
+  await clear.focus();
+  await clear.press("Enter");
+  await expect(search).toHaveValue("");
+  await expect(status).toHaveValue("");
+  await expect(app.locator(".generated-records > li")).toHaveCount(3);
+  // A role change must clear the former view and fetch under the new role.
+  await search.fill("No such synthetic item");
+  await status.selectOption("submitted");
+  let releaseRoleRead = () => {};
+  const roleRead = new Promise<void>((resolve) => {
+    releaseRoleRead = resolve;
+  });
+  const rolePattern = "**/api/purchase-request";
+  let managerRead = false;
+  await page.route(rolePattern, async (route) => {
+    if (
+      route.request().method() === "GET" &&
+      route.request().headers()["x-factory-fixture-session"] ===
+        "fixture-session-manager"
+    ) {
+      managerRead = true;
+      await roleRead;
+    }
+    await route.continue();
+  });
+  try {
+    await app.getByLabel("Demo role", { exact: true }).selectOption("manager");
+    await expect.poll(() => managerRead).toBe(true);
+    await expect(search).toHaveValue("");
+    await expect(status).toHaveValue("");
+    await expect(app.locator(".generated-records > li")).toHaveCount(0);
+  } finally {
+    releaseRoleRead();
+    await page.unroute(rolePattern);
+  }
+  await expect(app.locator(".generated-records > li")).toHaveCount(3);
+  await app.getByLabel("Demo role", { exact: true }).selectOption("requester");
+  await expect(app.locator(".generated-records > li")).toHaveCount(3);
 }
 
 async function createRequest(
@@ -275,7 +405,7 @@ async function createRequest(
   if (captureForm) {
     await mkdir(evidence, { recursive: true });
     await page.screenshot({
-      path: resolve(evidence, "b1-form-390.png"),
+      path: resolve(evidence, "b2-form-390.png"),
       fullPage: true,
     });
     expect(
@@ -331,7 +461,7 @@ async function createRequest(
   return created.id;
 }
 
-test("B1 registered Purchase definition assembles a usable responsive approval application", async ({
+test("B2 shared record finding supports a usable responsive Purchase approval application", async ({
   page,
   context,
   request,
@@ -431,6 +561,9 @@ test("B1 registered Purchase definition assembles a usable responsive approval a
       .not.toBe("pending");
     expect(outcome).toBe("ready");
     const elapsedToReadyMs = Date.now() - start;
+    expect(elapsedToReadyMs, "prepared local ready target").toBeLessThanOrEqual(
+      300_000,
+    );
     await Promise.all(pending);
     if (!compilationId) throw new Error("No immutable compilation observed.");
     console.info(
@@ -527,6 +660,13 @@ test("B1 registered Purchase definition assembles a usable responsive approval a
       [approvedId, approvedItem, "approve", "Approved"],
       [rejectedId, rejectedItem, "reject", "Rejected"],
     ]) {
+      await generated
+        .getByLabel("Search records", { exact: true })
+        .fill(`  ${item.toUpperCase()}  `);
+      await generated
+        .getByRole("combobox", { name: "Status filter", exact: true })
+        .selectOption("submitted");
+      await expect(generated.locator(".generated-records > li")).toHaveCount(1);
       const row = record(generated, item);
       await expect(field(row, "Status")).toHaveText("Submitted");
       await expectDecisionOnlyActions(generated);
@@ -543,6 +683,16 @@ test("B1 registered Purchase definition assembles a usable responsive approval a
         })
         .click();
       expect((await decision).ok()).toBe(true);
+      await expect(row).toHaveCount(0);
+      await expect(
+        generated
+          .locator("main.generated-app")
+          .getByRole("status")
+          .filter({ hasText: `Purchase request: ${status}.` }),
+      ).toBeVisible();
+      await generated
+        .getByRole("button", { name: "Clear filters", exact: true })
+        .click();
       await expect(field(row, "Status")).toHaveText(status);
       await expect(row.getByRole("button")).toHaveCount(0);
     }
@@ -629,13 +779,15 @@ test("B1 registered Purchase definition assembles a usable responsive approval a
     await nav
       .getByRole("link", { name: "Purchase request list", exact: true })
       .click();
+    stage = "record-finding";
+    await verifyRecordFinding(generated, approvedItem);
     for (const width of [390, 768, 1440]) {
       await generated.setViewportSize({ width, height: 900 });
       await generated.evaluate(() => window.scrollTo(0, 0));
       await expect(generated.locator(".generated-records > li")).toHaveCount(3);
       await layout(generated, width);
       await generated.screenshot({
-        path: resolve(evidence, `b1-results-${width}.png`),
+        path: resolve(evidence, `b2-results-${width}.png`),
         fullPage: true,
       });
     }
@@ -654,6 +806,12 @@ test("B1 registered Purchase definition assembles a usable responsive approval a
         invalidTransitionDenied: true,
         procurementAuditApi: true,
         reloadRetained: true,
+        sharedRecordFinding: true,
+        knownRecordInputChanges: 2,
+        clearActions: 1,
+        filteredMutationFeedback: true,
+        refreshPreservesFilters: true,
+        roleChangeClearsFilters: true,
         questions: 0,
         technicalHandoffs: 0,
         interpretationCalls: calls,

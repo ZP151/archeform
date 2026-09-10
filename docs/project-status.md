@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-09-10
+Updated: 2026-09-11
 
 All subsequent product types now inherit the
 [shared consumer acceptance matrix](acceptance/consumer-product-checklist.md)
@@ -11,7 +11,39 @@ technical test success alone is insufficient. This uses the existing review,
 preserves valid regression evidence and introduces no additional audit stage.
 Adopting this requirement is not evidence that untested product families pass it.
 
-## Current delivery: B1 reusable definition and material supply
+## Accepted delivery: B2 reusable record finding
+
+The [B2 plan](superpowers/plans/2026-09-11-reusable-record-finding.md) selects
+the next shared product capability: finding and processing records using search,
+workflow status and clear recovery in existing Expense and Purchase apps. The
+goal is fewer steps to a useful business outcome. B2 now reuses existing cards,
+controls and icons for declared-field search, workflow status, counts, one-action
+clear and no-match recovery. Filtered decisions keep visible outcome feedback;
+old-role callbacks cannot refresh a new view or release a newer operation lock.
+No dependency or public registry asset was added.
+
+Full compiler tests pass **665/665** across 39 files; focused runtime **28/28**,
+types/build/lint and real Purchase E2E **1/1** pass. The prepared local fixture
+reached ready in **177061 ms**, completed business/recovery in **187601 ms**, and
+required zero questions, technical handoffs or in-run rescue. Search plus status
+finds the known record in two inputs; one clear restores the list. These are
+deterministic local results, not real-model or ordinary-user measurements.
+All three roles at 390/768/1440 and phone search/no-match pass layout/axe;
+six actual images were inspected. Scoped independent findings are P0/P1/P2
+**0/0/0**, with exact Factory/two-Preview cleanup. The first failed label-text
+test locator and its precise correction remain separate in the
+[acceptance record](acceptance/reusable-record-finding.md). See the
+[phone search result](acceptance/evidence/consumer-record-finding/b2-search-390.png).
+
+Keep three canonical definitions and two runtime families as the delivered
+baseline. Next prioritize a complete Task family using shared record handling,
+then Appointment after availability/conflict semantics, Inventory after stock
+invariants, and Content/Directory with useful reviewed media. Progress toward
+30/100/hundreds-thousands definitions through demonstrated family reuse and
+bounded retrieval. Real identity/access/hosting and real-model/ordinary-user
+validation remain explicit maturity gaps alongside supply growth.
+
+## Accepted delivery: B1 reusable definition and material supply
 
 The founder now prioritizes multi-type assembly. The
 [B1 plan](superpowers/plans/2026-09-10-reusable-definition-bank.md) integrates a
@@ -45,10 +77,11 @@ materials, approved assets, authored definitions, runtime families and usable
 applications separately. Expand list/calendar/media supply and additional
 business families only with their applicable acceptance evidence.
 
-Next target: B2 selects a reusable list/calendar/media asset against an actual
-screen gap, followed by B3 Appointment, tasks/inventory and content/directory
-journeys. Prioritize TanStack Table, FullCalendar Standard and reviewed media
-intake from the research; none is adopted yet. Grow 30 detailed definitions,
+The B2 record-finding slice above closes an actual list-screen gap through
+existing materials. Next is B3 Task, followed by Appointment, Inventory and
+Content/Directory according to their missing business semantics. TanStack Table,
+FullCalendar Standard and reviewed media remain demand-driven supply candidates;
+none is adopted yet. Grow 30 detailed definitions,
 then 100 and eventually hundreds/thousands with bounded retrieval and shared
 family regressions. Batch library evidence and automated asset checks instead
 of repeating manual audits per cosmetic variant. H1 identity/access/hosting

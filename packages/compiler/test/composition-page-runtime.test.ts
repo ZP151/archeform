@@ -468,14 +468,14 @@ describe("Purchase approval summary", () => {
 });
 
 describe("definition bank byte preservation", () => {
-  it("preserves the ordered Expense bundle captured before bank extraction", async () => {
+  it("keeps the ordered B2 Expense approval bundle deterministic", async () => {
     expect(
       orderedBundleDigest(
         generateApplicationBundle(
           bundleInputFor(await composedGraphFor(expenseBrief)),
         ).files,
       ),
-    ).toBe("4aa544c03beb9a9f61e10b3b5252a255e0c397411f5d887e4435a34979537332");
+    ).toBe("96e531eb1db10f96dcaeaf65a046e6a4dd13eb291c4f73e06a6be5e6db80372e");
   });
 });
 
@@ -509,25 +509,214 @@ describe("approval presentation compatibility", () => {
   });
 });
 
-function approvalModule(runtime: string) {
+function approvalModule(
+  runtime: string,
+  runtimeRequire?: (name: string) => unknown,
+) {
   const source =
     runtime +
-    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, selectSummaryFields, statusTone, EntityRecords, definition };";
+    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, selectSummaryFields, statusTone, filterRecords, statusOptions, EntityRecords, definition };";
   const compiled = transpileModule(source, {
     compilerOptions: { module: ModuleKind.CommonJS, jsx: JsxEmit.ReactJSX },
   }).outputText;
   const exports: Record<string, any> = {};
   const reactRequire = (name: string) =>
-    require(
-      require.resolve(name, {
-        paths: [join(__dirname, "../../../apps/workbench")],
-      }),
-    );
+    runtimeRequire
+      ? runtimeRequire(name)
+      : require(
+          require.resolve(name, {
+            paths: [join(__dirname, "../../../apps/workbench")],
+          }),
+        );
   new Function("require", "exports", compiled)(reactRequire, exports);
   return { exports, compiled };
 }
 
 describe("approval runtime behavior", () => {
+  it("filters only declared scalar values with the selected immutable workflow state", async () => {
+    const expense = approvalModule(
+      runtimeFor(await composedGraphFor(expenseBrief)),
+    ).exports;
+    const purchase = approvalModule(
+      runtimeFor(await purchaseGraphFor()),
+    ).exports;
+    const fields = [
+      { key: "amount", type: "decimal", required: true },
+      { key: "category", type: "enum", required: true },
+      { key: "receipt", type: "json", required: false },
+      { key: "paid", type: "boolean", required: true },
+    ];
+    const records = [
+      {
+        id: "expense-1",
+        amount: 18.5,
+        category: "Taxi",
+        receipt: { reference: "private-token" },
+        paid: false,
+        status: "submitted",
+        undeclared: "private-token",
+      },
+      {
+        id: "expense-2",
+        amount: 42,
+        category: "Meals",
+        receipt: { reference: "taxi" },
+        paid: true,
+        status: "approved",
+      },
+      {
+        id: "expense-3",
+        amount: 7,
+        category: "Parking",
+        receipt: null,
+        paid: false,
+        status: "archived",
+      },
+    ];
+
+    expect(
+      expense.filterRecords(fields, records, "  tAxI ", "submitted"),
+    ).toEqual([records[0]]);
+    expect(expense.filterRecords(fields, records, "private-token", "")).toEqual(
+      [],
+    );
+    expect(expense.filterRecords(fields, records, "true", "approved")).toEqual([
+      records[1],
+    ]);
+    expect(expense.filterRecords(fields, records, "", "submitted")).toEqual([
+      records[0],
+    ]);
+    expect(expense.filterRecords(fields, records, "", "")).toEqual(records);
+
+    const expenseFlow = expense.definition.flow.flows.find(
+      (flow: any) => flow.entity === "expense",
+    );
+    expect(expense.statusOptions(expenseFlow.entity)).toEqual([
+      "draft",
+      "submitted",
+      "approved",
+      "rejected",
+    ]);
+    expect(purchase.statusOptions("purchase-request")).toEqual([
+      "draft",
+      "submitted",
+      "approved",
+      "rejected",
+    ]);
+  });
+
+  it("ignores a delayed transition from an earlier role scope", async () => {
+    const state: unknown[] = [];
+    const refs: Array<{ current: unknown }> = [];
+    const stateWrites: Array<{ index: number; value: unknown }> = [];
+    let hookIndex = 0;
+    const react = {
+      useState(initial: unknown) {
+        const index = hookIndex++;
+        if (!(index in state)) state[index] = initial;
+        return [
+          state[index],
+          (value: unknown) => {
+            state[index] =
+              typeof value === "function"
+                ? (value as (current: unknown) => unknown)(state[index])
+                : value;
+            stateWrites.push({ index, value: state[index] });
+          },
+        ];
+      },
+      useRef(initial: unknown) {
+        const index = hookIndex++;
+        return (refs[index] ??= { current: initial });
+      },
+      useEffect() {
+        hookIndex++;
+      },
+      useCallback(callback: unknown) {
+        hookIndex++;
+        return callback;
+      },
+    };
+    const jsx = (type: unknown, props: Record<string, unknown>) => ({
+      type,
+      props,
+    });
+    const runtime = approvalModule(
+      runtimeFor(await composedGraphFor(expenseBrief)),
+      (name) =>
+        name === "react"
+          ? react
+          : { jsx, jsxs: jsx, Fragment: Symbol.for("react.fragment") },
+    ).exports;
+    const entity = runtime.definition.entities.find(
+      (candidate: any) => candidate.key === "expense",
+    );
+    state[0] = [
+      {
+        id: "expense-1",
+        amount: 18.5,
+        category: "Taxi",
+        date: "2026-09-11",
+        status: "submitted",
+      },
+    ];
+    state[1] = null;
+    state[2] = false;
+    const render = (role: string) => {
+      hookIndex = 0;
+      return runtime.EntityRecords({
+        block: { id: "expenses", type: "collection", props: {} },
+        entity,
+        role,
+        reportError: () => {},
+      });
+    };
+    const findAction = (node: any): any => {
+      if (!node || typeof node !== "object") return undefined;
+      if (node.type === "button" && node.props.children?.includes?.("Approve"))
+        return node;
+      const children = node.props?.children;
+      for (const child of Array.isArray(children) ? children : [children]) {
+        const found = findAction(child);
+        if (found) return found;
+      }
+      return undefined;
+    };
+    const originalFetch = globalThis.fetch;
+    const pendingResponses: Array<(value: Response) => void> = [];
+    const requests: Array<{ url: string; method?: string }> = [];
+    globalThis.fetch = ((url: string, init?: RequestInit) => {
+      requests.push({ url, method: init?.method });
+      return new Promise<Response>((resolve) => pendingResponses.push(resolve));
+    }) as typeof fetch;
+    try {
+      const first = findAction(render("manager"));
+      first.props.onClick();
+      expect(requests).toEqual([
+        { url: "/api/expense/expense-1/events/approve", method: "POST" },
+      ]);
+      render("employee");
+      const second = findAction(render("manager"));
+      second.props.onClick();
+      expect(requests).toHaveLength(2);
+      pendingResponses[0]!({
+        ok: true,
+        json: async () => ({ status: "approved" }),
+      } as Response);
+      await Promise.resolve();
+      await Promise.resolve();
+      second.props.onClick();
+      expect(requests).toHaveLength(2);
+      expect(
+        stateWrites
+          .filter((write) => write.index === 9)
+          .map((write: any) => write.value.message),
+      ).not.toContain("Expense: Approved.");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("selects only exact, unambiguous declared summary fields and neutralizes ambiguous status tones", async () => {
     const { exports: runtime } = approvalModule(
       runtimeFor(await composedGraphFor(expenseBrief)),

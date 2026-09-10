@@ -100,6 +100,18 @@ H1 real identity/access/hosting remains an explicit delivery milestone. A large
 material catalog does not close it. The governing metric remains how quickly an
 ordinary user gets the intended working application with minimal correction.
 
+B2 update, 2026-09-11: the
+[reusable record-finding slice](2026-09-11-reusable-record-finding.md) is accepted
+locally. Expense and Purchase now share search/status/clear/count/recovery over
+existing approval cards. The actual Purchase lane passes in 177061 ms to ready,
+with all business/recovery/visual criteria recorded in its acceptance. The
+smallest adequate source was existing approved controls; no external library,
+media item or new public registry asset was admitted. Broader material intake
+remains demand-driven. Next prioritize a complete Task family, then Appointment
+after slot/conflict semantics, Inventory after stock invariants, and
+Content/Directory with useful reviewed media. Canonical-definition and runtime
+family counts remain three and two respectively.
+
 ## Scale without source duplication
 
 Each future admitted definition should specify its intended job, roles and data,

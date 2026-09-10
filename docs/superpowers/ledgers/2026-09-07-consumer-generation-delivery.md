@@ -3243,3 +3243,143 @@ business families and B4 retrieval-backed 30/100/hundreds-thousands expansion
 are prioritized in the plan. Reuse pinned-library evidence and automated batch
 checks; new business outcomes still require their applicable consumer acceptance.
 H1 identity/access/hosting and real-model/real-user task validation remain open.
+
+### B2 accepted decision and serialized implementation — 2026-09-11
+
+Root records founder standing acceptance of ADR-0055
+`docs/adr/adr-0055-generated-approval-record-finding.md`, exact SHA-256
+`fb0fa42d1d88cfad61b19a16b1ecbcd89980ba537f5fa0ebb6a52279702c9c22`.
+Qualified read-only reviewer `/root/b2_acceptance_decision` is neither the
+proposing Tech Lead nor an implementation writer; independently checked the
+exact artifact, reported P0/P1/P2 `0/0/0`, and returned
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`. Root uses the founder's 2026-09-01
+standing authorization. The recommendation is KEEP, with no dependency,
+public registry, Graph/API, security, provider or topology change.
+
+Contract status: frozen. ADR FND-001 through FND-009 own the exact UI labels,
+declared scalar-field matching, ordered Graph flow states, conjunctive filter,
+count/no-match/reset, entity/block/role lifetime, surviving mutation feedback,
+access and responsive semantics. The B2 plan and predeclared acceptance record
+map all eight consumer dimensions. This composition adds no definition, runtime
+family or public asset count.
+
+Root authorizes `/root/b2_implementation` as sole production writer of exactly
+`packages/compiler/src/index.ts` and
+`packages/compiler/test/composition-page-runtime.test.ts`. Root owns disjoint
+`e2e/consumer-purchase-request.spec.ts`, B2 plan/acceptance/status/ledger,
+`docs/acceptance/evidence/consumer-record-finding/` and ignored local harness
+files. Writers are not alone and must preserve each other's edits. No other
+production path is authorized; a shared-contract change stops the wave.
+Spark exploration was dispatched as required but failed on its account usage
+limit; root completed the bounded read-only reuse inspection and the engineer
+provides implementation without waiting for a reset.
+
+Begin focused RED/GREEN, affected compiler checks and root's disjoint E2E
+preparation. Actual template integration, runtime smoke and Git remain root's
+serialized work after source freeze. Reuse unchanged B1 evidence and obtain
+one independent implementation/evidence review. No runtime, Product Publish,
+provider call, cloud action, release or main integration is authorized here.
+
+### B2 source freeze and bounded runtime authorization
+
+The compiler writer reports focused emitted runtime tests 28/28 and compiler
+TypeScript/build/lint exit 0. RED was observed before helper implementation;
+a deliberate removal of scope guards then reproduced a stale callback fetch,
+and restored guards passed. Non-approval and Restaurant byte snapshots pass.
+The full compiler suite now runs once in parallel with the tracked image build.
+Root's E2E parses and formats; independent early review corrected refresh
+synchronization and error-state control visibility, with no production change.
+
+Frozen compiler SHA-256:
+`91a09198dc1a89b90053dcb5633679c52f789fd4c261b384ddbb47572375dc69`;
+compiler test `a484bcae3c8aea5a7bd02b0a8ef5e213f20a3cf25378217860c8f1f0b3392eb0`;
+root E2E `15548d43e29167874675394e50cd6836415c8c97d2e4f1c3929081601a3b40cd`.
+Matching workflow states use the existing unique structural approval flow;
+capability-effect flows can share its entity and are not status sources.
+
+Root now authorizes the tracked compiler-worker Dockerfile build, reuse of
+unchanged accepted B1 Workbench/Control Plane images, and one isolated
+provider-free canonical lane in `factory-t9-record-b2-20260911`. Reuse existing
+loopback ports 15180/13020/15440/16380 and topology with Workbench/Control Plane
+model keys empty; the ignored task overlay changes only the task image tag.
+Verify internal source hashes after startup, then run actual composition,
+Product Publish, immutable Compilation, Verification and local Preview with
+synthetic Purchase data under the predeclared B2 acceptance record. This is
+separate bounded local runtime authority; it grants no external provider,
+paid resource, cloud action, hosted deployment, main integration or release.
+Root owns exact-label teardown and the one independent final evidence review.
+
+### B2 build and full-regression evidence
+
+The single full compiler run completed: 39 files, 665/665 tests, 252.14 seconds.
+A detached tool wrapper initially hid its session result; process and log
+monitoring recovered the still-live run. No duplicate suite was launched and
+no failure was waived. The scoped source review has no actionable findings;
+this is the ordinary independent iteration review, not a repository release
+gate, and does not create separate unchanged QA/release waves.
+
+Tracked compiler image build passed. OCI manifest/index:
+`cdc2a0dca64e98182650aa22617240655c3e03e997c0e5f855218af3a707f4aa`;
+config `f727db3a9b347e67b6883359803447cdf168d9d1ef0c6991429e5fecfe77170a`.
+The running worker source exactly matches the frozen compiler hash.
+The reused Workbench interpreter matches
+`de82747547f98bcea385e2639e0e3f151e21550755372b8e36acd8a5a6e1c420`.
+Control Plane and Workbench respond HTTP 200; model-key presence checks are
+false for both. The first canonical lane now runs with one worker, zero retries
+and the exact B2 E2E source. Its actual business/visual result remains pending.
+
+### B2 first actual lane and scoped harness correction
+
+First immutable Compilation `cmtvre5j2000dnx4tv0j6ff9q` reached ready in
+189510 ms. Initial Submit ended at 771/592/592 px for 390/768/1440; manager
+layout/axe passed at each width. Two UI-created requests reached the decision
+stage. At 224293 ms, the harness timed out locating the status select by exact
+label text. This is a failed acceptance attempt, not a clean run.
+
+A minimal Chromium reproduction of the emitted nested native label/select
+proved `getByLabel('Status filter', exact)` matches zero because label text
+includes option text, whereas the exact accessible combobox name matches one.
+The native accessible name and explicit label association are correct. Root
+changes only all status-select test locators to exact `combobox` role/name.
+No product source, image, semantic label or contract changes. New E2E SHA-256:
+`8c2b0143f85c68dc66c323fda0528efb685872bd848ffc57bc2685498828b760`.
+Test parsing and format pass. The old log and first form image remain in
+ignored task evidence; the independent reviewer received the reproduction.
+
+First Preview `preview-2ba113bf-1d28-4895-8dba-310afa799e09` stopped with zero
+exact-label containers, networks and volumes. Root authorizes one fresh
+provider-free confirmation on the same isolated Factory and unchanged images,
+under ordinary in-scope harness-correction authority. Record its separate
+result and final exact Factory/Preview cleanup; no new review wave or build.
+
+### B2 final acceptance and controller delivery
+
+Confirmation E2E passed 1/1, exit 0, no runner retries. Immutable Compilation
+`cmtvrlwme002gnx4t04tnf7q7` reached ready in 177061 ms and completed the business,
+finder and recovery checks in 187601 ms. Two UI requests were submitted and
+approved/rejected under filters; removed cards retained list-level success,
+exact values survived reload, audit and both 403 cases passed. Known-record
+finding took two input changes; one clear restored all three records. Refresh
+retained criteria and a held role-bound read proved the former view cleared.
+Loading/503/database-empty/no-match recovered. Confirmation questions,
+technical handoffs and in-run rescue were 0/0/0; retain the earlier failed
+harness attempt separately. No model or physical-phone/user-study claim.
+
+All three roles at 390/768/1440 plus phone search/no-match pass layout and axe.
+Root and independent `/root/b2_review` visually inspected all six exact PNGs
+and their hashes in the acceptance record. Final scoped independent findings
+are P0/P1/P2 `0/0/0`, covering code, business, responsive/state/visual evidence
+and cleanup. This is ordinary iteration review, not a repository-release
+verdict; no separate unchanged QA/release wave was added.
+
+Confirmation Preview `preview-8ea96914-6ca3-4203-bbfe-40e800e8300e` stopped.
+Factory `down -v` exited 0; fresh exact-label container (including stopped),
+network and volume queries returned zero for Factory and both Preview projects.
+Root accepts bounded B2 and authorizes one English commit and normal push to
+`codex/consumer-delivery-roadmap`, followed by clean-tree and remote-tip checks.
+Git history identifies this delivery. No main integration, repository release
+or cloud deployment is authorized. The updated plan prioritizes a complete
+Task journey and retains identity/hosting, real-model/user validation and
+material intake as explicit next gaps. Counts remain three canonical business
+definitions and two runtime families; this reusable interaction is not counted
+as another template or admitted external asset.
