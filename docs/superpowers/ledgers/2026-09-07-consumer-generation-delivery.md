@@ -3383,3 +3383,109 @@ Task journey and retains identity/hosting, real-model/user validation and
 material intake as explicit next gaps. Counts remain three canonical business
 definitions and two runtime families; this reusable interaction is not counted
 as another template or admitted external asset.
+
+### B2 visual rejection and shared presentation repair — 2026-09-11
+
+The founder rejects the B2 visual outcome. Withdraw that visual acceptance while
+preserving valid business/compiler evidence at 82e0d4e7. Root owns repair planning,
+design records, acceptance criteria, E2E and Git. Tech Lead owns proposed ADR-0056;
+production writes wait for exact standing acceptance. No new review wave is
+required for unaffected functionality. Spark quota is still unavailable; use the
+existing qualified agents for this bounded repair rather than repeated retries.
+
+Root separately authorizes a provider-free baseline diagnostic using the already
+accepted B2 worker and B1 Workbench/Control Plane images in the exact isolated
+project factory-t9-ui-repair-20260911, existing loopback ports and topology. The
+existing canonical Purchase fixture may exercise local Publish, immutable Compile,
+Verify and Preview to inspect real stylesheet/icon delivery and reproduce the
+missing workspace layout. Root owns exact-label teardown. This is local diagnostic
+runtime authority, not external provider, cloud deployment or repository release.
+
+### Shared workspace exact decision acceptance and implementation ownership
+
+Root records founder standing acceptance of proposed ADR-0056 at SHA-256
+47da415120bcc8c8432687d9bd6cbfdfb3620aeec30275ded5ed75594f49ef85.
+Independent nonauthor/nonwriter /root/b2_review returned
+APPROVED_FOR_STANDING_ACCEPTANCE: yes, P0/P1 0/0, under the 2026-09-01
+founder policy. The bounded reversible KEEP decision preserves Golden versions,
+Graph/API/security/lifecycle/dependency/public-catalog contracts and historical
+Compilations. The proposal is not modified after acceptance. Two mobile records
+means their identifying summaries, not expanded Details, within 390 x 900.
+
+PM now authorizes /root/b2_implementation to write exactly
+packages/compiler/src/approval-workspace-presentation.ts,
+packages/compiler/src/index.ts and
+packages/compiler/test/composition-page-runtime.test.ts, following the frozen
+ADR and packages/compiler/DESIGN.md. Root owns disjoint E2E, docs/design/evidence
+and later serialized integration/Git. The private CSS sentinel is
+--approval-workspace-version: 1. No copied upstream source or public asset is
+added. Focused RED/GREEN plus relevant checks and one combined independent review
+apply. Actual runtime/image authority is separately recorded; no main integration,
+repository release, cloud action or external provider call is granted.
+
+### Visual correction ownership transfer
+
+The first two emitted-code SSR drafts fail the declared presentation target:
+legacy approval CSS initially overlapped the new grid, and the corrected cascade
+still placed the first phone action beyond 650 px. These drafts are not runtime
+acceptance evidence. Root now owns approval-workspace-presentation.ts for the
+final composition/CSS correction. /root/b2_implementation explicitly froze that
+module and retains only index.ts and the focused test; existing exported private
+helper signatures are frozen. No contract or business scope changes. Root adds
+actual CSS-variable resolution and summary non-overlap checks to the E2E helper.
+The full compiler suite and actual repaired runtime wait for this visual fix.
+
+### Repaired presentation freeze and actual dual-definition runtime authority
+
+Root's final private recipe replaces the old approval CSS completely. Emitted
+Purchase SSR drafts show first phone Submit at 572.86 px and second summary at
+743.83 px; desktop contains all three records within 900 px. These are synthetic
+static design diagnostics, not business acceptance. Independent /root/b2_review
+finds no P1 visual blocker in the four latest list/form phone/desktop drafts and
+explicitly requires actual interaction/state evidence next. The early stale CSS
+expectations are being replaced with semantic assertions; generated TypeScript
+checks passed. The expected Expense bundle digest is
+a8cff23cf9a5f15a71562b5e3c38740766ee87d0517e60999b29ee8000786823.
+
+Root now separately authorizes the tracked compiler-worker image build as
+factory-t9-workspace-r1-20260911-compiler-worker:latest and replacement of only
+that service in factory-t9-ui-repair-20260911, retaining the accepted cached
+Workbench/Control Plane images, loopback ports, key-empty provider-free setup
+and unchanged topology. Run the existing Purchase and Expense E2E lanes once,
+serially with one worker and zero retries: actual synthetic composition, local
+Publish, immutable Compilation, Verification and Preview, core business journey,
+asset-negative/geometry checks and actual 390/768/1440 evidence. Root owns exact
+Factory/Preview cleanup. The compiler writer runs one full affected suite while
+the image builds. No external provider, paid/cloud/production deployment,
+repository release or main integration is authorized.
+
+### Shared workspace final acceptance and normal delivery authority
+
+Independent /root/b2_review returns P0/P1/P2 0/0/0 for the bounded ordinary
+iteration after source, business, final accessibility, all 13 actual images and
+cleanup review. Root accepts the shared repair. Full compiler 665/665, runtime
+28/28, compiler typecheck/build/lint, actual Expense/Purchase 2/2 (6.9 minutes),
+and final focused workspace/digest 2/2 pass. Final recipe SHA is
+5e0ddb969bf074c8758c6ba22deb92a885fa556f0c3beb5ef34329379590f6fe;
+final Expense bundle digest is
+0d88224154e7f9cbc9fe884b93a217c727ff589f7acf0514c35d8ed755e7b573.
+
+The last source change only adds the native mobile summary's accessible name;
+exact final emitted Chromium DOM and Enter open/close checks pass for list/form.
+The actual business/image lanes precede it and retain valid pixel/business scope.
+The actual worker also captured index.ts before formatter-only wrapping of the
+recipe spread; AST structure/order/kinds/identifiers/literals are identical.
+The acceptance record and image manifest retain actual and final source hashes
+rather than claim byte equality or silently reuse a different runtime.
+
+Factory down with explicit local env-file exited 0. Fresh exact-label checks
+show zero containers/networks/volumes for Factory and all three Previews. The
+first teardown failed env interpolation before mutation and is recorded, not
+counted as successful cleanup. No unrelated runtime was touched.
+
+Root owns final docs/Git and authorizes a bounded English repair commit and
+normal push to codex/consumer-delivery-roadmap, followed by remote-tip equality
+and clean-tree checks. ADR-0057 is a separate proposed follow-on decision, not
+production acceptance. No main, release or cloud authority is granted. Counts
+remain three definitions/two families; real-model selection, ordinary-user
+success, production identity and managed hosting remain maturity gaps.

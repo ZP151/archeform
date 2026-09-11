@@ -1,6 +1,12 @@
 # B2 Reusable Record Finding Acceptance
 
-Prepared: 2026-09-11. Status: accepted for the bounded local B2 iteration.
+Prepared: 2026-09-11. Status: business functionality verified; visual acceptance
+withdrawn following the founder's repeated rejection on 2026-09-11.
+
+The historical results below describe the B2 commit and the internal review at
+that time. They do not establish current visual acceptance. See the
+[shared workspace repair](approval-workspace-repair.md) for the reproduced cause,
+rejected presentation, stronger observable targets and replacement evidence.
 
 The [plan](../superpowers/plans/2026-09-11-reusable-record-finding.md) fixes the
 product outcome and all eight acceptance dimensions before implementation.

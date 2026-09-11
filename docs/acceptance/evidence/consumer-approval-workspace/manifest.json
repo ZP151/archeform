@@ -1,0 +1,91 @@
+{
+  "date": "2026-09-11",
+  "scope": "Actual provider-free Expense/Purchase runtimes before accessible-name-only final correction; see acceptance record for exact equivalence boundary",
+  "finalSources": [
+    {
+      "path": "packages/compiler/src/approval-workspace-presentation.ts",
+      "sha256": "5e0ddb969bf074c8758c6ba22deb92a885fa556f0c3beb5ef34329379590f6fe"
+    },
+    {
+      "path": "packages/compiler/src/index.ts",
+      "sha256": "935d617f388b28ccf9881594e1a6e8274020b78505e09cf7015f00180023458d"
+    },
+    {
+      "path": "packages/compiler/test/composition-page-runtime.test.ts",
+      "sha256": "0e382dc0f6ad033880fbf1e9036b013fb3fc8c5c1b2b61b043ee598b2505dd0f"
+    },
+    {
+      "path": "e2e/approval-presentation.ts",
+      "sha256": "08118a44e70a088617975ec5f50a4cfde9936656c3d483e3af33c6efa0583b6d"
+    },
+    {
+      "path": "e2e/consumer-approval.spec.ts",
+      "sha256": "9bccf018c1d824e5a7b5dfabdc1905bb8ab5b3b2ab87208738aaeb3f2328bf66"
+    },
+    {
+      "path": "e2e/consumer-purchase-request.spec.ts",
+      "sha256": "87fc16dceba0b0378b600dce10b3947478436b130a191832f13816bb10a4b401"
+    }
+  ],
+  "actualRuntime": {
+    "workerImage": "factory-t9-workspace-r1-20260911-compiler-worker:latest",
+    "recipeSha256": "3f78f6ca5c4bbacff24430c11a4828eb67f2e883306a10dc5d41b9cbf855a0a6",
+    "indexSha256": "b614f69d4e0f9a88d17fe0ad2bfbe693c4bb80469b9ace707101372adf42c8b9",
+    "helperSha256": "273e28132bdc5f4e02646b54035d9cf1b9bbf56120236dd3cc3559b26b43a63f",
+    "compilations": ["cmtx27u91002gkf4tga18ctkz", "cmtx2c7lt004jkf4t3a9tqf2w"]
+  },
+  "images": [
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/workspace-form-1440.png",
+      "sha256": "09edbdd6fd8e8fa1dd9d63d84cbd50b2851f4278f8a915cb7e72eaf6ffb4f804"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/workspace-form-390.png",
+      "sha256": "c50feb830771cdaa551cd29c15c7c864f96ae6c41b84c09ef73e83f74b491b71"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/workspace-navigation-390.png",
+      "sha256": "cca18a89a95614e61159555d6df5768348b057fffaa241b9998e052240118ea4"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/workspace-no-match-390.png",
+      "sha256": "aa09937add501d30c7e4a4a442d9df085a7eb3573eed91e6b6c3c522791d6b14"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/workspace-results-1440.png",
+      "sha256": "a34bd86f717923624da1ad5accabfb3b86900a2eae0c4faaf9011aff4759866f"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/workspace-results-390.png",
+      "sha256": "7caec265f6602c44dc41784cf1d054df92f63706f81d7bd41d5d6842a815b4a2"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/workspace-results-768.png",
+      "sha256": "ddb907cbe1fbe4038bf7c43c318c2d43c127c42d793d8d74bbb1b1fee9c85536"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/workspace-search-390.png",
+      "sha256": "6c1f4f651cb06fa4f0cdcd26c494a620b09dd2d8b6fabf06e5431b72794d118e"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/expense/d24-results-1440.png",
+      "sha256": "2f814f8c9cae2de506821151f226a4744854496e78f964469da17b5e3d30448c"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/expense/d24-results-390.png",
+      "sha256": "9ebe5eeb159140bdc5ce247bc90b4b32546634e2808b649703b6d850d2d9254f"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/expense/d24-results-768.png",
+      "sha256": "be2c1aa93aa89e2c78e4344293ef7506868c6218c6a90debbdeea9514964d792"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/expense/workspace-form-1440.png",
+      "sha256": "ccafea9015ab34113702a73dad6c5927b1082e46a6405b5bc6c4090ac11135b6"
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-workspace/expense/workspace-form-390.png",
+      "sha256": "b5b08314b5faa463e59a6977758eeac1fd7e85c3f86905c34f2dd8d50791c7d8"
+    }
+  ]
+}

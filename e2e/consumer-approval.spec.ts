@@ -10,6 +10,12 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import {
+  navigateApproval,
+  openApprovalNavigation,
+  verifyApprovalAssets,
+  verifyWorkspaceComposition,
+} from "./approval-presentation";
 import { observeInterpretation } from "./helpers/interpretation-diagnostics";
 import { approvalIntakeFacts } from "./helpers/approval-intake-diagnostics";
 import { assertRequirementInterpretationResult } from "../packages/adapters/src/requirements/requirement-interpreter";
@@ -28,7 +34,7 @@ const realInterpretation = process.env.FACTORY_APPROVAL_REAL_ACCEPTANCE === "1";
 const privacyProbe = process.env.FACTORY_APPROVAL_PRIVACY_ACCEPTANCE === "1";
 const evidenceDirectory = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-approval",
+  "docs/acceptance/evidence/consumer-approval-workspace/expense",
 );
 // One separately reported real request, never included in fixture pass counts.
 const realApprovalBrief =
@@ -134,16 +140,14 @@ async function expectReadableApprovalLayout(page: Page): Promise<void> {
     const summariesFillCards = [
       ...document.querySelectorAll<HTMLElement>(".approval-record"),
     ].every((record) => {
-      const style = getComputedStyle(record);
-      const contentWidth =
-        record.clientWidth -
-        parseFloat(style.paddingLeft) -
-        parseFloat(style.paddingRight);
+      const bounds = record.getBoundingClientRect();
+      const summary = record
+        .querySelector<HTMLElement>(".approval-summary")!
+        .getBoundingClientRect();
       return (
-        record
-          .querySelector<HTMLElement>(".approval-summary")!
-          .getBoundingClientRect().width >=
-        contentWidth - 1
+        summary.width > 0 &&
+        summary.left >= bounds.left &&
+        summary.right <= bounds.right + 1
       );
     });
     return { roleTextFits: availableWidth >= textWidth, summariesFillCards };
@@ -152,10 +156,9 @@ async function expectReadableApprovalLayout(page: Page): Promise<void> {
     facts.roleTextFits,
     "selected demo role is readable without clipping",
   ).toBe(true);
-  expect(
-    facts.summariesFillCards,
-    "record summaries use available card width",
-  ).toBe(true);
+  expect(facts.summariesFillCards, "record summaries fit within each row").toBe(
+    true,
+  );
 }
 
 async function createExpense(
@@ -163,7 +166,7 @@ async function createExpense(
   marker: string,
   amount: string,
 ): Promise<string> {
-  await page.getByRole("link", { name: "Expense list", exact: true }).click();
+  await navigateApproval(page, "Expense list");
   if (marker === "D24 synthetic approved claim") {
     // The canonical composer starts with one untouched draft seed. Check the
     // first valid action before mutations, without depending on API row order.
@@ -184,7 +187,7 @@ async function createExpense(
       expect(
         box!.y + box!.height,
         "first draft action fits above fold",
-      ).toBeLessThanOrEqual(900);
+      ).toBeLessThanOrEqual(650);
       console.info(
         "FACTORY_APPROVAL_FIRST_VIEW",
         JSON.stringify({
@@ -207,10 +210,14 @@ async function createExpense(
   if (marker === "D24 synthetic approved claim") {
     await page.setViewportSize({ width: 390, height: 900 });
     await mkdir(evidenceDirectory, { recursive: true });
-    await page.screenshot({
-      path: resolve(evidenceDirectory, "d24-form-390.png"),
-      fullPage: true,
-    });
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.screenshot({
+        path: resolve(evidenceDirectory, `workspace-form-${width}.png`),
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize({ width: 390, height: 900 });
   }
   const createdResponse = page.waitForResponse(
     (response) =>
@@ -233,7 +240,7 @@ async function createExpense(
   const created = (await response.json()) as { id?: unknown };
   if (typeof created.id !== "string")
     throw new Error("Created expense did not have a server identity.");
-  await page.getByRole("link", { name: "Expense list", exact: true }).click();
+  await navigateApproval(page, "Expense list");
   const row = page
     .locator(".generated-records > li")
     .filter({ hasText: marker });
@@ -579,6 +586,8 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
     generated = await context.newPage();
     generated.on("pageerror", (error) => pageErrors.push(error.name));
     await generated.goto(href);
+    await verifyApprovalAssets(generated);
+    await openApprovalNavigation(generated);
     await expect(generated.locator("main.generated-app")).toBeVisible();
     await expect(
       generated.getByText("Requests and approvals", { exact: true }),
@@ -614,9 +623,7 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       403,
     );
     stage = "reviewer-decision";
-    await generated
-      .getByRole("link", { name: "Approval queue", exact: true })
-      .click();
+    await navigateApproval(generated, "Approval queue");
     await generated
       .getByLabel("Demo role", { exact: true })
       .selectOption("manager");
@@ -650,9 +657,7 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       await expect(row.getByRole("button")).toHaveCount(0);
     }
     stage = "requester-results";
-    await generated
-      .getByRole("link", { name: "Expense list", exact: true })
-      .click();
+    await navigateApproval(generated, "Expense list");
     await generated
       .getByLabel("Demo role", { exact: true })
       .selectOption("employee");
@@ -689,6 +694,7 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       await disclosure.press("Enter");
       await expect(recordField(row, "ID")).not.toBeVisible();
     }
+    await openApprovalNavigation(generated);
     const navigation = generated.getByRole("navigation", {
       name: "Application routes",
     });
@@ -702,17 +708,14 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       );
     expect(declaredRoutes).toHaveLength(5);
     for (const item of declaredRoutes) {
-      const link = navigation.getByRole("link", {
-        name: item.label,
-        exact: true,
-      });
-      await link.click();
+      await navigateApproval(generated, item.label);
       await expect(generated).toHaveURL(new URL(item.route, href).toString());
-      await expect(link).toHaveAttribute("aria-current", "page");
+      await openApprovalNavigation(generated);
+      await expect(
+        navigation.getByRole("link", { name: item.label, exact: true }),
+      ).toHaveAttribute("aria-current", "page");
     }
-    await navigation
-      .getByRole("link", { name: "Expense list", exact: true })
-      .click();
+    await navigateApproval(generated, "Expense list");
     expect(pageErrors).toEqual([]);
     const evidence = evidenceDirectory;
     await mkdir(evidence, { recursive: true });
@@ -743,11 +746,11 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
           ).toBeGreaterThanOrEqual(44);
         }
       }
-      await expect(
-        generated
-          .getByRole("navigation", { name: "Application routes" })
-          .getByRole("link", { name: "Expense list", exact: true }),
-      ).toHaveAttribute("aria-current", "page");
+      await verifyWorkspaceComposition(generated, width);
+      await generated.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement)
+          document.activeElement.blur();
+      });
       await generated.screenshot({
         path: resolve(
           evidence,
@@ -793,7 +796,7 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       expect(webContainer).toMatch(/^[a-f0-9]+$/);
       const emittedUi = resolve(
         process.cwd(),
-        ".superpowers/sdd/2026-09-10-approval-mobile-presentation/emitted-ui",
+        ".superpowers/sdd/2026-09-11-approval-workspace/emitted-ui",
       );
       await mkdir(emittedUi, { recursive: true });
       for (const file of ["page-runtime.tsx", "globals.css"]) {

@@ -11,7 +11,34 @@ technical test success alone is insufficient. This uses the existing review,
 preserves valid regression evidence and introduces no additional audit stage.
 Adopting this requirement is not evidence that untested product families pass it.
 
-## Accepted delivery: B2 reusable record finding
+## Accepted local repair: shared generated workspace
+
+The founder rejected B2's visual result; that historical visual acceptance stays
+withdrawn. The [shared repair](acceptance/approval-workspace-repair.md) now replaces
+the approval template's old layout with a coherent desktop sidebar, compact
+mobile navigation, neutral aligned record summaries and typed forms. Expense and
+Purchase consume the same private recipe. The reproduced old UI had loaded CSS
+and icons: template composition and incomplete acceptance criteria caused the
+observed poor result. New checks actively detect disabled CSS or hidden icons.
+
+Both actual immutable-runtime lanes pass (2/2): creation, submission, approval,
+rejection, persistence, role/state denials and finding/recovery. Ready times are
+185207 ms (Expense) and 177833 ms (Purchase); first phone actions end at 550 and
+573 px. All 13 actual images were visually inspected at 390/768/1440 and relevant
+form/navigation/search/no-match states. Compiler 665/665, runtime 28/28, final
+accessibility/digest correction 2/2 and emitted Chromium keyboard checks pass.
+One combined independent ordinary-iteration review reports P0/P1/P2 0/0/0;
+exact Factory/three-Preview cleanup is complete. Actual-runtime versus final
+accessible-name-only source identities are explicit in the acceptance record.
+
+See the [new phone result](acceptance/evidence/consumer-approval-workspace/workspace-results-390.png)
+and [desktop result](acceptance/evidence/consumer-approval-workspace/workspace-results-1440.png).
+This is local internal acceptance, not founder or ordinary-user visual approval.
+No definition/family is added: delivered counts stay **three / two**. Next is the
+Task-family experiment under proposed ADR-0057, beginning with strict semantic
+contract parity and shared assembly. It is not yet implemented or counted.
+
+## Functionally verified, visual repair required: B2 reusable record finding
 
 The [B2 plan](superpowers/plans/2026-09-11-reusable-record-finding.md) selects
 the next shared product capability: finding and processing records using search,

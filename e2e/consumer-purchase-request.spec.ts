@@ -11,6 +11,13 @@ import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+  verifyApprovalAssets,
+  verifyAssetFailureDetection,
+  openApprovalNavigation,
+  navigateApproval,
+  verifyWorkspaceComposition,
+} from "./approval-presentation";
+import {
   purchaseRequestFixtureBrief,
   purchaseRequestInterpretationFixture,
 } from "../apps/workbench/test/consumer-generation-fixture";
@@ -19,7 +26,7 @@ import {
 // compilation, verification, preview, form submission and persistence are real.
 const evidence = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-record-finding",
+  "docs/acceptance/evidence/consumer-approval-workspace",
 );
 type Preview = {
   id: string;
@@ -155,18 +162,17 @@ async function layout(page: Page, width: number): Promise<void> {
           parseFloat(style.paddingRight) -
           24 >=
         context.measureText(select.selectedOptions[0]!.text).width,
-      summariesFillCards: [
+      summariesFitRows: [
         ...document.querySelectorAll<HTMLElement>(".approval-record"),
       ].every((row) => {
-        const style = getComputedStyle(row);
+        const summary = row
+          .querySelector<HTMLElement>(".approval-summary")!
+          .getBoundingClientRect();
+        const bounds = row.getBoundingClientRect();
         return (
-          row
-            .querySelector<HTMLElement>(".approval-summary")!
-            .getBoundingClientRect().width >=
-          row.clientWidth -
-            parseFloat(style.paddingLeft) -
-            parseFloat(style.paddingRight) -
-            1
+          summary.width > 0 &&
+          summary.left >= bounds.left &&
+          summary.right <= bounds.right + 1
         );
       }),
     };
@@ -175,7 +181,7 @@ async function layout(page: Page, width: number): Promise<void> {
   expect(facts).toEqual({
     overflow: false,
     roleTextFits: true,
-    summariesFillCards: true,
+    summariesFitRows: true,
   });
   const violations = (
     await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()
@@ -308,7 +314,7 @@ async function verifyRecordFinding(
   await expect(status).toHaveValue("approved");
   await layout(page, 390);
   await page.screenshot({
-    path: resolve(evidence, "b2-search-390.png"),
+    path: resolve(evidence, "workspace-search-390.png"),
     fullPage: true,
   });
   await search.fill("No such synthetic item");
@@ -331,7 +337,7 @@ async function verifyRecordFinding(
   ]);
   await layout(page, 390);
   await page.screenshot({
-    path: resolve(evidence, "b2-no-match-390.png"),
+    path: resolve(evidence, "workspace-no-match-390.png"),
     fullPage: true,
   });
   await clear.focus();
@@ -404,10 +410,14 @@ async function createRequest(
     .fill("Synthetic replacement equipment for the shared workspace.");
   if (captureForm) {
     await mkdir(evidence, { recursive: true });
-    await page.screenshot({
-      path: resolve(evidence, "b2-form-390.png"),
-      fullPage: true,
-    });
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.screenshot({
+        path: resolve(evidence, `workspace-form-${width}.png`),
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize({ width: 390, height: 900 });
     expect(
       (
         await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()
@@ -440,9 +450,7 @@ async function createRequest(
   const created = (await response.json()) as { id?: unknown };
   if (typeof created.id !== "string")
     throw new Error("Created request has no server identity.");
-  await page
-    .getByRole("link", { name: "Purchase request list", exact: true })
-    .click();
+  await navigateApproval(page, "Purchase request list");
   const row = record(page, item);
   await expect(row).toHaveCount(1);
   await expect(row.getByRole("heading", { level: 3 })).toContainText(item);
@@ -461,7 +469,7 @@ async function createRequest(
   return created.id;
 }
 
-test("B2 shared record finding supports a usable responsive Purchase approval application", async ({
+test("Shared workspace supports a usable responsive Purchase approval application", async ({
   page,
   context,
   request,
@@ -582,12 +590,12 @@ test("B2 shared record finding supports a usable responsive Purchase approval ap
     generated = await context.newPage();
     generated.on("pageerror", (error) => errors.push(error.name));
     await generated.goto(href);
+    await verifyApprovalAssets(generated);
+    await verifyAssetFailureDetection(generated);
     await expect(
       generated.getByText("Requests and approvals", { exact: true }),
     ).toBeVisible();
-    await generated
-      .getByRole("link", { name: "Purchase request list", exact: true })
-      .click();
+    await navigateApproval(generated, "Purchase request list");
     await expect(generated.locator(".generated-records > li")).toHaveCount(1);
     for (const width of [390, 768, 1440]) {
       await generated.setViewportSize({ width, height: 900 });
@@ -597,7 +605,7 @@ test("B2 shared record finding supports a usable responsive Purchase approval ap
       const box = await seed
         .getByRole("button", { name: "Submit", exact: true })
         .boundingBox();
-      expect(box!.y + box!.height).toBeLessThanOrEqual(900);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(650);
       console.info(
         "FACTORY_PURCHASE_FIRST_VIEW",
         JSON.stringify({
@@ -645,15 +653,32 @@ test("B2 shared record finding supports a usable responsive Purchase approval ap
       ).status(),
     ).toBe(403);
     stage = "manager-decision";
-    await generated
-      .getByRole("link", { name: "Approval queue", exact: true })
-      .click();
+    await navigateApproval(generated, "Approval queue");
     await generated
       .getByLabel("Demo role", { exact: true })
       .selectOption("manager");
     for (const width of [390, 768, 1440]) {
       await generated.setViewportSize({ width, height: 900 });
       await layout(generated, width);
+      await verifyWorkspaceComposition(generated, width);
+      if (width === 390) {
+        await openApprovalNavigation(generated);
+        await generated.screenshot({
+          path: resolve(evidence, "workspace-navigation-390.png"),
+          fullPage: true,
+        });
+        await generated
+          .locator("details")
+          .filter({
+            has: generated.locator('nav[aria-label="Application routes"]'),
+          })
+          .locator(":scope > summary")
+          .click();
+      }
+      await generated.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement)
+          document.activeElement.blur();
+      });
     }
     await generated.setViewportSize({ width: 390, height: 900 });
     for (const [id, item, action, status] of [
@@ -743,9 +768,7 @@ test("B2 shared record finding supports a usable responsive Purchase approval ap
       ).toBe(true);
     }
     stage = "results";
-    await generated
-      .getByRole("link", { name: "Purchase request list", exact: true })
-      .click();
+    await navigateApproval(generated, "Purchase request list");
     await generated
       .getByLabel("Demo role", { exact: true })
       .selectOption("requester");
@@ -759,6 +782,7 @@ test("B2 shared record finding supports a usable responsive Purchase approval ap
       await expect(row.getByRole("heading", { level: 3 })).toContainText(item);
       await expectRequestValues(row, id, amount);
     }
+    await openApprovalNavigation(generated);
     const nav = generated.getByRole("navigation", {
       name: "Application routes",
     });
@@ -771,14 +795,14 @@ test("B2 shared record finding supports a usable responsive Purchase approval ap
       "Requester",
     ]);
     for (const name of labels) {
-      const link = nav.getByRole("link", { name: name.trim(), exact: true });
-      await link.click();
-      await expect(link).toHaveAttribute("aria-current", "page");
+      await navigateApproval(generated, name.trim());
+      await openApprovalNavigation(generated);
+      await expect(
+        nav.getByRole("link", { name: name.trim(), exact: true }),
+      ).toHaveAttribute("aria-current", "page");
       await expectDecisionOnlyActions(generated);
     }
-    await nav
-      .getByRole("link", { name: "Purchase request list", exact: true })
-      .click();
+    await navigateApproval(generated, "Purchase request list");
     stage = "record-finding";
     await verifyRecordFinding(generated, approvedItem);
     for (const width of [390, 768, 1440]) {
@@ -786,8 +810,13 @@ test("B2 shared record finding supports a usable responsive Purchase approval ap
       await generated.evaluate(() => window.scrollTo(0, 0));
       await expect(generated.locator(".generated-records > li")).toHaveCount(3);
       await layout(generated, width);
+      await verifyWorkspaceComposition(generated, width);
+      await generated.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement)
+          document.activeElement.blur();
+      });
       await generated.screenshot({
-        path: resolve(evidence, `b2-results-${width}.png`),
+        path: resolve(evidence, `workspace-results-${width}.png`),
         fullPage: true,
       });
     }

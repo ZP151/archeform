@@ -1,5 +1,10 @@
 # Reusable Record Finding Implementation Plan
 
+2026-09-11 correction: the founder rejected the delivered B2 visuals. Functional
+finding behavior remains verified, but its visual acceptance is withdrawn. The
+active shared workspace repair replaces the card/navigation presentation before
+the next Task family can inherit it; see `docs/acceptance/approval-workspace-repair.md`.
+
 > **For agentic workers:** Use subagent-driven-development for the bounded
 > implementation. Root owns the ledger, integration, acceptance and Git; the
 > accepted B2 ADR freezes production ownership before implementation.

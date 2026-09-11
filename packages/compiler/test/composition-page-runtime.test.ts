@@ -25,6 +25,7 @@ import {
 } from "@factory/graph";
 
 import { createGeneratedPageRuntimeProjection } from "../src/page-runtime-projection.js";
+import { approvalWorkspacePresentation } from "../src/approval-workspace-presentation.js";
 import {
   generateApplicationBundle,
   generateRestaurantProductApplicationBundle,
@@ -408,17 +409,11 @@ async function purchaseGraphFor(): Promise<ApplicationGraphV1> {
 }
 
 describe("Purchase approval summary", () => {
-  it("reserves readable native role-selector width only in the enhanced approval CSS", async () => {
-    const rule = ".approval-v1 .generated-header select { min-width: 10rem; }";
-    const graph = await purchaseGraphFor();
-    const styles = generateApplicationBundle(bundleInputFor(graph)).files.find(
-      (file) => file.path === "web/app/globals.css",
-    )!.content;
-    expect(styles.includes(rule)).toBe(true);
-    const expenseStyles = generateApplicationBundle(
-      bundleInputFor(await composedGraphFor(expenseBrief)),
-    ).files.find((file) => file.path === "web/app/globals.css")!.content;
-    expect(expenseStyles.includes(rule)).toBe(false);
+  it("emits one labelled demo role control for an enhanced approval workspace", async () => {
+    const source = runtimeFor(await purchaseGraphFor());
+    expect(source.match(/id='demo-role'/g)).toHaveLength(1);
+    expect(source).toContain("<label htmlFor='demo-role'>");
+    expect(runtimeFor(nonApprovalGraph())).not.toContain("id='demo-role'");
   });
 
   it("promotes only declared item identity and a unique temporal fallback", async () => {
@@ -475,7 +470,7 @@ describe("definition bank byte preservation", () => {
           bundleInputFor(await composedGraphFor(expenseBrief)),
         ).files,
       ),
-    ).toBe("96e531eb1db10f96dcaeaf65a046e6a4dd13eb291c4f73e06a6be5e6db80372e");
+    ).toBe("0d88224154e7f9cbc9fe884b93a217c727ff589f7acf0514c35d8ed755e7b573");
   });
 });
 
@@ -767,7 +762,7 @@ describe("approval runtime behavior", () => {
     runtime.definition.flow.flows = original;
   });
 
-  it("emits the compact approval shell, disclosure, semantic theme overrides, and desktop record grid", async () => {
+  it("emits the reusable approval workspace with responsive navigation and neutral record rows", async () => {
     const graph = await composedGraphFor(expenseBrief);
     const themed = structuredClone(graph);
     const designSystem = structuredClone(
@@ -784,9 +779,41 @@ describe("approval runtime behavior", () => {
     const styles = generateApplicationBundle(bundleInputFor(themed)).files.find(
       (file) => file.path === "web/app/globals.css",
     )!.content;
+    expect(approvalWorkspacePresentation).toEqual({
+      key: "approval-workspace-presentation",
+      version: "1.0.0",
+      ownership: "factory-authored",
+      license: "UNLICENSED",
+      reuse: [
+        "button",
+        "input",
+        "label",
+        "select",
+        "card",
+        "badge",
+        "compact-sidebar-navigation",
+        "form-field",
+        "loading-state",
+        "empty-state",
+        "error-state",
+        "confirmation-state",
+        "denial-state",
+      ],
+      icons: [
+        "house",
+        "receipt-text",
+        "user-round",
+        "refresh-cw",
+        "clock",
+        "circle-check",
+        "circle-x",
+      ],
+    });
+    expect(runtime).toContain("<aside className='approval-workspace-sidebar'>");
     expect(runtime).toContain(
-      "<h1>{definition.applicationName}</h1><p>Requests and approvals</p>",
+      "<details className='approval-workspace-mobile-nav'><summary aria-label={'Navigation: ' + activePage.title}>Navigation</summary><nav aria-label='Application routes'>",
     );
+    expect(runtime).toContain("<h1>{activePage.title}</h1>");
     expect(runtime).toContain(
       "aria-current={item.route === requestedRoute ? 'page' : undefined}",
     );
@@ -800,42 +827,12 @@ describe("approval runtime behavior", () => {
     expect(runtime).toContain(
       "className='generated-primary' href={formRoute}>New {entity.label.toLowerCase()}</a>",
     );
-    expect(styles).toContain(".approval-v1.generated-app");
+    expect(styles).toContain("--approval-workspace-version: 1;");
     expect(styles).toContain(
-      ".approval-v1 .approval-records-section { background: transparent;",
+      ".approval-v1.generated-app { --approval-workspace-version: 1; display: grid;",
     );
-    expect(styles).toContain(
-      ".approval-v1 .approval-summary-amount { grid-column: 1; grid-row: 1; }",
-    );
-    expect(styles).toContain(
-      ".approval-v1 .approval-summary-status { grid-column: 2; grid-row: 1; text-align: end; }",
-    );
-    expect(styles).toContain(
-      ".approval-v1 .approval-record summary { display: list-item;",
-    );
-    expect(styles).toContain(
-      ".approval-v1 .approval-record { display: grid; grid-template-columns: minmax(0, 1fr);",
-    );
-    expect(styles).toContain(
-      ".approval-v1 .approval-record > .approval-actions:empty { display: none; }",
-    );
-    expect(styles).toContain(
-      ".approval-v1 .generated-header label[for='demo-role'] { width: auto; flex: none;",
-    );
-    expect(styles).toContain(
-      ".approval-v1 .generated-header select { width: auto; min-width: 8rem;",
-    );
-    expect(styles).toContain(
-      ".approval-v1 .generated-header select { flex: 1 1 auto; min-width: 8rem;",
-    );
-    expect(styles).toContain(
-      ".approval-v1 .approval-records-section > .generated-section-heading { flex-direction: row; flex-wrap: wrap;",
-    );
-    expect(styles).toContain(".approval-v1 nav { flex-wrap: nowrap;");
-    expect(styles).toContain("overflow-x: auto;");
-    expect(styles).toContain(
-      "@media (min-width: 900px) { .approval-v1 .generated-records { grid-template-columns: repeat(2, minmax(0, 1fr)); }",
-    );
+    expect(styles).toContain(".approval-workspace-sidebar");
+    expect(styles).toContain(".approval-workspace-mobile-nav");
     for (const colour of [
       "#146c43",
       "#8a4b00",
@@ -845,18 +842,18 @@ describe("approval runtime behavior", () => {
       "#ff7b73",
     ])
       expect(styles).toContain(colour);
-    expect(styles).toContain(
-      ".approval-v1 .approval-tone-positive { border-color: var(--factory-colour-success);",
+    const referencedTokens = Array.from(
+      styles.matchAll(/var\((--factory-[\w-]+)/g),
+      ([, token]) => token!,
     );
-    expect(styles).toContain(
-      ".approval-v1 .approval-tone-pending { border-color: var(--factory-colour-warning);",
+    const definedTokens = new Set(
+      Array.from(
+        styles.matchAll(/(--factory-[\w-]+)\s*:/g),
+        ([, token]) => token!,
+      ),
     );
-    expect(styles).toContain(
-      ".approval-v1 .approval-tone-negative { border-color: var(--factory-colour-danger);",
-    );
-    expect(styles).toContain(
-      "color-mix(in srgb, var(--factory-text) 72%, var(--factory-colour-success))",
-    );
+    for (const token of referencedTokens)
+      expect(definedTokens).toContain(token);
   });
 
   it("selects only an unambiguous structural approval flow independent of naming or order", async () => {
@@ -1031,21 +1028,13 @@ describe("approval runtime behavior", () => {
     ).toEqual([]);
   });
 
-  it("keeps native date focus visible and the demo role label in one row", async () => {
-    const graph = await composedGraphFor(expenseBrief);
-    const styles = generateApplicationBundle(bundleInputFor(graph)).files.find(
-      (file) => file.path === "web/app/globals.css",
-    )!.content;
-    expect
-      .soft(styles)
-      .toMatch(
-        /input:is\(\[type='date'\], \[type='datetime-local'\]\):focus-within[^{}]*\{[^}]*outline: 3px solid var\(--factory-accent\)/,
-      );
-    expect
-      .soft(styles)
-      .toMatch(
-        /label\[for='demo-role'\]\s*\{[^}]*display: inline-flex;[^}]*align-items: center/,
-      );
+  it("keeps native date controls and one associated demo role label", async () => {
+    const source = runtimeFor(await composedGraphFor(expenseBrief));
+    expect(source).toContain(
+      "type={field.type === 'datetime' ? 'datetime-local' : field.type === 'string' ? 'text' : field.type}",
+    );
+    expect(source.match(/id='demo-role'/g)).toHaveLength(1);
+    expect(source).toContain("<label htmlFor='demo-role'>");
   });
 
   it("renders one refresh icon and sentence-case labels", async () => {

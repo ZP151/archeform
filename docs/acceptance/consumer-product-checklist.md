@@ -21,6 +21,25 @@ Do not clone the Expense screen into unrelated products. Reuse interaction
 patterns while choosing summaries, navigation, media and actions around each
 family's real user task. A generic field dump is not a finished product UI.
 
+### Presentation regressions following repeated founder rejection
+
+Declare the actual first-viewport composition before implementation: navigation,
+main action, record/content identity, important summaries and state hierarchy.
+Bind family-specific observable targets to it, such as first action position and
+visible meaningful records; do not apply an arbitrary card count to every family.
+Retain rejected images as anti-references. A rejection withdraws the associated
+visual acceptance even when prior automated and agent review results were green.
+
+For shared templates, exercise at least two materially different current
+definitions when both consume the changed presentation. Verify emitted stylesheet
+HTTP success, computed layout and visible icon/media geometry in the real app.
+Prove the detector fails when the relevant assets are disabled or missing. These
+checks diagnose loading; they do not establish visual quality. The existing
+review must also compare actual before/after images for deliberate composition,
+legibility, task reach, density, meaningful graphics and responsive navigation.
+Record functional, mechanical visual and qualitative visual conclusions separately.
+Do not describe internal review as founder or ordinary-user acceptance.
+
 ## Required acceptance dimensions
 
 | Dimension                          | Observable acceptance condition                                                                                                                                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                                                                                               |
