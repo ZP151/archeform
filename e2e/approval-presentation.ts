@@ -77,6 +77,8 @@ export async function navigateApproval(page: Page, name: string) {
 
 export async function verifyWorkspaceComposition(page: Page, width: number) {
   await verifyApprovalAssets(page);
+  await verifyBrandColors(page);
+  await verifyDecisionColors(page);
   const disclosure = page
     .locator("details")
     .filter({ has: page.locator('nav[aria-label="Application routes"]') });
@@ -100,9 +102,11 @@ export async function verifyWorkspaceComposition(page: Page, width: number) {
         await link.evaluate((node) => node.scrollWidth <= node.clientWidth),
       ).toBe(true);
     }
+    await verifyNavigationColors(page, false);
     await disclosure.locator(":scope > summary").click();
   } else {
     await expect(page.locator("aside")).toBeVisible();
+    await verifyNavigationColors(page, true);
     const columns = await page
       .locator("main.approval-v1")
       .evaluate(
@@ -165,12 +169,22 @@ export async function verifyApprovalAssets(page: Page) {
   expect(
     facts.workspaceVersion,
     "shared composed workspace must be loaded",
-  ).toBe("1");
+  ).toBe("2");
   expect(facts.appDisplay).toBe("grid");
   expect(facts.unresolvedTokens, "all used design tokens must resolve").toEqual(
     [],
   );
   expect(facts.bodyOverflow).toBe(false);
+  for (const refresh of await page
+    .locator("button.approval-refresh:visible")
+    .all()) {
+    await expect(refresh).toHaveAccessibleName("Refresh");
+    await expect(refresh).toHaveAttribute("title", "Refresh");
+    await expect(refresh).toHaveText("");
+    const bounds = await refresh.boundingBox();
+    expect(bounds!.width).toBeGreaterThanOrEqual(44);
+    expect(bounds!.height).toBeGreaterThanOrEqual(44);
+  }
 }
 
 export async function verifyAssetFailureDetection(page: Page) {
@@ -196,4 +210,173 @@ export async function verifyAssetFailureDetection(page: Page) {
     await hidden.evaluate((node) => node.remove());
   }
   await verifyApprovalAssets(page);
+}
+
+async function verifyBrandColors(page: Page) {
+  const facts = await page
+    .locator(".approval-workspace-sidebar")
+    .evaluate((node) => {
+      const style = getComputedStyle(node);
+      const resolve = (name: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = style.getPropertyValue(name);
+        probe.style.display = "none";
+        node.append(probe);
+        const value = getComputedStyle(probe).color;
+        probe.remove();
+        return value;
+      };
+      return {
+        background: style.backgroundColor,
+        text: style.color,
+        accent: resolve("--factory-accent"),
+        foreground: resolve("--factory-accent-text"),
+        canvas: getComputedStyle(node.closest("main")!).backgroundColor,
+        canvasToken: resolve("--factory-bg"),
+      };
+    });
+  expect(facts.background).toBe(facts.accent);
+  expect(facts.text).toBe(facts.foreground);
+  expect(facts.canvas).toBe(facts.canvasToken);
+}
+async function verifyNavigationColors(page: Page, desktop: boolean) {
+  const nav = page.locator(
+    desktop
+      ? ".approval-workspace-sidebar nav"
+      : ".approval-workspace-mobile-nav nav",
+  );
+  const check = async (current: boolean) => {
+    await expect(async () => {
+      const link = nav
+        .locator(
+          current ? "a[aria-current='page']" : "a:not([aria-current='page'])",
+        )
+        .first();
+      const facts = await link.evaluate(
+        (node, { desktop, current }) => {
+          const style = getComputedStyle(node);
+          const resolve = (name: string) => {
+            const probe = document.createElement("span");
+            probe.style.color = style.getPropertyValue(name);
+            probe.style.display = "none";
+            node.append(probe);
+            const value = getComputedStyle(probe).color;
+            probe.remove();
+            return value;
+          };
+          return {
+            background: style.backgroundColor,
+            text: style.color,
+            expectedBackground: resolve(
+              current && !desktop ? "--factory-accent" : "--factory-surface",
+            ),
+            expectedText: resolve(
+              current && !desktop
+                ? "--factory-accent-text"
+                : desktop
+                  ? "--factory-accent"
+                  : "--factory-text",
+            ),
+          };
+        },
+        { desktop, current },
+      );
+      expect(facts.background).toBe(facts.expectedBackground);
+      expect(facts.text).toBe(facts.expectedText);
+    }).toPass({ timeout: 2000 });
+  };
+  const ordinary = nav.locator("a:not([aria-current='page'])").first();
+  await ordinary.hover();
+  await check(false);
+  await page.mouse.move(0, 0);
+  await page.keyboard.press("Tab");
+  await ordinary.focus();
+  await expect(ordinary).toBeFocused();
+  expect(await ordinary.evaluate((node) => node.matches(":hover"))).toBe(false);
+  expect(
+    await ordinary.evaluate((node) => node.matches(":focus-visible")),
+  ).toBe(true);
+  await check(false);
+  await check(true);
+  await page.mouse.move(0, 0);
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+  });
+  await page.evaluate(async () => {
+    await Promise.all(
+      document
+        .getAnimations()
+        .map((animation) => animation.finished.catch(() => {})),
+    );
+  });
+}
+
+async function verifyDecisionColors(page: Page) {
+  await expect(async () => {
+    const facts = await page.locator(".approval-record").evaluateAll((rows) =>
+      rows.map((row) => {
+        const resolve = (value: string, background = false) => {
+          const probe = document.createElement("span");
+          if (background) probe.style.backgroundColor = value;
+          else probe.style.color = value;
+          probe.style.display = "none";
+          row.append(probe);
+          const style = getComputedStyle(probe);
+          const result = background ? style.backgroundColor : style.color;
+          probe.remove();
+          return result;
+        };
+        const checks: Record<string, boolean> = {
+          neutralRow:
+            getComputedStyle(row).backgroundColor ===
+            resolve("var(--factory-surface)", true),
+        };
+        const tone = ["positive", "pending", "negative"].find((tone) =>
+          row.classList.contains(`approval-tone-${tone}`),
+        );
+        const token =
+          tone === "positive"
+            ? "success"
+            : tone === "pending"
+              ? "warning"
+              : "danger";
+        const badge = row.querySelector(".approval-badge");
+        if (tone && badge) {
+          const style = getComputedStyle(badge);
+          checks.badgeFill =
+            style.backgroundColor ===
+            resolve(
+              `color-mix(in srgb,var(--factory-colour-${token}) 18%,var(--factory-surface))`,
+              true,
+            );
+          checks.badgeBorder =
+            style.borderTopColor === resolve(`var(--factory-colour-${token})`);
+          checks.badgeText = style.color === resolve("var(--factory-text)");
+          const icon = badge.querySelector(".approval-icon");
+          checks.badgeIcon =
+            !!icon &&
+            getComputedStyle(icon).color ===
+              resolve(`var(--factory-colour-${token})`);
+        }
+        for (const [index, button] of [
+          ...row.querySelectorAll(
+            ":scope > .approval-actions button:not(:disabled)",
+          ),
+        ].entries()) {
+          const style = getComputedStyle(button);
+          checks[`action${index}Fill`] =
+            style.backgroundColor === resolve("var(--factory-accent)", true);
+          checks[`action${index}Border`] =
+            style.borderTopColor === resolve("var(--factory-accent)");
+          checks[`action${index}Text`] =
+            style.color === resolve("var(--factory-accent-text)");
+        }
+        return { tone: tone ?? "neutral", checks };
+      }),
+    );
+    for (const fact of facts)
+      for (const [name, pass] of Object.entries(fact.checks))
+        expect(pass, `${fact.tone} ${name}`).toBe(true);
+  }).toPass({ timeout: 2000 });
 }

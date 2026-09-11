@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-09-11
+Updated: 2026-09-12
 
 All subsequent product types now inherit the
 [shared consumer acceptance matrix](acceptance/consumer-product-checklist.md)
@@ -11,7 +11,32 @@ technical test success alone is insufficient. This uses the existing review,
 preserves valid regression evidence and introduces no additional audit stage.
 Adopting this requirement is not evidence that untested product families pass it.
 
-## Accepted local repair: shared generated workspace
+## Active priority: expressive UI and a complete approval journey
+
+The founder rejected the 2d153239 visual result on September 12. Its internal
+visual acceptance is withdrawn; historical functional results retain their
+source-specific scope. A new refinement strengthens useful color and makes
+Refresh an accessible icon-only action. Mechanical checks cannot overrule the
+founder's direction.
+
+The [September 12 correction](acceptance/evidence/consumer-approval-emphasis/README.md)
+now passes both actual Expense/Purchase lanes (2/2), focused compiler tests
+(29/29), package checks and light/dark presentation checks. Full accent navigation,
+semantic statuses and icon-only Refresh are implemented. All 13 actual images were
+inspected and exact local runtime cleanup is complete. The single independent
+review is clean (P0/P1/P2 0/0/0); no founder visual approval or mature-product claim
+is inferred.
+
+The next product milestone is [approval correction and decision closure](superpowers/plans/2026-09-12-approval-decision-closure.md): visible decision history, draft correction and return/revision/resubmission, and recovery after uncertain writes. Existing generated APIs lack governed record update; rejected requests are terminal; audit data has no user-facing history; mutation retries are not idempotent. These are product gaps, not styling issues.
+
+B3 Task implementation is held. Its dispatched agent failed before writing code
+because the selected runtime used exhausted Spark quota. No Task production code
+was delivered; the previous "active implementation" report overstated dispatch.
+Keep **three registered definitions / two demonstrated runtime families**, with
+no mature closed-loop product count inferred from those numbers. Root owns the
+correction; the ledger records implementation/decision boundaries and evidence.
+
+## Historical functional repair: visual acceptance withdrawn
 
 The founder rejected B2's visual result; that historical visual acceptance stays
 withdrawn. The [shared repair](acceptance/approval-workspace-repair.md) now replaces
@@ -35,8 +60,8 @@ See the [new phone result](acceptance/evidence/consumer-approval-workspace/works
 and [desktop result](acceptance/evidence/consumer-approval-workspace/workspace-results-1440.png).
 This is local internal acceptance, not founder or ordinary-user visual approval.
 No definition/family is added: delivered counts stay **three / two**. Next is the
-Task-family experiment under proposed ADR-0057, beginning with strict semantic
-contract parity and shared assembly. It is not yet implemented or counted.
+Task-family experiment under standing-accepted ADR-0057, beginning with strict semantic
+contract parity and shared assembly. Its implementation is held under the [B3 plan](superpowers/plans/2026-09-11-canonical-team-task-family.md); no production code was written or counted. The September 12 priority above supersedes its immediate scheduling.
 
 ## Functionally verified, visual repair required: B2 reusable record finding
 

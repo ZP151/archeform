@@ -3489,3 +3489,123 @@ and clean-tree checks. ADR-0057 is a separate proposed follow-on decision, not
 production acceptance. No main, release or cloud authority is granted. Counts
 remain three definitions/two families; real-model selection, ordinary-user
 success, production identity and managed hosting remain maturity gaps.
+
+### B3 final decision acceptance and serialized implementation authority
+
+The shared repair is committed and normally pushed as
+2d15323977df174f2d86780f369c0c303cbc6957; local and remote tips match. Only the
+separate B3 proposal/plan existed outside that accepted commit.
+
+ADR-0057's initial eb74ff69 proposal received independent P1 feedback for an
+underdefined Task selector. Tech Lead froze exact field/grant/state/page/lock and
+binding eligibility plus falsification tests. A final pre-implementation delta
+corrected actual composer projection (long-text -> text and dashboard -> stats).
+No production write occurred under any earlier proposal hash.
+
+Root records founder standing acceptance of ADR-0057 at exact final SHA-256
+8ee8ff2870369bed43d076ab8ff8d63653138d761c9970ace9358dd9d5465017.
+Independent nonauthor/nonwriter /root/b2_review returns
+APPROVED_FOR_STANDING_ACCEPTANCE: yes, P0/P1/P2 0/0/0, after the final projection
+recheck under the 2026-09-01 policy. The proposed EXPERIMENT is bounded/reversible,
+retains historical inputs and non-Task bytes, and adds no identity/deployment or
+external authority. The ADR is now frozen; further changes require an explicit
+amendment rather than silently changing its hash.
+
+PM authorizes one strongest-inherited-model integration writer, /root/b3_integration,
+for exactly the production/test manifest in
+`docs/superpowers/plans/2026-09-11-canonical-team-task-family.md` and ADR MIG-001.
+This writer owns the Graph/provider vocabulary, canonical Task, capability tests,
+Workbench structural family/Home copy and compiler private assembly serially.
+The prior compiler writer owns no B3 paths. Root exclusively owns disjoint Task
+E2E/fixture/presentation checks, evidence/docs, acceptance, runtime authority and
+Git. Writers must not revert others' work. No parallel shared-contract writer.
+
+Use focused RED/GREEN, one affected package verification wave, and full task
+review -> independent Terra QA -> independent Sol release review -> PM acceptance
+-> controller delivery at this shared cross-package boundary. No per-component
+reviews. Spark quota remains unavailable; do not retry or redeem usage credits.
+Source writing/testing is authorized now; actual local Publish/Compilation/Preview
+and image/service execution await a separate root runtime record after source
+freeze. No main/repository release/cloud/external provider authority. Counts stay
+three definitions/two families until actual Task acceptance.
+
+### Founder correction: visual and product completeness — 2026-09-12
+
+The founder again rejects the visual result at 2d153239: color is too weak and
+routine icon actions repeat their meaning in text. Withdraw its product visual
+acceptance while retaining correctly scoped runtime/compiler evidence. The
+controller's previous internal review is not founder acceptance.
+
+The B3 agent failed at startup with a Spark quota error and wrote no production
+files. The prior claim that implementation had started describes dispatch only;
+actual code delivery is zero. Do not retry the exhausted model or redeem credits.
+Root resumes ownership. Keep the frozen ADR-0057 intact, but hold its production
+wave while the next priority is reassessed against the founder's closed-loop
+product requirement. Basic state transitions alone do not establish maturity.
+
+Root owns the new design/spec, focused tests, future presentation implementation,
+E2E and evidence. Tech Lead owns proposed ADR-0058; existing independent reviewer
+owns read-only business-gap analysis, followed by the same scoped review when
+needed. No extra product audit stage is created. Production presentation writes
+wait for the bounded template amendment. Frozen prior artifacts are not edited.
+
+Priority order: (1) shared expressive, accessible UI and removal of redundant
+routine-action text; (2) correct/recover/continue a business record with persisted
+results and explicit authority; (3) truthful result/history surfaces; (4) expand
+families by reusing a proven complete journey. Real identity/private access,
+model/ordinary-user trials and hosted operation remain explicit product gaps.
+
+### ADR-0058 accepted and root presentation implementation authorized
+
+Independent nonauthor/nonwriter /root/b2_review returns
+APPROVED_FOR_STANDING_ACCEPTANCE: yes, P0/P1 0/0, for exact ADR-0058 SHA-256
+181fc1cefd4e0e7fb23c648fbc6602acda3ace60437b7cd67285e2e01e542860.
+The prior proposals were not implementation-authorized; the final decision includes
+readable token pairs for hover/focus/current states. Root records acceptance under
+the September 1 standing policy and now owns/authorizes the exact ADR-0058 source,
+test and E2E manifest. No other production writer is active. Ordinary source
+checks and one combined independent implementation/product review apply.
+
+Before production changes, an emitted-DOM focused check failed because Refresh
+still had visible text. The safe RED log is in ignored
+.superpowers/sdd/2026-09-12-approval-emphasis/icon-red.log. Actual local runtime
+will receive its own root authorization after source freeze. Counts and current
+business contracts stay unchanged; no cloud, provider, release or main authority.
+
+### ADR-0058 source freeze and local runtime authority
+
+Root's presentation correction passes focused runtime tests 29/29, compiler
+build/typecheck/lint, and emitted Chromium light/dark phone/desktop checks with
+zero axe violations, icon-only accessible Refresh, and brand/nav hover/focus
+color pairs. First phone action remains 572.86 px and second summary 743.83 px.
+These static emitted views are not business-runtime acceptance. A failed helper
+check caught transition timing; it now waits for computed styles. The isolated
+axe harness required an explicit browser context, corrected without product edits.
+
+Root separately authorizes building only compiler-worker as
+factory-t9-emphasis-20260912-compiler-worker:latest and running the exact local
+project factory-t9-ui-emphasis-20260912 with the prior accepted CP/WB images,
+loopback ports 15180/13020/15440/16380, current topology and empty model keys.
+Use the two existing Expense/Purchase canonical deterministic lanes once with
+one worker and zero retries. Record actual Publish/immutable Compilation/Preview,
+core business and presentation checks, exact image/source identities and images.
+Root owns exact-label teardown. No external model/provider, paid/cloud action,
+main integration or repository release is authorized. Production source remains
+frozen during this runtime except a recorded targeted correction.
+
+### ADR-0058 ordinary delivery accepted
+
+Actual Expense/Purchase lanes pass 2/2 with one worker and zero retries. The
+29/29 focused suite and compiler build/typecheck/lint pass. All 13 actual images
+were visually inspected. The final helper's independent keyboard focus and
+computed action/badge checks pass on the same live Purchase Preview; the final
+canvas and transition-wait assertions pass on exact emitted light/dark views.
+Production recipe/index match the built image exactly. Evidence boundaries,
+timings, IDs and source hashes are recorded in
+docs/acceptance/evidence/consumer-approval-emphasis/README.md.
+
+Factory and both Preview projects have zero containers/networks/volumes after
+exact-label cleanup. The single independent nonwriter /root/b2_review reports
+P0/P1/P2 0/0/0. Root accepts the bounded correction and authorizes normal commit
+and push to codex/consumer-delivery-roadmap. No founder visual approval or mature
+business product is claimed. B3 stays held; next is closure slice A under ADR-0059.

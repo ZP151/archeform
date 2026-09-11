@@ -34,7 +34,7 @@ const realInterpretation = process.env.FACTORY_APPROVAL_REAL_ACCEPTANCE === "1";
 const privacyProbe = process.env.FACTORY_APPROVAL_PRIVACY_ACCEPTANCE === "1";
 const evidenceDirectory = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-approval-workspace/expense",
+  "docs/acceptance/evidence/consumer-approval-emphasis/expense",
 );
 // One separately reported real request, never included in fixture pass counts.
 const realApprovalBrief =

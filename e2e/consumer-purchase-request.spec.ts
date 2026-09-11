@@ -26,7 +26,7 @@ import {
 // compilation, verification, preview, form submission and persistence are real.
 const evidence = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-approval-workspace",
+  "docs/acceptance/evidence/consumer-approval-emphasis",
 );
 type Preview = {
   id: string;

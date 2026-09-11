@@ -162,3 +162,15 @@ source identities and exact cleanup. Final scoped ordinary-iteration verdict:
 **P0/P1/P2 = 0/0/0**, clean for local acceptance. Root accepts this bounded shared
 repair and authorizes one normal commit/push to the active iteration branch.
 No main integration, repository release or cloud deployment is implied.
+
+## Rejection correction — 2026-09-12
+
+The founder rejected this revision's visual quality: too little useful color and
+redundant labels on familiar icon actions. Historical tests remain valid for their
+source and narrow assertions; the visual product acceptance above is withdrawn.
+They did not establish a mature business product or ordinary-user acceptance.
+See the active ledger and subsequent correction for current status.
+
+The [September 12 emphasis correction](evidence/consumer-approval-emphasis/README.md)
+records the replacement source, actual images and fresh narrow evidence. The
+withdrawal above remains part of the historical record.

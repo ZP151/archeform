@@ -59,3 +59,18 @@ create/submit/approve/reject, persistence, filtering and permission checks.
 The scoped independent review receives the user's rejection and before/after
 images. Report functional, mechanical visual and human visual conclusions
 separately. Ordinary-user validation remains open until actually performed.
+
+## Direction correction — 2026-09-12
+
+The founder requests stronger color hierarchy and less redundant action text.
+Use the existing Graph accent and accent-text pair for the identity/sidebar band;
+keep the content surface readable, use a clear selected navigation surface and
+stronger success/warning/error badge fills. Preserve compact neutral business
+rows. Color must distinguish identity, selection and status instead of tinting
+every entire record. Verify light/dark colors and contrast from resolved tokens.
+
+Refresh becomes the existing Lucide refresh-cw icon in a 44 px control with
+aria-label/title Refresh and unchanged disabled/loading behavior. Keep words for
+Submit/Approve/Reject because their consequences must be clear. Remove no factual
+Graph labels. Current function tests and screenshots do not prove user visual
+acceptance; the prior neutral direction has been rejected.

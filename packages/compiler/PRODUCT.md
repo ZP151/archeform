@@ -49,3 +49,11 @@ rejected by the founder. Functional success does not establish visual acceptance
 
 No new brand constraint was supplied. The optional clarification remains pending;
 implementation follows the founder's existing request for rapid substantive repair.
+
+## Confirmed feedback — 2026-09-12
+
+The founder explicitly requests richer useful color and icon-only familiar
+routine actions such as Refresh. This supersedes the earlier unanswered optional
+brand question. A working happy-path demonstration is not a mature product:
+correction, recovery, visible outcomes and subsequent actions must be accounted
+for before expanding nominal template counts.

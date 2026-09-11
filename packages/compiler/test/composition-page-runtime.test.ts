@@ -470,7 +470,7 @@ describe("definition bank byte preservation", () => {
           bundleInputFor(await composedGraphFor(expenseBrief)),
         ).files,
       ),
-    ).toBe("0d88224154e7f9cbc9fe884b93a217c727ff589f7acf0514c35d8ed755e7b573");
+    ).toBe("47c1ef347f1bc97b2765d3cacfc128a3a829e069b0f5f790d0ca2fde21b0e9d9");
   });
 });
 
@@ -528,6 +528,28 @@ function approvalModule(
 }
 
 describe("approval runtime behavior", () => {
+  it("emits icon-only Refresh controls with accessible names for both approval definitions", async () => {
+    for (const graph of [
+      await composedGraphFor(expenseBrief),
+      await purchaseGraphFor(),
+    ]) {
+      const source = runtimeFor(graph);
+      expect(source).not.toContain(
+        "<ApprovalIcon name='refresh-cw' />Refresh</button>",
+      );
+      const controls =
+        source.match(
+          /<button[^<]*><ApprovalIcon name='refresh-cw' \/><\/button>/g,
+        ) ?? [];
+      expect(controls.length).toBeGreaterThan(0);
+      for (const control of controls) {
+        expect(control).toContain("className='approval-refresh'");
+        expect(control).toContain("aria-label='Refresh'");
+        expect(control).toContain("title='Refresh'");
+      }
+      expect(source).toContain("disabled={loading}");
+    }
+  });
   it("filters only declared scalar values with the selected immutable workflow state", async () => {
     const expense = approvalModule(
       runtimeFor(await composedGraphFor(expenseBrief)),
@@ -781,7 +803,7 @@ describe("approval runtime behavior", () => {
     )!.content;
     expect(approvalWorkspacePresentation).toEqual({
       key: "approval-workspace-presentation",
-      version: "1.0.0",
+      version: "1.1.0",
       ownership: "factory-authored",
       license: "UNLICENSED",
       reuse: [
@@ -827,9 +849,9 @@ describe("approval runtime behavior", () => {
     expect(runtime).toContain(
       "className='generated-primary' href={formRoute}>New {entity.label.toLowerCase()}</a>",
     );
-    expect(styles).toContain("--approval-workspace-version: 1;");
+    expect(styles).toContain("--approval-workspace-version: 2;");
     expect(styles).toContain(
-      ".approval-v1.generated-app { --approval-workspace-version: 1; display: grid;",
+      ".approval-v1.generated-app { --approval-workspace-version: 2; display: grid;",
     );
     expect(styles).toContain(".approval-workspace-sidebar");
     expect(styles).toContain(".approval-workspace-mobile-nav");

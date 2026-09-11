@@ -103,3 +103,30 @@ Inspect one screenshot batch, group observed corrections, and confirm the affect
 results. Existing independent review covers this matrix; do not add separate
 visual, QA and PM audit waves. Existing contract/security/release gates and
 bounded provider/runtime authorization still apply.
+
+### Closed-loop product acceptance, following 2026-09-12 feedback
+
+Prepare one realistic scenario that continues after the first successful action:
+incorrect input -> correction -> submission -> decision/result -> follow-up or
+explicit closure. Include the highest-frequency negative outcome (for example a
+rejected request) and an interrupted operation. Record what the user can do next
+without rebuilding the app or asking the model to add a missing screen.
+
+Do not exclude ordinary correction, result visibility or follow-up merely because
+the current template lacks it, then label the narrowed demonstration a mature
+product. If a required outcome is missing, record the family as a functional
+prototype and name the next implementation slice. Keep separate counts for
+registered definitions, demonstrated runtime families and product-complete
+journeys; never equate them.
+
+Assess visual quality against the user's direction as well as mechanics. Useful
+brand/selection/status color and recognizable library icons must aid scanning.
+Familiar repeat actions such as Refresh may be icon-only with a stable accessible
+name, native title/tooltip, keyboard support and a 44 px target. Consequential
+business actions retain clear words. Test that no visual label remains where
+icon-only was requested; an aria label alone does not verify text removal.
+
+One reviewer evaluates the complete journey, actual images and user effort in the
+existing review. No extra audit stage. Agent approval or passing axe/geometry
+checks cannot overrule explicit user rejection. Cross-contract/security gates
+remain applicable only at their existing boundaries.

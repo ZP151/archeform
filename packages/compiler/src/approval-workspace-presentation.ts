@@ -1,7 +1,7 @@
 /** Private, factory-authored composition of existing approval runtime ports. */
 export const approvalWorkspacePresentation = {
   key: "approval-workspace-presentation",
-  version: "1.0.0",
+  version: "1.1.0",
   ownership: "factory-authored",
   license: "UNLICENSED",
   reuse: [
@@ -37,23 +37,27 @@ export function renderApprovalWorkspaceShell(): string {
 // This profile has one stylesheet owner; older approval grid rules must not be layered underneath.
 export const approvalWorkspaceStyles = [
   `
-.approval-v1.generated-app { --approval-workspace-version: 1; display: grid; grid-template-columns: 15.5rem minmax(0,1fr); min-height: 100vh; margin: 0; padding: 0; background: var(--factory-bg); line-height: var(--factory-typography-line-height-base); }
+.approval-v1.generated-app { --approval-workspace-version: 2; display: grid; grid-template-columns: 15.5rem minmax(0,1fr); min-height: 100vh; margin: 0; padding: 0; background: var(--factory-bg); line-height: var(--factory-typography-line-height-base); }
 .approval-v1 .approval-icon { display: inline-flex !important; flex: 0 0 auto; width: 1.125rem; height: 1.125rem; margin: 0; vertical-align: middle; }
 .approval-v1 .approval-icon svg { width: 100%; height: 100%; }
-.approval-v1 .approval-workspace-sidebar { display: flex; flex-direction: column; gap: var(--factory-spacing-space-6); padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4); min-width: 0; border-inline-end: 1px solid var(--factory-border); background: color-mix(in srgb,var(--factory-accent) 8%,var(--factory-surface)); }
+.approval-v1 .approval-workspace-sidebar { display: flex; flex-direction: column; gap: var(--factory-spacing-space-6); padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4); min-width: 0; border-inline-end: 1px solid var(--factory-border); background: var(--factory-accent); color: var(--factory-accent-text); }
 .approval-v1 .approval-workspace-brand { display: flex; align-items: center; gap: var(--factory-spacing-space-3); min-width: 0; }
 .approval-v1 .approval-workspace-brand > div:last-child { min-width: 0; }
-.approval-v1 .approval-workspace-brand p { color: var(--factory-text); font-size: var(--factory-typography-font-size-base); font-weight: var(--factory-typography-font-weight-bold); line-height: 1.3; overflow-wrap: anywhere; }
-.approval-v1 .approval-workspace-brand span { color: var(--factory-muted); font-size: calc(var(--factory-typography-font-size-sm) * .9); line-height: 1.4; }
+.approval-v1 .approval-workspace-brand p { color: inherit; font-size: var(--factory-typography-font-size-base); font-weight: var(--factory-typography-font-weight-bold); line-height: 1.3; overflow-wrap: anywhere; }
+.approval-v1 .approval-workspace-brand span { color: inherit; font-size: calc(var(--factory-typography-font-size-sm) * .9); line-height: 1.4; }
 .approval-v1 .approval-workspace-mark { display: grid; place-items: center; flex: 0 0 auto; width: 2.25rem; height: 2.5rem; border-radius: var(--factory-radius-radius-base); background: var(--factory-accent); color: var(--factory-accent-text); }
 .approval-v1 .approval-workspace-mark .approval-icon { width: 1.25rem; height: 1.25rem; color: inherit; }
 .approval-v1 .approval-workspace-sidebar nav { display: grid; align-content: start; gap: var(--factory-spacing-space-1); margin: 0; flex: 1; }
 .approval-v1 nav a { display: flex; align-items: center; gap: var(--factory-spacing-space-3); min-height: 44px; padding: var(--factory-spacing-space-3); border-color: transparent; background: transparent; line-height: 1.4; min-width: 0; }
 .approval-v1 nav a span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .approval-v1 nav a[aria-current='page'] { background: var(--factory-surface); color: var(--factory-accent); font-weight: var(--factory-typography-font-weight-medium); border-color: var(--factory-border); }
-.approval-v1 nav a:hover { background: var(--factory-surface); }
+.approval-v1 nav a { color: var(--factory-text); }
+.approval-v1 nav a:is(:hover,:focus-visible) { background: var(--factory-surface); color: var(--factory-text); }
+.approval-v1 .approval-workspace-sidebar nav a { color: var(--factory-accent-text); }
+.approval-v1 .approval-workspace-sidebar nav a:is([aria-current='page'],:hover,:focus-visible) { background: var(--factory-surface); border-color: var(--factory-surface); color: var(--factory-accent); }
+.approval-v1 .approval-workspace-mobile-nav nav a[aria-current='page'] { background: var(--factory-accent); border-color: var(--factory-accent); color: var(--factory-accent-text); }
 .approval-v1 .approval-workspace-role { display: grid; gap: var(--factory-spacing-space-1); border-block-start: 1px solid var(--factory-border); padding-block-start: var(--factory-spacing-space-4); }
-.approval-v1 .approval-workspace-role label { display: flex; align-items: center; gap: var(--factory-spacing-space-2); color: var(--factory-muted); font-size: var(--factory-typography-font-size-sm); }
+.approval-v1 .approval-workspace-role label { display: flex; align-items: center; gap: var(--factory-spacing-space-2); color: inherit; font-size: var(--factory-typography-font-size-sm); }
 .approval-v1 .approval-workspace-role select { width: 100%; min-width: 0; min-height: 44px; padding: var(--factory-spacing-space-2); border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-base); background: var(--factory-surface); color: var(--factory-text); }
 .approval-v1 .approval-workspace-canvas { min-width: 0; width: 100%; max-width: 90rem; margin: 0 auto; padding: var(--factory-spacing-space-8); display: grid; grid-template-columns: minmax(0,1fr); align-content: start; gap: var(--factory-spacing-space-6); }
 .approval-v1 .approval-workspace-heading { padding: 0; min-width: 0; }
@@ -88,9 +92,12 @@ export const approvalWorkspaceStyles = [
 .approval-v1 .approval-summary-amount dd { font-size: var(--factory-typography-font-size-base); font-weight: var(--factory-typography-font-weight-bold); font-variant-numeric: tabular-nums; }
 .approval-v1 .approval-summary-status { text-align: end; }
 .approval-v1 .approval-badge { display: inline-flex !important; align-items: center; gap: var(--factory-spacing-space-1); width: fit-content; min-height: 1.75rem; padding: .15rem var(--factory-spacing-space-2); border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-full); font-size: var(--factory-typography-font-size-sm); background: var(--factory-surface); color: var(--factory-text); white-space: nowrap; }
-.approval-v1 .approval-tone-positive .approval-badge { border-color: color-mix(in srgb,var(--factory-colour-success) 25%,var(--factory-border)); background: color-mix(in srgb,var(--factory-colour-success) 8%,var(--factory-surface)); color: color-mix(in srgb,var(--factory-text) 85%,var(--factory-colour-success)); }
-.approval-v1 .approval-tone-pending .approval-badge { border-color: color-mix(in srgb,var(--factory-colour-warning) 30%,var(--factory-border)); background: color-mix(in srgb,var(--factory-colour-warning) 12%,var(--factory-surface)); color: color-mix(in srgb,var(--factory-text) 85%,var(--factory-colour-warning)); }
-.approval-v1 .approval-tone-negative .approval-badge { border-color: color-mix(in srgb,var(--factory-colour-danger) 25%,var(--factory-border)); background: color-mix(in srgb,var(--factory-colour-danger) 8%,var(--factory-surface)); color: color-mix(in srgb,var(--factory-text) 85%,var(--factory-colour-danger)); }
+.approval-v1 .approval-tone-positive .approval-badge { border-color: var(--factory-colour-success); background: color-mix(in srgb,var(--factory-colour-success) 18%,var(--factory-surface)); color: var(--factory-text); }
+.approval-v1 .approval-tone-positive .approval-badge .approval-icon { color: var(--factory-colour-success); }
+.approval-v1 .approval-tone-pending .approval-badge { border-color: var(--factory-colour-warning); background: color-mix(in srgb,var(--factory-colour-warning) 18%,var(--factory-surface)); color: var(--factory-text); }
+.approval-v1 .approval-tone-pending .approval-badge .approval-icon { color: var(--factory-colour-warning); }
+.approval-v1 .approval-tone-negative .approval-badge { border-color: var(--factory-colour-danger); background: color-mix(in srgb,var(--factory-colour-danger) 18%,var(--factory-surface)); color: var(--factory-text); }
+.approval-v1 .approval-tone-negative .approval-badge .approval-icon { color: var(--factory-colour-danger); }
 .approval-v1 .approval-record > .approval-actions { grid-column: 1; grid-row: 2; }
 .approval-v1 .approval-record > .approval-actions:empty { display: none; }
 .approval-v1 .approval-record details { grid-column: 2; grid-row: 2; justify-self: end; min-width: 0; }
@@ -113,7 +120,10 @@ export const approvalWorkspaceStyles = [
 .approval-v1 .approval-field input[type='checkbox'] { width: 1.5rem; height: 1.5rem; }
 .approval-v1 .approval-form-footer { display: flex; justify-content: flex-end; border-block-start: 1px solid var(--factory-border); padding-block-start: var(--factory-spacing-space-4); }
 .approval-v1 .approval-form-footer button { min-height: 44px; }
+.approval-v1 .approval-record > .approval-actions button:not(:disabled) { background: var(--factory-accent); border-color: var(--factory-accent); color: var(--factory-accent-text); }
+.approval-v1 button.approval-refresh { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; }
 .approval-v1 :is(a,button,input,select,textarea,summary):focus-visible { outline: 3px solid var(--factory-accent); outline-offset: 3px; }
+.approval-v1 .approval-workspace-sidebar :is(a,select):focus-visible { outline-color: var(--factory-accent-text); }
 .approval-v1 input:is([type='date'],[type='datetime-local']):focus-within { outline: 3px solid var(--factory-accent); outline-offset: 3px; }
 .approval-v1 ::selection { background: color-mix(in srgb,var(--factory-accent) 22%,var(--factory-surface)); color: var(--factory-text); }
 .approval-v1 :is(input,textarea) { caret-color: var(--factory-accent); }
