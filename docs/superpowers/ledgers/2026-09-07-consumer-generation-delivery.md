@@ -3677,3 +3677,41 @@ docs/acceptance/approval-decision-history.md records hashes, outcomes, identitie
 visual evidence, cleanup and the remaining limits. No founder visual approval,
 complete correction journey, mature-product count, main/release or cloud claim.
 Next is the combined correction/resubmission and safe mutation/recovery contract.
+
+### Delivery identity and next long-running goal
+
+ADR-0059 is delivered at 4b02872b056c41c2888b007d2d67193bee1ff433,
+verified equal to origin/codex/consumer-delivery-roadmap. The visual/history goal
+is complete. Root has created the next goal for the full local correction,
+return-reason, same-record resubmission and safe mutation/recovery journey in both
+canonical applications. Its first dependency is exact ADR-0060 standing acceptance;
+no pending proposal or the goal itself authorizes production writes.
+
+Root also narrows the Expense E2E title from "complete approval journey" to
+"persisted approval decisions and history" to match the actual accepted scope.
+Only the title changes after runtime; assertions and production are unchanged.
+This ordinary wording correction retains the valid 2/2 runtime and independent
+review evidence, with formatting/diff checks only, and needs no extra QA gate.
+
+### ADR-0060 standing acceptance and next-goal ownership
+
+Independent nonauthor/nonwriter /root/b2_review returns
+APPROVED_FOR_STANDING_ACCEPTANCE: yes, P0/P1/P2 0/0/0 for exact final ADR-0060
+SHA-256 b47961bec46af1757087e3c067ff6c1e35556aae2b07e9de01e0dbc16f122107.
+The intermediate 6a81b4a5095d90b759ee1cf2286731b0eb7dd9b5f43c16728ae32511480d26e1
+was not accepted because conflict precedence and entity scope were ambiguous.
+The final decision resolves both and includes the mandatory replay/version
+controls. Root records acceptance under the standing policy before source writes.
+
+Root now owns and authorizes the exact serialized ADR-0060 MIG-001 implementation
+manifest for the active next goal; no parallel production writer is assigned.
+Start with focused failing contract tests and retain a byte baseline from
+4b02872b before modifying canonical definitions or compiler behavior. Use the
+existing full cross-package task review, independent QA, release review and root
+delivery once for this complete business slice. Runtime/Publish/Compilation
+acceptance requires a later exact local authorization and source freeze. No
+provider, cloud, main integration or repository release authority is implied.
+
+Production status for ADR-0060 is not started: only its accepted decision and
+next-goal ownership are delivered here. Root authorizes a normal documentation/
+wording commit and push with the unchanged-test-title correction above.

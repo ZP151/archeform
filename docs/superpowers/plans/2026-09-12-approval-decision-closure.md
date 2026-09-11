@@ -2,7 +2,7 @@
 
 Date: 2026-09-12. Priority: next product milestone, before Task-family expansion.
 Status: slice A accepted under ADR-0059 with 34 focused tests and both real runtime lanes passing;
-the combined B/C mutation contract is proposed, not implemented.
+the combined B/C mutation contract is accepted under ADR-0060, not implemented.
 
 ## Goal and reason
 
@@ -70,6 +70,11 @@ to bind replay and a record version or equivalent immutable revision. A lost
 returned-record PATCH response could otherwise be retried as a second draft
 update, and stale edits could overwrite newer data. Revise the proposal to deliver
 B and its required C controls together; do not seek a weaker-control exception.
+The final ADR-0060 at SHA-256
+`b47961bec46af1757087e3c067ff6c1e35556aae2b07e9de01e0dbc16f122107`
+passes the standing independent review (0/0/0) and is accepted in the ledger.
+It freezes primary-entity scope and exact authorization/replay/version/state
+precedence. Root owns its serialized implementation under the active next goal.
 
 #### Recover uncertain writes in the same delivery boundary
 

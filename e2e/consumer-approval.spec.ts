@@ -271,7 +271,7 @@ async function createExpense(
   return created.id;
 }
 
-test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" : `${realInterpretation ? "real" : "deterministic"} interpretation delivers a complete approval journey`}`, async ({
+test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" : `${realInterpretation ? "real" : "deterministic"} interpretation delivers persisted approval decisions and history`}`, async ({
   page,
   context,
   request,

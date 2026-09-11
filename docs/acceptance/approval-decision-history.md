@@ -67,7 +67,9 @@ model messages. Actual fixture evidence uses synthetic business records only.
 
 Both existing deterministic interpretation/selection lanes passed **2/2 in
 6.9 minutes**, one worker and zero retries. There were no production changes or
-test-helper changes after the accepted source freeze and image build.
+test-helper changes during the runtime after the accepted source freeze and image
+build. After delivery, the Expense test title was narrowed from "complete approval
+journey" to "persisted approval decisions and history"; assertions are unchanged.
 
 | Definition | Compilation                 | Ready / first task time |
 | ---------- | --------------------------- | ----------------------- |

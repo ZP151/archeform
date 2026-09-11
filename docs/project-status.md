@@ -34,12 +34,15 @@ under accepted ADR-0059 and passes 34 focused tests. Both actual generated Expen
 and Purchase lanes pass (2/2, 6.9 minutes), with visible outcomes after reload,
 safe error/retry and role-race isolation. All 21 actual images were inspected,
 exact cleanup is complete, and one independent ordinary review is clean
-(P0/P1/P2 0/0/0). Root accepts this bounded local capability. Slice B
-has proposed ADR-0060 for governed draft correction, persisted return reasons and
+(P0/P1/P2 0/0/0). Root accepts this bounded local capability, delivered at
+`4b02872b056c41c2888b007d2d67193bee1ff433`. Slice B
+has accepted ADR-0060 for governed draft correction, persisted return reasons and
 same-record resubmission. Its initial separation from replay/concurrency controls
 failed the existing threat-model requirement. The revised proposal combines B
-with the necessary C recovery controls in one delivery boundary; it has no
-production implementation yet.
+with the necessary C recovery controls in one delivery boundary. The final exact
+decision passes standing review (0/0/0), and root owns the next long-running goal.
+Its production implementation has not started; no correction/recovery outcome is
+counted yet.
 
 B3 Task implementation is held. Its dispatched agent failed before writing code
 because the selected runtime used exhausted Spark quota. No Task production code
