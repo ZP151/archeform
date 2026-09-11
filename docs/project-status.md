@@ -27,7 +27,19 @@ inspected and exact local runtime cleanup is complete. The single independent
 review is clean (P0/P1/P2 0/0/0); no founder visual approval or mature-product claim
 is inferred.
 
-The next product milestone is [approval correction and decision closure](superpowers/plans/2026-09-12-approval-decision-closure.md): visible decision history, draft correction and return/revision/resubmission, and recovery after uncertain writes. Existing generated APIs lack governed record update; rejected requests are terminal; audit data has no user-facing history; mutation retries are not idempotent. These are product gaps, not styling issues.
+The next product milestone is [approval correction and decision closure](superpowers/plans/2026-09-12-approval-decision-closure.md): visible decision history, draft correction and return/revision/resubmission, and recovery after uncertain writes. Generated APIs still lack governed record update; rejected requests are terminal; mutation retries are not idempotent. The prior invisible-audit gap is now addressed by slice A below. These remaining gaps are product behavior, not styling issues.
+
+Slice A [decision history](acceptance/approval-decision-history.md) is implemented
+under accepted ADR-0059 and passes 34 focused tests. Both actual generated Expense
+and Purchase lanes pass (2/2, 6.9 minutes), with visible outcomes after reload,
+safe error/retry and role-race isolation. All 21 actual images were inspected,
+exact cleanup is complete, and one independent ordinary review is clean
+(P0/P1/P2 0/0/0). Root accepts this bounded local capability. Slice B
+has proposed ADR-0060 for governed draft correction, persisted return reasons and
+same-record resubmission. Its initial separation from replay/concurrency controls
+failed the existing threat-model requirement. The revised proposal combines B
+with the necessary C recovery controls in one delivery boundary; it has no
+production implementation yet.
 
 B3 Task implementation is held. Its dispatched agent failed before writing code
 because the selected runtime used exhausted Spark quota. No Task production code

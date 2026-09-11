@@ -15,6 +15,7 @@ import {
   openApprovalNavigation,
   verifyApprovalAssets,
   verifyWorkspaceComposition,
+  verifyDecisionHistory,
 } from "./approval-presentation";
 import { observeInterpretation } from "./helpers/interpretation-diagnostics";
 import { approvalIntakeFacts } from "./helpers/approval-intake-diagnostics";
@@ -34,7 +35,7 @@ const realInterpretation = process.env.FACTORY_APPROVAL_REAL_ACCEPTANCE === "1";
 const privacyProbe = process.env.FACTORY_APPROVAL_PRIVACY_ACCEPTANCE === "1";
 const evidenceDirectory = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-approval-emphasis/expense",
+  "docs/acceptance/evidence/consumer-approval-decision-history/expense",
 );
 // One separately reported real request, never included in fixture pass counts.
 const realApprovalBrief =
@@ -623,6 +624,11 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       403,
     );
     stage = "reviewer-decision";
+    await verifyDecisionHistory(generated, {
+      auditor: "finance",
+      requester: "employee",
+      entity: "expense",
+    });
     await navigateApproval(generated, "Approval queue");
     await generated
       .getByLabel("Demo role", { exact: true })
@@ -657,6 +663,13 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       await expect(row.getByRole("button")).toHaveCount(0);
     }
     stage = "requester-results";
+    await verifyDecisionHistory(generated, {
+      auditor: "finance",
+      requester: "employee",
+      entity: "expense",
+      identities: ["Amount: 12.5", "Amount: 7.25"],
+      evidence: evidenceDirectory,
+    });
     await navigateApproval(generated, "Expense list");
     await generated
       .getByLabel("Demo role", { exact: true })

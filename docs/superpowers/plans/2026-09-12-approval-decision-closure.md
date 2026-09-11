@@ -1,7 +1,8 @@
 # Approval Correction and Decision Closure
 
 Date: 2026-09-12. Priority: next product milestone, before Task-family expansion.
-Status: product scope prepared; technical contract proposal and implementation pending.
+Status: slice A accepted under ADR-0059 with 34 focused tests and both real runtime lanes passing;
+the combined B/C mutation contract is proposed, not implemented.
 
 ## Goal and reason
 
@@ -41,12 +42,15 @@ history to the business record instead of dumping raw JSON. Differentiate the
 reviewer's queue from requester results where existing Graph bindings permit it.
 Do not grant audit visibility to another role as a presentation shortcut.
 
+ADR-0059 implements the bounded history panel; queue-specific contents remain a
+later refinement, not part of its completion claim.
+
 Acceptance: the declared auditor sees both real decisions after reload through
 UI; unauthorized roles cannot fetch or display the history; empty/error/retry and
 role changes cannot leave stale privileged data. This is a partial product gain,
 not completion of the full correction journey.
 
-### B. Correct and resubmit the same request
+### B/C. Correct, resubmit and safely recover the same request
 
 Add a governed correction path: edit a draft; preserve values and record identity;
 lock direct editing while awaiting a decision; return with an understandable
@@ -60,7 +64,14 @@ Graph workflow/permissions, field changes, server guards and their tests require
 a frozen Tech Lead contract before production implementation. Earlier immutable
 Compilations remain immutable.
 
-### C. Recover uncertain writes
+The first ADR-0060 proposal deferred replay/concurrency to C. Independent review
+rejected that split because the threat model requires new state-changing requests
+to bind replay and a record version or equivalent immutable revision. A lost
+returned-record PATCH response could otherwise be retried as a second draft
+update, and stale edits could overwrite newer data. Revise the proposal to deliver
+B and its required C controls together; do not seek a weaker-control exception.
+
+#### Recover uncertain writes in the same delivery boundary
 
 Use the accepted server design to reconcile an operation whose response was lost.
 A retry must not create another request or apply a decision twice. Distinguish a
@@ -70,6 +81,14 @@ Acceptance: let a real Create/decision commit, discard its response in the test,
 then recover/retry and verify one record, one transition, one audit result and the
 correct visible outcome. Add concurrent/stale decision cases at the shared server
 boundary. Preserve user input on pre-commit failure.
+
+Acceptance must cover create, correction and decision writes consistently:
+persist the operation identity, bind the expected version where a record exists,
+commit mutation and evidence atomically, return a stable replay result, and expose
+conflicts without silently overwriting newer values. The final exact contract is
+owned by ADR-0060 after acceptance. Use one serialized implementation and one
+required full contract review/QA/release sequence for the combined business slice;
+do not repeat that sequence for each form or control.
 
 ## Acceptance changes
 

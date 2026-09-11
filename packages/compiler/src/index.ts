@@ -30,6 +30,10 @@ import {
   approvalWorkspaceStyles,
   renderApprovalWorkspaceShell,
 } from "./approval-workspace-presentation.js";
+import {
+  approvalDecisionHistoryStyles,
+  renderApprovalDecisionHistory,
+} from "./approval-decision-history.js";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
 import {
   renderRestaurantCustomerCommandRuntime,
@@ -2934,6 +2938,9 @@ function renderPageRuntime(
           "}",
         ]
       : []),
+    ...(approvalFlow
+      ? [renderApprovalDecisionHistory(approvalFlow.entity)]
+      : []),
     "function can(role: string, entity: string, action: string): boolean {",
     "  return definition.policy.permissions.some((permission) => permission.role === role && (permission.resource === entity || permission.resource === '*') && permission.actions.includes(action));",
     "}",
@@ -3412,7 +3419,9 @@ function renderWebStyles(
     ".generated-stats { display: grid; gap: var(--factory-spacing-space-2); align-items: baseline; grid-auto-flow: column; justify-content: start; } .generated-stats strong { font-size: var(--factory-typography-font-size-xl); } .generated-stats span { color: var(--factory-muted); }",
     ".generated-calendar { display: grid; gap: var(--factory-spacing-space-4); padding: 0; margin: 0; list-style: none; } .generated-calendar > li { display: grid; gap: var(--factory-spacing-space-2); } .generated-calendar > li > strong { color: var(--factory-muted); text-transform: uppercase; font-size: var(--factory-typography-font-size-sm); }",
     "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
-    ...(profile === "approval-v1" ? [...approvalWorkspaceStyles] : []),
+    ...(profile === "approval-v1"
+      ? [...approvalWorkspaceStyles, approvalDecisionHistoryStyles]
+      : []),
     "",
   ].join("\n");
 }

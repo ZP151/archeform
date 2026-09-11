@@ -26,6 +26,7 @@ import {
 
 import { createGeneratedPageRuntimeProjection } from "../src/page-runtime-projection.js";
 import { approvalWorkspacePresentation } from "../src/approval-workspace-presentation.js";
+import { approvalDecisionHistory } from "../src/approval-decision-history.js";
 import {
   generateApplicationBundle,
   generateRestaurantProductApplicationBundle,
@@ -470,7 +471,7 @@ describe("definition bank byte preservation", () => {
           bundleInputFor(await composedGraphFor(expenseBrief)),
         ).files,
       ),
-    ).toBe("47c1ef347f1bc97b2765d3cacfc128a3a829e069b0f5f790d0ca2fde21b0e9d9");
+    ).toBe("56f0db0628886e14f183c7d8d8485db199be4fcb0e22ea433f80b2b319aaefc4");
   });
 });
 
@@ -510,7 +511,7 @@ function approvalModule(
 ) {
   const source =
     runtime +
-    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, selectSummaryFields, statusTone, filterRecords, statusOptions, EntityRecords, definition };";
+    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, selectSummaryFields, statusTone, filterRecords, statusOptions, EntityRecords, definition, ApprovalDecisionHistory, decisionHistoryPayload, decisionIdentityFields, DecisionHistoryRow };";
   const compiled = transpileModule(source, {
     compilerOptions: { module: ModuleKind.CommonJS, jsx: JsxEmit.ReactJSX },
   }).outputText;
@@ -528,6 +529,323 @@ function approvalModule(
 }
 
 describe("approval runtime behavior", () => {
+  it("keeps approval API and database bytes at the delivered pre-history baseline", async () => {
+    for (const [graph, expected] of [
+      [
+        await purchaseGraphFor(),
+        "b26942bdf5587af399f58db6f4d8635196c2eb3d4345afc16b9a4fcd646af2b5",
+      ],
+      [
+        await composedGraphFor(expenseBrief),
+        "8dfdca8272c77c9531baf6a165975029ca82e50690af133935d97e517378fd77",
+      ],
+    ] as const) {
+      const files = generateApplicationBundle(
+        bundleInputFor(graph),
+      ).files.filter(
+        (file) => file.path.startsWith("api/") || file.path.includes("prisma/"),
+      );
+      expect(files).toHaveLength(33);
+      expect(
+        createHash("sha256").update(JSON.stringify(files)).digest("hex"),
+      ).toBe(expected);
+    }
+  });
+  it("validates decision reads strictly and preserves only real ordered outcomes", async () => {
+    const runtime = approvalModule(
+      runtimeFor(await purchaseGraphFor()),
+    ).exports;
+    const event = {
+      actor: "manager",
+      action: "approve",
+      entity: "purchase-request",
+      recordId: "r1",
+      at: "2026-09-12T10:00:00.000Z",
+    };
+    const record = { id: "r1", item: "Shared desk" };
+    const filtered = runtime.decisionHistoryPayload(
+      [
+        { ...event, action: "submit" },
+        { ...event, id: "internal-storage-id" },
+        { ...event, action: "record" },
+        { ...event, entity: "other" },
+        { ...event, action: "reject" },
+        event,
+      ],
+      [record],
+      "purchase-request",
+    );
+    expect(filtered.events).toEqual([
+      event,
+      { ...event, action: "reject" },
+      event,
+    ]);
+    expect(filtered.records).toEqual([record]);
+    for (const audit of [
+      null,
+      {},
+      [null],
+      [[]],
+      [{ ...event, actor: " " }],
+      [{ ...event, at: "invalid" }],
+      [{ ...event, recordId: 1 }],
+    ]) {
+      expect(() =>
+        runtime.decisionHistoryPayload(audit, [record], "purchase-request"),
+      ).toThrow("Decision history is unavailable. Try again.");
+    }
+    for (const records of [
+      null,
+      {},
+      [[]],
+      [null],
+      [{ id: " " }],
+      [{ id: 12 }],
+    ]) {
+      expect(() =>
+        runtime.decisionHistoryPayload([event], records, "purchase-request"),
+      ).toThrow("Decision history is unavailable. Try again.");
+    }
+    expect(
+      runtime.decisionHistoryPayload(
+        [{ ...event, action: "submit" }],
+        [],
+        "purchase-request",
+      ).events,
+    ).toEqual([]);
+    expect(approvalDecisionHistory).toMatchObject({
+      key: "approval-decision-history",
+      version: "1.0.0",
+      ownership: "factory-authored",
+      license: "UNLICENSED",
+    });
+    expect(approvalDecisionHistory.reuse).toContain("error-state");
+  });
+
+  it("renders readable current record identity, safe details, actor and actual time", async () => {
+    const resolveReact = (name: string) =>
+      require(
+        require.resolve(name, {
+          paths: [join(__dirname, "../../../apps/workbench")],
+        }),
+      );
+    const { createElement } = resolveReact("react");
+    const { renderToStaticMarkup } = resolveReact("react-dom/server");
+    for (const [graph, key, record, labels] of [
+      [
+        await purchaseGraphFor(),
+        "purchase-request",
+        {
+          id: "opaque",
+          item: "Shared desk",
+          amount: 125,
+          category: "equipment",
+        },
+        ["Shared desk"],
+      ],
+      [
+        await composedGraphFor(expenseBrief),
+        "expense",
+        { id: "opaque", amount: 0, category: "travel" },
+        ["Amount: 0", "Category: travel"],
+      ],
+    ] as const) {
+      const runtime = approvalModule(runtimeFor(graph)).exports;
+      const entity = runtime.definition.entities.find(
+        (entity: any) => entity.key === key,
+      );
+      const event = {
+        actor: "manager",
+        action: "approve",
+        entity: key,
+        recordId: "opaque",
+        at: "2026-09-12T10:00:00.000Z",
+      };
+      const markup = renderToStaticMarkup(
+        createElement(runtime.DecisionHistoryRow, { entity, event, record }),
+      );
+      for (const label of labels) expect(markup).toContain(label);
+      expect(markup).toContain("Demo role: Manager");
+      expect(markup).toContain('dateTime="2026-09-12T10:00:00.000Z"');
+      expect(markup).not.toContain("<h3>opaque");
+      const missing = renderToStaticMarkup(
+        createElement(runtime.DecisionHistoryRow, { entity, event }),
+      );
+      expect(missing).toContain(entity.label + " decision");
+      expect(missing).toContain("Record ID: opaque");
+      const structured = renderToStaticMarkup(
+        createElement(runtime.DecisionHistoryRow, {
+          entity: {
+            ...entity,
+            fields: [...entity.fields, { key: "extra", type: "json" }],
+          },
+          event,
+          record: { ...record, extra: { secret: "not-visible-payload" } },
+        }),
+      );
+      expect(structured).not.toContain("not-visible-payload");
+      expect(structured).toContain("Structured value");
+      const auditor = key === "expense" ? "finance" : "procurement";
+      expect(
+        renderToStaticMarkup(
+          createElement(runtime.ApprovalDecisionHistory, { role: auditor }),
+        ),
+      ).toContain("Decision history");
+      const permissions = runtime.definition.policy.permissions;
+      for (const removedAction of ["read", "audit"]) {
+        runtime.definition.policy.permissions = permissions.map(
+          (permission: any) => ({
+            ...permission,
+            actions: permission.actions.filter(
+              (action: string) => action !== removedAction,
+            ),
+          }),
+        );
+        expect(
+          renderToStaticMarkup(
+            createElement(runtime.ApprovalDecisionHistory, { role: auditor }),
+          ),
+        ).toBe("");
+      }
+      runtime.definition.policy.permissions = permissions;
+    }
+  });
+
+  it("deduplicates history reads and clears privileged responses across role scopes", async () => {
+    const state: any[] = [];
+    const refs: any[] = [];
+    let cursor = 0;
+    const jsx = (type: unknown, props: any) => ({ type, props });
+    const react = {
+      useState(initial: any) {
+        const index = cursor++;
+        if (!(index in state))
+          state[index] = typeof initial === "function" ? initial() : initial;
+        return [
+          state[index],
+          (value: any) => {
+            state[index] =
+              typeof value === "function" ? value(state[index]) : value;
+          },
+        ];
+      },
+      useRef(initial: any) {
+        const index = cursor++;
+        return (refs[index] ??= { current: initial });
+      },
+      useEffect() {
+        cursor++;
+      },
+      useCallback(value: any) {
+        cursor++;
+        return value;
+      },
+    };
+    const runtime = approvalModule(
+      runtimeFor(await purchaseGraphFor()),
+      (name) =>
+        name === "react"
+          ? react
+          : { jsx, jsxs: jsx, Fragment: Symbol.for("react.fragment") },
+    ).exports;
+    const render = (role: string) => {
+      cursor = 0;
+      return runtime.ApprovalDecisionHistory({ role });
+    };
+    const requests: Array<{
+      url: string;
+      headers: HeadersInit | undefined;
+      resolve: (value: Response) => void;
+    }> = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = ((url: string, init?: RequestInit) =>
+      new Promise<Response>((resolve) =>
+        requests.push({ url, headers: init?.headers, resolve }),
+      )) as typeof fetch;
+    const settle = async (
+      offset: number,
+      audit: unknown,
+      records: unknown,
+      ok = true,
+    ) => {
+      requests[offset]!.resolve({ ok, json: async () => audit } as Response);
+      requests[offset + 1]!.resolve({
+        ok: true,
+        json: async () => records,
+      } as Response);
+      for (let tick = 0; tick < 10; tick++) await Promise.resolve();
+    };
+    try {
+      expect(render("requester")).toBeNull();
+      expect(render("manager")).toBeNull();
+      expect(requests).toHaveLength(0);
+      const panel = render("procurement");
+      expect(panel.props.open).toBe(false);
+      panel.props.onToggle({ currentTarget: { open: true } });
+      panel.props.onToggle({ currentTarget: { open: true } });
+      expect(requests.map((r) => r.url)).toEqual([
+        "/api/audit",
+        "/api/purchase-request",
+      ]);
+      expect(requests[0]!.headers).toEqual(requests[1]!.headers);
+      expect(JSON.stringify(requests[0]!.headers)).toContain("procurement");
+      expect(render("requester")).toBeNull();
+      const fresh = render("procurement");
+      expect(fresh.props.open).toBe(false);
+      fresh.props.onToggle({ currentTarget: { open: true } });
+      await settle(
+        0,
+        [
+          {
+            actor: "manager",
+            action: "approve",
+            entity: "purchase-request",
+            recordId: "private",
+            at: "2026-09-12",
+          },
+        ],
+        [{ id: "private" }],
+      );
+      expect(JSON.stringify(state)).not.toContain("private");
+      expect(state[0].phase).toBe("loading");
+      await settle(2, [], []);
+      expect(state[0].phase).toBe("success");
+      expect(state[0].events).toEqual([]);
+      render("procurement").props.onToggle({ currentTarget: { open: false } });
+      render("procurement").props.onToggle({ currentTarget: { open: true } });
+      expect(requests).toHaveLength(4);
+      const find = (node: any, label: string): any => {
+        if (!node || typeof node !== "object") return undefined;
+        if (
+          node.type === "button" &&
+          (node.props["aria-label"] === label || node.props.children === label)
+        )
+          return node;
+        return [node.props?.children]
+          .flat(Infinity)
+          .map((child) => find(child, label))
+          .find(Boolean);
+      };
+      find(render("procurement"), "Refresh").props.onClick();
+      await settle(4, { internal: "unsafe-error-body" }, [], false);
+      expect(state[0].phase).toBe("error");
+      expect(JSON.stringify(render("procurement"))).not.toContain(
+        "unsafe-error-body",
+      );
+      find(render("procurement"), "Retry").props.onClick();
+      await settle(6, [], []);
+      expect(state[0].phase).toBe("success");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+  it("exposes decision history only through the shared approval workspace", async () => {
+    const source = runtimeFor(await purchaseGraphFor());
+    expect(source).toContain("function ApprovalDecisionHistory");
+    expect(source).toContain("<ApprovalDecisionHistory role={role} />");
+    expect(source).toContain("Decision history is unavailable. Try again.");
+    expect(runtimeFor(nonApprovalGraph())).not.toContain("Decision history");
+  });
   it("emits icon-only Refresh controls with accessible names for both approval definitions", async () => {
     for (const graph of [
       await composedGraphFor(expenseBrief),
@@ -803,7 +1121,7 @@ describe("approval runtime behavior", () => {
     )!.content;
     expect(approvalWorkspacePresentation).toEqual({
       key: "approval-workspace-presentation",
-      version: "1.1.0",
+      version: "1.2.0",
       ownership: "factory-authored",
       license: "UNLICENSED",
       reuse: [
@@ -849,9 +1167,9 @@ describe("approval runtime behavior", () => {
     expect(runtime).toContain(
       "className='generated-primary' href={formRoute}>New {entity.label.toLowerCase()}</a>",
     );
-    expect(styles).toContain("--approval-workspace-version: 2;");
+    expect(styles).toContain("--approval-workspace-version: 3;");
     expect(styles).toContain(
-      ".approval-v1.generated-app { --approval-workspace-version: 2; display: grid;",
+      ".approval-v1.generated-app { --approval-workspace-version: 3; display: grid;",
     );
     expect(styles).toContain(".approval-workspace-sidebar");
     expect(styles).toContain(".approval-workspace-mobile-nav");

@@ -3609,3 +3609,71 @@ exact-label cleanup. The single independent nonwriter /root/b2_review reports
 P0/P1/P2 0/0/0. Root accepts the bounded correction and authorizes normal commit
 and push to codex/consumer-delivery-roadmap. No founder visual approval or mature
 business product is claimed. B3 stays held; next is closure slice A under ADR-0059.
+
+### ADR-0059 accepted; visible decision history implementation
+
+ADR-0058 is delivered at aefe0d813332761d2ffd2a6636d59943a88f0273,
+verified equal to origin/codex/consumer-delivery-roadmap. Independent nonauthor
+and nonwriter /root/b2_review returns APPROVED_FOR_STANDING_ACCEPTANCE: yes,
+P0/P1 0/0 for exact ADR-0059 SHA-256
+5baaf7119acec0c4c76820585cbc1dcd20ac83a799f5fbab7b72920623e0f37d.
+Root records standing acceptance and authorizes its exact MIG-001 source/test/
+E2E/evidence manifest, owned solely by root. No parallel production writer.
+Use focused RED/GREEN and one combined independent review. Local runtime requires
+a later source-freeze entry. Server/database/nonapproval output remains exact.
+History is slice A only; correction/resubmission and uncertain-write recovery
+remain pending separate contracts. Tech Lead may prepare proposed ADR-0060 only.
+
+### ADR-0059 source freeze and local runtime authority
+
+Focused RED exposed the missing history panel. Final suite passes 34/34 including
+strict emitted typechecking, malformed payloads, readable identities, independent
+read/audit eligibility, same-scope deduplication, retry and A/B/A late-response
+rejection. Compiler build/typecheck/lint pass. Comparing both emitted definitions
+against delivered aefe0d81 changes only page-runtime.tsx and globals.css; all 33
+API/database files per definition remain exact, with permanent focused digests.
+The independent source review found one P2 Retry target issue, corrected before
+freeze; no other production issue is open. Final runtime/visual review is pending.
+
+Root freezes the exact source hashes recorded in the upcoming history acceptance
+report and authorizes compiler-worker-only build
+factory-t9-history-20260912-compiler-worker:latest. Run the isolated project
+factory-t9-history-20260912 with prior accepted CP/WB images, the same Compose
+topology, loopback ports 15180/13020/15440/16380 and empty provider keys. Extend
+the two existing deterministic Expense/Purchase lanes with actual empty/history,
+reload, denied roles, response failure/retry and delayed role-switch reads.
+Use one worker, zero automatic retries. Root owns source, evidence and exact-label
+teardown. No external model/provider, cloud, release or main integration authority.
+
+### Next priority correction: B and required write recovery together
+
+Root owns the roadmap update in
+docs/superpowers/plans/2026-09-12-approval-decision-closure.md. The initial
+ADR-0060 proposal at 62704b64c8109478cc1b5708ac0bdf9b5d4415da60b750d84dd267f8219f7c81
+was not accepted: independent /root/b2_review reports standing no, P0/P1 0/1,
+because it deferred mandatory replay/concurrency protection for new mutations.
+Root directs Tech Lead to revise the proposed decision to combine the correction
+journey with necessary persisted operation identity, expected-version checks and
+atomic replay/conflict behavior. No threat-model exception is requested. This
+consolidates a required cross-contract gate around one useful business slice.
+ADR-0060 has no implementation authority until its revised exact decision passes
+and ADR-0059 is delivered. Current source stays frozen for history acceptance.
+
+### ADR-0059 ordinary delivery accepted
+
+Both actual history/business lanes pass 2/2 in 6.9 minutes, one worker and zero
+retries. Expense ready/task times are 166451/179953 ms; Purchase 186269/207308 ms.
+Both prove empty-before, two persisted readable decisions after reload, exact
+unauthorized UI/API denials, safe 500/keyboard Retry and delayed role-switch
+response isolation. Source and built image remain byte-identical throughout.
+The 34 focused tests, package checks and byte-preservation evidence are clean.
+Root inspected all 21 actual images; independent reviewer inspected eight new
+and four changed retained images, retaining exact-byte evidence for the other nine.
+Factory and both Preview projects have zero containers/networks/volumes.
+
+Independent /root/b2_review final combined ordinary verdict is P0/P1/P2 0/0/0.
+Root accepts the bounded capability and authorizes normal branch commit/push.
+docs/acceptance/approval-decision-history.md records hashes, outcomes, identities,
+visual evidence, cleanup and the remaining limits. No founder visual approval,
+complete correction journey, mature-product count, main/release or cloud claim.
+Next is the combined correction/resubmission and safe mutation/recovery contract.

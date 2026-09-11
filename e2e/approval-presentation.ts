@@ -1,4 +1,6 @@
 import { expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { resolve } from "node:path";
 
 export async function approvalPresentationFacts(page: Page) {
   return page.evaluate(() => {
@@ -169,7 +171,7 @@ export async function verifyApprovalAssets(page: Page) {
   expect(
     facts.workspaceVersion,
     "shared composed workspace must be loaded",
-  ).toBe("2");
+  ).toBe("3");
   expect(facts.appDisplay).toBe("grid");
   expect(facts.unresolvedTokens, "all used design tokens must resolve").toEqual(
     [],
@@ -184,6 +186,206 @@ export async function verifyApprovalAssets(page: Page) {
     const bounds = await refresh.boundingBox();
     expect(bounds!.width).toBeGreaterThanOrEqual(44);
     expect(bounds!.height).toBeGreaterThanOrEqual(44);
+  }
+}
+
+export async function verifyDecisionHistory(
+  page: Page,
+  options: {
+    auditor: string;
+    requester: string;
+    entity: string;
+    identities?: readonly string[];
+    evidence?: string;
+  },
+) {
+  const role = page.getByLabel("Demo role", { exact: true });
+  const panel = page.locator(".approval-decision-history");
+  const summary = panel.locator(":scope > summary");
+  const open = async () => {
+    await expect(panel).not.toHaveAttribute("open", "");
+    await summary.focus();
+    await summary.press("Enter");
+    await expect(panel).toHaveAttribute("open", "");
+  };
+  let auditRequests = 0;
+  const observe = (request: import("@playwright/test").Request) => {
+    if (new URL(request.url()).pathname === "/api/audit") auditRequests++;
+  };
+  page.on("request", observe);
+  try {
+    for (const deniedRole of [options.requester, "manager"]) {
+      await role.selectOption(deniedRole);
+      await expect(panel).toHaveCount(0);
+      const response = await page.request.get(
+        new URL("/api/audit", page.url()).toString(),
+        {
+          headers: {
+            "x-factory-fixture-session": "fixture-session-" + deniedRole,
+          },
+        },
+      );
+      expect(response.status()).toBe(403);
+    }
+    expect(auditRequests).toBe(0);
+    if (options.identities) await page.reload();
+    await role.selectOption(options.auditor);
+    await expect(panel).toBeVisible();
+    await expect(panel).not.toHaveAttribute("open", "");
+    expect(auditRequests).toBe(0);
+    await open();
+    if (!options.identities) {
+      await expect(
+        panel.getByText("No decisions yet.", { exact: true }),
+      ).toBeVisible();
+      await expect(panel.locator(".approval-history-row")).toHaveCount(0);
+      await summary.press("Enter");
+      await role.selectOption(options.requester);
+      console.info(
+        "FACTORY_HISTORY_EMPTY",
+        JSON.stringify({
+          entity: options.entity,
+          auditRequests,
+          unauthorizedUiAndApi: true,
+        }),
+      );
+      return;
+    }
+    const rows = panel.locator(".approval-history-row");
+    await expect(rows).toHaveCount(2);
+    for (const [index, identity] of options.identities.entries()) {
+      const row = rows.nth(index);
+      await expect(row.getByRole("heading", { level: 3 })).toContainText(
+        identity,
+      );
+      await expect(row.locator(".approval-badge")).toHaveText(
+        index === 0 ? "Approve" : "Reject",
+      );
+      await expect(
+        row.getByText("Demo role: Manager", { exact: true }),
+      ).toBeVisible();
+      const time = row.locator(".approval-history-outcome time");
+      expect(
+        Number.isFinite(Date.parse((await time.getAttribute("datetime"))!)),
+      ).toBe(true);
+    }
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate(() => scrollTo(0, 0));
+      await verifyApprovalAssets(page);
+      await verifyBrandColors(page);
+      expect(
+        await panel.evaluate((node) =>
+          getComputedStyle(node)
+            .getPropertyValue("--approval-decision-history-version")
+            .trim(),
+        ),
+      ).toBe("1");
+      for (const target of await panel
+        .locator("summary:visible, button:visible")
+        .all()) {
+        const box = await target.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+      }
+      expect(
+        await rows.evaluateAll((items) =>
+          items.every(
+            (row) =>
+              getComputedStyle(row).backgroundColor ===
+              getComputedStyle(row.closest(".approval-decision-history")!)
+                .backgroundColor,
+          ),
+        ),
+      ).toBe(true);
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      if (options.evidence)
+        await page.screenshot({
+          path: resolve(options.evidence, `decision-history-${width}.png`),
+          fullPage: true,
+        });
+      await summary.click();
+      await page.evaluate(() => scrollTo(0, 0));
+      await verifyWorkspaceComposition(page, width);
+      if (width === 390 && options.evidence)
+        await page.screenshot({
+          path: resolve(options.evidence, "decision-history-closed-390.png"),
+          fullPage: true,
+        });
+      await open();
+    }
+    const failed = "**/api/audit";
+    await page.route(
+      failed,
+      (route) =>
+        route.fulfill({ status: 500, body: "unsafe internal failure payload" }),
+      { times: 1 },
+    );
+    await panel.getByRole("button", { name: "Refresh", exact: true }).click();
+    await expect(panel.getByRole("alert")).toHaveText(
+      "Decision history is unavailable. Try again.",
+    );
+    await expect(panel).not.toContainText("unsafe internal");
+    const retry = panel.getByRole("button", { name: "Retry", exact: true });
+    expect((await retry.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.setViewportSize({ width: 390, height: 900 });
+    expect((await retry.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await retry.focus();
+    await retry.press("Enter");
+    await expect(rows).toHaveCount(2);
+    const held: Array<{
+      route: import("@playwright/test").Route;
+      response: import("@playwright/test").APIResponse;
+    }> = [];
+    const hold = async (route: import("@playwright/test").Route) => {
+      if (
+        route.request().headers()["x-factory-fixture-session"] !==
+        "fixture-session-" + options.auditor
+      )
+        return route.continue();
+      const response = await route.fetch();
+      held.push({ route, response });
+    };
+    const pattern = new RegExp("/api/(audit|" + options.entity + ")$");
+    await page.route(pattern, hold);
+    try {
+      await panel.getByRole("button", { name: "Refresh", exact: true }).click();
+      await expect.poll(() => held.length).toBe(2);
+      await role.selectOption(options.requester);
+      await expect(panel).toHaveCount(0);
+      for (const item of held)
+        await item.route.fulfill({ response: item.response });
+    } finally {
+      await page.unroute(pattern, hold);
+    }
+    await expect(panel).toHaveCount(0);
+    await role.selectOption(options.auditor);
+    await expect(panel).not.toHaveAttribute("open", "");
+    await expect(rows).toHaveCount(0);
+    await open();
+    await expect(rows).toHaveCount(2);
+    await summary.click();
+    await role.selectOption(options.requester);
+    await page.setViewportSize({ width: 390, height: 900 });
+    console.info(
+      "FACTORY_HISTORY_BUSINESS",
+      JSON.stringify({
+        entity: options.entity,
+        visibleDecisions: 2,
+        reload: true,
+        safeErrorRetry: true,
+        lateRoleResponsesIgnored: true,
+        unauthorizedUiAndApi: true,
+        responsive: [390, 768, 1440],
+      }),
+    );
+  } finally {
+    page.off("request", observe);
   }
 }
 

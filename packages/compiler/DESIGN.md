@@ -69,6 +69,24 @@ stronger success/warning/error badge fills. Preserve compact neutral business
 rows. Color must distinguish identity, selection and status instead of tinting
 every entire record. Verify light/dark colors and contrast from resolved tokens.
 
+## Decision outcome interaction
+
+ADR-0059 composes one private `approval-decision-history@1.0.0` panel into the
+accepted workspace. Reuse the existing read/audit authority, request headers,
+field labels/formatters, summary identities, Details disclosure, neutral surfaces,
+semantic badges and four already-pinned icons. The ordered registry/recipe/template/
+source-study search found no interaction combining these read-only business
+outcomes with role-scope invalidation; the private first-party module owns that
+gap, records UNLICENSED provenance, and adds no catalog entry or dependency.
+
+Default closed, it keeps the task workspace compact. Opening shows current
+readable record identity, actual persisted decision, recorded demo role and time.
+It never claims verified people, decision-time snapshots or a reason absent from
+the current API. Both reads must validate before rendering. Unauthorized roles
+have no panel/fetch, and a role change closes and clears it before old responses
+can render. Empty, loading, safe error, Retry and icon-only Refresh are required.
+Actual UI evidence must show both decisions after reload for both definitions.
+
 Refresh becomes the existing Lucide refresh-cw icon in a 44 px control with
 aria-label/title Refresh and unchanged disabled/loading behavior. Keep words for
 Submit/Approve/Reject because their consequences must be clear. Remove no factual

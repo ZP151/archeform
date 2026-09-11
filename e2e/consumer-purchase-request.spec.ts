@@ -16,6 +16,7 @@ import {
   openApprovalNavigation,
   navigateApproval,
   verifyWorkspaceComposition,
+  verifyDecisionHistory,
 } from "./approval-presentation";
 import {
   purchaseRequestFixtureBrief,
@@ -26,7 +27,7 @@ import {
 // compilation, verification, preview, form submission and persistence are real.
 const evidence = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-approval-emphasis",
+  "docs/acceptance/evidence/consumer-approval-decision-history",
 );
 type Preview = {
   id: string;
@@ -633,6 +634,11 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
     const headers = (role: string) => ({
       "x-factory-fixture-session": `fixture-session-${role}`,
     });
+    await verifyDecisionHistory(generated, {
+      auditor: "procurement",
+      requester: "requester",
+      entity: "purchase-request",
+    });
     const approveUrl = new URL(
       `/api/purchase-request/${approvedId}/events/approve`,
       href,
@@ -768,6 +774,13 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
       ).toBe(true);
     }
     stage = "results";
+    await verifyDecisionHistory(generated, {
+      auditor: "procurement",
+      requester: "requester",
+      entity: "purchase-request",
+      identities: [approvedItem, rejectedItem],
+      evidence,
+    });
     await navigateApproval(generated, "Purchase request list");
     await generated
       .getByLabel("Demo role", { exact: true })
