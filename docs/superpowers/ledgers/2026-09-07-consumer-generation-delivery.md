@@ -3715,3 +3715,139 @@ provider, cloud, main integration or repository release authority is implied.
 Production status for ADR-0060 is not started: only its accepted decision and
 next-goal ownership are delivered here. Root authorizes a normal documentation/
 wording commit and push with the unchanged-test-title correction above.
+
+### Founder-selected expressive UI combination — September 12
+
+The founder again rejected the delivered visual appearance, reviewed three
+generated design alternatives, selected their combination and explicitly ordered
+implementation plus reusable component/material/assembly improvements. This
+replaces the previous visual direction; historical functional evidence keeps its
+exact scope. The combined reference is a concept, not an implemented screenshot.
+
+Root owns the new expressive-approval goal and plan
+docs/superpowers/plans/2026-09-12-expressive-approval.md. Root dispatches
+/root/visual_system_decision for the private template/material governance trigger
+and /root/visual_materials for two original raster materials. The latter writes
+only ignored material staging files. Root owns documentation, acceptance, E2E
+integration and Git. No compiler implementation is authorized by dispatch alone;
+record exact standing acceptance and its serialized writer before source changes.
+
+Pre-change hashes for three generated bundles (Expense, Purchase and Booking)
+are captured under .superpowers/sdd/2026-09-12-expressive-approval. Original
+illustrative workspace/expense materials are staged there; no external source
+was copied and no model prompt/response is saved. No dependency, API/data or
+Graph change is intended. Existing Spark quota failure remains; do not redispatch
+Spark or consume an account reset. Use a qualified available implementation owner
+for this bounded accepted task.
+
+ADR-0060 remains accepted but not started. This visual/material iteration takes
+priority under the founder's latest instruction and must not imply that return,
+resubmission, attachment or production identity behavior is already delivered.
+
+### ADR-0061 standing acceptance and serialized implementation
+
+Independent nonauthor/nonwriter /root/visual_decision_review returns
+APPROVED_FOR_STANDING_ACCEPTANCE: yes and P0/P1/P2 0/0/0 for exact ADR-0061
+SHA-256 3f71e0ae0eb364a42ec65b57f281b49a983c9c38c1478a7ff5fee869440a7d5a.
+The earlier 53870a60 proposal was corrected before acceptance because its material
+signature used Blueprint types rather than Published Graph types/status. Root
+records acceptance under the standing founder authorization.
+
+Root now authorizes /root/expressive_compiler as the sole serialized compiler
+writer for the exact ADR MIG-001 source/test manifest. Root retains the disjoint
+DESIGN/E2E/evidence/ledger/status/plan/assembly-guide/checklist paths and Git.
+No package, public registry, Graph, API, adapter, database or server change is
+authorized. Frozen E2E selectors are approval-family-hero, approval-material,
+img[data-approval-material], approval-progress > ol and aria-current=step;
+existing record/summary/details/navigation selectors remain available.
+
+Offline preparation converted original PNGs to metadata-free 768 x 512 WebPs
+using already installed Sharp 0.34.5 without adding a dependency. Workspace
+material is 26830 bytes, SHA-256
+6621d5c80cee5784e8e0920e34c090eb31084f4218d61c7a2e38566712b6a715;
+Expense material is 29056 bytes, SHA-256
+c1961dabf8ce08922808dc7f9572bcd1bef57dc95625852d6c65f33097e4d343.
+Both remain original decorative materials with no record-evidence meaning.
+Implementation starts with focused failing tests. Actual runtime authority will
+be recorded after source freeze and package checks; no provider/cloud/release
+or main authority is implied.
+
+### Expressive integration handoff
+
+The compiler owner handed back all writes after 37 focused tests and a successful
+build. Two emitted-layout inspections found real defects: the first omitted
+record media wiring and oversized the hero; the second fixed wiring but exposed
+desktop grid overlap and inherited progress styling. Those images are design
+diagnostics, not acceptance. Root now takes sole serialized ownership of the
+same ADR-0061 compiler/test manifest to finish the concrete layout corrections.
+No parallel compiler writer remains. Retain the selected target and business
+contracts; do not weaken first-action/summary bounds to accept the defect.
+
+### Expressive local runtime verification authority
+
+Root freezes the four changed compiler source files in ignored
+.superpowers/sdd/2026-09-12-expressive-approval/source-freeze.txt after a successful
+package build and lint. The complete compiler regression is running; actual
+acceptance remains conditional on its result and the single combined review.
+The unchanged-server/Booking bundle comparison passed. Root authorizes building
+the local compiler-worker image and running the existing two provider-free
+Draft/Publish/Compilation/Preview acceptance lanes under exact Compose project
+factory-t9-expressive-20260912. Use the staged acceptance.compose.yml, existing
+control-plane/Workbench images and local environment file without logging its
+contents. No real model, cloud host, production credentials or remote deployment
+is authorized. Preview resources created by these tests and this exact Factory
+project must be cleaned and recorded before delivery. Any source repair requires
+an updated digest and rebuilding the affected worker before fresh evidence.
+
+The single source review found missing material-version metadata, incomplete
+manifest role/key admission, a hard-coded caption colour pair, incorrect hero
+placement, and missing selector parity coverage. Root corrected them together
+inside the same frozen contract. The hero is now page-level on dashboard/list/
+queue, uses the declared page title, and excludes form/detail/history-only pages.
+Both exact entity signatures and their rejected mutations run through compile
+and emitted-runtime selectors. No new approval or audit wave was introduced.
+
+Complete compiler regression passed 675/675 (40 files); subsequent affected
+source coverage passed 40/40 including the two new page/selector cases. An earlier
+full run saw a transient test/source mismatch when version metadata was added
+during the run; the clean complete rerun resolved it. Build and lint passed.
+Root refreshed the source-freeze digests and rebuilt the worker after all source
+repairs. Actual runtime evidence must use this rebuilt worker, not earlier images.
+
+### Expressive approval acceptance and controller delivery
+
+Final scoped review also required entity-bound material selection, explicit
+palette-case proof and complete malformed-progress probes. Root fixed all three
+as one bounded repair: the compiler emits one selected entity/material pair,
+and unknown or unrelated schemas cannot acquire its record image. The first
+actual runtime wave found redundant hidden hero copy causing ambiguous element
+queries; removing it preserved visible semantics. The final worker was rebuilt
+and the two immutable runtime lanes rerun successfully, 2/2 in 7.2 minutes.
+
+Final affected compiler tests pass 42/42; complete pre-final-repair regression
+passes 675/675 with unchanged coverage retained. Build/lint, frozen non-approval
+and Restaurant output, and all 33 server files for each approval family pass.
+The final four source digests equal those in the actual worker and are recorded
+in docs/acceptance/evidence/consumer-expressive-approval/verification.json.
+
+Root and independent reviewer inspected all 29 actual PNGs, 13 Expense and 16
+Purchase. Both lanes cover three viewport widths, actual role/state operations,
+history/reload/denial/recovery, loaded CSS/icons/tokens, image decode and fallback,
+dark presentation, and zero accessibility/overflow findings. First action is at
+616 px on phone/tablet and 478 px on desktop. Both exact Preview cleanups pass;
+the exact Factory project has zero containers, networks and volumes in cleanup.json.
+
+Independent /root/visual_decision_review returns APPROVED_FOR_COMMIT_AND_PUSH:
+yes, P0/P1/P2 0/0/0, no blocking findings for this single combined ordinary review.
+Root accepts the bounded visual/material delivery and owns the normal English
+commit/push on codex/consumer-delivery-roadmap, verifying local/remote tip equality.
+No main integration, repository release, cloud deployment or claim of founder
+visual acceptance is included.
+
+The concrete result and limitations are in
+docs/acceptance/approval-expressive-presentation.md. New immutable compilations
+inherit workspace 2.0.0, presentation components 1.0.0 and visual assets 1.0.0.
+Published Graphs and prior artifacts are not rewritten. Product counts remain
+three definitions/two demonstrated runtime families. ADR-0060 return reason,
+same-record correction/resubmission and interrupted-operation recovery remain
+the next business target, followed by verified reuse in additional families.

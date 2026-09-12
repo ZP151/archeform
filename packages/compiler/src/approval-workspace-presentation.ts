@@ -1,7 +1,7 @@
 /** Private, factory-authored composition of existing approval runtime ports. */
 export const approvalWorkspacePresentation = {
   key: "approval-workspace-presentation",
-  version: "1.2.0",
+  version: "2.0.0",
   ownership: "factory-authored",
   license: "UNLICENSED",
   reuse: [
@@ -31,13 +31,13 @@ export const approvalWorkspacePresentation = {
 } as const;
 
 export function renderApprovalWorkspaceShell(): string {
-  return "  return <main className='generated-app approval-v1' data-theme={definition.themeMode}><aside className='approval-workspace-sidebar'><div className='approval-workspace-brand'><div className='approval-workspace-mark'><ApprovalIcon name='receipt-text' /></div><div><p>{definition.applicationName}</p><span>Requests and approvals</span></div></div><nav aria-label='Application routes'>{projection.navigation.map((item) => <a aria-current={item.route === requestedRoute ? 'page' : undefined} href={item.route} key={item.id}><ApprovalIcon name={item.route === projection.routeFallback.rootRoute ? 'house' : 'receipt-text'} /><span>{item.label}</span></a>)}</nav><div className='approval-workspace-role'><label htmlFor='demo-role'><ApprovalIcon name='user-round' />Demo role</label><select id='demo-role' value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></div></aside><div className='approval-workspace-canvas'><header className='generated-header approval-workspace-heading'><h1>{activePage.title}</h1></header><details className='approval-workspace-mobile-nav'><summary aria-label={'Navigation: ' + activePage.title}>Navigation</summary><nav aria-label='Application routes'>{projection.navigation.map((item) => <a aria-current={item.route === requestedRoute ? 'page' : undefined} href={item.route} key={item.id}><ApprovalIcon name={item.route === projection.routeFallback.rootRoute ? 'house' : 'receipt-text'} /><span>{item.label}</span></a>)}</nav></details><ApprovalDecisionHistory role={role} />{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'>{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></div></main>;";
+  return "  return <main className='generated-app approval-v1' data-theme={definition.themeMode}><aside className='approval-workspace-sidebar'><div className='approval-workspace-brand'><div className='approval-workspace-mark'><ApprovalIcon name='receipt-text' /></div><div><p>{definition.applicationName}</p><span>Requests and approvals</span></div></div><nav aria-label='Application routes'>{projection.navigation.map((item) => <a aria-current={item.route === requestedRoute ? 'page' : undefined} href={item.route} key={item.id}><ApprovalIcon name={item.route === projection.routeFallback.rootRoute ? 'house' : 'receipt-text'} /><span>{item.label}</span></a>)}</nav><div className='approval-workspace-role'><label htmlFor='demo-role'><ApprovalIcon name='user-round' />Demo role</label><select id='demo-role' value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></div></aside><div className='approval-workspace-canvas'><header className='generated-header approval-workspace-heading'><h1>{activePage.title}</h1></header><details className='approval-workspace-mobile-nav'><summary aria-label={'Navigation: ' + activePage.title} title='Navigation'><ApprovalIcon name='receipt-text' /></summary><nav aria-label='Application routes'>{projection.navigation.map((item) => <a aria-current={item.route === requestedRoute ? 'page' : undefined} href={item.route} key={item.id}><ApprovalIcon name={item.route === projection.routeFallback.rootRoute ? 'house' : 'receipt-text'} /><span>{item.label}</span></a>)}</nav></details><ApprovalDecisionHistory role={role} />{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'><ApprovalPageHero page={activePage} role={role} formRoutes={formRouteByEntity} />{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></div></main>;";
 }
 
 // This profile has one stylesheet owner; older approval grid rules must not be layered underneath.
 export const approvalWorkspaceStyles = [
   `
-.approval-v1.generated-app { --approval-workspace-version: 3; display: grid; grid-template-columns: 15.5rem minmax(0,1fr); min-height: 100vh; margin: 0; padding: 0; background: var(--factory-bg); line-height: var(--factory-typography-line-height-base); }
+.approval-v1.generated-app { --approval-workspace-version: 4; display: grid; grid-template-columns: 15.5rem minmax(0,1fr); min-height: 100vh; margin: 0; padding: 0; background: var(--factory-bg); line-height: var(--factory-typography-line-height-base); }
 .approval-v1 .approval-icon { display: inline-flex !important; flex: 0 0 auto; width: 1.125rem; height: 1.125rem; margin: 0; vertical-align: middle; }
 .approval-v1 .approval-icon svg { width: 100%; height: 100%; }
 .approval-v1 .approval-workspace-sidebar { display: flex; flex-direction: column; gap: var(--factory-spacing-space-6); padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4); min-width: 0; border-inline-end: 1px solid var(--factory-border); background: var(--factory-accent); color: var(--factory-accent-text); }
@@ -137,10 +137,11 @@ export const approvalWorkspaceStyles = [
 }
 @media (max-width:899px) {
 .approval-v1.generated-app { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); }
-.approval-v1 .approval-workspace-sidebar { display: grid; grid-template-columns: minmax(0,1fr) 9rem; align-items: center; gap: var(--factory-spacing-space-3); padding: var(--factory-spacing-space-3) var(--factory-spacing-space-4); border-inline-end: 0; border-block-end: 1px solid var(--factory-border); }
+.approval-v1 .approval-workspace-sidebar { display: grid; grid-template-columns: minmax(0,1fr) 9rem; align-items: center; gap: var(--factory-spacing-space-3); padding: var(--factory-spacing-space-3) var(--factory-spacing-space-4); border-inline-end: 0; border-block-end: 1px solid var(--factory-border); background: var(--factory-surface); color: var(--factory-text); }
 .approval-v1 .approval-workspace-sidebar > nav { display: none; }
 .approval-v1 .approval-workspace-role { padding: 0; border: 0; }
 .approval-v1 .approval-workspace-role label { gap: var(--factory-spacing-space-1); font-size: calc(var(--factory-typography-font-size-sm) * .9); white-space: nowrap; }
+.approval-v1 .approval-workspace-mark { background: var(--factory-accent); color: var(--factory-accent-text); }
 .approval-v1 .approval-workspace-role select { font-size: var(--factory-typography-font-size-sm); }
 .approval-v1 .approval-workspace-brand { gap: var(--factory-spacing-space-2); }
 .approval-v1 .approval-workspace-mark { width: 1.75rem; height: 2rem; }

@@ -17,6 +17,7 @@ import {
   navigateApproval,
   verifyWorkspaceComposition,
   verifyDecisionHistory,
+  verifyExpressiveRecovery,
 } from "./approval-presentation";
 import {
   purchaseRequestFixtureBrief,
@@ -27,7 +28,7 @@ import {
 // compilation, verification, preview, form submission and persistence are real.
 const evidence = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-approval-decision-history",
+  "docs/acceptance/evidence/consumer-expressive-approval",
 );
 type Preview = {
   id: string;
@@ -834,6 +835,7 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
       });
     }
     stage = "recoverable-states";
+    await verifyExpressiveRecovery(generated, evidence);
     await verifyRecoverableListStates(generated);
     expect(errors).toEqual([]);
     console.info(

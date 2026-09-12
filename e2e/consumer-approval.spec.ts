@@ -16,6 +16,7 @@ import {
   verifyApprovalAssets,
   verifyWorkspaceComposition,
   verifyDecisionHistory,
+  verifyExpressiveRecovery,
 } from "./approval-presentation";
 import { observeInterpretation } from "./helpers/interpretation-diagnostics";
 import { approvalIntakeFacts } from "./helpers/approval-intake-diagnostics";
@@ -35,7 +36,7 @@ const realInterpretation = process.env.FACTORY_APPROVAL_REAL_ACCEPTANCE === "1";
 const privacyProbe = process.env.FACTORY_APPROVAL_PRIVACY_ACCEPTANCE === "1";
 const evidenceDirectory = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-approval-decision-history/expense",
+  "docs/acceptance/evidence/consumer-expressive-approval/expense",
 );
 // One separately reported real request, never included in fixture pass counts.
 const realApprovalBrief =
@@ -795,6 +796,7 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
         }),
       );
     }
+    await verifyExpressiveRecovery(generated, evidenceDirectory);
     if (!realInterpretation) {
       // Preserve only the emitted UI from this synthetic compilation for the
       // local design detector. Do not copy environment, API or provider files.

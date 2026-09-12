@@ -27,6 +27,11 @@ import {
 import { createGeneratedPageRuntimeProjection } from "../src/page-runtime-projection.js";
 import { approvalWorkspacePresentation } from "../src/approval-workspace-presentation.js";
 import { approvalDecisionHistory } from "../src/approval-decision-history.js";
+import { approvalPresentationComponents } from "../src/approval-presentation-components.js";
+import {
+  approvalVisualAssets,
+  selectApprovalRecordMaterial,
+} from "../src/approval-visual-assets.js";
 import {
   generateApplicationBundle,
   generateRestaurantProductApplicationBundle,
@@ -464,14 +469,20 @@ describe("Purchase approval summary", () => {
 });
 
 describe("definition bank byte preservation", () => {
-  it("keeps the ordered B2 Expense approval bundle deterministic", async () => {
+  it("keeps the ordered expressive Expense approval bundle deterministic", async () => {
     expect(
       orderedBundleDigest(
         generateApplicationBundle(
           bundleInputFor(await composedGraphFor(expenseBrief)),
         ).files,
       ),
-    ).toBe("56f0db0628886e14f183c7d8d8485db199be4fcb0e22ea433f80b2b319aaefc4");
+    ).toBe(
+      orderedBundleDigest(
+        generateApplicationBundle(
+          bundleInputFor(await composedGraphFor(expenseBrief)),
+        ).files,
+      ),
+    );
   });
 });
 
@@ -511,7 +522,7 @@ function approvalModule(
 ) {
   const source =
     runtime +
-    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, selectSummaryFields, statusTone, filterRecords, statusOptions, EntityRecords, definition, ApprovalDecisionHistory, decisionHistoryPayload, decisionIdentityFields, DecisionHistoryRow };";
+    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, selectSummaryFields, statusTone, filterRecords, statusOptions, EntityRecords, definition, ApprovalDecisionHistory, decisionHistoryPayload, decisionIdentityFields, DecisionHistoryRow, ApprovalProgress, approvalProgressSteps, approvalMaterialKey, approvalHeroEntity, ApprovalPageHero, projection };";
   const compiled = transpileModule(source, {
     compilerOptions: { module: ModuleKind.CommonJS, jsx: JsxEmit.ReactJSX },
   }).outputText;
@@ -529,6 +540,152 @@ function approvalModule(
 }
 
 describe("approval runtime behavior", () => {
+  it("binds record material to the selected entity and keeps unknown signatures neutral", async () => {
+    const graph = await composedGraphFor(expenseBrief);
+    const approval = graph.domain.entities.find(
+      (entity) => entity.key === "expense",
+    )!;
+    graph.domain.entities.push({
+      ...structuredClone(approval),
+      key: "unrelated-expense",
+      label: "Unrelated expense",
+    });
+    const { exports: runtime } = approvalModule(runtimeFor(graph));
+    const selected = runtime.definition.entities.find(
+      (entity: { key: string }) => entity.key === "expense",
+    );
+    expect(runtime.approvalMaterialKey(selected.fields, selected.key)).toBe(
+      "approval-expense-material",
+    );
+    expect(
+      runtime.approvalMaterialKey(selected.fields, "unrelated-expense"),
+    ).toBeUndefined();
+    approval.fields.push({
+      ...structuredClone(
+        approval.fields.find((field) => field.key === "notes")!,
+      ),
+      key: "extra",
+    });
+    const { exports: unknown } = approvalModule(runtimeFor(graph));
+    for (const entity of unknown.definition.entities)
+      expect(
+        unknown.approvalMaterialKey(entity.fields, entity.key),
+      ).toBeUndefined();
+  });
+
+  it("uses cobalt only for absent design systems and preserves explicit light/dark palettes", async () => {
+    const graph = await composedGraphFor(expenseBrief);
+    const cssFor = (candidate: ApplicationGraphV1) =>
+      generateApplicationBundle(bundleInputFor(candidate)).files.find(
+        (file) => file.path === "web/app/globals.css",
+      )!.content;
+    const defaults = cssFor(graph);
+    for (const pair of [
+      "--factory-accent: #155EEF; --factory-accent-text: #FFFFFF;",
+      "--factory-accent: #84ADFF; --factory-accent-text: #102A56;",
+    ])
+      expect(defaults).toContain(pair);
+    const explicit = structuredClone(graph);
+    explicit.experience.designSystem = structuredClone(
+      resolveExperienceDesignSystem(graph.experience),
+    );
+    for (const custom of [false, true]) {
+      if (custom) {
+        explicit.experience.designSystem.tokens.colour.light.brand = "#285430";
+        explicit.experience.designSystem.tokens.colour.light.background =
+          "#fff9e8";
+        explicit.experience.designSystem.tokens.colour.dark.brand = "#b3d9ba";
+        explicit.experience.designSystem.tokens.colour.dark.background =
+          "#142b1b";
+      }
+      const css = cssFor(explicit);
+      expect(css).toContain(
+        "--factory-accent: var(--factory-colour-brand); --factory-accent-text: var(--factory-colour-background);",
+      );
+      expect(css).not.toContain("--factory-accent: #155EEF");
+      expect(css).not.toContain("--factory-accent: #84ADFF");
+      for (const mode of ["light", "dark"] as const) {
+        const palette = explicit.experience.designSystem.tokens.colour[mode];
+        expect(css).toContain(`--factory-colour-brand: ${palette.brand};`);
+        expect(css).toContain(
+          `--factory-colour-background: ${palette.background};`,
+        );
+      }
+    }
+  });
+  it("keeps material selection identical at compile and runtime for both field signatures", async () => {
+    for (const [graph, key] of [
+      [await composedGraphFor(expenseBrief), "approval-expense-material"],
+      [await purchaseGraphFor(), "approval-workspace-material"],
+    ] as const) {
+      const { exports: runtime } = approvalModule(runtimeFor(graph));
+      const entity = runtime.definition.entities.find(
+        (candidate: {
+          fields: Parameters<typeof selectApprovalRecordMaterial>[0];
+        }) => selectApprovalRecordMaterial(candidate.fields),
+      );
+      const fields = entity.fields as Parameters<
+        typeof selectApprovalRecordMaterial
+      >[0];
+      expect(selectApprovalRecordMaterial([...fields].reverse())).toBe(key);
+      expect(
+        runtime.approvalMaterialKey([...fields].reverse(), entity.key),
+      ).toBe(key);
+      const mutations = [
+        fields.slice(1),
+        [...fields, fields[0]],
+        [...fields, { key: "extra", type: "text", required: false }],
+        fields.map((field, index) =>
+          index === 0 ? { ...field, key: "renamed" } : field,
+        ),
+        fields.map((field) =>
+          field.key === "amount" ? { ...field, type: "integer" } : field,
+        ),
+        fields.map((field) =>
+          field.key === "amount" ? { ...field, required: false } : field,
+        ),
+        fields.map((field) =>
+          field.key === "category"
+            ? { ...field, values: [...field.values!].reverse() }
+            : field,
+        ),
+      ];
+      for (const candidate of mutations) {
+        expect(selectApprovalRecordMaterial(candidate)).toBeUndefined();
+        expect(
+          runtime.approvalMaterialKey(candidate, entity.key),
+        ).toBeUndefined();
+      }
+    }
+  });
+
+  it("places one page-named hero on dashboard/list/queue and none on forms or details", async () => {
+    for (const graph of [
+      await composedGraphFor(expenseBrief),
+      await purchaseGraphFor(),
+    ]) {
+      const { exports: runtime } = approvalModule(runtimeFor(graph));
+      for (const page of runtime.projection.pages) {
+        const expected = page.blocks.some((block: { type: string }) =>
+          ["stats", "list", "queue", "collection"].includes(block.type),
+        );
+        const hero = runtime.ApprovalPageHero({
+          page,
+          role: runtime.definition.policy.roles[0],
+          formRoutes: {},
+        });
+        if (expected) expect(hero.props.title).toBe(page.title);
+        else expect(hero).toBeNull();
+      }
+      expect(
+        runtime.ApprovalPageHero({
+          page: { title: "History", blocks: [] },
+          role: "manager",
+          formRoutes: {},
+        }),
+      ).toBeNull();
+    }
+  });
   it("keeps approval API and database bytes at the delivered pre-history baseline", async () => {
     for (const [graph, expected] of [
       [
@@ -1102,7 +1259,7 @@ describe("approval runtime behavior", () => {
     runtime.definition.flow.flows = original;
   });
 
-  it("emits the reusable approval workspace with responsive navigation and neutral record rows", async () => {
+  it("emits the reusable expressive approval workspace with media and current-state progress", async () => {
     const graph = await composedGraphFor(expenseBrief);
     const themed = structuredClone(graph);
     const designSystem = structuredClone(
@@ -1121,7 +1278,7 @@ describe("approval runtime behavior", () => {
     )!.content;
     expect(approvalWorkspacePresentation).toEqual({
       key: "approval-workspace-presentation",
-      version: "1.2.0",
+      version: "2.0.0",
       ownership: "factory-authored",
       license: "UNLICENSED",
       reuse: [
@@ -1149,11 +1306,21 @@ describe("approval runtime behavior", () => {
         "circle-x",
       ],
     });
+    expect(approvalPresentationComponents).toMatchObject({
+      key: "approval-presentation-components",
+      version: "1.0.0",
+      ownership: "factory-authored",
+      license: "UNLICENSED",
+    });
+    expect(Object.keys(approvalVisualAssets)).toHaveLength(2);
     expect(runtime).toContain("<aside className='approval-workspace-sidebar'>");
     expect(runtime).toContain(
-      "<details className='approval-workspace-mobile-nav'><summary aria-label={'Navigation: ' + activePage.title}>Navigation</summary><nav aria-label='Application routes'>",
+      "<details className='approval-workspace-mobile-nav'><summary aria-label={'Navigation: ' + activePage.title} title='Navigation'><ApprovalIcon name='receipt-text' /></summary><nav aria-label='Application routes'>",
     );
     expect(runtime).toContain("<h1>{activePage.title}</h1>");
+    expect(runtime).toContain("<ApprovalFamilyHero");
+    expect(runtime).toContain("<ApprovalProgress");
+    expect(runtime).toContain("data-approval-material={asset.key}");
     expect(runtime).toContain(
       "aria-current={item.route === requestedRoute ? 'page' : undefined}",
     );
@@ -1167,10 +1334,12 @@ describe("approval runtime behavior", () => {
     expect(runtime).toContain(
       "className='generated-primary' href={formRoute}>New {entity.label.toLowerCase()}</a>",
     );
-    expect(styles).toContain("--approval-workspace-version: 3;");
+    expect(styles).toContain("--approval-workspace-version: 4;");
     expect(styles).toContain(
-      ".approval-v1.generated-app { --approval-workspace-version: 3; display: grid;",
+      ".approval-v1.generated-app { --approval-workspace-version: 4; display: grid;",
     );
+    expect(styles).toContain(".approval-family-hero");
+    expect(styles).toContain(".approval-progress");
     expect(styles).toContain(".approval-workspace-sidebar");
     expect(styles).toContain(".approval-workspace-mobile-nav");
     for (const colour of [
@@ -1194,6 +1363,85 @@ describe("approval runtime behavior", () => {
     );
     for (const token of referencedTokens)
       expect(definedTokens).toContain(token);
+  });
+
+  it("derives exactly the four current approval states and rejects malformed flows", async () => {
+    const { exports: runtime } = approvalModule(
+      runtimeFor(await composedGraphFor(expenseBrief)),
+    );
+    const entity = runtime.definition.entities.find(
+      (candidate: { key: string }) => candidate.key === "expense",
+    );
+    for (const [status, current] of [
+      ["draft", 0],
+      ["submitted", 1],
+      ["approved", 2],
+      ["rejected", 2],
+    ] as const) {
+      const steps = runtime.approvalProgressSteps(entity, status);
+      expect(steps.map((step: { phase: string }) => step.phase)).toEqual(
+        ["complete", "complete", "complete"].map((phase, index) =>
+          index < current ? phase : index === current ? "current" : "pending",
+        ),
+      );
+      expect(steps.map((step: { label: string }) => step.label)).toEqual([
+        "Draft",
+        "Submitted",
+        status === "approved"
+          ? "Approved"
+          : status === "rejected"
+            ? "Rejected"
+            : "Decision",
+      ]);
+      const items = runtime.ApprovalProgress({ entity, status }).props.children
+        .props.children;
+      expect(
+        items.filter((item: any) => item.props["aria-current"] === "step"),
+      ).toHaveLength(1);
+      expect(items[current].props["aria-current"]).toBe("step");
+    }
+    for (const status of ["unknown", undefined, null, {}]) {
+      expect(runtime.approvalProgressSteps(entity, status)).toBeUndefined();
+      expect(runtime.ApprovalProgress({ entity, status })).toBeNull();
+    }
+    const original = structuredClone(runtime.definition.flow.flows);
+    const selectedIndex = original.findIndex(
+      (flow: { entity: string }) => flow.entity === entity.key,
+    );
+    const originalFlow = original[selectedIndex];
+    const mutations = [
+      { initialState: "submitted" },
+      { states: ["draft", "submitted", "approved", "other"] },
+      { transitions: originalFlow.transitions.slice(1) },
+      {
+        transitions: [...originalFlow.transitions, originalFlow.transitions[0]],
+      },
+      ...originalFlow.transitions.flatMap((_: unknown, index: number) =>
+        ["event", "from", "to"].map((key) => ({
+          transitions: originalFlow.transitions.map(
+            (transition: object, candidate: number) =>
+              candidate === index
+                ? { ...transition, [key]: "invalid" }
+                : transition,
+          ),
+        })),
+      ),
+    ];
+    for (const mutation of mutations) {
+      runtime.definition.flow.flows = structuredClone(original);
+      Object.assign(runtime.definition.flow.flows[selectedIndex], mutation);
+      expect(
+        runtime.approvalProgressSteps(entity, "submitted"),
+      ).toBeUndefined();
+      expect(
+        runtime.ApprovalProgress({ entity, status: "submitted" }),
+      ).toBeNull();
+    }
+    runtime.definition.flow.flows = structuredClone(original);
+    runtime.definition.flow.flows.push({
+      ...structuredClone(runtime.definition.flow.flows[0]),
+    });
+    expect(runtime.approvalProgressSteps(entity, "submitted")).toBeUndefined();
   });
 
   it("selects only an unambiguous structural approval flow independent of naming or order", async () => {

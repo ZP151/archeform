@@ -79,6 +79,7 @@ export async function navigateApproval(page: Page, name: string) {
 
 export async function verifyWorkspaceComposition(page: Page, width: number) {
   await verifyApprovalAssets(page);
+  await verifyExpressiveMaterials(page);
   await verifyBrandColors(page);
   await verifyDecisionColors(page);
   const disclosure = page
@@ -171,7 +172,7 @@ export async function verifyApprovalAssets(page: Page) {
   expect(
     facts.workspaceVersion,
     "shared composed workspace must be loaded",
-  ).toBe("3");
+  ).toBe("4");
   expect(facts.appDisplay).toBe("grid");
   expect(facts.unresolvedTokens, "all used design tokens must resolve").toEqual(
     [],
@@ -187,6 +188,152 @@ export async function verifyApprovalAssets(page: Page) {
     expect(bounds!.width).toBeGreaterThanOrEqual(44);
     expect(bounds!.height).toBeGreaterThanOrEqual(44);
   }
+}
+
+export async function verifyExpressiveMaterials(page: Page) {
+  const hero = page.locator(".approval-family-hero");
+  await expect(hero).toHaveCount(1);
+  const photos = page.locator("img[data-approval-material]");
+  await expect(photos.first()).toBeVisible();
+  await expect(async () => {
+    const facts = await photos.evaluateAll((images) =>
+      images.map((node) => {
+        const image = node as HTMLImageElement;
+        const rect = image.getBoundingClientRect();
+        return {
+          key: image.dataset.approvalMaterial,
+          local: image.src.startsWith("data:image/webp;base64,"),
+          loaded:
+            image.complete &&
+            image.naturalWidth === 768 &&
+            image.naturalHeight === 512,
+          decorative: image.alt === "",
+          sized:
+            image.width > 0 &&
+            image.height > 0 &&
+            rect.width > 0 &&
+            rect.height > 0,
+        };
+      }),
+    );
+    expect(facts.length).toBeGreaterThan(0);
+    for (const fact of facts) {
+      expect([
+        "approval-workspace-material",
+        "approval-expense-material",
+      ]).toContain(fact.key);
+      expect(fact.local && fact.loaded && fact.decorative && fact.sized).toBe(
+        true,
+      );
+    }
+  }).toPass();
+  const totalBytes = await photos.evaluateAll((images) =>
+    [...new Set(images.map((node) => (node as HTMLImageElement).src))].reduce(
+      (sum, source) => sum + atob(source.split(",")[1]!).length,
+      0,
+    ),
+  );
+  expect(totalBytes).toBeLessThanOrEqual(160 * 1024);
+  for (const row of await page.locator(".approval-record").all()) {
+    await expect(
+      row.locator(".approval-material img[data-approval-material]"),
+    ).toHaveCount(1);
+    const status = (
+      await row.locator(".approval-summary-status dd").innerText()
+    ).trim();
+    await expect(row.locator(".approval-progress > ol > li")).toHaveCount(3);
+    await expect(
+      row.locator(".approval-progress [aria-current='step']"),
+    ).toContainText(status);
+  }
+}
+
+/** Corrupt one decoded image in the real app; preserve real API records/actions. */
+export async function verifyExpressiveRecovery(page: Page, evidence: string) {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.evaluate(() => scrollTo(0, 0));
+  await verifyExpressiveMaterials(page);
+  const role = await page.getByLabel("Demo role", { exact: true }).inputValue();
+  const before = await page.locator(".approval-record").allTextContents();
+  const material = page
+    .locator(".approval-family-hero .approval-material")
+    .first();
+  const bounds = await material.boundingBox();
+  await material.locator("img").evaluate((node) => {
+    (node as HTMLImageElement).src = "data:image/webp;base64,broken";
+  });
+  await expect(material.locator("img")).not.toBeVisible();
+  const afterBounds = await material.boundingBox();
+  expect(afterBounds!.width).toBeCloseTo(bounds!.width, 0);
+  expect(afterBounds!.height).toBeCloseTo(bounds!.height, 0);
+  expect(await page.locator(".approval-record").allTextContents()).toEqual(
+    before,
+  );
+  await expect(
+    page.locator(".approval-records-section .approval-refresh"),
+  ).toBeEnabled();
+  expect(
+    (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
+      .violations,
+  ).toEqual([]);
+  await page.screenshot({
+    path: resolve(evidence, "media-fallback-390.png"),
+    fullPage: true,
+  });
+  await page.reload();
+  await page.getByLabel("Demo role", { exact: true }).selectOption(role);
+  await expect(page.locator(".approval-record")).toHaveCount(before.length);
+  await verifyExpressiveMaterials(page);
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page
+      .locator("main.approval-v1")
+      .evaluate((node) => node.setAttribute("data-theme", "dark"));
+    await page.evaluate(() => scrollTo(0, 0));
+    await verifyApprovalAssets(page);
+    await verifyExpressiveMaterials(page);
+    expect(
+      (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
+        .violations,
+    ).toEqual([]);
+    await page.screenshot({
+      path: resolve(evidence, `workspace-dark-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page
+    .locator("main.approval-v1")
+    .evaluate((node) => node.setAttribute("data-theme", "light"));
+  const captionColors = await page
+    .locator("main.approval-v1")
+    .evaluate((node) => {
+      const app = node as HTMLElement;
+      const saved = app.getAttribute("style");
+      try {
+        app.style.setProperty("--factory-colour-surface", "#f2eee3");
+        app.style.setProperty("--factory-colour-text", "#263225");
+        const style = getComputedStyle(
+          app.querySelector(".approval-material-caption")!,
+        );
+        return { background: style.backgroundColor, text: style.color };
+      } finally {
+        if (saved === null) app.removeAttribute("style");
+        else app.setAttribute("style", saved);
+      }
+    });
+  expect(captionColors).toEqual({
+    background: "rgb(242, 238, 227)",
+    text: "rgb(38, 50, 37)",
+  });
+  console.info(
+    "FACTORY_EXPRESSIVE_MATERIALS",
+    JSON.stringify({
+      localOnly: true,
+      fallbackPreservesLayoutAndRecords: true,
+      reloaded: true,
+      darkWidths: [390, 768, 1440],
+    }),
+  );
 }
 
 export async function verifyDecisionHistory(
@@ -433,13 +580,33 @@ async function verifyBrandColors(page: Page) {
         text: style.color,
         accent: resolve("--factory-accent"),
         foreground: resolve("--factory-accent-text"),
+        surface: resolve("--factory-surface"),
+        mobile: innerWidth < 900,
         canvas: getComputedStyle(node.closest("main")!).backgroundColor,
         canvasToken: resolve("--factory-bg"),
       };
     });
-  expect(facts.background).toBe(facts.accent);
-  expect(facts.text).toBe(facts.foreground);
+  expect(facts.background).toBe(facts.mobile ? facts.surface : facts.accent);
+  if (!facts.mobile) expect(facts.text).toBe(facts.foreground);
   expect(facts.canvas).toBe(facts.canvasToken);
+  const hero = page.locator(".approval-family-hero");
+  if (await hero.count()) {
+    const brand = await hero.evaluate((node) => {
+      const resolve = (token: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(${token})`;
+        node.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      return {
+        actual: resolve("--approval-hero-brand"),
+        expected: resolve("--factory-accent"),
+      };
+    });
+    expect(brand.actual).toBe(brand.expected);
+  }
 }
 async function verifyNavigationColors(page: Page, desktop: boolean) {
   const nav = page.locator(

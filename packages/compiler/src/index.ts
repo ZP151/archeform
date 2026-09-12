@@ -34,6 +34,10 @@ import {
   approvalDecisionHistoryStyles,
   renderApprovalDecisionHistory,
 } from "./approval-decision-history.js";
+import {
+  approvalPresentationComponentStyles,
+  renderApprovalPresentationComponents,
+} from "./approval-presentation-components.js";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
 import {
   renderRestaurantCustomerCommandRuntime,
@@ -2734,6 +2738,9 @@ function renderPageRuntime(
         ),
       )
     : undefined;
+  const approvalEntity = approvalFlow
+    ? graph.domain.entities.find((entity) => entity.key === approvalFlow.entity)
+    : undefined;
   const projection = createGeneratedPageRuntimeProjection(graph, {
     ...(orderEntityKey ? { orderEntity: orderEntityKey } : {}),
   });
@@ -2758,7 +2765,9 @@ function renderPageRuntime(
     flow: {
       flows: graph.flow.flows.map((flow) => ({
         entity: flow.entity,
-        ...(flow === approvalFlow ? { states: flow.states } : {}),
+        ...(flow === approvalFlow
+          ? { states: flow.states, initialState: flow.initialState }
+          : {}),
         transitions: flow.transitions.map((transition) => ({
           from: transition.from,
           event: transition.event,
@@ -2793,7 +2802,7 @@ function renderPageRuntime(
       ? "type RuntimeField = { readonly key: string; readonly required: boolean; readonly type: string; readonly values?: readonly string[] }; type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly RuntimeField[] };"
       : "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string }[] };",
     approval
-      ? "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly states?: readonly string[]; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };"
+      ? "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly states?: readonly string[]; readonly initialState?: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };"
       : "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly checkoutRoute: string | null; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly configureLine: (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]) => Promise<JsonRecord>; readonly checkoutCart: () => Promise<void> };",
     "",
@@ -2940,6 +2949,14 @@ function renderPageRuntime(
       : []),
     ...(approvalFlow
       ? [renderApprovalDecisionHistory(approvalFlow.entity)]
+      : []),
+    ...(approval
+      ? [
+          renderApprovalPresentationComponents(
+            approvalEntity?.key,
+            approvalEntity?.fields ?? [],
+          ),
+        ]
       : []),
     "function can(role: string, entity: string, action: string): boolean {",
     "  return definition.policy.permissions.some((permission) => permission.role === role && (permission.resource === entity || permission.resource === '*') && permission.actions.includes(action));",
@@ -3115,7 +3132,7 @@ function renderPageRuntime(
           ...(extendedSummary
             ? ["  const titleField = selectRecordTitleField(entity.fields);"]
             : []),
-          "  return <section className='generated-card approval-records-section'><div className='generated-section-heading'><h2 className={block.props.title ? undefined : 'approval-default-block-title'}>{block.props.title ?? entity.label}</h2><div className='approval-actions'>{formRoute && can(role, entity.key, 'create') ? <a className='generated-primary' href={formRoute}>New {entity.label.toLowerCase()}</a> : null}<button className='approval-refresh' aria-label='Refresh' title='Refresh' type='button' disabled={loading} onClick={() => void refresh().catch(() => undefined)}><ApprovalIcon name='refresh-cw' /></button></div></div><div className='approval-record-finder'><label htmlFor={block.id + '-record-search'}><span className='approval-finder-label'>Search records</span><input id={block.id + '-record-search'} name='record-search' placeholder='Search records' type='text' value={query} onChange={(event) => setQuery(event.target.value)} /></label><div><label htmlFor={block.id + '-status-filter'}><span className='approval-finder-label'>Status filter</span><select id={block.id + '-status-filter'} name='status-filter' value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value=''>All statuses</option>{statuses.map((status) => <option key={status} value={status}>{fieldLabel(status)}</option>)}</select></label><button type='button' onClick={() => { setQuery(''); setStatusFilter(''); }}>Clear filters</button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{loading ? <p role='status' aria-live='polite'>Loading records\u2026</p> : null}{!loading && !error ? <p className='approval-result-count' role='status' aria-live='polite'>{visibleRecords.length} of {records.length} records</p> : null}{listMutation ? <p className={'approval-list-mutation' + (listMutation.status === 'error' ? ' generated-error' : '')} role={listMutation.status === 'error' ? 'alert' : 'status'} aria-live={listMutation.status === 'error' ? 'assertive' : 'polite'}>{listMutation.message}</p> : null}{!loading && !error && records.length === 0 ? <div role='status' className='approval-empty'><ApprovalIcon name='receipt-text' /><p>No {entity.label.toLowerCase()} records yet.</p>{formRoute && can(role, entity.key, 'create') ? <a href={formRoute}>Create {entity.label}</a> : null}</div> : null}{!loading && !error && records.length > 0 && visibleRecords.length === 0 ? <div role='status' className='approval-empty'><p>No matching records.</p></div> : null}<ul className='generated-records'>{visibleRecords.map((record) => {",
+          "  return <section className='generated-card approval-records-section'><div className='approval-record-finder'><label htmlFor={block.id + '-record-search'}><span className='approval-finder-label'>Search records</span><input id={block.id + '-record-search'} name='record-search' placeholder='Search records' type='text' value={query} onChange={(event) => setQuery(event.target.value)} /></label><div><label htmlFor={block.id + '-status-filter'}><span className='approval-finder-label'>Status filter</span><select id={block.id + '-status-filter'} name='status-filter' value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value=''>All statuses</option>{statuses.map((status) => <option key={status} value={status}>{fieldLabel(status)}</option>)}</select></label><button type='button' aria-label='Clear filters' title='Clear filters' onClick={() => { setQuery(''); setStatusFilter(''); }}><ApprovalIcon name='circle-x' /></button><button className='approval-refresh' aria-label='Refresh' title='Refresh' type='button' disabled={loading} onClick={() => void refresh().catch(() => undefined)}><ApprovalIcon name='refresh-cw' /></button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{loading ? <p role='status' aria-live='polite'>Loading records\u2026</p> : null}{!loading && !error ? <p className='approval-result-count' role='status' aria-live='polite'>{visibleRecords.length} of {records.length} records</p> : null}{listMutation ? <p className={'approval-list-mutation' + (listMutation.status === 'error' ? ' generated-error' : '')} role={listMutation.status === 'error' ? 'alert' : 'status'} aria-live={listMutation.status === 'error' ? 'assertive' : 'polite'}>{listMutation.message}</p> : null}{!loading && !error && records.length === 0 ? <div role='status' className='approval-empty'><ApprovalIcon name='receipt-text' /><p>No {entity.label.toLowerCase()} records yet.</p>{formRoute && can(role, entity.key, 'create') ? <a href={formRoute}>Create {entity.label}</a> : null}</div> : null}{!loading && !error && records.length > 0 && visibleRecords.length === 0 ? <div role='status' className='approval-empty'><p>No matching records.</p></div> : null}<ul className='generated-records'>{visibleRecords.map((record) => {",
           "    const mutation = mutations[String(record.id)];",
           "    const icon = stateIcon(entity.key, record.status);",
           "    const tone = statusTone(entity.key, record.status);",
@@ -3123,10 +3140,10 @@ function renderPageRuntime(
             (extendedSummary
               ? "{titleField ? <h3 className='approval-record-title'><span>{fieldLabel(titleField.key)}</span>{formatValue(titleField, record[titleField.key])}</h3> : null}"
               : "") +
-            "<dl className='approval-summary'>{summaryKeys.map((key) => { const field = entity.fields.find((candidate) => candidate.key === key)!; return <div className={key === 'amount' ? 'approval-summary-amount' : 'approval-summary-support'} key={key}><dt>{fieldLabel(key)}</dt><dd>{formatValue(field, record[key])}</dd></div>; })}<div className='approval-summary-status'><dt>Status</dt><dd><span className='approval-badge'>{icon ? <ApprovalIcon name={icon} /> : null}{fieldLabel(String(record.status ?? 'Not provided'))}</span></dd></div></dl><div className='approval-actions'>{validTransitions(role, entity.key, record.status).map((action) => {",
+            "{approvalMaterialKey(entity.fields, entity.key) ? <ApprovalMaterial materialKey={approvalMaterialKey(entity.fields, entity.key)!} className='approval-record-media' /> : null}<dl className='approval-summary'>{summaryKeys.map((key) => { const field = entity.fields.find((candidate) => candidate.key === key)!; return <div className={key === 'amount' ? 'approval-summary-amount' : 'approval-summary-support'} key={key}><dt>{fieldLabel(key)}</dt><dd>{formatValue(field, record[key])}</dd></div>; })}<div className='approval-summary-status'><dt>Status</dt><dd><span className='approval-badge'>{icon ? <ApprovalIcon name={icon} /> : null}{fieldLabel(String(record.status ?? 'Not provided'))}</span></dd></div></dl><div className='approval-actions'>{validTransitions(role, entity.key, record.status).map((action) => {",
           "      const actionAsset = actionIcon(action.event);",
           "      return <button key={action.event} type='button' disabled={mutation?.status === 'pending'} onClick={() => void transition(record, action.event)}>{actionAsset ? <ApprovalIcon name={actionAsset} /> : null}{fieldLabel(action.event)}</button>;",
-          "    })}</div>{mutation ? <p className={mutation.status === 'error' ? 'generated-error' : undefined} role={mutation.status === 'error' ? 'alert' : 'status'} aria-live={mutation.status === 'error' ? 'assertive' : 'polite'}>{mutation.message}</p> : null}<details><summary>Details</summary><dl className='approval-details-values'><div><dt>ID</dt><dd>{String(record.id ?? 'Not provided')}</dd></div>{entity.fields.filter((field) => field.key !== 'status' && !summaryKeys.includes(field.key)" +
+          "    })}</div><ApprovalProgress entity={entity} status={record.status} />{mutation ? <p className={mutation.status === 'error' ? 'generated-error' : undefined} role={mutation.status === 'error' ? 'alert' : 'status'} aria-live={mutation.status === 'error' ? 'assertive' : 'polite'}>{mutation.message}</p> : null}<details><summary>Details</summary><dl className='approval-details-values'><div><dt>ID</dt><dd>{String(record.id ?? 'Not provided')}</dd></div>{entity.fields.filter((field) => field.key !== 'status' && !summaryKeys.includes(field.key)" +
             (extendedSummary ? " && field.key !== titleField?.key" : "") +
             ").map((field) => <div key={field.key}><dt>{fieldLabel(field.key)}</dt><dd>{formatValue(field, record[field.key])}</dd></div>)}</dl></details></li>;",
           "  })}</ul></section>;",
@@ -3382,6 +3399,8 @@ function renderWebStyles(
   // legacy alias surface keeps the rendered components stable. Token edits
   // made in the Page Studio therefore survive Publish and compilation.
   const system = resolveExperienceDesignSystem(graph.experience);
+  const usesPrivateApprovalCobalt =
+    profile === "approval-v1" && graph.experience.designSystem === undefined;
   const themeBlock = (mode: "light" | "dark"): string => {
     const tokenVars: string[] = [];
     for (const [group, tokens] of Object.entries(system.tokens)) {
@@ -3398,8 +3417,17 @@ function renderWebStyles(
     for (const [key, value] of Object.entries(colours)) {
       tokenVars.push(`--factory-colour-${key}: ${value};`);
     }
-    const aliases =
-      " --factory-bg: var(--factory-colour-background); --factory-surface-muted: var(--factory-colour-surface); --factory-muted: var(--factory-colour-text-muted); --factory-accent: var(--factory-colour-brand); --factory-accent-text: var(--factory-colour-background); --factory-surface: var(--factory-colour-surface); --factory-text: var(--factory-colour-text); --factory-border: var(--factory-colour-border); --factory-danger: var(--factory-colour-danger);";
+    const accent = usesPrivateApprovalCobalt
+      ? mode === "light"
+        ? "#155EEF"
+        : "#84ADFF"
+      : "var(--factory-colour-brand)";
+    const accentText = usesPrivateApprovalCobalt
+      ? mode === "light"
+        ? "#FFFFFF"
+        : "#102A56"
+      : "var(--factory-colour-background)";
+    const aliases = ` --factory-bg: var(--factory-colour-background); --factory-surface-muted: var(--factory-colour-surface); --factory-muted: var(--factory-colour-text-muted); --factory-accent: ${accent}; --factory-accent-text: ${accentText}; --factory-surface: var(--factory-colour-surface); --factory-text: var(--factory-colour-text); --factory-border: var(--factory-colour-border); --factory-danger: var(--factory-colour-danger);`;
     return tokenVars.join(" ") + aliases;
   };
   const lightTheme = themeBlock("light");
@@ -3420,7 +3448,11 @@ function renderWebStyles(
     ".generated-calendar { display: grid; gap: var(--factory-spacing-space-4); padding: 0; margin: 0; list-style: none; } .generated-calendar > li { display: grid; gap: var(--factory-spacing-space-2); } .generated-calendar > li > strong { color: var(--factory-muted); text-transform: uppercase; font-size: var(--factory-typography-font-size-sm); }",
     "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
     ...(profile === "approval-v1"
-      ? [...approvalWorkspaceStyles, approvalDecisionHistoryStyles]
+      ? [
+          ...approvalWorkspaceStyles,
+          approvalDecisionHistoryStyles,
+          approvalPresentationComponentStyles,
+        ]
       : []),
     "",
   ].join("\n");

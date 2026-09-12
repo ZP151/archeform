@@ -40,6 +40,18 @@ legibility, task reach, density, meaningful graphics and responsive navigation.
 Record functional, mechanical visual and qualitative visual conclusions separately.
 Do not describe internal review as founder or ordinary-user acceptance.
 
+For a selected visual concept, attach the exact target to the task and compare
+it with the actual rendered product at matching widths and relevant states.
+Record deliberate deviations required by real business behavior; do not silently
+fall back to the rejected layout. Useful media must decode in the generated app,
+have the correct crop/aspect ratio, remain available without unapproved remote
+requests and degrade to a usable layout when absent. Decorative category imagery
+must not masquerade as actual records or uploaded evidence. Routine icon-only
+actions retain accessible names and 44 px targets; meaningful business decisions
+retain clear words. Apply the [assembly guide](../design/generated-ui-assembly.md)
+to future recipes and interpretation/configuration changes. These checks are part
+of the existing review and add no separate gate.
+
 ## Required acceptance dimensions
 
 | Dimension                          | Observable acceptance condition                                                                                                                                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                                                                                               |

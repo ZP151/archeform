@@ -1,94 +1,86 @@
-# Generated approval workspace
+# Expressive generated approval workspace
 
-## Direction and purpose
+## Selected direction
 
-Build a compact, familiar business inbox. The first viewport must show useful
-records and their next action, not a stack of navigation, filters and field labels.
-This replaces the founder-rejected B2 presentation; it is not founder visual
-acceptance. Product truth is recorded in PRODUCT.md. Existing Graph theme tokens
-remain authoritative, including edited colors, typography and dark mode.
+Mode: Operate. On September 12 the founder selected cobalt visual hierarchy,
+warm photographic materials and clear approval progress, then requested
+implementation and reusable assembly supply. This replaces the prior rejected
+neutral inbox. The visual target is
+`docs/acceptance/evidence/consumer-expressive-approval/design-reference.png`;
+it is a concept, not functional evidence or exact business copy.
 
-Seven grounded structures considered were an office ledger, a dispatch board,
-a correspondence inbox, a calendar agenda, a case-folder index, a banking
-transaction register and a procurement comparison sheet. The direction exercise
-selected the third structure. Dense aligned content and progressive disclosure
-serve both requesters and reviewers without inventing business information.
-Physical theatrical treatments would weaken task clarity here; retain disciplined
-alignment, legible state cues and responsive transformation, not their motifs.
+Richness comes from useful imagery, deliberate type and meaningful state—not
+additional paragraphs, dummy metrics, ornamental controls or a second framework.
+The real UI preserves Graph names, amounts without invented currency, actual state
+and authorized actions. Illustrative currency and unimplemented controls in the
+concept are excluded from output.
 
-## First viewport
+## Shared composition
 
-- Desktop: distinct quiet sidebar containing application identity, all full Graph
-  route labels and honest demo-role control; broad working canvas with a compact
-  contextual heading and primary creation action. One coherent list surface with
-  aligned business rows, restrained separators and a clear toolbar.
-- Phone: compact identity bar, native Navigation disclosure with full labels when
-  opened, a small demo-role control, then the task. No clipped horizontal nav.
-  Closed navigation must not consume the viewport. At 390 x 900 the first enabled
-  record action ends within 650 px and at least two of three populated records
-  have their identifying summary visible without scrolling.
-- Tablet: same deliberate compact navigation and readable content width; do not
-  squeeze a desktop sidebar and desktop columns into an unusable middle size.
+Upgrade `approval-workspace-presentation` to 2.0.0 and compose private
+`approval-presentation-components@1.0.0` and `approval-visual-assets@1.0.0`
+under accepted ADR-0061. Retain `approval-decision-history@1.0.0` behavior.
+These are reusable compiler assemblies, not extra public catalog definitions.
 
-## Components and state
+- One compact photo-led hero introduces an existing approval list/home without
+  displacing the primary action or repeating on every form/history section.
+- Original workspace and expense illustrations are bundled locally and selected
+  by reviewed Published Graph structure. A thumbnail is category decoration,
+  never a particular record or uploaded evidence. Unknown structures get the
+  generic family hero and a usable neutral material surface.
+- Identity, amount and semantic status dominate. Preserve typed values and
+  concise supporting details with progressive disclosure. Avoid large repeated
+  Amount/Status/Item labels where typography communicates them.
+- Progress projects the known current position: Draft, Submitted, Decision
+  (Approved or Rejected when real). It is not historical audit data and supplies
+  no fabricated timestamps, actors or reasons.
+- Familiar secondary actions use pinned icons with accessible names and
+  tooltips. Submit/Approve/Reject retain words because their consequences matter.
+  Only working Graph routes and authorized actions appear.
+- Forms, errors, empty states, no-match recovery and history share the palette,
+  spacing, controls and typography. A refined list beside a raw form is incomplete.
 
-Compose one private shared presentation recipe. Retain approved native controls,
-the pinned seven Lucide approval icons, Graph bindings, typed fields, search,
-status filtering, result counts and mutation feedback. The current canonical
-Expense and Purchase variants must both use it. No extra dependency is required.
-Record titles dominate; amounts use tabular numerals without inventing currency
-units. Dates remain unambiguous. Secondary field labels stay accessible, with
-full details disclosed on demand. Status color belongs to the badge, not a large
-tinted record. Avoid giant amounts, redundant Item headings and nested cards.
+## Theme and responsive behavior
 
-Forms use a deliberate field grid, readable labels, suitable native inputs and a
-clear submit footer. Loading, failure, empty and no-match use the same composed
-surface and keep recovery controls usable. Keep B2 scope invalidation, role
-denials and all real data behavior. Preserve keyboard focus and 44 px touch
-targets; navigation disclosure is the principal responsive interaction.
+For approval Graphs without an explicit design system, use private cobalt
+brand/on-brand #155EEF/#FFFFFF in light mode and #84ADFF/#102A56 in dark mode.
+Explicit Graph design systems—including an explicit default—retain their resolved
+colors. Typography, radius, motion, spacing and remaining tokens stay Graph-driven.
+No external font request or dependency is necessary.
 
-## Finish and acceptance
+Phone: compact identity, honest demo-role control and native navigation disclosure;
+one short hero and compact toolbar; readable records and next action. For the
+fixed 390 x 900 populated case, the first permitted record action stays within
+650 px and two identifying summaries remain visible. Do not hide necessary
+content to satisfy a screenshot.
 
-Compare actual generated desktop, tablet, phone list and form images against the
-rejected B2 images. Verify full navigation access, hierarchy, density, typography,
-state differentiation and both Expense/Purchase data. No assertion that an icon,
-axe pass or absence of overflow proves visual finish. Check CSS responses,
-computed recipe styles and actual SVG geometry. Deliberately disable CSS and
-remove icons to prove those checks detect degradation. Retain real business
-create/submit/approve/reject, persistence, filtering and permission checks.
-The scoped independent review receives the user's rejection and before/after
-images. Report functional, mechanical visual and human visual conclusions
-separately. Ordinary-user validation remains open until actually performed.
+Tablet: compact navigation and working canvas without squeezing in a desktop
+sidebar. Desktop: coherent sidebar, wider working surface, deliberate alignment
+and readable line lengths. Fixed image geometry avoids layout shift; maintain
+44 px controls and visible keyboard focus.
 
-## Direction correction — 2026-09-12
+## Media admission and reuse
 
-The founder requests stronger color hierarchy and less redundant action text.
-Use the existing Graph accent and accent-text pair for the identity/sidebar band;
-keep the content surface readable, use a clear selected navigation surface and
-stronger success/warning/error badge fills. Preserve compact neutral business
-rows. Color must distinguish identity, selection and status instead of tinting
-every entire record. Verify light/dark colors and contrast from resolved tokens.
+Two original AI-generated images, prepared as 768 x 512 WebP, have fixed keys,
+dimensions, decoded lengths, hashes, provenance and decorative alt policy.
+Embed only selected verified material. No record URL, prompt, upload or provider
+response becomes an image source. Corrupt compiler assets fail admission; browser
+decode failure preserves the material region, data, actions and recovery.
 
-## Decision outcome interaction
+Future families follow `docs/design/generated-ui-assembly.md`: reuse compatible
+slots, add only documented semantic gaps, and keep interpretation focused on the
+business definition. Deterministic recipes supply visual completeness without
+repeated model prompting or user-facing development steps.
 
-ADR-0059 composes one private `approval-decision-history@1.0.0` panel into the
-accepted workspace. Reuse the existing read/audit authority, request headers,
-field labels/formatters, summary identities, Details disclosure, neutral surfaces,
-semantic badges and four already-pinned icons. The ordered registry/recipe/template/
-source-study search found no interaction combining these read-only business
-outcomes with role-scope invalidation; the private first-party module owns that
-gap, records UNLICENSED provenance, and adds no catalog entry or dependency.
+## Acceptance and product truth
 
-Default closed, it keeps the task workspace compact. Opening shows current
-readable record identity, actual persisted decision, recorded demo role and time.
-It never claims verified people, decision-time snapshots or a reason absent from
-the current API. Both reads must validate before rendering. Unauthorized roles
-have no panel/fetch, and a role change closes and clears it before old responses
-can render. Empty, loading, safe error, Retry and icon-only Refresh are required.
-Actual UI evidence must show both decisions after reload for both definitions.
+Compare actual generated images with the selected concept and retained rejection.
+Review phone/tablet/desktop together, including forms and both outcomes; make one
+bounded correction pass. Check decoding, local delivery, icons, computed styles,
+contrast, focus, overflow, fallback and real create/submit/decision/reload.
+Mechanical tests and internal review do not establish founder/user acceptance.
 
-Refresh becomes the existing Lucide refresh-cw icon in a 44 px control with
-aria-label/title Refresh and unchanged disabled/loading behavior. Keep words for
-Submit/Approve/Reject because their consequences must be clear. Remove no factual
-Graph labels. Current function tests and screenshots do not prove user visual
-acceptance; the prior neutral direction has been rejected.
+Decision history remains permission-gated read/audit behavior with safe retry and
+role-race protection. ADR-0060 return/revision/resubmission/recovery remains a
+separate unimplemented milestone. Do not display illustrative controls for it.
+Actual identity, owner privacy and managed hosting are separate maturity gaps.

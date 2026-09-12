@@ -2,6 +2,26 @@
 
 Updated: 2026-09-12
 
+## Current founder direction: combined expressive UI and reusable assembly
+
+The founder rejected the latest visual result, selected a combination of three
+design concepts, and requested implementation plus reusable component/material
+and assembly improvements. The [active plan](superpowers/plans/2026-09-12-expressive-approval.md)
+combines stronger cobalt hierarchy, original photographic category materials and
+clear state progress. The [combined concept](acceptance/evidence/consumer-expressive-approval/design-reference.png)
+is a reference only. The shared workspace 2.0.0, presentation components 1.0.0 and
+two-material registry 1.0.0 are implemented. Both actual Expense/Purchase runtime
+lanes pass, and all 29 actual screenshots were visually inspected. Final affected
+compiler tests pass 42/42, with build/lint and unchanged-server/non-approval
+checks passing. See [acceptance and actual screens](acceptance/approval-expressive-presentation.md).
+Internal visual reviews do not constitute founder approval.
+
+This presentation iteration precedes the accepted ADR-0060 correction/recovery
+milestone, which remains unimplemented. Definition/family counts stay three/two.
+The generator now inherits versioned deterministic visual assets and fallbacks;
+neither a longer model prompt nor a larger unverified template count is counted
+as delivery. No backend or model instruction change was needed for this slice.
+
 All subsequent product types now inherit the
 [shared consumer acceptance matrix](acceptance/consumer-product-checklist.md)
 through delivery policy and the active roadmap. Each task must cover applicable
