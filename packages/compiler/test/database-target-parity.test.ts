@@ -1,3 +1,4 @@
+import { approvalLegacyFixtures } from "./fixtures/approval-legacy.js";
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
 
@@ -216,27 +217,9 @@ describe("seed renders Prisma-valid ISO-8601 for date and datetime fields", () =
     "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
 
   async function composedExpenseGraph(): Promise<ApplicationGraphV1> {
-    const { interpretation } = await fixtureInterpreter.interpret({
-      brief: expenseBrief,
-    });
-    const baseDraft = createBlankApplicationDraft({
-      applicationId: interpretation.spec.requirementId,
-      workspaceId: "local-workspace",
-      name: interpretation.spec.requirementId,
-    });
-    const [standard] = planProductAlternatives({
-      requirement: interpretation.spec,
-      blueprint: interpretation.blueprint,
-      baseDraft,
-    });
-    const { diff } = composeProductDraft({
-      plan: standard.plan,
-      blueprint: interpretation.blueprint,
-      baseDraft,
-    });
-    return assertValidApplicationGraph(
-      applyGraphDiffToDraft(baseDraft, diff).graph,
-    );
+    return structuredClone(
+      approvalLegacyFixtures.expense.input.graph,
+    ) as unknown as ApplicationGraphV1;
   }
 
   it("emits only Prisma-valid date and datetime values in the seed", async () => {
@@ -2297,27 +2280,9 @@ describe("database target handles factory base fields", () => {
     "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
 
   async function composedExpenseGraph(): Promise<ApplicationGraphV1> {
-    const { interpretation } = await fixtureInterpreter.interpret({
-      brief: expenseBrief,
-    });
-    const baseDraft = createBlankApplicationDraft({
-      applicationId: interpretation.spec.requirementId,
-      workspaceId: "local-workspace",
-      name: interpretation.spec.requirementId,
-    });
-    const [standard] = planProductAlternatives({
-      requirement: interpretation.spec,
-      blueprint: interpretation.blueprint,
-      baseDraft,
-    });
-    const { diff } = composeProductDraft({
-      plan: standard.plan,
-      blueprint: interpretation.blueprint,
-      baseDraft,
-    });
-    return assertValidApplicationGraph(
-      applyGraphDiffToDraft(baseDraft, diff).graph,
-    );
+    return structuredClone(
+      approvalLegacyFixtures.expense.input.graph,
+    ) as unknown as ApplicationGraphV1;
   }
 
   function withEntityField(

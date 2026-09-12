@@ -15,9 +15,12 @@ export const approvalDecisionHistory = {
   icons: ["receipt-text", "refresh-cw", "circle-check", "circle-x"],
 } as const;
 
-export function renderApprovalDecisionHistory(entityKey: string): string {
+export function renderApprovalDecisionHistory(
+  entityKey: string,
+  correction = false,
+): string {
   return `
-type DecisionEvent = { actor: string; action: string; entity: string; recordId: string; at: string };
+type DecisionEvent = { actor: string; action: string; entity: string; recordId: string;${correction ? " reason: string | null;" : ""} at: string };
 type DecisionHistoryState = { scope: string; open: boolean; phase: 'idle' | 'loading' | 'success' | 'error'; events: readonly DecisionEvent[]; records: readonly JsonRecord[] };
 function decisionHistoryPayload(audit: unknown, records: unknown, entity: string) {
   const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
@@ -26,7 +29,7 @@ function decisionHistoryPayload(audit: unknown, records: unknown, entity: string
     if (!item || typeof item !== 'object' || Array.isArray(item)) throw new SafeUiError('Decision history is unavailable. Try again.');
     const value = item as Record<string, unknown>;
     if (!nonempty(value.actor) || !nonempty(value.action) || !nonempty(value.entity) || !nonempty(value.recordId) || !nonempty(value.at) || !Number.isFinite(new Date(value.at).getTime())) throw new SafeUiError('Decision history is unavailable. Try again.');
-    return { actor: value.actor, action: value.action, entity: value.entity, recordId: value.recordId, at: value.at };
+    return { actor: value.actor, action: value.action, entity: value.entity, recordId: value.recordId,${correction ? " reason: typeof value.reason === 'string' ? value.reason : null," : ""} at: value.at };
   });
   if (records.some((record: unknown) => !record || typeof record !== 'object' || Array.isArray(record) || !nonempty((record as JsonRecord).id))) throw new SafeUiError('Decision history is unavailable. Try again.');
   return { events: events.filter((event) => event.entity === entity && (event.action === 'approve' || event.action === 'reject')), records: records as JsonRecord[] };
@@ -46,8 +49,8 @@ function DecisionHistoryRow({ event, entity, record }: { readonly event: Decisio
   const safeValue = (field: RuntimeField, value: unknown) => value && typeof value === 'object' ? 'Structured value' : formatValue(field, value);
   return <li className={'approval-history-row approval-tone-' + (event.action === 'approve' ? 'positive' : 'negative')}>
     <h3>{identity.length ? identity.map((field, index) => <span key={field.key}>{index ? ' · ' : ''}{field.key === 'item' ? null : fieldLabel(field.key) + ': '}{safeValue(field, record![field.key])}</span>) : entity.label + ' decision'}</h3>
-    <div className='approval-history-outcome'><span className='approval-badge'><ApprovalIcon name={event.action === 'approve' ? 'circle-check' : 'circle-x'} />{fieldLabel(event.action)}</span><span>Demo role: {fieldLabel(event.actor)}</span>{formatValue({ type: 'datetime' }, event.at)}</div>
-    {!identity.length ? <p className='approval-history-reference'>Record ID: {event.recordId}</p> : null}
+    <div className='approval-history-outcome'><span className='approval-badge'><ApprovalIcon name={event.action === 'approve' ? 'circle-check' : 'circle-x'} />{${correction ? "event.action === 'reject' ? 'Return' : fieldLabel(event.action)" : "fieldLabel(event.action)"}}</span><span>Demo role: {fieldLabel(event.actor)}</span>{formatValue({ type: 'datetime' }, event.at)}</div>
+${correction ? "    {event.reason ? <p className='approval-return-reason'>{event.reason}</p> : null}\n" : ""}    {!identity.length ? <p className='approval-history-reference'>Record ID: {event.recordId}</p> : null}
     {record ? <details><summary>Details</summary><dl className='approval-details-values'><div><dt>ID</dt><dd>{event.recordId}</dd></div>{entity.fields.filter((field) => !identity.includes(field)).map((field) => <div key={field.key}><dt>{fieldLabel(field.key)}</dt><dd>{safeValue(field, record[field.key])}</dd></div>)}</dl></details> : null}
   </li>;
 }

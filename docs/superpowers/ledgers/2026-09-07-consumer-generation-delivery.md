@@ -3851,3 +3851,394 @@ Published Graphs and prior artifacts are not rewritten. Product counts remain
 three definitions/two demonstrated runtime families. ADR-0060 return reason,
 same-record correction/resubmission and interrupted-operation recovery remain
 the next business target, followed by verified reuse in additional families.
+
+### Founder UI acceptance and long-goal correction continuation — September 12
+
+The founder explicitly approves the UI at `92f21089beeb184a236a1512cb4c1866f158e903`
+and directs the next important business iteration under a long goal. Root has
+created that goal for the complete ADR-0060 same-record correction/resubmission,
+return-reason/history and safe mutation-recovery slice. No token budget was
+requested. The new execution plan is
+docs/superpowers/plans/2026-09-12-approval-correction.md.
+
+The existing isolated consumer-delivery worktree is clean at that local/remote
+base. Root captured legacy Expense, Purchase and Booking immutable inputs plus
+all generated-file hashes before changes in the ignored correction staging
+directory. These expected hashes must not be refreshed from changed source.
+The accepted ADR-0060 hash and existing standing verdict remain authoritative.
+Root dispatched /root/correction_visual_contract as Tech Lead to resolve only
+the private presentation/selector compatibility with delivered ADR-0061 before
+production changes. No new API or business contract is proposed.
+
+Root owns the plan, status, acceptance, E2E and Workbench fixture paths from
+ADR-0060 MIG-001. The serialized adapter/compiler production owner is assigned
+after this minimal compatibility check freezes its exact manifest. No concurrent
+frontend/backend writers, Git actions, local runtime, provider calls or external
+deployment are authorized by this planning entry.
+
+### Correction presentation contract frozen; serialized implementation authorized
+
+Tech Lead /root/correction_visual_contract proposed ADR-0062, SHA-256
+088cef645a80a34d05fe027cec3e15914ba2735bdd682778c7de41e96a5b8201.
+Independent read-only /root/b2_review reviewed that exact hash against both
+authorities and accepted ADR-0060/0061 and returned
+APPROVED_FOR_STANDING_ACCEPTANCE: yes; P0/P1/P2 0/0/0. Root records founder
+acceptance under the existing standing authorization before production writes.
+This changes only the private correction presentation profile/manifest needed
+to keep the approved media and progress. All ADR-0060 business/API/data/security
+semantics remain exact.
+
+Root authorizes one serialized adapter/compiler implementation owner for the
+complete ADR-0060 MIG-001 plus ADR-0062 MIG-001 source/test manifest, including
+the permanent standalone legacy fixture. Root retains disjoint Workbench
+fixture/E2E/DESIGN/acceptance/status/ledger/Git paths. Both use base 92f21089.
+The exact brief is .superpowers/sdd/2026-09-12-approval-correction/task-1-brief.md.
+No per-component gate, dependency addition, provider/runtime call, deployment,
+main integration or release is introduced. Local runtime evidence requires a
+later exact-project/source-freeze record. Worker identity follows immediately
+after dispatch; no additional concurrent production writer is authorized.
+
+The dispatched serialized owner is /root/approval_correction_owner (GPT-6 Astra,
+high reasoning for shared compiler/API/concurrency judgment). Root authored the
+disjoint actual correction/retry/conflict cases in the two existing E2E lanes;
+Playwright list parsing finds both tests. That is syntax/discovery evidence only,
+not a passed runtime journey. Evidence writes target new correction directories,
+preserving the founder-approved screenshots. The implementation owner reports
+the standalone legacy baseline is GREEN against untouched compiler output.
+
+### Actual verifier compatibility gap identified during implementation
+
+The implementation owner identified existing worker HTTP probes that still send
+legacy approval bodies and expect transition/replay statuses from the one-stage
+runtime. They cannot verify the already-accepted correction API. Root confirmed
+the mismatch in verification-graph-plan.ts and probes.ts and dispatched the Tech
+Lead to freeze the minimum correction-only verifier adaptation, including the
+related private fixture/action types and focused tests where necessary.
+No worker source writes are authorized until that ownership/contract resolution
+is recorded. The existing adapter/compiler owner continues in-scope regression;
+this is a delivery-path integration repair for the same business slice, not a
+new product feature or a weaker acceptance exception.
+
+### Verifier path ownership extension inside the accepted contract
+
+Tech Lead /root/correction_visual_contract assessed the exact mismatch and
+recommends keep. No ADR-0063 or new architecture acceptance is needed: worker
+probes consume the existing ADR-0060 API-001..006 and VER-002/003 contract without
+changing technology, API, security, topology or evidence schemas. Root authorizes
+the same serialized /root/approval_correction_owner to additionally write only
+apps/compiler-worker/src/verifier/{verification-graph-plan,role-journey,probes}.ts
+and apps/compiler-worker/test/{verification-graph-plan,verification-probes}.test.ts.
+Root retains its disjoint E2E/docs ownership.
+
+Frozen adaptation: a worker-local full exact ADR-0060 SEL-001 protocol predicate,
+without a public compiler selector export, selects wrapped create values,
+header-bound idempotency keys, expectedVersion, fixed synthetic return reason,
+PATCH revision values, create 201/mutations 200 and explicit stored-success replay.
+An optional internal replay discriminator leaves absent/default legacy behavior
+exact. Reuse existing safe evidence codes; never persist keys, request bodies,
+reasons or hostile response contents in summaries/facts. Preserve principal
+headers, authorization-first denials and all legacy/nonmatching/Restaurant paths.
+Positive and negative selector/probe regressions belong to this same slice gate.
+
+All five paths were clean before this assignment. Baseline SHA-256 values in
+listed order: aa669e2d402ec56228976e06aff4349818eb45cfd50c2021eecee323a2bf431e,
+f74e61e84b601264c6ec99c810c8e945139575d6a7111e1f2fe7895558672121,
+6ac627b203ac39e4673b9281d8d9944a8589116c674a0746b71a341ab0423fb5,
+f5beeadeba400f762f681b121cbe068b98986f49c29079de72373e5eef268043,
+84caffd4deb37f85c165aa470e1c3987068ba4b79a295e9dbc337800e1a0922e.
+
+The final verifier request adapter also rejects nested values envelopes. Tech
+Lead traced the complete remaining path and confirms keep/ordinary PM expansion,
+with no further paths required. Root additionally assigns existing
+apps/compiler-worker/src/verifier/verification-environment.ts and new
+apps/compiler-worker/test/verification-environment.test.ts to the same owner.
+Source baseline: 0788df08c262e76bcfe07de13ec956fb016325b96e9bcc80dc584ef024afc3d9.
+
+The validator admits only the existing nonempty flat primitive body plus exact
+{values: flatValues} and {expectedVersion, values: flatValues}. Preserve 512
+characters total, 16 value keys, existing key pattern, 200-character strings,
+finite numbers/booleans, and every target/path/method/header/timeout/redaction
+bound. Versions are nonnegative safe integers. Reject empty values, null,
+arrays, nested values, extra envelope keys and malformed/oversized content before
+fetch. The environment does not infer a protocol or inspect unbounded responses;
+full replay-body equality stays in runtime/E2E evidence. No new ADR or gate.
+
+Full compiler regression exposed an existing test helper that derives legacy
+Expense journey assertions from the now-migrated canonical adapter. Root assigns
+packages/compiler/test/role-journey-runtime.test.ts to the same owner for only
+replacing that helper's input with the permanent frozen legacy fixture. Preserve
+the existing expected legacy assertions; new correction journey evidence remains
+separate. This test-only migration changes no product or shared contract and
+needs no technology decision or additional review stage.
+
+### Stable source and bounded local acceptance preparation
+
+The implementation owner reports stable production source, passing affected
+adapter/compiler/worker build/typecheck/lint, worker regression 301/301 and
+focused compiler regression 78/78. The final complete compiler run is finishing.
+Root records source digests in the correction staging source-freeze.json and
+authorizes building the three affected images for exact local project
+factory-t9-correction-20260912 using the staged acceptance.compose.yml. Use the
+local environment file without logging contents. Workbench/Control Plane model
+credentials are disabled; no provider, cloud deployment or remote resource is
+authorized. Root observed the four declared loopback ports available before
+preparation.
+
+Actual acceptance proceeds only after complete compiler success and the required
+task review. It uses the existing two immutable Expense/Purchase lanes, new
+correction evidence directories, and final-source images. Any production repair
+refreshes digests and rebuilds affected images before new evidence. Tests own
+their exact Preview cleanup; root owns exact Factory project cleanup including
+volumes and records zero remaining containers/networks/volumes before delivery.
+
+### Approval correction task-review repair batch — September 12
+
+The independent Astra whole-slice task review returned P0/P1/P2 0/0/3 and
+APPROVED_FOR_QA no. PM authorizes one existing-contract repair batch, with no new
+architecture decision: R1 compatible status storage in both private selectors;
+R2 stable command state and retained request across same-scope filtering; R3
+scope-guarded conflict feedback after a row disappears. The same owner retains
+its frozen source/test manifest. Root owns the matching actual browser probes
+and evidence widths. The existing duplicate storage-name validator closes the
+suspected collision, so no collision rule is added. Reuse unaffected package
+passes, rerun focused affected checks, and obtain a scoped recheck before actual
+QA. Rebuild affected final-source images before producing runtime evidence.
+
+### Approval correction ready for actual QA — September 12
+
+The same independent reviewer closed R1/R2/R3 on the scoped recheck:
+SPEC_COMPLIANCE APPROVED, TASK_QUALITY APPROVED, APPROVED_FOR_QA yes,
+P0/P1/P2 0/0/0. All 33 frozen path hashes matched. The root's form-only capture
+correction preserves all-width stylesheet, accessibility and touch checks while
+applying hero/material expectations only to record pages. No production source
+changed after the final image build. Affected final tests pass compiler 62,
+worker 91; previous full-suite passes remain valid for unaffected paths. Root
+also verified all 23 owner source/test hashes and Workbench generation tests 14.
+
+PM authorizes exact local Factory project factory-t9-correction-20260912 startup,
+source/image identity checks and the independent Terra QA's two existing actual
+Expense/Purchase lanes. Public loopback ports are 15180/13020/15440/16380. Provider
+calls remain disabled and interpretation authored. Root owns Factory cleanup;
+the tests own exact Preview cleanup. No cloud, main integration or release.
+
+### Approval correction actual QA attempt 1 — bounded repair
+
+Independent Terra QA executed both actual lanes once without automatic retry.
+Expense stopped before generation because the root's revised brief no longer
+matched the fixture interpreter's exact canned lookup. Root replaced that test
+bridge with the existing authored definition-selection parser, as already used
+by Purchase; no production parser changed. Root owns the new focused regression
+apps/workbench/test/consumer-generation-fixture.test.ts (two current correction
+fixtures/checksums), which passes 2/2; the related generation-hook tests pass14.
+Purchase published and compiled, but the immutable compilation failed with zero
+artifacts before verification or Preview. Its current-preview endpoint returned
+an empty successful no-preview response; root repaired the cleanup helper so
+that response cannot mask the primary failure. The actual compilation failure
+remains open and the same serialized owner is diagnosing it using the exact
+persisted immutable fixture Graph without exposing its contents. QA is paused;
+Factory runtime remains available for bounded diagnosis. No passing runtime or
+cleanup claim is inferred from this failed attempt.
+
+PM also owns a documentation-only scheduling correction to
+2026-09-11-canonical-team-task-family.md: the next Task slice must capture its
+non-Task baseline from the accepted correction tip and inherit the founder-
+approved expressive hierarchy and complete interaction-state visual acceptance.
+Its older base/digest are historical, and its production remains held until the
+current business slice is accepted. No Task implementation or contract changed.
+
+The compiler cause is now reproduced: Published Graphs omit draft composition
+selections and retain the six immutable packages in the separately validated
+composition lock. The owner is repairing the private compiler/worker predicates
+and render handoff within six existing owned paths. This implements the accepted
+immutable input contract without changing or hydrating the Graph/hash. Direct
+reproduction against the failed immutable input now emits 63 files; affected
+regression/checks follow. No new ADR is required for this existing-contract fix.
+
+Root's actual recovery probe now also restarts only the generated api service
+identified by the test's exact Preview project, between a committed-but-lost
+Create response and same-key retry. It verifies the changed API process start,
+persisted record and identical replay while preserving PostgreSQL. This directly
+exercises ADR-0060 OPS-001/VER-002; no service topology or provider changes.
+
+### Approval correction actual QA attempt 2 authorized
+
+The scoped independent recheck accepted the published-input fix and root's
+fixture/recovery probes: SPEC_COMPLIANCE and TASK_QUALITY APPROVED,
+APPROVED_FOR_QA yes, P0/P1/P2 0/0/0, all35frozenhashes matched. Final affected
+checks pass compiler128/worker93 and both builds/typechecks/lint. Root rebuilt
+all3images, recreated only the exact Factory services, matched all14 changed
+production hashes inside each running image, and verified both loopback HTTP200.
+The existing independent Terra QA may rerun both lanes once without automated
+retries, retaining attempt1 and writing qa-e2e-attempt2.log. No provider or cloud
+execution is authorized or needed.
+
+### Approval correction actual QA attempt 2 outcome
+
+Both immutable compilations now succeeded. Both automatic verification runs
+failed binding.status_mismatch before user Preview: Expense verification
+cmtyij1qo0022o54tnr1mnrbl and Purchase cmtyimmyv0045o54t6gsbihq0. Independent QA
+recorded no PreviewRun and zero factory-preview containers; no business/visual
+pass is claimed. The owner reproduced the shared cause: journeyHeaders returns
+only fixture-session authentication in its sessionId branch, dropping the
+required declared idempotency header. The principal-only fixture missed this.
+
+PM authorizes the same owner's two-path repair in probes.ts and
+verification-probes.test.ts, preserving validated headers while resolved session
+authority wins. Both Published-family session+key paths must pass focused tests.
+This changes only compiler-worker runtime. Rebuild that image; reuse unchanged
+Control Plane/Workbench images and match their relevant source dependency hashes
+rather than rebuilding unused copies of worker files. The package manifests and
+Docker build targets prove those service dependency boundaries. No new API,
+Graph, UI, topology, provider or approval rule is introduced.
+
+### Approval correction actual QA attempt 3 authorized
+
+The two-path verifier header fix passed the scoped independent recheck with
+APPROVED_FOR_QA yes and remaining P0/P1/P2 0/0/0. All production/test hashes
+match; only root's live acceptance-status note differs. Worker focused checks
+pass96 with build/typecheck/lint. Root rebuilt and recreated only compiler-worker,
+then matched its11 relevant changed source hashes, Control Plane's10 and
+Workbench's3 against the frozen source using their verified dependency profiles.
+Unchanged CP/WB runtime images remain valid. Independent Terra QA may execute the
+same two complete actual lanes once, preserving earlier logs and writing
+qa-e2e-attempt3.log. Final business, visual, restart and cleanup acceptance stays
+open until the actual results are available.
+
+### Approval correction actual QA attempt 3 and mechanical correction
+
+Both families now completed compile, automatic verification and Preview startup.
+Both tests then failed the root's fingerprint helper before business navigation:
+the helper required bare hex while the canonical immutable hash is sha256: plus
+64 hex characters. Independent owner diagnosis and QA's exact assertions agree.
+Root changed that one test assertion to the canonical strict format, retaining
+the full before/after immutable metadata comparison. Formatting passes and source
+freeze/review diff are refreshed. No production code, package or image changed;
+reuse valid source review and runtime identities under delivery policy rather
+than introducing another review/build gate for this mechanical test correction.
+QA proved both exact Preview projects stopped with all containers, networks and
+volumes0. PM authorizes the same complete two lanes once more, retaining prior
+logs and writing qa-e2e-attempt4.log. Actual business and visual acceptance remains
+open; no failed test is counted as passed.
+
+### Approval correction actual QA attempt 4 and mobile command repair
+
+Both families reached real generated applications with loaded styles, icons,
+media and no horizontal overflow. Both failed the existing mobile first-action
+requirement before business mutations: Submit bottom704.984375 at390x900 exceeds
+650px. QA confirmed both exact Preview projects have zero remaining containers,
+networks and volumes. This is a real presentation defect, not a loading failure.
+The owner reproduced it with emitted DOM/CSS in Chromium: the correction command
+wrapper is auto-placed after progress because the compact direct-child action
+rule no longer applies. PM authorizes the existing presentation owner to restore
+its intended row while preserving full-width forms, 44px targets, the650px
+requirement and old emitted bytes. No new component or governed contract arises.
+
+Root adds synthetic-generated-app-only failure screenshots to both existing E2E
+catch blocks and a staged safe failure-location reporter. These diagnostics
+preserve the primary failure, capture no Workbench intake or provider payloads,
+and do not count failure images as accepted visual evidence. No diagnostic
+Preview is needed because the owner reproduced the exact geometry independently.
+Next actual QA remains pending final-source review and affected image refresh.
+
+### Approval correction actual QA attempt 5 authorized
+
+The bounded layout and accent repair passed independent scoped review:
+APPROVED_FOR_QA yes, P0/P1/P2 0/0/0, all 35 final source hashes matched.
+Both emitted-browser family checks now place Submit at615.59px on mobile,
+retain44px targets and restore the approved computed accent tokens. Final
+compiler checks pass70 affected tests plus build/typecheck/lint; legacy bytes
+remain exact. Root and reviewer inspected both diagnostic390px screenshots.
+
+Root rebuilt only compiler-worker and Control Plane, recreated those exact
+Factory services, and matched their11/10 relevant production hashes. Unchanged
+Workbench matches its3 relevant adapter hashes. Both loopback endpoints return
+HTTP200. Runtime identities are recorded. Independent Terra QA may run the same
+complete two actual lanes once, preserving prior logs and using attempt5 plus
+the safe failure-location reporter. Actual correction-state business/visual
+acceptance remains pending; diagnostic DOM screenshots do not replace it.
+
+### Approval correction actual QA attempt 5 and scoped fixture repairs
+
+Both actual families passed the repaired first-action and responsive presentation
+checks with no overflow or axe violations. Existing approval/history/reload/role
+checks passed. Expense then committed its first correction Create, lost delivery
+as injected, and retained form values with the expected unknown-result message.
+The test's unscoped alert locator collided with Next's route announcer. Both the
+final Playwright error and an independent Chromium reproduction confirm this.
+Purchase's record Details locator likewise collided with the separate decision
+history disclosure. Both final failures are strict-mode fixture selectors.
+
+Root scopes the Create alert to its existing approval-form-card and the Purchase
+Details summary to the disclosure containing approval-details-values. Exact copy,
+keyboard interaction, ID visibility and all business assertions remain required.
+Both tests parse with the safe reporter. Production/image hashes are unchanged;
+reuse existing review, package and runtime evidence without another gate. Actual
+correction/restart/replay acceptance remains open. PM authorizes the same two
+complete lanes once again, preserving attempt5 and writing attempt6 evidence.
+
+### Approval correction actual QA attempt 6 and Decimal fixture repair
+
+Both families completed actual lost Create delivery, generated API restart and
+same-key replay, held Save/filter remount, competing HTTP writes returning200/409,
+and stale UI conflict feedback. Both then failed the same persisted-read amount
+assertion: actual amount is the string91.5, while the test required number91.5;
+record ID and version2 match. The existing GET list passes Prisma Decimal through
+a type-only asStoredRecord cast (compiler index.ts list/store implementation).
+Installed Prisma independently serializes Decimal91.5 to JSON string91.5. The
+accepted correction command response deliberately normalizes numeric values;
+ADR-0060 does not migrate the existing GET list representation.
+
+Root repairs only the two persisted GET amount assertions to numeric equality,
+retaining strict ID/version/status checks and all exact numeric mutation/replay
+response assertions. No production or public contract changes are authorized or
+needed. Both tests parse and formatting passes. Reuse prior source review and
+runtime images; PM authorizes attempt7 of the same complete actual lanes with
+all earlier logs retained. Returned/revised/final history acceptance stays open.
+
+### Approval correction actual acceptance complete; final review dispatched
+
+Independent Terra QA reports QA_PASS yes, P0/P1/P2 0/0/0. Final attempt7 ran both
+actual immutable-generation/HTTP/PostgreSQL/browser lanes with one worker and
+zero retries: 2 passed in8.0minutes. Both correction records end approved at
+version7, with2decisions and8audit events. Real lost Create+API restart replay,
+lost Return replay, held Save/remount, competing200/409 writes, staleUI conflict,
+required reasons, edit denials, same-ID resubmission and history reload pass.
+Prepared local ready times are182.054seconds Expense and178.884seconds Purchase;
+there are no real model calls, business questions or technical handoffs.
+
+Root inspected12assignedfinalscreens and recorded hashes/observations. QA
+inspected36remainingcorrection screens plus proportionatebaseline samples; all
+48newstates across390/768/1440 have qualitative coverage, without a separate UI
+approval gate. Existing29baseline images are also retained. Both final Preview
+runs persisted asstopped; root independently verified all11exactownedprojects
+have0containers(includingstopped),0networks and0volumes afterFactoryshutdown.
+
+The earlierGETDecimal finding is closed as an existing-list-contract fixture
+assertion, preserving exact numericcommand responses and strictrecordversions.
+No production changes followed the last clean taskreview. Root now dispatches
+the required independent Sol final slice review, reusing all unaffected evidence.
+Controlleracceptance/commit/push and longgoalcompletion remain pending that
+review. No mainintegration, repositoryrelease or clouddeployment is included.
+
+### Approval correction controller acceptance
+
+State: accepted for controller delivery on2026-09-13. The independent Sol final
+slice review is PASS, P0/P1/P2 0/0/0. Root read its completed report and accepts
+the reviewed implementation, exact28source/test identities, two actual passing
+business lanes,48newstate visual coverage and11project cleanup proof. No code or
+test changed after actual attempt7; final changes are controller documentation
+and safe evidence copies. The task, QA and final-review reports are retained in
+docs/acceptance/evidence/consumer-approval-correction with the passing log,
+source/runtime identities, screenshots, journey facts and cleanup results.
+
+Root is authorized to create one bounded English commit and push the active
+codex/consumer-delivery-roadmap branch, then verify remote equality before marking
+the long goal complete. The remote branch still equals the recorded92f21089base
+before delivery. Git history and the controller's final task result identify the
+actual resulting commit; acceptance does not substitute for those Git operations.
+
+The next bounded business slice is the accepted Task create/start/complete/reopen
+plan. Capture non-Task byte baselines from this delivered tip before Task source
+writes. Preserve the expressive UI and focused emitted-DOM checks. No Task
+implementation, template-count increase, managed hosting or main/release action
+is claimed in this acceptance.

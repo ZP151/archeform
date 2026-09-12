@@ -1,8 +1,28 @@
 # Archeform delivery status
 
-Updated: 2026-09-12
+Updated: 2026-09-13
 
-## Current founder direction: combined expressive UI and reusable assembly
+## Current: founder-approved UI and approval correction delivery
+
+The founder explicitly approved the UI delivered at `92f21089` and authorized
+the next important business iteration under a long goal. That visual result is
+now the baseline. The active [correction plan](superpowers/plans/2026-09-12-approval-correction.md)
+implements accepted ADR-0060: edit an existing draft, return with a reason,
+revise/resubmit the same record, retain decision history, and safely retry
+interrupted or conflicting mutations. Both actual generated Expense/Purchase
+business lanes now pass, including same-record resubmission, API restart/replay,
+concurrent-write conflicts and retained reasons/history. All 48 new state images
+have visual review coverage. Task review, independent QA and final slice review
+are clean; the controller has accepted the slice for delivery. See the
+[acceptance results](acceptance/approval-correction.md). The next bounded business
+expansion is Task create/start/complete/reopen, inheriting this approved baseline.
+
+The iteration reuses the approved workspace/media and one shared correction
+contract for Expense and Purchase. It adds no package, provider or template
+count. The required API/data review applies once to the complete business slice.
+Earlier status entries below describe historical evidence and decisions.
+
+## Historical delivery: combined expressive UI and reusable assembly
 
 The founder rejected the latest visual result, selected a combination of three
 design concepts, and requested implementation plus reusable component/material
@@ -31,7 +51,7 @@ technical test success alone is insufficient. This uses the existing review,
 preserves valid regression evidence and introduces no additional audit stage.
 Adopting this requirement is not evidence that untested product families pass it.
 
-## Active priority: expressive UI and a complete approval journey
+## Historical priority: expressive UI and a complete approval journey
 
 The founder rejected the 2d153239 visual result on September 12. Its internal
 visual acceptance is withdrawn; historical functional results retain their

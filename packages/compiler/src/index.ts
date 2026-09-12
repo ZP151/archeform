@@ -1,3 +1,11 @@
+import {
+  selectApprovalCorrection,
+  renderApprovalJourney,
+  renderApprovalCorrectionPage,
+  renderApprovalMutationRuntime,
+  renderApprovalPrismaStore,
+  renderApprovalApi,
+} from "./approval-mutation-contract.js";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -1680,6 +1688,7 @@ function renderApplicationRuntime(
   orderOperationsEntityKey: string | undefined,
   persistentOrderOperationReceipts: boolean,
   notificationOutbox: NotificationOutboxRuntimeContribution | undefined,
+  approvalEntity?: string,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityRegistryImports = [
@@ -1698,7 +1707,7 @@ function renderApplicationRuntime(
     "getWorkflowHandler",
     "providedEffects",
   ];
-  return [
+  const source = [
     useResolvedContributions
       ? `import { ${capabilityRegistryImports.join(", ")} } from "./capabilities/registry.js";`
       : 'import { providedEffects } from "./capabilities/registry.js";',
@@ -2371,6 +2380,7 @@ function renderApplicationRuntime(
     "export const applicationRuntime = new ApplicationRuntime();",
     "",
   ].join("\n");
+  return renderApprovalMutationRuntime(source, graph, approvalEntity);
 }
 
 function renderPrismaRecordStore(
@@ -2378,6 +2388,7 @@ function renderPrismaRecordStore(
   hasRestaurantRuntime: boolean,
   persistentOrderOperationReceipts: boolean,
   notificationOutbox: boolean,
+  approvalEntity?: string,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
@@ -2396,7 +2407,7 @@ function renderPrismaRecordStore(
       toCamelCase(entity.key),
     ]),
   );
-  return [
+  const source = [
     'import { PrismaClient } from "@prisma/client";',
     `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""}${notificationOutbox ? " NotificationOutboxEntry, NotificationOutboxInput," : ""}${persistentOrderOperationReceipts ? " OrderOperationReceipt," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
     'import { assertFactoryOwnedRecordIdentityInput } from "./application-runtime.js";',
@@ -2619,6 +2630,7 @@ function renderPrismaRecordStore(
     "}",
     "",
   ].join("\n");
+  return renderApprovalPrismaStore(source, graph, approvalEntity);
 }
 
 function renderWebRootPage(): string {
@@ -2716,6 +2728,7 @@ function renderPageRuntime(
   orderEntityKey: string | undefined,
   useFixtureSessions: boolean,
   profile: GeneratedPresentationProfile,
+  correctionEntity?: string,
 ): string {
   const approval = profile === "approval-v1";
   const extendedSummary = approval && needsApprovalSummaryExtension(graph);
@@ -2788,7 +2801,7 @@ function renderPageRuntime(
     2,
   ).replaceAll("<", "\\u003c");
 
-  return [
+  const source = [
     '"use client";',
     "",
     approval
@@ -2948,13 +2961,14 @@ function renderPageRuntime(
         ]
       : []),
     ...(approvalFlow
-      ? [renderApprovalDecisionHistory(approvalFlow.entity)]
+      ? [renderApprovalDecisionHistory(approvalFlow.entity, !!correctionEntity)]
       : []),
     ...(approval
       ? [
           renderApprovalPresentationComponents(
             approvalEntity?.key,
             approvalEntity?.fields ?? [],
+            !!correctionEntity,
           ),
         ]
       : []),
@@ -3345,6 +3359,7 @@ function renderPageRuntime(
     "}",
     "",
   ].join("\n");
+  return renderApprovalCorrectionPage(source, graph, correctionEntity);
 }
 
 function renderWebProxyRoute(
@@ -3392,6 +3407,7 @@ function renderWebProxyRoute(
 function renderWebStyles(
   graph: ApplicationGraphV1,
   profile: GeneratedPresentationProfile,
+  approvalEntity?: string,
 ): string {
   // The generated application styles come entirely from the resolved
   // Experience Design System: every token group (colour, typography,
@@ -3449,7 +3465,19 @@ function renderWebStyles(
     "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
     ...(profile === "approval-v1"
       ? [
-          ...approvalWorkspaceStyles,
+          ...approvalWorkspaceStyles.map((style) =>
+            approvalEntity
+              ? style.replace(
+                  "--approval-workspace-version: 4",
+                  "--approval-workspace-version: 5",
+                )
+              : style,
+          ),
+          ...(approvalEntity
+            ? [
+                ".approval-v1 .approval-correction-controls { grid-column: 1 / -1; grid-row: 3; display: grid; gap: var(--factory-spacing-space-4); min-width: 0; } .approval-v1 .approval-correction-controls > .approval-actions, .approval-v1 .approval-correction-controls > .approval-return-reason { padding-inline-end: 6rem; } .approval-v1 .approval-correction-controls > .approval-actions:empty { display: none; } .approval-v1 .approval-correction-controls > .approval-actions button:not(:disabled), .approval-v1 .approval-correction-controls form button[type='submit']:not(:disabled) { background: var(--factory-accent); border-color: var(--factory-accent); color: var(--factory-accent-text); } .approval-v1 .approval-correction-controls form { display: grid; gap: 1rem; } .approval-v1 .approval-correction-controls fieldset { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap: 1rem; border: 0; min-width: 0; padding: 0; } .approval-v1 .approval-correction-controls details { grid-column: auto; grid-row: auto; justify-self: stretch; } .approval-v1 .approval-correction-controls details > summary { max-width: calc(100% - 6rem); } .approval-v1 .approval-correction-controls p { white-space: pre-wrap; overflow-wrap: anywhere; } @media (min-width:900px) { .approval-v1 .approval-record:has(.approval-record-media) > .approval-correction-controls { grid-column: 2 / -1; } }",
+              ]
+            : []),
           approvalDecisionHistoryStyles,
           approvalPresentationComponentStyles,
         ]
@@ -3525,6 +3553,7 @@ function renderApiMain(
   usePackageLineConfigurationHandler: boolean,
   usePackageMoneyPricingHandler: boolean,
   identityPolicy: IdentityPolicyRuntimeContribution | undefined,
+  approvalEntity?: string,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const roleForEntityAction = (action: string): string =>
@@ -3584,7 +3613,7 @@ function renderApiMain(
         "  return typeof value === 'string' && value ? value : 'anonymous';",
         "}",
       ];
-  return [
+  const source = [
     'import { Body, Controller, Get, HttpException, HttpStatus, Module, Param, Post, Req } from "@nestjs/common";',
     'import { NestFactory } from "@nestjs/core";',
     'import { PrismaClient } from "@prisma/client";',
@@ -3679,6 +3708,7 @@ function renderApiMain(
     "void bootstrap();",
     "",
   ].join("\n");
+  return renderApprovalApi(source, graph, !!identityPolicy, approvalEntity);
 }
 
 function renderCapabilityLock(
@@ -3841,6 +3871,7 @@ export function generateApplicationBundle(
   const plan = buildCompilationPlan(input);
   const compilationInput = buildCompilationInput(input, options);
   const graph = compilationInput.graph;
+  const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
   const rendererGraph = compilationInput.rendererGraph;
   const presentationProfile = presentationProfileFor(graph);
   const {
@@ -4059,6 +4090,7 @@ export function generateApplicationBundle(
               orderEntityKey,
               !!identityPolicy,
               presentationProfile,
+              approvalEntity,
             ),
     },
     ...(restaurantRuntimeEnabled
@@ -4085,11 +4117,22 @@ export function generateApplicationBundle(
     {
       path: "web/app/api/[...path]/route.ts",
       render: () =>
-        renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
+        approvalEntity
+          ? renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy)
+              .replace(
+                "headers: { 'content-type':",
+                "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
+              )
+              .replace(
+                "export const POST = proxy;",
+                "export const POST = proxy;\nexport const PATCH = proxy;",
+              )
+          : renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
     },
     {
       path: "web/app/globals.css",
-      render: () => renderWebStyles(rendererGraph, presentationProfile),
+      render: () =>
+        renderWebStyles(rendererGraph, presentationProfile, approvalEntity),
     },
     {
       path: "api/package.json",
@@ -4170,6 +4213,7 @@ export function generateApplicationBundle(
           usePackageLineConfigurationHandler,
           usePackageMoneyPricingHandler,
           identityPolicy,
+          approvalEntity,
         ),
     },
     ...(restaurantRuntimeEnabled
@@ -4211,6 +4255,7 @@ export function generateApplicationBundle(
           orderOperationsEntityKey,
           useGenericOrderOperationsPersistence,
           notificationOutbox,
+          approvalEntity,
         ),
     },
     {
@@ -4221,6 +4266,7 @@ export function generateApplicationBundle(
           restaurantRuntimeEnabled,
           useGenericOrderOperationsPersistence,
           notificationOutbox !== undefined,
+          approvalEntity,
         ),
     },
     ...(notificationOutbox
@@ -4287,7 +4333,9 @@ export function generateApplicationBundle(
     {
       path: "api/test/journey.generated.test.ts",
       render: () =>
-        restaurantRuntime()?.generatedTests ?? renderJourneyTest(graph),
+        restaurantRuntime()?.generatedTests ??
+        renderApprovalJourney(graph, approvalEntity) ??
+        renderJourneyTest(graph),
     },
     ...(restaurantRuntimeEnabled
       ? [

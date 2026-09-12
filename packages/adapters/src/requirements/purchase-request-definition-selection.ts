@@ -8,7 +8,7 @@ export const purchaseRequestApprovalDefinition = createApprovalDefinition({
   integrations:
     "No external purchasing, inventory, invoice, payment, identity or notification integration.",
   instruction:
-    "Every Purchase Request approval brief returns definition-selection with definitionKey purchase-request-approval, generatedInterpretation null and businessParameters null. The reviewed one-stage local demo lets a requester submit, one manager approve or reject, and procurement read and audit. An approval records a decision only: it does not place purchase orders, reserve inventory, contact suppliers, create invoices, or spend or transfer money. Omitted routine pages and presentation accept supported-default with zero questions. Explicit or ambiguous requester-only or private records, real identity, SSO, tenant isolation, thresholds, budgets, multiple or sequential reviewers, return, reopen, resubmit, changed fields, requiredness or category options, currency codes or symbols or conversion, quote or file storage, purchase orders, vendor management, ERP or procurement integrations, inventory, fulfilment, invoices, payments or external notification delivery require needs-clarification. Preserve every independent material question using authorization, visibility, role, business-rule, data or integration. Follow-ups retain every still-required exclusion until the user explicitly accepts supported scope; never infer acceptance or hide requirements in identity text. Amount is numeric requested amount without an invented currency code, symbol or payment. The exact roles are selectable local demo roles with role-wide reads.",
+    "Every Purchase Request approval brief returns definition-selection with definitionKey purchase-request-approval, generatedInterpretation null and businessParameters null. The reviewed correction local demo lets a requester create and edit drafts, submit, revise returned records and resubmit the same record; one manager approves or returns with a required reason, and procurement read and audit. An approval records a decision only: it does not place purchase orders, reserve inventory, contact suppliers, create invoices, or spend or transfer money. Omitted routine pages and presentation accept supported-default with zero questions. Explicit or ambiguous requester-only or private records, real identity, SSO, tenant isolation, thresholds, budgets, multiple or sequential reviewers, editing submitted or approved records, reopening approved records, configurable reason policy, changed fields, requiredness or category options, currency codes or symbols or conversion, quote or file storage, purchase orders, vendor management, ERP or procurement integrations, inventory, fulfilment, invoices, payments or external notification delivery require needs-clarification. Preserve every independent material question using authorization, visibility, role, business-rule, data or integration. Follow-ups retain every still-required exclusion until the user explicitly accepts supported scope; never infer acceptance or hide requirements in identity text. Amount is numeric requested amount without an invented currency code, symbol or payment. The exact roles are selectable local demo roles with role-wide reads.",
   fields: [
     {
       key: "amount",
@@ -58,7 +58,7 @@ export const purchaseRequestApprovalDefinition = createApprovalDefinition({
       "Submits purchase requests with amount, category, needed date, item, supplier, and business justification.",
     reviewerKey: "manager",
     reviewerLabel: "Manager",
-    reviewerDescription: "Approves or rejects submitted purchase requests.",
+    reviewerDescription: "Approves or returns submitted purchase requests.",
     auditorKey: "procurement",
     auditorLabel: "Procurement",
     auditorDescription: "Audits all approval decisions.",
@@ -76,8 +76,9 @@ export const purchaseRequestApprovalDefinition = createApprovalDefinition({
     approveWhen: "the manager approves it",
     approveThen: "the purchase request is approved",
     rejectScenarioKey: "manager-rejects",
-    rejectWhen: "the manager rejects it",
-    rejectThen: "the purchase request is rejected",
+    rejectWhen: "the manager returns it with a reason",
+    rejectThen:
+      "the purchase request is returned with a required reason for same-record revision and resubmission",
     auditScenarioKey: "procurement-audits",
     auditGiven: "decided purchase requests",
     auditWhen: "procurement audits them",
@@ -94,8 +95,8 @@ export const purchaseRequestApprovalDefinition = createApprovalDefinition({
     submitAction: "submits a purchase request",
     decisionJourneyKey: "manager-decides-purchase-request",
     decisionJourneyDescription:
-      "A manager approves or rejects a submitted purchase request.",
-    decisionAction: "approves or rejects it",
+      "A manager approves or returns a submitted purchase request.",
+    decisionAction: "approves or returns it",
     auditJourneyKey: "procurement-audits-decisions",
     auditJourneyDescription: "Procurement audits every decision.",
     reviewAction: "decides it",

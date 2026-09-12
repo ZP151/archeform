@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { PublishedGraphInput } from "@factory/compiler";
 import {
   VerificationContractError,
+  hashApplicationGraph,
   type ApplicationGraphV1,
 } from "@factory/graph";
 
@@ -450,6 +451,26 @@ export function deriveVerificationProfile(
     );
   }
 
+  let correctionEntity: string | undefined;
+  try {
+    if (
+      lock.applicationGraphChecksum === hashApplicationGraph(graph) &&
+      (graph.integration.compositionSelections === undefined ||
+        canonicalProtocol(
+          [...lock.packages].sort((a, b) =>
+            a.lock.key.localeCompare(b.lock.key),
+          ),
+        ) ===
+          canonicalProtocol(
+            [...(graph.integration.compositionSelections ?? [])].sort((a, b) =>
+              a.lock.key.localeCompare(b.lock.key),
+            ),
+          ))
+    )
+      correctionEntity = approvalProtocolEntity(graph, lock.packages);
+  } catch {
+    /* Unsupported profiles retain their existing protocol. */
+  }
   const sessionBound = isSessionBound(lock);
   const orderEntityKey = orderEntityKeyOf(lock);
   const permissions = graph.policy.permissions;
@@ -695,6 +716,79 @@ export function deriveVerificationProfile(
     }
   }
 
+  if (correctionEntity) {
+    const entity = graph.domain.entities.find(
+      (e) => e.key === correctionEntity,
+    )!;
+    const values = JSON.parse(
+      createBodyFor(graph, entity, true, false) ?? "{}",
+    ) as Record<string, unknown>;
+    const operation = (action: string) =>
+      action.slice(correctionEntity!.length + 1).replace(/-fresh$/, "");
+    const bodyFor = (action: string, version: number, body?: string) => {
+      const op = operation(action);
+      return op === "create"
+        ? JSON.stringify({ values: JSON.parse(body ?? JSON.stringify(values)) })
+        : op === "update"
+          ? JSON.stringify({ expectedVersion: version, values })
+          : op === "reject"
+            ? JSON.stringify({
+                expectedVersion: version,
+                reason: "Please correct this verification fixture.",
+              })
+            : JSON.stringify({ expectedVersion: version });
+    };
+    for (let index = 0; index < apiRegistry.length; index++) {
+      const action = apiRegistry[index]!;
+      if (
+        !action.action.startsWith(correctionEntity + ".") ||
+        action.method === "GET"
+      )
+        continue;
+      const op = operation(action.action);
+      apiRegistry[index] = {
+        ...action,
+        method: op === "update" ? "PATCH" : "POST",
+        route:
+          op === "update"
+            ? action.route.replace("/events/update", "")
+            : action.route,
+        expectedStatus: op === "create" ? 201 : 200,
+      };
+    }
+    for (const [id, journey] of Object.entries(journeys)) {
+      if (
+        !journey.action.startsWith(correctionEntity + ".") ||
+        apiRegistry.find((a) => a.action === journey.action)?.method === "GET"
+      )
+        continue;
+      const key =
+        "verify-" + createHash("sha256").update(id).digest("hex").slice(0, 40);
+      journeys[id] = {
+        ...journey,
+        headers: [{ name: "x-factory-idempotency-key", value: key }],
+        body: bodyFor(
+          journey.action,
+          journey.chain ? journey.chain.length - 1 : 0,
+          journey.body,
+        ),
+        ...(journey.chain
+          ? {
+              chain: journey.chain.map((step, index) => ({
+                ...step,
+                body: bodyFor(step.action, Math.max(0, index - 1), step.body),
+              })),
+            }
+          : {}),
+        ...("idempotencyKey" in journey
+          ? {
+              idempotencyKey: key,
+              replayExpectation: "stored-success" as const,
+            }
+          : {}),
+      };
+    }
+  }
   if (stepPlan.length > maximumStepPlanLength) {
     throw new VerificationContractError(
       "The derived verification step plan exceeds the bounded plan length.",
@@ -719,4 +813,289 @@ export function deriveVerificationProfile(
     journeys: Object.freeze(journeys),
     apiRegistry: Object.freeze(apiRegistry),
   };
+}
+
+// Worker-local consumer predicate mirrors the accepted compiler-private protocol.
+const equalSet = (actual: readonly string[], expected: readonly string[]) =>
+  actual.length === expected.length &&
+  new Set(actual).size === actual.length &&
+  expected.every((x) => actual.includes(x));
+const locks = {
+  "core.crud": [
+    "1.0.1",
+    "8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1",
+  ],
+  "core.workflow": [
+    "1.0.1",
+    "16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884",
+  ],
+  "core.identity-policy": [
+    "1.0.0",
+    "a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82",
+  ],
+  "core.policy-declarations": [
+    "1.0.0",
+    "56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54",
+  ],
+  "core.audit": [
+    "1.0.2",
+    "fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8",
+  ],
+  "core.notification": [
+    "1.1.1",
+    "207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
+  ],
+} as const;
+function approvalProtocolEntity(
+  graph: ApplicationGraphV1,
+  selections: CompositionLock["packages"] = graph.integration
+    .compositionSelections ?? [],
+): string | undefined {
+  const candidate = graph.flow.flows.some(
+    (f) =>
+      (f.states.includes("returned") ||
+        f.transitions.some(
+          (t) => t.event === "update" && t.from === "returned",
+        )) &&
+      f.transitions.some((t) => t.event === "approve" || t.event === "reject"),
+  );
+  if (!candidate) return undefined;
+  const deny = (): never => {
+    throw new Error("Approval correction shape is not supported.");
+  };
+  if (graph.flow.flows.length !== 1) return deny();
+  const flow = graph.flow.flows[0]!;
+  if (
+    flow.initialState !== "draft" ||
+    !equalSet(flow.states, ["draft", "submitted", "approved", "returned"]) ||
+    !equalSet(flow.events, ["submit", "approve", "reject", "update"]) ||
+    flow.transitions.length !== 4
+  )
+    return deny();
+  const submit = flow.transitions.find((t) => t.event === "submit");
+  const approve = flow.transitions.find((t) => t.event === "approve");
+  const requester = submit?.roles?.[0],
+    reviewer = approve?.roles?.[0];
+  const grants = graph.policy.permissions.filter(
+    (p) => p.resource === flow.entity,
+  );
+  const auditor = grants.find((p) => p.actions.includes("audit"))?.role;
+  if (
+    !requester ||
+    !reviewer ||
+    !auditor ||
+    new Set([requester, reviewer, auditor]).size !== 3 ||
+    !equalSet(graph.policy.roles, [requester, reviewer, auditor]) ||
+    grants.length !== 3
+  )
+    return deny();
+  for (const [role, actions] of [
+    [requester, ["create", "read", "update", "submit"]],
+    [reviewer, ["read", "approve", "reject"]],
+    [auditor, ["read", "audit"]],
+  ] as const)
+    if (!grants.some((p) => p.role === role && equalSet(p.actions, actions)))
+      return deny();
+  for (const [event, from, to, role] of [
+    ["submit", "draft", "submitted", requester],
+    ["approve", "submitted", "approved", reviewer],
+    ["reject", "submitted", "returned", reviewer],
+    ["update", "returned", "draft", requester],
+  ]) {
+    const transition = flow.transitions.find((t) => t.event === event);
+    const expected =
+      event === "approve" || event === "reject"
+        ? ["audit.record:record", "notification.send:send"]
+        : ["audit.record:record"];
+    if (
+      !transition ||
+      transition.from !== from ||
+      transition.to !== to ||
+      !equalSet(transition.roles ?? [], [role!]) ||
+      !equalSet(
+        (transition.effects ?? []).map((e) => e.capability + ":" + e.operation),
+        expected,
+      )
+    )
+      return deny();
+  }
+  const blocks = graph.page.pages.flatMap((p) =>
+    p.blocks.map((b) => ({ page: p, block: b })),
+  );
+  for (const type of ["form", "list", "queue", "detail"])
+    if (
+      blocks.filter(
+        ({ block }) => block.entity === flow.entity && block.type === type,
+      ).length !== 1
+    )
+      return deny();
+  if (
+    selections.length !== 6 ||
+    !equalSet(
+      selections.map((s) => s.lock.key),
+      Object.keys(locks),
+    )
+  )
+    return deny();
+  const byKey = new Map(selections.map((s) => [s.lock.key, s]));
+  for (const [key, [version, digest]] of Object.entries(locks)) {
+    const lock = byKey.get(key)!.lock;
+    if (
+      lock.version !== version ||
+      lock.manifestDigest !== "sha256:" + digest ||
+      lock.packageRoot !== `packages/capabilities/assets/${key}/${version}` ||
+      lock.lifecycle !== "golden"
+    )
+      return deny();
+  }
+  const bindings = (key: string, expected: Record<string, string>) => {
+    const b = byKey.get(key)!.bindings;
+    return (
+      equalSet(Object.keys(b), Object.keys(expected)) &&
+      Object.entries(expected).every(
+        ([k, v]) => JSON.stringify(b[k]) === JSON.stringify({ graphSymbol: v }),
+      )
+    );
+  };
+  const listPage = blocks.find(
+    ({ block }) => block.entity === flow.entity && block.type === "list",
+  )!.page;
+  if (
+    !bindings("core.crud", {
+      entityKey: "graph.domain." + flow.entity,
+      routeKey: "graph.page." + listPage.id,
+    }) ||
+    !bindings("core.workflow", { flowKey: "graph.flow." + flow.id }) ||
+    !bindings("core.audit", { actorRole: "graph.policy." + reviewer }) ||
+    !bindings("core.notification", {
+      recipientRole: "graph.policy." + requester,
+    }) ||
+    !bindings("core.policy-declarations", {})
+  )
+    return deny();
+  const identity = byKey.get("core.identity-policy")!.bindings as Record<
+    string,
+    { graphSymbol?: string }
+  >;
+  if (
+    !equalSet(Object.keys(identity), [
+      "principalEntity",
+      "sessionEntity",
+      "defaultRole",
+      "authenticatedRole",
+    ]) ||
+    identity.defaultRole?.graphSymbol !== "graph.policy." + requester ||
+    identity.authenticatedRole?.graphSymbol !== "graph.policy." + reviewer ||
+    !graph.domain.entities.some(
+      (e) => "graph.domain." + e.key === identity.principalEntity?.graphSymbol,
+    ) ||
+    !graph.domain.entities.some(
+      (e) => "graph.domain." + e.key === identity.sessionEntity?.graphSymbol,
+    )
+  )
+    return deny();
+  const principal = identity.principalEntity!.graphSymbol!.slice(
+      "graph.domain.".length,
+    ),
+    session = identity.sessionEntity!.graphSymbol!.slice(
+      "graph.domain.".length,
+    );
+  const secondary = graph.domain.entities.filter(
+    (e) => ![flow.entity, principal, session].includes(e.key),
+  );
+  if (
+    secondary.length !== 1 ||
+    new Set([flow.entity, principal, session]).size !== 3 ||
+    graph.domain.entities.length !== 4
+  )
+    return deny();
+  const permissionPairs = graph.policy.permissions.flatMap((p) =>
+    p.actions.map((a) => p.role + ":" + p.resource + ":" + a),
+  );
+  const expectedPairs = [
+    ...grants.flatMap((p) =>
+      p.actions.map((a) => p.role + ":" + flow.entity + ":" + a),
+    ),
+    requester + ":" + secondary[0]!.key + ":read",
+    requester + ":" + secondary[0]!.key + ":update",
+    ...[requester, reviewer, auditor].flatMap((role) => [
+      role + ":" + principal + ":read",
+      role + ":" + session + ":read",
+    ]),
+    requester + ":" + session + ":create",
+    requester + ":" + session + ":update",
+  ];
+  if (!equalSet(permissionPairs, expectedPairs)) return deny();
+  if (
+    graph.page.pages.length !== 7 ||
+    blocks.length !== 7 ||
+    blocks.filter(({ block }) => block.entity === flow.entity).length !== 5 ||
+    blocks.filter(
+      ({ block }) => block.type === "stats" && block.entity === flow.entity,
+    ).length !== 1 ||
+    blocks.filter(({ block }) => block.type === "settings" && !block.entity)
+      .length !== 1 ||
+    blocks.filter(
+      ({ block }) =>
+        block.type === "list" && block.entity === secondary[0]!.key,
+    ).length !== 1
+  )
+    return deny();
+  if (
+    graph.integration.providers.length !== 0 ||
+    !equalSet(
+      graph.integration.capabilities.map(
+        (c) => c.key + ":" + c.operation + ":" + c.providerId,
+      ),
+      [
+        "audit.record:record:factory",
+        "notification.send:send:factory",
+        "identity.context.resolve:resolve:factory",
+        "authorization.decision:decision:factory",
+      ],
+    )
+  )
+    return deny();
+  const entity = graph.domain.entities.filter((e) => e.key === flow.entity);
+  if (
+    entity.length !== 1 ||
+    entity[0]!.fields.some((f) =>
+      ["id", "version", "createdAt", "updatedAt"].includes(f.key),
+    )
+  )
+    return deny();
+  const status = entity[0]!.fields.find((field) => field.key === "status");
+  if (
+    !status ||
+    status.type !== "enum" ||
+    status.required !== true ||
+    !equalSet(status.values ?? [], [
+      "draft",
+      "submitted",
+      "approved",
+      "returned",
+    ])
+  )
+    return deny();
+  return flow.entity;
+}
+
+function canonicalProtocol(value: unknown): string {
+  if (Array.isArray(value))
+    return "[" + value.map(canonicalProtocol).join(",") + "]";
+  if (value && typeof value === "object")
+    return (
+      "{" +
+      Object.keys(value)
+        .sort()
+        .map(
+          (k) =>
+            JSON.stringify(k) +
+            ":" +
+            canonicalProtocol((value as Record<string, unknown>)[k]),
+        )
+        .join(",") +
+      "}"
+    );
+  return JSON.stringify(value);
 }

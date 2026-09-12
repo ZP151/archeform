@@ -93,8 +93,8 @@ const safeHeaderValue = /^[a-zA-Z0-9._-]{1,64}$/;
 const maximumDeclaredHeaders = 8;
 
 /**
- * Request bodies are bounded declared JSON fixtures: a flat record of
- * primitive values, never nested objects, arrays, or unbounded text.
+ * Request bodies are bounded declared JSON fixtures: flat primitive records
+ * or the exact create/update values envelopes. Values never nest further.
  */
 const maximumRequestBodyBytes = 512;
 const maximumBodyKeys = 16;
@@ -111,6 +111,26 @@ function isFlatDeclaredJsonBody(body: string): boolean {
   } catch {
     return false;
   }
+  if (isFlatDeclaredValues(parsed)) return true;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    return false;
+  const envelope = parsed as Record<string, unknown>;
+  const keys = Object.keys(envelope);
+  if (keys.length === 1 && keys[0] === "values") {
+    return isFlatDeclaredValues(envelope.values);
+  }
+  return (
+    keys.length === 2 &&
+    keys.includes("values") &&
+    keys.includes("expectedVersion") &&
+    typeof envelope.expectedVersion === "number" &&
+    Number.isSafeInteger(envelope.expectedVersion) &&
+    envelope.expectedVersion >= 0 &&
+    isFlatDeclaredValues(envelope.values)
+  );
+}
+
+function isFlatDeclaredValues(parsed: unknown): boolean {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return false;
   }

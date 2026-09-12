@@ -70,7 +70,7 @@ type ApprovalDefinitionDescriptor<K extends string> = {
   };
 };
 
-/** Fixed one-stage approval structure, parameterized only by reviewed business data. */
+/** Fixed correction approval structure, parameterized only by reviewed business data. */
 export function createApprovalDefinition<const K extends string>(
   descriptor: ApprovalDefinitionDescriptor<K>,
 ) {
@@ -163,7 +163,8 @@ export function createApprovalDefinition<const K extends string>(
         {
           key: descriptor.definitionKey,
           label: descriptor.copy.workflowLabel,
-          description: "From submission to decision.",
+          description:
+            "Create and edit a draft, submit, return with a required reason, revise the same record, resubmit and approve.",
         },
       ],
       constraints: [],
@@ -207,7 +208,7 @@ export function createApprovalDefinition<const K extends string>(
           permissions: [
             {
               entityKey: descriptor.copy.entityKey,
-              actions: ["create", "read", "submit"],
+              actions: ["create", "read", "update", "submit"],
             },
             {
               entityKey: descriptor.copy.requesterKey,
@@ -304,7 +305,7 @@ export function createApprovalDefinition<const K extends string>(
             { key: "draft", label: "Draft" },
             { key: "submitted", label: "Submitted" },
             { key: "approved", label: "Approved" },
-            { key: "rejected", label: "Rejected" },
+            { key: "returned", label: "Returned" },
           ],
           transitions: [
             {
@@ -324,9 +325,16 @@ export function createApprovalDefinition<const K extends string>(
             {
               key: "reject",
               from: "submitted",
-              to: "rejected",
-              label: "Reject",
+              to: "returned",
+              label: "Return",
               actorKey: descriptor.copy.reviewerKey,
+            },
+            {
+              key: "update",
+              from: "returned",
+              to: "draft",
+              label: "Revise",
+              actorKey: descriptor.copy.requesterKey,
             },
           ],
         },
@@ -353,6 +361,11 @@ export function createApprovalDefinition<const K extends string>(
             {
               actorKey: descriptor.copy.reviewerKey,
               action: descriptor.copy.decisionAction,
+            },
+            {
+              actorKey: descriptor.copy.requesterKey,
+              action:
+                "edits the returned record, saves it as draft and resubmits the same record",
             },
           ],
         },
@@ -473,6 +486,7 @@ export function createApprovalDefinition<const K extends string>(
       canonical().blueprint;
     return {
       definitionKey: descriptor.definitionKey,
+      template: { key: "approval-definition-template", version: "2.0.0" },
       actors,
       entities,
       pageIntents,

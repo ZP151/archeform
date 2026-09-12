@@ -645,3 +645,224 @@ describe("graph-derived verification plan", () => {
     ).toBe("/api/appointment/sample-appointment/events/request");
   });
 });
+import { approvalLegacyFixtures } from "../../../packages/compiler/test/fixtures/approval-legacy.js";
+import { createCapabilityCompositionLock } from "@factory/capabilities";
+import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
+function correctionGraph(name: "expense" | "purchase") {
+  const graph = structuredClone(
+    approvalLegacyFixtures[name].input.graph,
+  ) as unknown as ApplicationGraphV1;
+  const flow = graph.flow.flows[0]!;
+  const requester = flow.transitions[0]!.roles![0]!;
+  flow.states = ["draft", "submitted", "approved", "returned"];
+  flow.events.push("update");
+  flow.transitions[2]!.to = "returned";
+  flow.transitions.push({
+    from: "returned",
+    event: "update",
+    to: "draft",
+    roles: [requester],
+    effects: [{ capability: "audit.record", operation: "record" }],
+  });
+  graph.policy.permissions.find(
+    (p) => p.resource === flow.entity && p.role === requester,
+  )!.actions = ["create", "read", "update", "submit"];
+  graph.domain.entities
+    .find((e) => e.key === flow.entity)!
+    .fields.find((f) => f.key === "status")!.values = [
+    "draft",
+    "submitted",
+    "approved",
+    "returned",
+  ];
+  return {
+    graph,
+    lock: createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections: graph.integration.compositionSelections!,
+    }),
+  };
+}
+describe("exact correction verification protocol", () => {
+  it.each(["expense", "purchase"] as const)(
+    "derives immutable published %s protocol from the separate lock",
+    (name) => {
+      const { graph } = correctionGraph(name);
+      const selections = graph.integration.compositionSelections!;
+      delete graph.integration.compositionSelections;
+      const lock = createCapabilityCompositionLock({
+        graphChecksum: hashApplicationGraph(graph),
+        selections,
+      });
+      const before = JSON.stringify({ graph, lock });
+      const profile = deriveVerificationProfile(graph, lock);
+      const entity = graph.flow.flows[0]!.entity;
+      expect(profile.journeys[entity + "-submit"]).toMatchObject({
+        replayExpectation: "stored-success",
+        body: '{"expectedVersion":0}',
+      });
+      expect(JSON.stringify({ graph, lock })).toBe(before);
+      for (const kind of ["missing-package", "binding", "checksum", "status"]) {
+        const changed = structuredClone(graph);
+        const packages = structuredClone(selections);
+        if (kind === "missing-package") packages.pop();
+        if (kind === "binding")
+          packages.find((s) => s.lock.key === "core.crud")!.bindings.entityKey =
+            { graphSymbol: "graph.domain." + changed.domain.entities[1]!.key };
+        if (kind === "status")
+          changed.domain.entities[0]!.fields.find(
+            (f) => f.key === "status",
+          )!.required = false;
+        const invalid = createCapabilityCompositionLock({
+          graphChecksum:
+            kind === "checksum"
+              ? "sha256:" + "0".repeat(64)
+              : hashApplicationGraph(changed),
+          selections: packages,
+        });
+        expect(
+          Object.values(
+            deriveVerificationProfile(changed, invalid).journeys,
+          ).some(
+            (j) =>
+              "replayExpectation" in j &&
+              j.replayExpectation === "stored-success",
+          ),
+        ).toBe(false);
+      }
+    },
+  );
+  it.each(["missing", "integer", "incomplete-enum", "optional"])(
+    "does not select incompatible stored status %s with a matching lock",
+    (kind) => {
+      const { graph } = correctionGraph("expense");
+      const entity = graph.domain.entities.find((e) => e.key === "expense")!;
+      const status = entity.fields.find((f) => f.key === "status")!;
+      if (kind === "missing") {
+        entity.fields = entity.fields.filter((f) => f.key !== "status");
+        entity.indexes = [];
+        for (const seed of graph.domain.seedData ?? [])
+          if (seed.entity === "expense") delete seed.values.status;
+      }
+      if (kind === "integer") {
+        Object.assign(status, { type: "integer" });
+        delete status.values;
+        for (const seed of graph.domain.seedData ?? [])
+          if (seed.entity === "expense") seed.values.status = 0;
+      }
+      if (kind === "incomplete-enum")
+        status.values = ["draft", "submitted", "approved"];
+      if (kind === "optional") status.required = false;
+      const lock = createCapabilityCompositionLock({
+        graphChecksum: hashApplicationGraph(graph),
+        selections: graph.integration.compositionSelections!,
+      });
+      const profile = deriveVerificationProfile(graph, lock);
+      expect(
+        Object.values(profile.journeys).some(
+          (j) =>
+            "replayExpectation" in j &&
+            j.replayExpectation === "stored-success",
+        ),
+      ).toBe(false);
+    },
+  );
+  it.each(["shape", "grant", "page", "binding", "lock", "checksum"])(
+    "leaves malformed %s outside correction protocol",
+    (kind) => {
+      const { graph, lock: originalLock } = correctionGraph("expense");
+      let lock = structuredClone(originalLock);
+      if (kind === "shape") graph.flow.flows[0]!.transitions.pop();
+      if (kind === "grant")
+        graph.policy.permissions.find(
+          (p) => p.resource === "expense" && p.actions.includes("submit"),
+        )!.actions = ["create", "read", "submit"];
+      if (kind === "page")
+        graph.page.pages
+          .flatMap((p) => p.blocks)
+          .find((b) => b.type === "queue")!.type = "list";
+      if (kind === "binding")
+        graph.integration.compositionSelections![0]!.bindings = {};
+      if (kind === "lock") lock.packages[0]!.lock.version = "9.9.9";
+      if (kind !== "lock" && kind !== "checksum")
+        lock = {
+          ...lock,
+          applicationGraphChecksum: hashApplicationGraph(graph),
+          packages: structuredClone(graph.integration.compositionSelections!),
+        };
+      if (kind === "checksum")
+        lock.applicationGraphChecksum = "sha256:" + "0".repeat(64);
+      const profile = deriveVerificationProfile(graph, lock);
+      expect(
+        Object.values(profile.journeys).some(
+          (j) =>
+            "replayExpectation" in j &&
+            j.replayExpectation === "stored-success",
+        ),
+      ).toBe(false);
+      expect(
+        JSON.parse(profile.journeys["expense-create"]!.body!),
+      ).not.toHaveProperty("values");
+    },
+  );
+  it.each(["expense", "purchase"] as const)(
+    "derives header keys, values and every versioned mutation for %s",
+    (name) => {
+      const { graph, lock } = correctionGraph(name);
+      const entity = graph.flow.flows[0]!.entity;
+      const profile = deriveVerificationProfile(graph, lock);
+      expect(
+        JSON.parse(profile.journeys[entity + "-create"]!.body!),
+      ).toHaveProperty("values");
+      expect(profile.journeys[entity + "-submit"]).toMatchObject({
+        replayExpectation: "stored-success",
+        body: '{"expectedVersion":0}',
+      });
+      expect(
+        profile.apiRegistry.find((a) => a.action === entity + ".approve"),
+      ).toMatchObject({ method: "POST", expectedStatus: 200 });
+      expect(
+        profile.apiRegistry.find((a) => a.action === entity + ".update"),
+      ).toMatchObject({
+        method: "PATCH",
+        route: "/api/" + entity + "/{recordId}",
+        expectedStatus: 200,
+      });
+      expect(JSON.parse(profile.journeys[entity + "-reject"]!.body!)).toEqual({
+        expectedVersion: 1,
+        reason: "Please correct this verification fixture.",
+      });
+      expect(
+        JSON.parse(profile.journeys[entity + "-update"]!.body!),
+      ).toMatchObject({ expectedVersion: 2, values: expect.any(Object) });
+      expect(
+        profile.journeys[entity + "-update"]!.chain!.map((step) =>
+          JSON.parse(step.body!),
+        ),
+      ).toEqual([
+        { values: expect.any(Object) },
+        { expectedVersion: 0 },
+        {
+          expectedVersion: 1,
+          reason: "Please correct this verification fixture.",
+        },
+      ]);
+      expect(JSON.parse(profile.journeys[entity + "-approve"]!.body!)).toEqual({
+        expectedVersion: 1,
+      });
+      expect(
+        profile.apiRegistry.find((a) => a.action === entity + ".create")!
+          .expectedStatus,
+      ).toBe(201);
+      for (const journey of Object.values(profile.journeys).filter(
+        (j) => j.action.startsWith(entity + ".") && j.body,
+      ))
+        expect(journey.headers).toEqual([
+          {
+            name: "x-factory-idempotency-key",
+            value: expect.stringMatching(/^verify-[a-f0-9]{40}$/),
+          },
+        ]);
+    },
+  );
+});

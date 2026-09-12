@@ -84,6 +84,8 @@ export type ChainJourneyStep = {
 };
 
 export type IdempotencyJourneyFixture = RoleJourneyFixture & {
+  /** Exact correction protocol replays the persisted successful response. */
+  readonly replayExpectation?: "stored-success";
   /** The declared idempotency key for the repeated request. */
   readonly idempotencyKey: string;
   /** The declared expected version for the transition. */
@@ -555,6 +557,13 @@ export function validateIdempotencyJourney(
   registry: readonly RegisteredApiAction[],
 ): RegisteredApiAction {
   const action = validateRoleJourney(journey, registry);
+  if (
+    journey.replayExpectation !== undefined &&
+    journey.replayExpectation !== "stored-success"
+  )
+    throw new VerificationContractError(
+      "Unsupported idempotency replay expectation.",
+    );
   if (
     typeof journey.idempotencyKey !== "string" ||
     !idempotencyKeyPattern.test(journey.idempotencyKey) ||

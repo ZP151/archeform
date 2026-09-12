@@ -4,6 +4,12 @@
 
 **Scheduling correction (2026-09-12):** Production is held for the approval correction/decision-closure priority. The dispatched agent failed before writing code. Preserve this frozen experiment as planned scope, not delivered capability. Its non-Task byte baseline must be explicitly rebased after any accepted shared UI refinement.
 
+**Next delivery prerequisite:** The founder approved the expressive UI at
+`92f21089`. After the current approval-correction slice is accepted and pushed,
+capture non-Task byte baselines from that exact accepted tip before Task source
+writes. The older base and digest below are historical decision evidence, not
+permission to restore an older workspace or lower the approved visual standard.
+
 **Goal:** An ordinary user can generate a shared team task application in minutes and complete a create/start/complete/reopen journey through reusable assembly.
 
 **Architecture:** A reviewed private `team-task-tracking` definition supplies the immutable Graph composition; the model selects the definition rather than writing an app. Structural family recognition connects the existing consumer delivery flow to a task presentation composed from the repaired workspace and existing CRUD/workflow/finder behavior.
@@ -26,7 +32,20 @@
 
 Follow the ordered lookup recorded in ADR-0057: native primitive controls, state/navigation patterns, existing recipes, repaired compiler workspace and pinned studies. Existing approval workflow copy cannot express Task semantics; no upstream study adds the required business contract. The only new private asset is `task-workspace-presentation@1.0.0` with factory provenance and exact tests.
 
-Keep the repaired compact sidebar/mobile disclosure, record finder, restrained row separators, typed form and status-only badge accents. Adapt record information to the task: title first, priority, due date, assignee and status visible. Long description and ID live in Details. Use Graph labels without approval-specific copy. Do not decorate a working task list with unrelated photography or introduce another UI framework.
+Reuse the founder-approved color hierarchy, compact navigation, icon controls,
+record finder and typed forms. Adapt the visual hierarchy to tasks: title first,
+clear priority accents, readable due date, assignee and completion state, and one
+obvious next action. Keep long descriptions and IDs in Details. Compose existing
+icons, tokens and controls with Task labels; unrelated photography adds no task
+value. The result must be visually inspected at 390/768/1440, including pending,
+failed and filtered outcomes, against the approved quality baseline. Do not
+introduce another UI framework or count bare functional rows as visual acceptance.
+
+Before the full runtime lane, exercise the complete emitted DOM and CSS in the
+existing focused browser regression. Measure the first action, 44 px controls,
+Details overlap, and computed theme colors through the actual component nesting.
+Do not let direct-child selectors silently skip newly wrapped controls. This
+extends the existing feedback loop; it adds no acceptance or approval stage.
 
 ## Task B3: One serialized integration slice
 
@@ -51,6 +70,7 @@ Interfaces: adapter exports its canonical interpretation and definition entry on
 - [ ] Implement structural consumer recognition using existing delivery state flow; generic composer must prove Task works without hidden approval aliases.
 - [ ] Add compiler RED tests for title/priority/due/assignee summaries, all three event buttons/icons and safe long/empty values; preserve finding, pending/race/error/role behavior.
 - [ ] Extract minimal presentation-neutral helpers, keep approval bytes, and assemble Task output from the frozen contract. Run final emitted TSX/CSS diagnostics before actual runtime. Reject clipped navigation, overlap, sparse oversized rows or approval copy.
+- [ ] In the focused development regressions, feed a true Published Graph and its separate immutable lock through compilation and the generated verification requests. Exercise fixture-session authentication together with declared mutation headers. Catch lifecycle and request-assembly gaps before the broad package run; this is existing test coverage, not another approval stage.
 - [ ] Run affected package checks and focused suites; run complete suites for changed shared contracts/packages once. Reuse valid unaffected evidence for later small corrections.
 - [ ] Independent task review checks specification and implementation. Fix concrete issues within frozen ownership.
 - [ ] Root authorizes one provider-free actual runtime after source freeze, with current topology and exact project/image identities. Run business and actual visual cases below, retain failure/repair attempts honestly and clean only exact resources.

@@ -82,7 +82,10 @@ function journeyHeaders(
   journey: RoleJourneyFixture,
 ): readonly { name: string; value: string }[] | undefined {
   if (journey.sessionId !== undefined) {
-    return [{ name: "x-factory-fixture-session", value: journey.sessionId }];
+    return [
+      ...(journey.headers ?? []),
+      { name: "x-factory-fixture-session", value: journey.sessionId },
+    ];
   }
   const principalHeader =
     journey.principal === undefined
@@ -436,16 +439,22 @@ export async function runIdempotencyProbe(
   const action = validateIdempotencyJourney(journey, registry);
   const requestOptions = {
     headers: journeyHeaders(journey),
-    body: JSON.stringify({
-      expectedVersion: journey.expectedVersion,
-      idempotencyKey: journey.idempotencyKey,
-    }),
+    body:
+      journey.replayExpectation === "stored-success"
+        ? journey.body
+        : JSON.stringify({
+            expectedVersion: journey.expectedVersion,
+            idempotencyKey: journey.idempotencyKey,
+          }),
   };
   const first = await context.environment.request(
     action.method,
     action.route,
     "api",
     requestOptions,
+    ...(journey.replayExpectation === "stored-success"
+      ? ([true] as const)
+      : []),
   );
   if (first.status !== action.expectedStatus) {
     if (first.status === 0) {
@@ -475,7 +484,38 @@ export async function runIdempotencyProbe(
     action.route,
     "api",
     requestOptions,
+    ...(journey.replayExpectation === "stored-success"
+      ? ([true] as const)
+      : []),
   );
+  if (journey.replayExpectation === "stored-success") {
+    if (
+      repeated.status !== action.expectedStatus ||
+      !first.recordId ||
+      repeated.recordId !== first.recordId
+    )
+      return failedStep(
+        context.entry,
+        "idempotency",
+        "idempotency.replay_not_rejected",
+        "The repeated command did not reproduce its stored success.",
+        first.durationMs + repeated.durationMs,
+        {
+          ...statusFacts(repeated.status),
+          ...journeyFacts(journey.principal, journey.action),
+        },
+      );
+    return passedStep(
+      context.entry,
+      "idempotency",
+      "The repeated command reproduced its stored success.",
+      first.durationMs + repeated.durationMs,
+      {
+        ...statusFacts(repeated.status),
+        ...journeyFacts(journey.principal, journey.action),
+      },
+    );
+  }
   if (repeated.status !== 403) {
     return failedStep(
       context.entry,

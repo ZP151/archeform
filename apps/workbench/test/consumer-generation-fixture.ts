@@ -1,8 +1,5 @@
 import { canonicalRestaurantMenuParameters } from "@factory/capabilities";
-import {
-  FixtureRequirementInterpreter,
-  OpenAIRequirementInterpreterAdapter,
-} from "@factory/adapters";
+import { OpenAIRequirementInterpreterAdapter } from "@factory/adapters";
 import {
   composeProductDraft,
   planProductAlternatives,
@@ -30,30 +27,41 @@ const verificationRunId = "verify-restaurant";
 const previewRunId = "preview-restaurant";
 
 export const approvalFixtureBrief =
-  "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
+  "Build an expense approval application. Employees create and correct expenses with amount, category, date, receipt, and notes. Managers approve or return them with a reason. Employees revise and resubmit the same request, and finance can audit all decisions.";
 
 export async function approvalInterpretationFixture(requirementId?: string) {
-  const result = await new FixtureRequirementInterpreter().interpret({
+  // Exercise the registered definition parser with authored selection data,
+  // independently of the exact brief keys supported by the fixture interpreter.
+  return new OpenAIRequirementInterpreterAdapter({
+    readEnvironment: () => "test-key",
+    transport: {
+      async create() {
+        return {
+          outputText: JSON.stringify({
+            resultKind: "definition-selection",
+            definitionSelection: {
+              definitionKey: "expense-approval",
+              requirementId: requirementId ?? "expense-approval-requirement",
+              title: "Expense Approval",
+              outcome:
+                "Employees correct and resubmit expenses; managers decide them with retained reasons and finance audits decisions.",
+              disposition: "supported-default",
+              materialQuestions: [],
+              businessParameters: null,
+            },
+            generatedInterpretation: null,
+          }),
+        };
+      },
+    },
+  }).interpret({
     brief: approvalFixtureBrief,
     answers: {},
   });
-  if (requirementId === undefined) return result;
-  const spec = { ...result.interpretation.spec, requirementId };
-  return {
-    ...result,
-    interpretation: {
-      ...result.interpretation,
-      spec,
-      blueprint: {
-        ...result.interpretation.blueprint,
-        requirementChecksum: hashRequirementSpec(spec),
-      },
-    },
-  };
 }
 
 export const purchaseRequestFixtureBrief =
-  "Build a local purchase request app. Requesters submit an item, amount, category, needed date, supplier and business justification. A manager approves or rejects; procurement reads and audits decisions. Use selectable demo roles and role-wide reads, with no ordering or payments.";
+  "Build a local purchase request app. Requesters create and correct an item, amount, category, needed date, supplier and business justification. A manager approves or returns requests with a reason; requesters revise and resubmit the same record. Procurement reads and audits decisions. Use selectable demo roles and role-wide reads, with no ordering or payments.";
 
 // Exercise the real registered selection parser/projector with authored data.
 // No network or model call occurs; this does not measure intent classification.

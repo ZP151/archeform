@@ -1,0 +1,89 @@
+{
+  "inspectedAt": "2026-09-12T16:12:55.592Z",
+  "source": "Actual attempt 7 generated applications; original unmodified Playwright PNGs",
+  "baseline": "Founder-approved expressive UI at 92f21089",
+  "verdict": "pass",
+  "findings": [],
+  "observations": [
+    "Approved cobalt hierarchy, original category materials, familiar icons and compact navigation remain present.",
+    "Edit and Return forms are readable, preserve their values, and keep controls and Details separate.",
+    "Unknown-result and conflict messages remain visible with the relevant record; pending commands are visibly disabled.",
+    "Return reasons remain visible before editing; final history retains Return and Approve while the record shows Approved.",
+    "Long Purchase identities wrap without clipped controls or overlapping layout."
+  ],
+  "allocation": "Root inspected these 12 key images; independent QA covers the remaining new states and widths plus proportionate baseline evidence.",
+  "images": [
+    {
+      "path": "expense/correction-draft-edit-390.png",
+      "sha256": "bf1f3cad17d85de0bc22b6188833e21500cf47cab44dea2613c354844815c456",
+      "width": 390,
+      "height": 2081
+    },
+    {
+      "path": "expense/correction-returned-390.png",
+      "sha256": "b8e80a4f5dd1836dca489607171f146ca036ed7d3dab2a41cbf313c275e4f987",
+      "width": 390,
+      "height": 1670
+    },
+    {
+      "path": "expense/correction-conflict-390.png",
+      "sha256": "207f27cac0a96f68afed99ec0d9207d0e1d1f3140303cdad5ab92fbcb905c89e",
+      "width": 390,
+      "height": 1644
+    },
+    {
+      "path": "expense/correction-return-retry-390.png",
+      "sha256": "67bf1129b17fdd30c349cf0ce26dbc2c04fafb0746eae3f63f0ada961e588abd",
+      "width": 390,
+      "height": 1802
+    },
+    {
+      "path": "expense/correction-return-reason-1440.png",
+      "sha256": "6427c26ba0ff93f25539b3f273914deaab02671f63ad998f80f3ba17bdcbf00f",
+      "width": 1440,
+      "height": 1323
+    },
+    {
+      "path": "expense/correction-approved-history-1440.png",
+      "sha256": "e2dad509552029d8cb3c78c9d0fdea226eefc4909bb848e8a2fee30b833dbd6d",
+      "width": 1440,
+      "height": 1937
+    },
+    {
+      "path": "purchase/correction-draft-edit-390.png",
+      "sha256": "39ab8c5969b20d944150b19388061657c2a327d268186134758005ee17d6ec2b",
+      "width": 390,
+      "height": 2205
+    },
+    {
+      "path": "purchase/correction-returned-390.png",
+      "sha256": "ecc71ba4aba0c227393b6d7c07bed6eb480320541f243c8d4ed834bc6a41a52c",
+      "width": 390,
+      "height": 1705
+    },
+    {
+      "path": "purchase/correction-conflict-390.png",
+      "sha256": "3389b232e5898703778bb6d423519c021b55086f989a5e00e961457a9bd691c8",
+      "width": 390,
+      "height": 1679
+    },
+    {
+      "path": "purchase/correction-return-retry-390.png",
+      "sha256": "21f7e31cc158a9840b4b6f7cc1875e21bb6e3bbcb539fe2907dfc5f9c6c3ee0e",
+      "width": 390,
+      "height": 1837
+    },
+    {
+      "path": "purchase/correction-return-reason-1440.png",
+      "sha256": "90fda5d16633e9fa791602e29bb34243f6521a5118e9c1986c673d9306862c3c",
+      "width": 1440,
+      "height": 1368
+    },
+    {
+      "path": "purchase/correction-approved-history-1440.png",
+      "sha256": "a9037990a7b9c652c688ff3091cedbc6db6c268c624b38de6bf82d8b533076c4",
+      "width": 1440,
+      "height": 1960
+    }
+  ]
+}

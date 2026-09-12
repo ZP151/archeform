@@ -17,6 +17,8 @@ import {
   verifyWorkspaceComposition,
   verifyDecisionHistory,
   verifyExpressiveRecovery,
+  verifyApprovalCorrection,
+  immutableApprovalFingerprint,
 } from "./approval-presentation";
 import { observeInterpretation } from "./helpers/interpretation-diagnostics";
 import { approvalIntakeFacts } from "./helpers/approval-intake-diagnostics";
@@ -36,7 +38,7 @@ const realInterpretation = process.env.FACTORY_APPROVAL_REAL_ACCEPTANCE === "1";
 const privacyProbe = process.env.FACTORY_APPROVAL_PRIVACY_ACCEPTANCE === "1";
 const evidenceDirectory = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-expressive-approval/expense",
+  "docs/acceptance/evidence/consumer-approval-correction/expense",
 );
 // One separately reported real request, never included in fixture pass counts.
 const realApprovalBrief =
@@ -232,11 +234,10 @@ async function createExpense(
   const response = await createdResponse;
   expect(response.status(), "generated typed form creates expense").toBe(201);
   const payload = response.request().postDataJSON() as {
-    amount: unknown;
-    date: unknown;
+    values: { amount: unknown; date: unknown };
   };
-  expect(payload.amount).toBe(Number(amount));
-  expect(payload.date).toBe("2026-09-09T00:00:00.000Z");
+  expect(payload.values.amount).toBe(Number(amount));
+  expect(payload.values.date).toBe("2026-09-09T00:00:00.000Z");
   await expect(page.getByRole("status")).toHaveText("Created Expense.");
   await expect(page.getByLabel("Amount", { exact: true })).toHaveValue("");
   const created = (await response.json()) as { id?: unknown };
@@ -249,7 +250,9 @@ async function createExpense(
   await expect(row).toHaveCount(1);
   await expect(recordField(row, "Status")).toHaveText("Draft");
   await expect(recordField(row, "Date")).toHaveText("2026-09-09");
-  await expect(row.getByRole("button")).toHaveCount(1);
+  await expect(
+    row.getByRole("button", { name: "Edit", exact: true }),
+  ).toBeVisible();
   await expect(
     row
       .getByRole("button", { name: "Submit", exact: true })
@@ -575,6 +578,10 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
     const elapsedToReadyMs = Date.now() - start;
     if (!compilationId)
       throw new Error("No immutable compilation was observed.");
+    const immutableBefore = await immutableApprovalFingerprint(
+      request,
+      controlPlaneUrl(`/compilations/${compilationId}`),
+    );
     const preview = await currentPreview(request, compilationId);
     expect(preview?.status).toBe("ready");
     const href = await openApp.getAttribute("href");
@@ -636,7 +643,7 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       .selectOption("manager");
     for (const [id, marker, action, status] of [
       [approvedId, "D24 synthetic approved claim", "approve", "approved"],
-      [rejectedId, "D24 synthetic rejected claim", "reject", "rejected"],
+      [rejectedId, "D24 synthetic rejected claim", "reject", "returned"],
     ]) {
       const row = generated
         .locator(".generated-records > li")
@@ -653,15 +660,30 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       );
       await row
         .getByRole("button", {
-          name: action === "approve" ? "Approve" : "Reject",
+          name: action === "approve" ? "Approve" : "Return",
           exact: true,
         })
         .click();
+      if (action === "reject") {
+        await row
+          .getByLabel("Reason for return", { exact: true })
+          .fill(
+            "Please correct the amount to match the receipt before resubmitting.",
+          );
+        await row
+          .locator("form")
+          .getByRole("button", { name: "Return", exact: true })
+          .click();
+      }
       expect((await decision).ok(), "reviewer decision").toBe(true);
       await expect(recordField(row, "Status")).toHaveText(
-        status === "approved" ? "Approved" : "Rejected",
+        status === "approved" ? "Approved" : "Returned",
       );
-      await expect(row.getByRole("button")).toHaveCount(0);
+      await expect(
+        row.getByRole("button", {
+          name: /^(Edit|Save|Submit|Approve|Return)$/,
+        }),
+      ).toHaveCount(0);
     }
     stage = "requester-results";
     await verifyDecisionHistory(generated, {
@@ -678,15 +700,17 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
     await generated.reload();
     for (const [marker, status] of [
       ["D24 synthetic approved claim", "approved"],
-      ["D24 synthetic rejected claim", "rejected"],
+      ["D24 synthetic rejected claim", "returned"],
     ]) {
       const row = generated
         .locator(".generated-records > li")
         .filter({ hasText: marker });
       await expect(recordField(row, "Status")).toHaveText(
-        status === "approved" ? "Approved" : "Rejected",
+        status === "approved" ? "Approved" : "Returned",
       );
-      const details = row.locator("details");
+      const details = row
+        .locator("details:has(.approval-details-values)")
+        .first();
       await expect(details).not.toHaveAttribute("open", "");
       await expect(recordField(row, "ID")).not.toBeVisible();
       const disclosure = details.locator("summary");
@@ -797,6 +821,33 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       );
     }
     await verifyExpressiveRecovery(generated, evidenceDirectory);
+    stage = "same-record-correction";
+    await verifyApprovalCorrection(generated, {
+      entity: "expense",
+      requester: "employee",
+      auditor: "finance",
+      list: "Expense list",
+      create: "New expense",
+      createAction: "Create Expense",
+      identity: "Client visit rail fare correction",
+      identityField: "Notes",
+      fields: {
+        Amount: "89.50",
+        Date: "2026-09-09",
+        Receipt: "https://example.test/synthetic-receipt",
+        Notes: "Client visit rail fare correction",
+      },
+      category: "travel",
+      evidence: evidenceDirectory,
+      previewProject: preview!.composeProjectName,
+    });
+    expect(pageErrors).toEqual([]);
+    expect(
+      await immutableApprovalFingerprint(
+        request,
+        controlPlaneUrl(`/compilations/${compilationId}`),
+      ),
+    ).toBe(immutableBefore);
     if (!realInterpretation) {
       // Preserve only the emitted UI from this synthetic compilation for the
       // local design detector. Do not copy environment, API or provider files.
@@ -830,7 +881,7 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
           : "deterministic-interpretation-real-runtime",
         requests: 2,
         approved: 1,
-        rejected: 1,
+        returned: 1,
         crossRoleDenied: true,
         reloadRetained: true,
         questions: businessQuestions,
@@ -844,6 +895,21 @@ test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" 
       }),
     );
   } catch (error) {
+    if (generated) {
+      // Capture only the synthetic generated application, never intake prompts.
+      await mkdir(evidenceDirectory, { recursive: true }).catch(
+        () => undefined,
+      );
+      await generated
+        .screenshot({
+          path: resolve(
+            evidenceDirectory,
+            `failure-generated-${Date.now()}.png`,
+          ),
+          fullPage: true,
+        })
+        .catch(() => undefined);
+    }
     await Promise.allSettled(pendingResponses);
     const manualChoicesVisible =
       (await page

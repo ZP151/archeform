@@ -266,11 +266,11 @@ describe("FixtureRequirementInterpreter (test authority)", () => {
       (candidate) => candidate.key === "expense-approval",
     );
     expect(workflow?.states.map((state) => state.key)).toEqual(
-      expect.arrayContaining(["submitted", "approved", "rejected"]),
+      expect.arrayContaining(["submitted", "approved", "returned"]),
     );
     expect(
       workflow?.transitions.map((transition) => transition.key).sort(),
-    ).toEqual(["approve", "reject", "submit"]);
+    ).toEqual(["approve", "reject", "submit", "update"]);
   });
 
   it("Prompt B yields a materially different spec and blueprint", async () => {
@@ -736,7 +736,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       createHash("sha256")
         .update(JSON.stringify(canonicalExpenseApprovalInterpretation()))
         .digest("hex"),
-    ).toBe("be71d62bcd3c124986629e0ec2fb06d9c1defebf9f34b0704d2b6e6fdb60f6a7");
+    ).toBe("7078a1632e6f5436b27c3f92f2531f0ac9f9d5dd97a337106fc11694aa88ad65");
     expect(
       createHash("sha256")
         .update(
@@ -1001,7 +1001,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       [
         {
           entityKey: "purchase-request",
-          actions: ["create", "read", "submit"],
+          actions: ["create", "read", "update", "submit"],
         },
         { entityKey: "requester", actions: ["read", "update"] },
       ],
@@ -1023,7 +1023,8 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     ).toEqual([
       ["submit", "draft", "submitted", "requester"],
       ["approve", "submitted", "approved", "manager"],
-      ["reject", "submitted", "rejected", "manager"],
+      ["reject", "submitted", "returned", "manager"],
+      ["update", "returned", "draft", "requester"],
     ]);
   });
 
@@ -1050,10 +1051,10 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       expect(
         createHash("sha256").update(JSON.stringify(result)).digest("hex"),
       ).toBe(
-        "6bb06e85fa6a33e3eef1b8ba39770dc6bfb55cc9f882c52fd46a9211f73587d8",
+        "dbc81c4ee665c6a575cec2e33dee6a6a062a10674e650813e555541692053190",
       );
       expect(result.interpretation.blueprint.requirementChecksum).toBe(
-        "sha256:4e62ff6314a43affe62a823ad0d7be7db53dc43336582dab9c480f692e5cd37d",
+        "sha256:6adb860e104c495b1ad0b06abc7713ec241a3e97d4a8a5e39c444977a82a186b",
       );
       expect(requests).toHaveLength(1);
       expect(result.businessParameters).toBeNull();
@@ -1239,7 +1240,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
           expect.objectContaining({
             event: "reject",
             from: "submitted",
-            to: "rejected",
+            to: "returned",
             roles: ["manager"],
           }),
         ]),
@@ -3445,7 +3446,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       answers: {},
     });
     expect(result.interpretation.blueprint.requirementChecksum).toBe(
-      "sha256:4e62ff6314a43affe62a823ad0d7be7db53dc43336582dab9c480f692e5cd37d",
+      "sha256:6adb860e104c495b1ad0b06abc7713ec241a3e97d4a8a5e39c444977a82a186b",
     );
     expect(create).toHaveBeenCalledOnce();
     expect(create.mock.calls[0]?.[0]).toMatchObject({
@@ -3761,5 +3762,30 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     expect(exposed).not.toContain(hostileAnswer);
     expect(exposed).not.toContain(hostileCause);
     expect(exposed).not.toContain(hostileAbort);
+  });
+});
+
+describe("approval correction canonical definitions", () => {
+  it("declares same-record return and revise with exact grants", () => {
+    const definition = canonicalExpenseApprovalInterpretation().blueprint;
+    expect(definition.workflows[0]!.states.map((state) => state.key)).toEqual([
+      "draft",
+      "submitted",
+      "approved",
+      "returned",
+    ]);
+    expect(definition.actors[0]!.permissions[0]!.actions).toEqual([
+      "create",
+      "read",
+      "update",
+      "submit",
+    ]);
+    expect(definition.workflows[0]!.transitions.at(-1)).toMatchObject({
+      key: "update",
+      from: "returned",
+      to: "draft",
+      actorKey: "employee",
+      label: "Revise",
+    });
   });
 });

@@ -249,14 +249,32 @@ export function approvalVisualDataUrl(asset: ApprovalVisualAsset): string {
 
 export function selectApprovalRecordMaterial(
   fields: readonly StructuralField[],
+  correction = false,
 ): ApprovalVisualAssetKey | undefined {
-  if (matchesSignature(fields, expenseSignature)) {
+  const signature = (value: readonly StructuralField[]) =>
+    correction
+      ? value.map((field) =>
+          field.key === "status"
+            ? {
+                ...field,
+                values: ["draft", "submitted", "approved", "returned"],
+              }
+            : field,
+        )
+      : value;
+  if (matchesSignature(fields, signature(expenseSignature))) {
     return "approval-expense-material";
   }
-  if (matchesSignature(fields, purchaseSignature)) {
+  if (matchesSignature(fields, signature(purchaseSignature))) {
     return "approval-workspace-material";
   }
   return undefined;
 }
 
 validateApprovalVisualAssets(approvalVisualAssets);
+
+/** Selected only after the exact ADR-0060 correction selector. */
+export const approvalVisualAssetRegistryCorrection = {
+  ...approvalVisualAssetRegistry,
+  version: "1.1.0",
+} as const;

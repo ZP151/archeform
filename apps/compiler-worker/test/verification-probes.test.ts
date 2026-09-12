@@ -26,6 +26,10 @@ import {
   type RoleJourneyFixture,
 } from "../src/verifier/role-journey.js";
 import { resolveVerificationProfile } from "../src/verifier/verification-profiles.js";
+import { deriveVerificationProfile } from "../src/verifier/verification-graph-plan.js";
+import { approvalLegacyFixtures } from "../../../packages/compiler/test/fixtures/approval-legacy.js";
+import { createCapabilityCompositionLock } from "@factory/capabilities";
+import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 import {
   acceptanceCompilation,
   acceptanceProfileKey,
@@ -1131,5 +1135,163 @@ describe("expense-approval acceptance profile", () => {
     for (const field of requiredFields) {
       expect(body).toHaveProperty(field);
     }
+  });
+});
+
+describe("stored-success idempotency probe", () => {
+  it.each(["expense", "purchase"] as const)(
+    "preserves session authority and command keys through published %s create, replay and chains",
+    async (name) => {
+      const graph = structuredClone(
+        approvalLegacyFixtures[name].input.graph,
+      ) as unknown as ApplicationGraphV1;
+      const flow = graph.flow.flows[0]!;
+      const requester = flow.transitions[0]!.roles![0]!;
+      flow.states = ["draft", "submitted", "approved", "returned"];
+      flow.events.push("update");
+      flow.transitions[2]!.to = "returned";
+      flow.transitions.push({
+        from: "returned",
+        event: "update",
+        to: "draft",
+        roles: [requester],
+        effects: [{ capability: "audit.record", operation: "record" }],
+      });
+      graph.policy.permissions.find(
+        (p) => p.resource === flow.entity && p.role === requester,
+      )!.actions = ["create", "read", "update", "submit"];
+      graph.domain.entities
+        .find((e) => e.key === flow.entity)!
+        .fields.find((f) => f.key === "status")!.values = flow.states;
+      const selections = graph.integration.compositionSelections!;
+      delete graph.integration.compositionSelections;
+      const profile = deriveVerificationProfile(
+        graph,
+        createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(graph),
+          selections,
+        }),
+      );
+      for (const suffix of [
+        "create",
+        "submit",
+        "approve",
+        "reject",
+        "update",
+      ]) {
+        const journey = profile.journeys[flow.entity + "-" + suffix]!;
+        const seen: any[] = [];
+        const request = vi.fn(
+          async (method: string, path: string, _port: string, options: any) => {
+            seen.push(options);
+            const hasSession = options.headers.some(
+              (h: any) => h.name === "x-factory-fixture-session",
+            );
+            const hasKey = options.headers.some(
+              (h: any) => h.name === "x-factory-idempotency-key",
+            );
+            const status =
+              !hasSession || !hasKey
+                ? 400
+                : method === "POST" && path === "/api/" + flow.entity
+                  ? 201
+                  : 200;
+            return {
+              ...boundedRequest(status),
+              recordId: "fixture-created-record",
+            };
+          },
+        );
+        const { context } = probeContext({
+          kind: suffix === "submit" ? "idempotency" : "role-journey",
+          request,
+        });
+        const result =
+          suffix === "submit"
+            ? await runIdempotencyProbe(
+                context,
+                journey as IdempotencyJourneyFixture,
+                profile.apiRegistry,
+              )
+            : await runRoleJourneyProbe(context, journey, profile.apiRegistry);
+        expect(result.status).toBe("passed");
+        expect(seen.length).toBe(
+          suffix === "submit" ? 2 : 1 + (journey.chain?.length ?? 0),
+        );
+        for (const options of seen) {
+          expect(options.headers).toContainEqual({
+            name: "x-factory-idempotency-key",
+            value: journey.headers![0]!.value,
+          });
+          expect(
+            options.headers.filter(
+              (h: any) => h.name === "x-factory-fixture-session",
+            ),
+          ).toHaveLength(1);
+          expect(
+            options.headers.some((h: any) => h.name === "x-factory-role"),
+          ).toBe(false);
+        }
+        if (suffix === "submit") expect(seen[1]).toEqual(seen[0]);
+        expect(JSON.stringify(result)).not.toContain(
+          journey.headers![0]!.value,
+        );
+        expect(JSON.stringify(result)).not.toContain("fixture-created-record");
+      }
+    },
+  );
+  it("rejects declared attempts to replace resolved session authority before any request", async () => {
+    const { context, request } = probeContext({ kind: "role-journey" });
+    await expect(
+      runRoleJourneyProbe(
+        context,
+        {
+          journeyId: "session-conflict",
+          action: "expense.create",
+          sessionId: "fixture-session-employee",
+          headers: [
+            {
+              name: "x-factory-fixture-session",
+              value: "fixture-session-manager",
+            },
+          ],
+        },
+        expenseApprovalApiRegistry,
+      ),
+    ).rejects.toThrow(VerificationContractError);
+    expect(request).not.toHaveBeenCalled();
+  });
+  it("replays one exact header command and matches safe identity without retaining contents", async () => {
+    const request = vi.fn(async () => ({
+      ...boundedRequest(200),
+      recordId: "fixture-record",
+      body: "HOSTILE-RESPONSE",
+    }));
+    const { context } = probeContext({ kind: "idempotency", request });
+    const journey = {
+      journeyId: "correction-submit",
+      action: "expense.submit",
+      principal: "employee",
+      idempotencyKey: "verify-correction",
+      expectedVersion: 0,
+      replayExpectation: "stored-success",
+      headers: [
+        { name: "x-factory-idempotency-key", value: "verify-correction" },
+      ],
+      body: '{"expectedVersion":0}',
+    } as IdempotencyJourneyFixture;
+    const result = await runIdempotencyProbe(context, journey, [
+      {
+        action: "expense.submit",
+        method: "POST",
+        route: "/api/expense/fixture-record/events/submit",
+        expectedStatus: 200,
+      },
+    ]);
+    expect(result.status).toBe("passed");
+    expect(request.mock.calls[0]).toEqual(request.mock.calls[1]);
+    expect(JSON.stringify(result)).not.toMatch(
+      /fixture-record|verify-correction|HOSTILE-RESPONSE|expectedVersion/,
+    );
   });
 });

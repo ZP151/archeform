@@ -16,9 +16,10 @@ export const approvalPresentationComponents = {
 export function renderApprovalPresentationComponents(
   entityKey: string | undefined,
   fields: Parameters<typeof selectApprovalRecordMaterial>[0],
+  correction = false,
 ): string {
   const materialKey = entityKey
-    ? selectApprovalRecordMaterial(fields)
+    ? selectApprovalRecordMaterial(fields, correction)
     : undefined;
   const includeExpenseMaterial = materialKey === "approval-expense-material";
   const selection = materialKey
@@ -48,7 +49,7 @@ export function renderApprovalPresentationComponents(
       ]),
   );
 
-  return `
+  const source = `
 const approvalMaterials: Readonly<Record<string, { readonly key: string; readonly src: string; readonly width: number; readonly height: number }>> = ${JSON.stringify(materials).replaceAll("<", "\\u003c")};
 type ApprovalMaterialKey = string;
 function approvalFieldMatches(field: RuntimeField, expected: { readonly key: string; readonly type: string; readonly required: boolean; readonly values?: readonly string[] }) {
@@ -97,6 +98,14 @@ function ApprovalProgress({ entity, status }: { readonly entity: RuntimeEntity; 
   return !steps ? null : <div className='approval-progress'><ol>{steps.map((step) => <li className={'approval-progress-' + step.phase} key={step.state} aria-current={step.phase === 'current' ? 'step' : undefined}><span className='approval-progress-marker'>{step.phase === 'complete' ? <ApprovalIcon name='circle-check' /> : step.phase === 'current' ? <ApprovalIcon name={step.state === 'rejected' ? 'circle-x' : step.state === 'approved' ? 'circle-check' : 'clock'} /> : null}</span><span>{step.label}</span></li>)}</ol></div>;
 }
 `;
+  return correction
+    ? source
+        .replaceAll("'rejected'", "'returned'")
+        .replace(
+          "transitions.length !== 3",
+          "transitions.length !== 4 || !transitions.some((transition) => transition.event === 'update' && transition.from === 'returned' && transition.to === 'draft')",
+        )
+    : source;
 }
 
 export const approvalPresentationComponentStyles = `
@@ -179,3 +188,9 @@ export const approvalPresentationComponentStyles = `
   .approval-v1 .approval-form-card form { gap: 1rem; }
 }
 `;
+
+/** Selected only after the exact ADR-0060 correction selector. */
+export const approvalPresentationComponentsCorrection = {
+  ...approvalPresentationComponents,
+  version: "1.1.0",
+} as const;

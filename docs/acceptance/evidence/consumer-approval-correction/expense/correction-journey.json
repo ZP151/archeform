@@ -1,0 +1,23 @@
+{
+  "entity": "expense",
+  "recordId": "cmtykwblt000mnw01tv346hxo",
+  "finalVersion": 7,
+  "finalStatus": "approved",
+  "sameRecordCorrection": true,
+  "returnedReasonSurvivesReload": true,
+  "retainedDecisions": 2,
+  "auditEvents": 8,
+  "createLostResponseReplayed": true,
+  "apiRestartBeforeCreateReplay": true,
+  "returnLostResponseReplayed": true,
+  "concurrentEditRejected": true,
+  "concurrentApiWritesCommitOnce": true,
+  "duplicateActivationIgnored": true,
+  "submittedEditDenied": true,
+  "responsiveWidths": [
+    390,
+    768,
+    1440
+  ],
+  "modelCalls": 0
+}

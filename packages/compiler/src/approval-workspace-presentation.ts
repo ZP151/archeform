@@ -175,3 +175,9 @@ export const approvalWorkspaceStyles = [
 @media (prefers-reduced-motion:reduce) { .approval-v1 :is(a,button) { transition: none; } }
 `,
 ] as const;
+
+/** Selected only after the exact ADR-0060 correction selector. */
+export const approvalWorkspacePresentationCorrection = {
+  ...approvalWorkspacePresentation,
+  version: "2.1.0",
+} as const;

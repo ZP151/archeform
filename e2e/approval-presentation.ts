@@ -1,6 +1,22 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type APIRequestContext } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { resolve } from "node:path";
+import { createHash, randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+
+export async function immutableApprovalFingerprint(
+  request: APIRequestContext,
+  endpoint: string,
+) {
+  const response = await request.get(endpoint);
+  expect(response.status()).toBe(200);
+  const compilation = await response.json();
+  expect(compilation.publishedRevisionId).toEqual(expect.any(String));
+  expect(compilation.inputGraphHash).toMatch(/^sha256:[a-f0-9]{64}$/);
+  expect(compilation.artifacts.length).toBeGreaterThan(0);
+  return createHash("sha256").update(JSON.stringify(compilation)).digest("hex");
+}
 
 export async function approvalPresentationFacts(page: Page) {
   return page.evaluate(() => {
@@ -172,7 +188,7 @@ export async function verifyApprovalAssets(page: Page) {
   expect(
     facts.workspaceVersion,
     "shared composed workspace must be loaded",
-  ).toBe("4");
+  ).toBe("5");
   expect(facts.appDisplay).toBe("grid");
   expect(facts.unresolvedTokens, "all used design tokens must resolve").toEqual(
     [],
@@ -406,7 +422,7 @@ export async function verifyDecisionHistory(
         identity,
       );
       await expect(row.locator(".approval-badge")).toHaveText(
-        index === 0 ? "Approve" : "Reject",
+        index === 0 ? "Approve" : "Return",
       );
       await expect(
         row.getByText("Demo role: Manager", { exact: true }),
@@ -730,7 +746,7 @@ async function verifyDecisionColors(page: Page) {
         }
         for (const [index, button] of [
           ...row.querySelectorAll(
-            ":scope > .approval-actions button:not(:disabled)",
+            ":scope > .approval-actions button:not(:disabled), :scope > .approval-correction-controls > .approval-actions button:not(:disabled)",
           ),
         ].entries()) {
           const style = getComputedStyle(button);
@@ -748,4 +764,549 @@ async function verifyDecisionColors(page: Page) {
       for (const [name, pass] of Object.entries(fact.checks))
         expect(pass, `${fact.tone} ${name}`).toBe(true);
   }).toPass({ timeout: 2000 });
+}
+
+/** Real HTTP/database correction journey. Only response delivery is interrupted. */
+export async function verifyApprovalCorrection(
+  page: Page,
+  options: {
+    entity: string;
+    requester: string;
+    auditor: string;
+    list: string;
+    create: string;
+    createAction: string;
+    identity: string;
+    identityField: string;
+    fields: Record<string, string>;
+    category: string;
+    evidence: string;
+    previewProject: string;
+  },
+) {
+  type RecordValue = {
+    id: string;
+    status: string;
+    version: number;
+    amount: number | string;
+  };
+  const url = (path: string) => new URL(path, page.url()).toString();
+  const headers = (role: string, key = randomUUID()) => ({
+    "x-factory-fixture-session": `fixture-session-${role}`,
+    "x-factory-idempotency-key": key,
+  });
+  const role = page.getByLabel("Demo role", { exact: true });
+  const row = page
+    .locator(".generated-records > li")
+    .filter({ hasText: options.identity });
+  const status = row.locator(".approval-summary-status dd");
+  const capture = async (
+    name: string,
+    widths = [390, 768, 1440],
+    scope: import("@playwright/test").Locator = row,
+    presentation: "records" | "form" = "records",
+  ) => {
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 });
+      await scope.scrollIntoViewIfNeeded();
+      await verifyApprovalAssets(page);
+      if (presentation === "records") await verifyExpressiveMaterials(page);
+      for (const control of await scope
+        .locator(
+          "button:visible, input:visible, select:visible, textarea:visible, summary:visible",
+        )
+        .all()) {
+        const box = await control.boundingBox();
+        expect(
+          box!.height,
+          "correction controls have usable touch targets",
+        ).toBeGreaterThanOrEqual(44);
+      }
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      await page.screenshot({
+        path: resolve(options.evidence, `correction-${name}-${width}.png`),
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize({ width: 390, height: 900 });
+  };
+  const readRecord = async (id: string) => {
+    const response = await page.request.get(url(`/api/${options.entity}`), {
+      headers: headers(options.requester),
+    });
+    expect(response.status()).toBe(200);
+    const records = (await response.json()) as RecordValue[];
+    expect(records.filter((record) => record.id === id)).toHaveLength(1);
+    return records.find((record) => record.id === id)!;
+  };
+  const waitCommand = (path: string, method: string) =>
+    page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === path &&
+        response.request().method() === method,
+    );
+
+  await navigateApproval(page, options.list);
+  await role.selectOption(options.requester);
+  await page.getByRole("link", { name: options.create, exact: true }).click();
+  await role.selectOption(options.requester);
+  for (const [label, value] of Object.entries(options.fields))
+    await page.getByLabel(label, { exact: true }).fill(value);
+  await page
+    .getByLabel("Category", { exact: true })
+    .selectOption(options.category);
+
+  const createPath = `/api/${options.entity}`;
+  const createKeys: string[] = [];
+  let created: RecordValue | undefined;
+  const createPattern = `**${createPath}`;
+  const loseCreate = async (route: import("@playwright/test").Route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    createKeys.push(route.request().headers()["x-factory-idempotency-key"]!);
+    const response = await route.fetch();
+    expect(response.status()).toBe(201);
+    const value = (await response.json()) as RecordValue;
+    if (createKeys.length === 1) {
+      created = value;
+      await route.abort("connectionreset");
+    } else {
+      expect(value).toEqual(created);
+      await route.fulfill({ response });
+    }
+  };
+  await page.route(createPattern, loseCreate);
+  try {
+    const create = page.getByRole("button", {
+      name: options.createAction,
+      exact: true,
+    });
+    await create.click();
+    await expect.poll(() => created?.version).toBe(0);
+    await expect(create).toBeEnabled();
+    await expect(
+      page.getByLabel(options.identityField, { exact: true }),
+    ).toHaveValue(options.identity);
+    const createAlert = page.locator(".approval-form-card").getByRole("alert");
+    await expect(createAlert).toBeVisible();
+    await expect(createAlert).toHaveText(
+      "The result is unknown. Try again to recover this request.",
+    );
+    await capture(
+      "create-retry",
+      [390, 768, 1440],
+      page.locator("form").filter({ has: create }),
+      "form",
+    );
+    // Restart only this test's generated API: the browser retains the unknown
+    // request while PostgreSQL must retain both its record and replay receipt.
+    expect(options.previewProject).toMatch(/^factory-preview-[a-z0-9-]+$/);
+    const docker = (args: string[]) =>
+      execFileSync("docker", args, {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+    const apiContainer = docker([
+      "ps",
+      "--filter",
+      `label=com.docker.compose.project=${options.previewProject}`,
+      "--filter",
+      "label=com.docker.compose.service=api",
+      "--format",
+      "{{.ID}}",
+    ]);
+    expect(apiContainer).toMatch(/^[a-f0-9]{12,64}$/);
+    const startedAt = () =>
+      docker(["inspect", "--format", "{{.State.StartedAt}}", apiContainer]);
+    const beforeRestart = startedAt();
+    docker(["restart", "--time", "5", apiContainer]);
+    expect(startedAt()).not.toBe(beforeRestart);
+    await expect
+      .poll(
+        async () => {
+          try {
+            return (
+              await page.request.get(url(createPath), {
+                headers: headers(options.requester),
+              })
+            ).status();
+          } catch {
+            return 0;
+          }
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(200);
+    expect(await readRecord(created!.id)).toMatchObject({ version: 0 });
+    const replay = waitCommand(createPath, "POST");
+    await create.click();
+    expect((await replay).status()).toBe(201);
+    expect(createKeys).toHaveLength(2);
+    expect(createKeys[0]).toMatch(/^[A-Za-z0-9._:-]{1,128}$/);
+    expect(createKeys[1]).toBe(createKeys[0]);
+  } finally {
+    await page.unroute(createPattern, loseCreate);
+  }
+  const id = created!.id;
+  const recordPath = `${createPath}/${id}`;
+  await navigateApproval(page, options.list);
+  await expect(row).toHaveCount(1);
+  await expect(status).toHaveText("Draft");
+  await row.getByRole("button", { name: "Edit", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  const edit = row.locator("form");
+  await expect(edit.getByLabel("Amount", { exact: true })).toHaveValue("89.5");
+  await edit.getByLabel("Amount", { exact: true }).fill("90.50");
+  await capture("draft-edit");
+  let releaseSave!: () => void;
+  const heldSave = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  let saveCalls = 0;
+  const holdSave = async (route: import("@playwright/test").Route) => {
+    if (route.request().method() !== "PATCH") return route.continue();
+    saveCalls++;
+    await heldSave;
+    await route.continue();
+  };
+  await page.route(`**${recordPath}`, holdSave);
+  try {
+    const saved = waitCommand(recordPath, "PATCH");
+    const save = edit.getByRole("button", { name: "Save", exact: true });
+    await save.click();
+    await expect.poll(() => saveCalls).toBe(1);
+    await expect(save).toBeDisabled();
+    await page
+      .getByLabel("Search records", { exact: true })
+      .fill("no-matching-correction-record");
+    await expect(row).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Clear filters", exact: true })
+      .click();
+    await expect(row).toHaveCount(1);
+    await expect(edit.getByLabel("Amount", { exact: true })).toHaveValue(
+      "90.50",
+    );
+    await expect(save).toBeDisabled();
+    for (const button of await row
+      .getByRole("button", { name: /^(Submit|Edit|Save|Return|Approve)$/ })
+      .all())
+      await expect(button).toBeDisabled();
+    await save.dispatchEvent("click");
+    await capture("pending");
+    expect(saveCalls).toBe(1);
+    releaseSave();
+    const response = await saved;
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toMatchObject({
+      id,
+      status: "draft",
+      version: 1,
+      amount: 90.5,
+    });
+  } finally {
+    releaseSave();
+    await page.unroute(`**${recordPath}`, holdSave);
+  }
+  await expect(edit).toHaveCount(0);
+
+  // Two real concurrent requests race at the version this UI has already read.
+  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  await edit.getByLabel("Amount", { exact: true }).fill("92.50");
+  const competitors = await Promise.all(
+    [0, 1].map(() =>
+      page.request.patch(url(recordPath), {
+        headers: headers(options.requester),
+        data: { expectedVersion: 1, values: { amount: 91.5 } },
+      }),
+    ),
+  );
+  expect(competitors.map((response) => response.status()).sort()).toEqual([
+    200, 409,
+  ]);
+  const otherWriter = competitors.find(
+    (response) => response.status() === 200,
+  )!;
+  expect(
+    await competitors.find((response) => response.status() === 409)!.json(),
+  ).toEqual({
+    code: "approval.version_conflict",
+    current: { id, status: "draft", version: 2 },
+  });
+  expect(await otherWriter.json()).toMatchObject({
+    id,
+    version: 2,
+    amount: 91.5,
+  });
+  const conflict = waitCommand(recordPath, "PATCH");
+  await edit.getByRole("button", { name: "Save", exact: true }).click();
+  const conflicted = await conflict;
+  expect(conflicted.status()).toBe(409);
+  expect(await conflicted.json()).toEqual({
+    code: "approval.version_conflict",
+    current: { id, status: "draft", version: 2 },
+  });
+  await expect(
+    row.getByRole("alert").filter({
+      hasText:
+        "This record changed. Review the refreshed record before trying again.",
+    }),
+  ).toBeVisible();
+  await capture("conflict");
+  const persistedConflict = await readRecord(id);
+  expect(persistedConflict).toMatchObject({ id, version: 2 });
+  // Existing GET lists serialize Prisma Decimal as a string. Mutation response
+  // assertions above retain their exact numeric contract.
+  expect(Number(persistedConflict.amount)).toBe(91.5);
+  if (await edit.count())
+    await edit.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.reload();
+  await role.selectOption(options.requester);
+  await expect(status).toHaveText("Draft");
+
+  const submit = waitCommand(`${recordPath}/events/submit`, "POST");
+  await row.getByRole("button", { name: "Submit", exact: true }).click();
+  expect((await submit).status()).toBe(200);
+  await expect(status).toHaveText("Submitted");
+  await expect(
+    row.getByRole("button", { name: "Edit", exact: true }),
+  ).toHaveCount(0);
+  expect(await readRecord(id)).toMatchObject({
+    version: 3,
+    status: "submitted",
+  });
+  for (const directEvent of [false, true]) {
+    const denied = directEvent
+      ? await page.request.post(url(`${recordPath}/events/update`), {
+          headers: headers(options.requester),
+          data: { expectedVersion: 3 },
+        })
+      : await page.request.patch(url(recordPath), {
+          headers: headers(options.requester),
+          data: { expectedVersion: 3, values: { amount: 777 } },
+        });
+    expect(denied.status()).toBe(403);
+  }
+  await role.selectOption("manager");
+  await row.getByRole("button", { name: "Return", exact: true }).click();
+  const reason =
+    "Please correct the amount to 93.50 and resubmit this request.";
+  const reasonField = row.getByLabel("Reason for return", { exact: true });
+  await expect(reasonField).toHaveAttribute("required", "");
+  expect(
+    await reasonField.evaluate((node) =>
+      (node as HTMLTextAreaElement).checkValidity(),
+    ),
+  ).toBe(false);
+  const invalidReason = await page.request.post(
+    url(`${recordPath}/events/reject`),
+    {
+      headers: headers("manager"),
+      data: { expectedVersion: 3, reason: "   " },
+    },
+  );
+  expect(invalidReason.status()).toBe(400);
+  expect(await readRecord(id)).toMatchObject({
+    version: 3,
+    status: "submitted",
+  });
+  await row
+    .locator("form")
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await expect(reasonField).toHaveCount(0);
+  await row.getByRole("button", { name: "Return", exact: true }).click();
+  await reasonField.fill(reason);
+  await capture("return-reason");
+  const returnPath = `${recordPath}/events/reject`;
+  const returnKeys: string[] = [];
+  const returnPayloads: unknown[] = [];
+  let returned: RecordValue | undefined;
+  const loseReturn = async (route: import("@playwright/test").Route) => {
+    returnKeys.push(route.request().headers()["x-factory-idempotency-key"]!);
+    returnPayloads.push(route.request().postDataJSON());
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    const value = (await response.json()) as RecordValue;
+    if (returnKeys.length === 1) {
+      returned = value;
+      await route.abort("connectionreset");
+    } else {
+      expect(value).toEqual(returned);
+      await route.fulfill({ response });
+    }
+  };
+  await page.route(`**${returnPath}`, loseReturn);
+  try {
+    const confirm = row
+      .locator("form")
+      .getByRole("button", { name: "Return", exact: true });
+    await confirm.click();
+    await expect.poll(() => returned?.version).toBe(4);
+    await expect(confirm).toBeEnabled();
+    await page
+      .getByLabel("Search records", { exact: true })
+      .fill("no-matching-correction-record");
+    await expect(row).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Clear filters", exact: true })
+      .click();
+    await expect(row).toHaveCount(1);
+    await expect(reasonField).toHaveValue(reason);
+    await expect(
+      row.getByRole("alert").filter({
+        hasText: "The result is unknown. Try again to recover this request.",
+      }),
+    ).toBeVisible();
+    await capture("return-retry");
+    const replay = waitCommand(returnPath, "POST");
+    await confirm.click();
+    expect((await replay).status()).toBe(200);
+    expect(returnKeys).toHaveLength(2);
+    expect(returnKeys[1]).toBe(returnKeys[0]);
+    expect(returnPayloads).toEqual([
+      { expectedVersion: 3, reason },
+      { expectedVersion: 3, reason },
+    ]);
+  } finally {
+    await page.unroute(`**${returnPath}`, loseReturn);
+  }
+  await expect(status).toHaveText("Returned");
+  await page.reload();
+  await role.selectOption(options.requester);
+  const latestReason = row.locator(".approval-return-reason");
+  await expect(latestReason).toBeVisible();
+  await expect(latestReason).toContainText(reason);
+  const reasonBounds = await latestReason.boundingBox();
+  const editBounds = await row
+    .getByRole("button", { name: "Edit", exact: true })
+    .boundingBox();
+  expect(reasonBounds!.y).toBeLessThan(editBounds!.y);
+  await capture("returned");
+  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  await edit.getByLabel("Amount", { exact: true }).fill("93.50");
+  const revised = waitCommand(recordPath, "PATCH");
+  await edit.getByRole("button", { name: "Save", exact: true }).click();
+  const revision = await revised;
+  expect(revision.status()).toBe(200);
+  expect(await revision.json()).toMatchObject({
+    id,
+    status: "draft",
+    version: 5,
+    amount: 93.5,
+  });
+  await page.reload();
+  await role.selectOption(options.requester);
+  await expect(status).toHaveText("Draft");
+  const resubmitted = waitCommand(`${recordPath}/events/submit`, "POST");
+  await row.getByRole("button", { name: "Submit", exact: true }).click();
+  expect((await resubmitted).status()).toBe(200);
+  await expect(status).toHaveText("Submitted");
+  await role.selectOption("manager");
+  const approved = waitCommand(`${recordPath}/events/approve`, "POST");
+  await row.getByRole("button", { name: "Approve", exact: true }).click();
+  expect((await approved).status()).toBe(200);
+  await expect(status).toHaveText("Approved");
+  const persistedApproval = await readRecord(id);
+  expect(persistedApproval).toMatchObject({
+    id,
+    status: "approved",
+    version: 7,
+  });
+  expect(Number(persistedApproval.amount)).toBe(93.5);
+  await role.selectOption(options.requester);
+  await expect(
+    row.getByRole("button", { name: "Edit", exact: true }),
+  ).toHaveCount(0);
+  const approvedEdit = await page.request.patch(url(recordPath), {
+    headers: headers(options.requester),
+    data: { expectedVersion: 7, values: { amount: 777 } },
+  });
+  expect(approvedEdit.status()).toBe(403);
+
+  const decisionsResponse = await page.request.get(
+    url(`${recordPath}/decision-events`),
+    { headers: headers(options.requester) },
+  );
+  expect(decisionsResponse.status()).toBe(200);
+  const decisions = (await decisionsResponse.json()) as {
+    action: string;
+    reason: string | null;
+    recordId: string;
+    actor: string;
+    entity: string;
+    at: string;
+  }[];
+  expect(decisions.map(({ action, reason }) => ({ action, reason }))).toEqual([
+    { action: "reject", reason },
+    { action: "approve", reason: null },
+  ]);
+  for (const event of decisions) {
+    expect(Object.keys(event).sort()).toEqual([
+      "action",
+      "actor",
+      "at",
+      "entity",
+      "reason",
+      "recordId",
+    ]);
+    expect(event).toMatchObject({
+      recordId: id,
+      actor: "manager",
+      entity: options.entity,
+    });
+  }
+  const auditResponse = await page.request.get(url("/api/audit"), {
+    headers: headers(options.auditor),
+  });
+  expect(auditResponse.status()).toBe(200);
+  const audit = (
+    (await auditResponse.json()) as { recordId: string; action: string }[]
+  ).filter((event) => event.recordId === id);
+  expect(audit.map(({ action }) => action)).toEqual([
+    "create",
+    "update",
+    "update",
+    "submit",
+    "reject",
+    "update",
+    "submit",
+    "approve",
+  ]);
+  await page.reload();
+  await role.selectOption(options.auditor);
+  const history = page.locator(".approval-decision-history");
+  await history.locator(":scope > summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(history.getByText(reason, { exact: true })).toBeVisible();
+  await capture("approved-history");
+  const facts = {
+    entity: options.entity,
+    recordId: id,
+    finalVersion: 7,
+    finalStatus: "approved",
+    sameRecordCorrection: true,
+    returnedReasonSurvivesReload: true,
+    retainedDecisions: 2,
+    auditEvents: 8,
+    createLostResponseReplayed: true,
+    apiRestartBeforeCreateReplay: true,
+    returnLostResponseReplayed: true,
+    concurrentEditRejected: true,
+    concurrentApiWritesCommitOnce: true,
+    duplicateActivationIgnored: true,
+    submittedEditDenied: true,
+    responsiveWidths: [390, 768, 1440],
+    modelCalls: 0,
+  };
+  await writeFile(
+    resolve(options.evidence, "correction-journey.json"),
+    JSON.stringify(facts, null, 2) + "\n",
+  );
+  console.info("FACTORY_APPROVAL_CORRECTION", JSON.stringify(facts));
 }

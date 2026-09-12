@@ -18,6 +18,8 @@ import {
   verifyWorkspaceComposition,
   verifyDecisionHistory,
   verifyExpressiveRecovery,
+  verifyApprovalCorrection,
+  immutableApprovalFingerprint,
 } from "./approval-presentation";
 import {
   purchaseRequestFixtureBrief,
@@ -28,7 +30,7 @@ import {
 // compilation, verification, preview, form submission and persistence are real.
 const evidence = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-expressive-approval",
+  "docs/acceptance/evidence/consumer-approval-correction/purchase",
 );
 type Preview = {
   id: string;
@@ -61,7 +63,9 @@ async function currentPreview(
     ),
   );
   if (!response.ok()) return null;
-  const value = (await response.json()) as Preview;
+  const body = await response.text();
+  if (body.trim() === "") return null;
+  const value = JSON.parse(body) as Preview | null;
   return value?.compilationId === compilationId && typeof value.id === "string"
     ? value
     : null;
@@ -129,7 +133,9 @@ async function expectRequestValues(
   for (const label of ["Amount", "Category", "Needed by"])
     await expect(field(row, label)).toBeVisible();
   await expect(field(row, "ID")).not.toBeVisible();
-  const summary = row.locator("details > summary");
+  const summary = row.locator(
+    "details:has(.approval-details-values) > summary",
+  );
   await summary.focus();
   await summary.press("Enter");
   await expect(field(row, "ID")).toHaveText(id);
@@ -335,7 +341,7 @@ async function verifyRecordFinding(
     "Draft",
     "Submitted",
     "Approved",
-    "Rejected",
+    "Returned",
   ]);
   await layout(page, 390);
   await page.screenshot({
@@ -437,13 +443,15 @@ async function createRequest(
   const response = await pending;
   expect(response.status()).toBe(201);
   expect(response.request().postDataJSON()).toMatchObject({
-    amount: Number(amount),
-    category: "equipment",
-    neededBy: "2026-09-20T00:00:00.000Z",
-    item,
-    supplier: "Synthetic Office Supply",
-    businessJustification:
-      "Synthetic replacement equipment for the shared workspace.",
+    values: {
+      amount: Number(amount),
+      category: "equipment",
+      neededBy: "2026-09-20T00:00:00.000Z",
+      item,
+      supplier: "Synthetic Office Supply",
+      businessJustification:
+        "Synthetic replacement equipment for the shared workspace.",
+    },
   });
   await expect(page.getByRole("status")).toHaveText(
     "Created Purchase request.",
@@ -576,6 +584,10 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
     );
     await Promise.all(pending);
     if (!compilationId) throw new Error("No immutable compilation observed.");
+    const immutableBefore = await immutableApprovalFingerprint(
+      request,
+      controlPlaneUrl(`/compilations/${compilationId}`),
+    );
     console.info(
       "FACTORY_PURCHASE_READY",
       JSON.stringify({ compilationId, elapsedToReadyMs }),
@@ -690,7 +702,7 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
     await generated.setViewportSize({ width: 390, height: 900 });
     for (const [id, item, action, status] of [
       [approvedId, approvedItem, "approve", "Approved"],
-      [rejectedId, rejectedItem, "reject", "Rejected"],
+      [rejectedId, rejectedItem, "reject", "Returned"],
     ]) {
       await generated
         .getByLabel("Search records", { exact: true })
@@ -710,10 +722,21 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
       );
       await row
         .getByRole("button", {
-          name: action === "approve" ? "Approve" : "Reject",
+          name: action === "approve" ? "Approve" : "Return",
           exact: true,
         })
         .click();
+      if (action === "reject") {
+        await row
+          .getByLabel("Reason for return", { exact: true })
+          .fill(
+            "Please confirm the installation estimate before resubmitting.",
+          );
+        await row
+          .locator("form")
+          .getByRole("button", { name: "Return", exact: true })
+          .click();
+      }
       expect((await decision).ok()).toBe(true);
       await expect(row).toHaveCount(0);
       await expect(
@@ -726,13 +749,20 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
         .getByRole("button", { name: "Clear filters", exact: true })
         .click();
       await expect(field(row, "Status")).toHaveText(status);
-      await expect(row.getByRole("button")).toHaveCount(0);
+      await expect(
+        row.getByRole("button", {
+          name: /^(Edit|Save|Submit|Approve|Return)$/,
+        }),
+      ).toHaveCount(0);
     }
     expect(
       (
         await request.post(approveUrl, {
-          headers: headers("manager"),
-          data: {},
+          headers: {
+            ...headers("manager"),
+            "x-factory-idempotency-key": randomUUID(),
+          },
+          data: { expectedVersion: 2 },
         })
       ).status(),
     ).toBe(403);
@@ -744,7 +774,9 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
       "Approved",
     );
     await expect(
-      record(generated, approvedItem).getByRole("button"),
+      record(generated, approvedItem).getByRole("button", {
+        name: /^(Edit|Save|Submit|Approve|Return)$/,
+      }),
     ).toHaveCount(0);
     await expectDecisionOnlyActions(generated);
     for (const width of [390, 768, 1440]) {
@@ -789,7 +821,7 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
     await generated.reload();
     for (const [id, item, amount, status] of [
       [approvedId, approvedItem, "450.50", "Approved"],
-      [rejectedId, rejectedItem, "725.25", "Rejected"],
+      [rejectedId, rejectedItem, "725.25", "Returned"],
     ]) {
       const row = record(generated, item);
       await expect(field(row, "Status")).toHaveText(status);
@@ -837,7 +869,35 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
     stage = "recoverable-states";
     await verifyExpressiveRecovery(generated, evidence);
     await verifyRecoverableListStates(generated);
+    stage = "same-record-correction";
+    await verifyApprovalCorrection(generated, {
+      entity: "purchase-request",
+      requester: "requester",
+      auditor: "procurement",
+      list: "Purchase request list",
+      create: "New purchase request",
+      createAction: "Create Purchase request",
+      identity: "Shared workspace monitor replacement",
+      identityField: "Item",
+      fields: {
+        Item: "Shared workspace monitor replacement",
+        Amount: "89.50",
+        "Needed by": "2026-09-20",
+        Supplier: "Synthetic Office Supply",
+        "Business justification":
+          "Replace an unreliable shared workspace display.",
+      },
+      category: "equipment",
+      evidence,
+      previewProject: preview!.composeProjectName,
+    });
     expect(errors).toEqual([]);
+    expect(
+      await immutableApprovalFingerprint(
+        request,
+        controlPlaneUrl(`/compilations/${compilationId}`),
+      ),
+    ).toBe(immutableBefore);
     console.info(
       "FACTORY_PURCHASE_BUSINESS",
       JSON.stringify({
@@ -845,7 +905,7 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
         compilationId,
         requests: 2,
         approved: 1,
-        rejected: 1,
+        returned: 1,
         crossRoleDenied: true,
         invalidTransitionDenied: true,
         procurementAuditApi: true,
@@ -864,6 +924,16 @@ test("Shared workspace supports a usable responsive Purchase approval applicatio
       }),
     );
   } catch (error) {
+    if (generated) {
+      // Capture only the synthetic generated application, never intake prompts.
+      await mkdir(evidence, { recursive: true }).catch(() => undefined);
+      await generated
+        .screenshot({
+          path: resolve(evidence, `failure-generated-${Date.now()}.png`),
+          fullPage: true,
+        })
+        .catch(() => undefined);
+    }
     console.info(
       "FACTORY_PURCHASE_FAILURE",
       JSON.stringify({

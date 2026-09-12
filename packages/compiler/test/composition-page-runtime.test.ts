@@ -1,3 +1,4 @@
+import { approvalLegacyFixtures } from "./fixtures/approval-legacy.js";
 import { canonicalPurchaseRequestApprovalInterpretation } from "../../adapters/src/requirements/purchase-request-definition-selection.js";
 import { createHash } from "node:crypto";
 import { transpileModule, ModuleKind, JsxEmit } from "typescript";
@@ -53,6 +54,12 @@ const bookingBrief =
  * through the projection and the generated application bundle.
  */
 async function composedGraphFor(brief: string): Promise<ApplicationGraphV1> {
+  if (brief === expenseBrief) {
+    const graph = structuredClone(
+      approvalLegacyFixtures.expense.input.graph,
+    ) as unknown as ApplicationGraphV1;
+    return graph;
+  }
   const { interpretation } = await fixtureInterpreter.interpret({ brief });
   const baseDraft = createBlankApplicationDraft({
     applicationId: interpretation.spec.requirementId,
@@ -395,23 +402,9 @@ function runtimeFor(graph: ApplicationGraphV1): string {
 }
 
 async function purchaseGraphFor(): Promise<ApplicationGraphV1> {
-  const interpretation = canonicalPurchaseRequestApprovalInterpretation();
-  const baseDraft = createBlankApplicationDraft({
-    applicationId: interpretation.spec.requirementId,
-    workspaceId: "local-workspace",
-    name: interpretation.blueprint.title,
-  });
-  const [standard] = planProductAlternatives({
-    requirement: interpretation.spec,
-    blueprint: interpretation.blueprint,
-    baseDraft,
-  });
-  const { diff } = composeProductDraft({
-    plan: standard!.plan,
-    blueprint: interpretation.blueprint,
-    baseDraft,
-  });
-  return applyGraphDiffToDraft(baseDraft, diff).graph;
+  return structuredClone(
+    approvalLegacyFixtures.purchase.input.graph,
+  ) as unknown as ApplicationGraphV1;
 }
 
 describe("Purchase approval summary", () => {

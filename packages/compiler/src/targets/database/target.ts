@@ -1,4 +1,9 @@
 import {
+  selectApprovalCorrection,
+  approvalReceiptSchema,
+  approvalReceiptMigration,
+} from "../../approval-mutation-contract.js";
+import {
   assertValidApplicationGraph,
   type ApplicationGraphV1,
 } from "@factory/graph";
@@ -23,6 +28,7 @@ import type {
 export interface DatabasePlanV1 {
   readonly apiVersion: "factory.compiler-target/v1";
   readonly graph: ApplicationGraphV1;
+  readonly approvalEntity?: string;
   readonly orderOperationReceiptSchema?: string;
   readonly includeGenericCommerceLineItems: boolean;
   readonly additionalSchemaFragments: readonly string[];
@@ -369,6 +375,7 @@ function renderPrismaSchema(
   orderOperationReceiptSchema?: string,
   includeGenericCommerceLineItems = true,
   additionalSchemaFragments: readonly string[] = [],
+  approvalEntity?: string,
 ): string {
   const duplicateRelationSuffixes = duplicateEndpointRelationSuffixes(graph);
   const relationFields = (entityKey: string): readonly string[] =>
@@ -439,6 +446,7 @@ function renderPrismaSchema(
       `model ${toPascalCase(entity.key)} {`,
       "  id String @id @default(cuid())",
       ...fields,
+      ...(approvalEntity === entity.key ? ["  version Int @default(0)"] : []),
       ...relationFields(entity.key),
       ...(renderedNames.has("createdAt")
         ? []
@@ -462,7 +470,9 @@ function renderPrismaSchema(
     "",
     ...models,
     "",
+    ...(approvalEntity ? [approvalReceiptSchema, ""] : []),
     `model ${compilerStorageName("AuditEvent")} {`,
+    ...(approvalEntity ? ["  reason String?"] : []),
     "  id String @id @default(cuid())",
     "  actor String",
     "  action String",
@@ -559,11 +569,15 @@ function renderInitialMigration(
   orderOperationReceiptMigration?: string,
   includeGenericCommerceLineItems = true,
   additionalMigrationFragments: readonly string[] = [],
+  approvalEntity?: string,
 ): string {
   const duplicateRelationSuffixes = duplicateEndpointRelationSuffixes(graph);
   const createTables = graph.domain.entities.map((entity) => {
     const renderedNames = renderedFieldNames(graph, entity.key);
     const columns = [
+      ...(approvalEntity === entity.key
+        ? ['"version" INTEGER NOT NULL DEFAULT 0']
+        : []),
       '"id" TEXT NOT NULL PRIMARY KEY',
       ...entity.fields
         .filter((field) => field.key !== "id")
@@ -612,7 +626,8 @@ function renderInitialMigration(
   return [
     "-- Generated from a Published Factory Application Graph. Do not edit manually.",
     ...createTables,
-    `CREATE TABLE "${compilerStorageName("AuditEvent")}" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "action" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);`,
+    ...(approvalEntity ? [approvalReceiptMigration] : []),
+    `CREATE TABLE "${compilerStorageName("AuditEvent")}" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  ${approvalEntity ? '"reason" TEXT,\n  ' : ""}"actor" TEXT NOT NULL,\n  "action" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);`,
     `CREATE INDEX "${compilerStorageName("AuditEvent")}_entity_recordId_idx" ON "${compilerStorageName("AuditEvent")}" ("entity", "recordId");`,
     `CREATE TABLE "${compilerStorageName("CapabilityEvent")}" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "capability" TEXT NOT NULL,\n  "operation" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "outcome" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);`,
     `CREATE INDEX "${compilerStorageName("CapabilityEvent")}_entity_recordId_idx" ON "${compilerStorageName("CapabilityEvent")}" ("entity", "recordId");`,
@@ -1108,6 +1123,7 @@ function renderPrismaSeed(
 function buildDatabasePlan(input: PublishedCompilationInput): DatabasePlanV1 {
   const { context } = input;
   const graph = assertValidApplicationGraph(input.graph);
+  const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
   const orderOperationReceiptSchema =
     context.useGenericOrderOperationsPersistence
       ? context.orderOperationsPersistence?.schema
@@ -1120,6 +1136,7 @@ function buildDatabasePlan(input: PublishedCompilationInput): DatabasePlanV1 {
   return {
     apiVersion: "factory.compiler-target/v1",
     graph,
+    ...(approvalEntity ? { approvalEntity } : {}),
     ...(orderOperationReceiptSchema === undefined
       ? {}
       : { orderOperationReceiptSchema }),
@@ -1204,6 +1221,7 @@ function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
         plan.orderOperationReceiptSchema,
         plan.includeGenericCommerceLineItems,
         plan.additionalSchemaFragments,
+        plan.approvalEntity,
       );
   const migration = plan.initialMigrationOverride
     ? plan.initialMigrationOverride
@@ -1212,6 +1230,7 @@ function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
         plan.orderOperationReceiptMigration,
         plan.includeGenericCommerceLineItems,
         plan.additionalMigrationFragments,
+        plan.approvalEntity,
       );
   assertUniqueDatabaseStorageNames(schema, migration);
   return [
