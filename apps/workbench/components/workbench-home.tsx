@@ -164,12 +164,20 @@ function ConsumerDelivery({
   if (consumer === undefined) return null;
   const paused = consumer.status?.startsWith("Delivery paused") ?? false;
   const approval = consumer.family === "approval";
-  const label = approval ? "Approval" : "Restaurant";
+  const task = consumer.family === "task";
+  const label = task ? "Task" : approval ? "Approval" : "Restaurant";
   return (
     <section aria-label={`${label} delivery`} className="consumer-delivery">
       <h2>Your {label} app</h2>
       <p role="status">{consumer.status ?? `Preparing your ${label} app…`}</p>
-      {approval ? (
+      {task ? (
+        <p>
+          This is a bounded local shared board prototype with selectable demo
+          roles. Team members can create, start, complete and reopen every task;
+          Viewer can read all tasks. Assignee is display text only. Tasks cannot
+          be edited after creation.
+        </p>
+      ) : approval ? (
         <p>
           This is a local demo of your approval workflow on this computer.
           Select a demo role to submit requests, review them, and read results.

@@ -54,7 +54,12 @@ function statusFor(
   release: ReleaseJourneyController["release"],
   family: ConsumerFamily | null,
 ): string {
-  const label = family === "approval" ? "Approval" : "Restaurant";
+  const label =
+    family === "task"
+      ? "Task"
+      : family === "approval"
+        ? "Approval"
+        : "Restaurant";
   switch (release?.phase) {
     case "publishing":
       return `Preparing your ${label} app…`;
@@ -288,7 +293,12 @@ export function useConsumerGeneration({
         applyingSessionRef.current === sessionKey));
 
   const activeFamily = target !== null ? targetFamily : family;
-  const label = activeFamily === "approval" ? "Approval" : "Restaurant";
+  const label =
+    activeFamily === "task"
+      ? "Task"
+      : activeFamily === "approval"
+        ? "Approval"
+        : "Restaurant";
 
   return {
     family: activeFamily,

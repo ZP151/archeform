@@ -1,0 +1,16 @@
+{
+  "capturedAt": "2026-09-12T18:11:49.4406099Z",
+  "previews": {
+    "id": "preview-98005068-a4c3-4c97-ad57-4982a78be1d1",
+    "compilationId": "cmtyp5cii000hqu55tyta7qvw",
+    "project": "factory-preview-preview-98005068-a4c3-4c97-ad57-4982a78be1d1",
+    "status": "stopped"
+  },
+  "verification": {
+    "id": "cmtyp5dpz002aqu55iyrr64d8",
+    "verificationRunId": "verify-77f7bd33-64e9-4c27-891c-d40598c0bfcd",
+    "compilationId": "cmtyp5cii000hqu55tyta7qvw",
+    "status": "succeeded",
+    "evidenceDigest": "sha256:f25556155cb076453e6cab03619eb2281e24e0e537d80aa369212902eebd39b7"
+  }
+}

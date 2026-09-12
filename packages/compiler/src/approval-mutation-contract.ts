@@ -1,3 +1,4 @@
+import { writeProtectionFragments } from "./mutation-write-protection.js";
 import type { CapabilityCompositionLockV1 } from "@factory/capabilities";
 import { isDeepStrictEqual } from "node:util";
 import type { ApplicationGraphV1 } from "@factory/graph";
@@ -310,6 +311,10 @@ export function renderApprovalMutationRuntime(
   entity = selectApprovalCorrection(graph),
 ): string {
   if (!entity) return source;
+  const protection = writeProtectionFragments(
+    "approval",
+    hashApplicationGraph(graph),
+  );
   const fields = graph.domain.entities.find((e) => e.key === entity)!.fields;
   source = 'import { createHash } from "node:crypto";\n' + source;
   source = replace(
@@ -330,7 +335,7 @@ function plainApproval(value:unknown): asserts value is Record<string,unknown> {
  if(!value || typeof value!=='object' || Array.isArray(value) || ![Object.prototype,null].includes(Object.getPrototypeOf(value))) failApproval(400,'approval.invalid_request');
  for(const key of Reflect.ownKeys(value)) { const d=Object.getOwnPropertyDescriptor(value,key)!; if(typeof key!=='string' || !d.enumerable || !('value' in d)) failApproval(400,'approval.invalid_request'); }
 }
-function canonicalApproval(value:unknown):string { if(Array.isArray(value)) return '['+value.map(canonicalApproval).join(',')+']'; if(value && typeof value==='object') return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonicalApproval((value as Record<string,unknown>)[k])).join(',')+'}'; return JSON.stringify(value); }
+${protection.canonical}
 function approvalValues(value:unknown,create:boolean):Record<string,unknown> {
  plainApproval(value); if(!create && Object.keys(value).length===0) failApproval(400,'approval.invalid_request');
  const fields=approvalFields.filter(f=>!['id','status','version','createdAt','updatedAt'].includes(f.key));
@@ -376,9 +381,7 @@ export interface RecordStore {
   source = replace(
     source,
     "  private collection(entityKey:",
-    `  async getApprovalReceipt(scope:string,key:string):Promise<ApprovalMutationReceipt | undefined> { const receipt=this.approvalReceipts.get(JSON.stringify([scope,key])); return receipt ? structuredClone(receipt) : undefined; }
-  async saveApprovalReceipt(receipt:ApprovalMutationReceipt):Promise<void> { await this.coordinateMutation(()=>{ const key=JSON.stringify([receipt.scope,receipt.idempotencyKey]); if(this.approvalReceipts.has(key)) throw new Error('Duplicate approval receipt.'); this.approvalReceipts.set(key,structuredClone(receipt)); }); }
-  async conditionalApprovalUpdate(entity:string,id:string,status:string,version:number,values:Record<string,unknown>):Promise<StoredRecord | undefined> { return this.coordinateMutation(()=>{ const current=this.collection(entity).get(id); if(!current || current.status!==status || current.version!==version) return undefined; const updated={...current,...values}; this.collection(entity).set(id,updated); return structuredClone(updated); }); }
+    `${protection.memoryMethods}
   private collection(entityKey:`,
   );
   source = replace(
@@ -395,7 +398,7 @@ export interface RecordStore {
     if(entityKey!==approvalEntity) failApproval(404,'approval.not_found');
     if(!['create','update','submit','approve','reject'].includes(operation)) failApproval(403,'approval.denied');
     if(!(await enforce(role,entityKey,operation))) failApproval(403,'approval.denied');
-    if(typeof key!=='string'||! /^[A-Za-z0-9._:-]{1,128}$/.test(key)) failApproval(400,'approval.invalid_request');
+${protection.validateKey}
     plainApproval(body);
     const expected=operation==='create'?['values']:operation==='update'?['expectedVersion','values']:operation==='reject'?['expectedVersion','reason']:['expectedVersion'];
     if(Object.keys(body).length!==expected.length || !expected.every(k=>Object.hasOwn(body,k))) failApproval(400,'approval.invalid_request');
@@ -404,11 +407,9 @@ export interface RecordStore {
     if(operation==='create'||operation==='update') values=approvalValues(body.values,operation==='create');
     if(operation==='reject') { if(typeof body.reason!=='string') failApproval(400,'approval.invalid_request'); reason=body.reason.trim(); if(reason.length<1||reason.length>500||/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/.test(reason)) failApproval(400,'approval.invalid_request'); }
     const normalized=operation==='create'?{values}:operation==='update'?{expectedVersion:body.expectedVersion,values}:operation==='reject'?{expectedVersion:body.expectedVersion,reason}:{expectedVersion:body.expectedVersion};
-    const scope=createHash('sha256').update([${JSON.stringify(hashApplicationGraph(graph))},actorScope,role,entityKey,recordId??'$create',operation].map(v=>Buffer.byteLength(v)+':'+v).join('')).digest('hex');
-    const requestHash=createHash('sha256').update(canonicalApproval(normalized)).digest('hex');
-    const replay=(receipt:ApprovalMutationReceipt)=> { if(receipt.requestHash!==requestHash) failApproval(409,'approval.idempotency_conflict'); return {status:receipt.responseStatus,body:structuredClone(receipt.responseBody)}; };
-    const run=()=>this.store.inTransaction(async store=>{
-      const existing=await store.getApprovalReceipt(scope,key); if(existing) return replay(existing);
+${protection.identity}
+${protection.replay}
+${protection.transactionStart}
       let record:StoredRecord; let effects:readonly {capability:string;operation:string}[]=[];
       if(operation==='create') { record=await store.create(entityKey,{...values,status:'draft',version:0}); }
       else {
@@ -417,8 +418,7 @@ export interface RecordStore {
         let status=current.status!;
         if(operation==='update' && status==='draft') { /* Draft edits have no transition effect. */ }
         else { const transition=this.flow(entityKey)?.transitions.find(t=>t.event===operation && t.from===status && t.roles?.includes(role)); if(!transition || operation==='update' && status!=='returned') failApproval(403,'approval.denied'); status=transition.to; effects=transition.effects??[]; }
-        const updated=await store.conditionalApprovalUpdate(entityKey,current.id,current.status!,current.version!,{...values,status,version:current.version!+1});
-        if(!updated) { const authoritative=await store.find(entityKey,current.id); if(!authoritative) failApproval(404,'approval.not_found'); failApproval(409,'approval.version_conflict',authoritative); } record=updated;
+${protection.conditionalWrite}
       }
       const at=new Date().toISOString();
       await store.appendAudit({actor:role,action:operation,entity:entityKey,recordId:record.id,reason,at});
@@ -429,10 +429,10 @@ export interface RecordStore {
       }
       const responseBody=JSON.parse(JSON.stringify({id:record.id,status:record.status,version:record.version,...Object.fromEntries(approvalFields.filter(f=>f.key!=='status').map(f=>[f.key,record[f.key]==null ? null : f.type==='decimal'||f.type==='integer' ? Number(record[f.key]) : ['date','datetime'].includes(f.type) ? new Date(record[f.key] as string).toISOString() : record[f.key]]))})) as StoredRecord;
       const responseStatus=operation==='create'?201:200;
-      await store.saveApprovalReceipt({scope,idempotencyKey:key,requestHash,operation,recordId:record.id,responseStatus,responseBody});
+${protection.saveReceipt}
       return {status:responseStatus,body:responseBody};
     });
-    for(let attempt=0;;attempt++) { try { return await run(); } catch(error) { const code=(error as {code?:string})?.code; if(attempt<3 && ['P2002','P2034'].includes(code??'')) continue; throw error; } }
+${protection.transactionRetry}
   }
   async approvalDecisionEvents(role:string,entity:string,recordId:string):Promise<readonly AuditEvent[]> {
     if(entity!==approvalEntity) failApproval(404,'approval.not_found');
@@ -480,6 +480,10 @@ export function renderApprovalPrismaStore(
   entity = selectApprovalCorrection(graph),
 ): string {
   if (!entity) return source;
+  const protection = writeProtectionFragments(
+    "approval",
+    hashApplicationGraph(graph),
+  );
   source = replace(
     source,
     "AuditEvent, CapabilityEvent,",
@@ -493,12 +497,7 @@ export function renderApprovalPrismaStore(
   source = replace(
     source,
     "export class PrismaRecordStore implements RecordStore {",
-    `type ApprovalReceiptDelegate = { findUnique(input:{where:{scope_idempotencyKey:{scope:string;idempotencyKey:string}}}):Promise<ApprovalMutationReceipt|null>; create(input:{data:ApprovalMutationReceipt}):Promise<unknown>; };
-export class PrismaRecordStore implements RecordStore {
-  private approvalReceiptDelegate():ApprovalReceiptDelegate { return (this.prisma as unknown as {approvalMutationReceipt:ApprovalReceiptDelegate}).approvalMutationReceipt; }
-  async getApprovalReceipt(scope:string,key:string):Promise<ApprovalMutationReceipt | undefined> { return (await this.approvalReceiptDelegate().findUnique({where:{scope_idempotencyKey:{scope,idempotencyKey:key}}}))??undefined; }
-  async saveApprovalReceipt(receipt:ApprovalMutationReceipt):Promise<void> { await this.approvalReceiptDelegate().create({data:receipt}); }
-  async conditionalApprovalUpdate(entity:string,id:string,status:string,version:number,values:Record<string,unknown>):Promise<StoredRecord | undefined> { const result=await this.delegate(entity).updateMany({where:{id,status,version},data:values}); return result.count===1?this.find(entity,id):undefined; }`,
+    `${protection.prismaMethods}`,
   );
   source = replace(
     source,

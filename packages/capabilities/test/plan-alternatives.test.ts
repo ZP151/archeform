@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { canonicalTeamTaskInterpretation } from "../../adapters/src/requirements/task-definition-selection.js";
 
 import {
   applyGraphDiffToDraft,
@@ -31,6 +32,51 @@ function planKeys(plan: CompositionPlanV1): readonly string[] {
 }
 
 describe("planProductAlternatives", () => {
+  it("assembles the canonical Task with the six existing locks and nine exact bindings", () => {
+    const { spec, blueprint } = canonicalTeamTaskInterpretation();
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft: blankDraft("team-board", "Team board"),
+    });
+    expect(
+      standard.plan.capabilityLocks
+        .map((lock) => lock.key + "@" + lock.version)
+        .sort(),
+    ).toEqual([
+      "core.audit@1.0.2",
+      "core.crud@1.0.1",
+      "core.identity-policy@1.0.0",
+      "core.notification@1.1.1",
+      "core.policy-declarations@1.0.0",
+      "core.workflow@1.0.1",
+    ]);
+    expect(
+      standard.plan.graphBindings.map((b) => [
+        b.capabilityKey,
+        b.inputKey,
+        b.graphSymbol,
+      ]),
+    ).toEqual([
+      ["core.crud", "entityKey", "graph.domain.task"],
+      ["core.crud", "routeKey", "graph.page.task-list"],
+      ["core.workflow", "flowKey", "graph.flow.task-lifecycle"],
+      [
+        "core.identity-policy",
+        "principalEntity",
+        "graph.domain.team-board-principal",
+      ],
+      [
+        "core.identity-policy",
+        "sessionEntity",
+        "graph.domain.team-board-session",
+      ],
+      ["core.identity-policy", "defaultRole", "graph.policy.member"],
+      ["core.identity-policy", "authenticatedRole", "graph.policy.viewer"],
+      ["core.audit", "actorRole", "graph.policy.member"],
+      ["core.notification", "recipientRole", "graph.policy.member"],
+    ]);
+  });
   it("proposes standard and minimal alternatives for Prompt A", () => {
     const { requirement, blueprint } = expenseApprovalPrompt();
     const base = blankDraft("expense-approval", "Expense Approval");

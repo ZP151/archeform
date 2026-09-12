@@ -73,6 +73,8 @@ export type RoleJourneyFixture = {
  * employee creates and submits, the manager approves).
  */
 export type ChainJourneyStep = {
+  /** Replaces only the already-declared parent command key for this activation. */
+  readonly idempotencyKeyOverride?: string;
   /** Must resolve in the profile registry; unknown actions fail closed. */
   readonly action: string;
   /** Optional declared body for this prologue request. */
@@ -489,6 +491,18 @@ function validateChainPrologue(
     ) {
       throw new VerificationContractError(
         "Chain steps must be declared fixture data.",
+      );
+    }
+    if (
+      step.idempotencyKeyOverride !== undefined &&
+      (typeof step.idempotencyKeyOverride !== "string" ||
+        !idempotencyKeyPattern.test(step.idempotencyKeyOverride) ||
+        journey.headers?.filter(
+          (header) => header.name === "x-factory-idempotency-key",
+        ).length !== 1)
+    ) {
+      throw new VerificationContractError(
+        "Chain command keys require a declared parent command header.",
       );
     }
     if (

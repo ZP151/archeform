@@ -2,6 +2,30 @@
 
 Updated: 2026-09-13
 
+## Current: Team Task accepted; next is correction and definition scale
+
+Team Task Tracking is implemented from delivered `d28f1fed`. Actual attempt 2
+passed one generated PostgreSQL/API/browser lane in 3.5 minutes, with the local
+app ready in 177,738 ms. Create/start/complete/reopen/complete, finding, persisted
+reload, Viewer/state denial, safe restart/replay and conflicting writes pass.
+Audit and receipt counts match exactly. The first attempt's pre-Publish identity
+failure is retained with its focused correction. Sixteen actual screenshots and
+exact three-project cleanup support the [acceptance record](acceptance/team-task.md).
+Task review, independent Terra QA and independent Sol release review passed
+with no open P0/P1/P2 findings. The controller accepted the bounded slice.
+
+Three prior canonical definitions and ten complete ordered bundles remain
+byte-identical. Coverage is now four definitions and three
+demonstrated local runtime families. Missing post-creation field editing still
+prevents calling Task a product-complete application. The next delivery is Task
+correction, followed by data-based definition authoring and batch validation.
+
+The [scale plan](superpowers/plans/2026-09-13-product-definition-scale.md)
+connects each next slice to ordinary-user effort reduction and separates
+fixture, real-model and ordinary-user evidence. Hundred/thousand-definition
+coverage, real identity and public hosted usability are targets, not delivered
+capabilities.
+
 ## Current: founder-approved UI and approval correction delivery
 
 The founder explicitly approved the UI delivered at `92f21089` and authorized

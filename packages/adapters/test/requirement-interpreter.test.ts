@@ -5,6 +5,114 @@ import {
   projectDefinitionSelection,
 } from "../src/requirements/definition-selection-catalogue.js";
 import { canonicalExpenseApprovalInterpretation } from "../src/requirements/approval-definition-selection.js";
+
+describe("canonical Team Task definition", () => {
+  const selection = {
+    definitionKey: "team-task-tracking",
+    disposition: "supported-default",
+    requirementId: "team-board",
+    title: "Team Board",
+    outcome: "Track shared team tasks.",
+    materialQuestions: [],
+    businessParameters: null,
+  };
+  it("projects a shared task board with truthful roles, fields, pages and transitions", () => {
+    const result = projectDefinitionSelection(selection);
+    expect(result.blueprint.actors.map((a) => [a.key, a.permissions])).toEqual([
+      [
+        "member",
+        [
+          {
+            entityKey: "task",
+            actions: ["create", "read", "start", "complete", "reopen"],
+          },
+        ],
+      ],
+      ["viewer", [{ entityKey: "task", actions: ["read"] }]],
+    ]);
+    expect(result.blueprint.entities).toHaveLength(1);
+    expect(result.blueprint.entities[0].fields).toEqual([
+      { key: "title", label: "Title", type: "text", required: true },
+      {
+        key: "description",
+        label: "Description",
+        type: "long-text",
+        required: false,
+      },
+      { key: "assignee", label: "Assignee", type: "text", required: true },
+      { key: "dueDate", label: "Due date", type: "date", required: true },
+      {
+        key: "priority",
+        label: "Priority",
+        type: "enum",
+        required: true,
+        options: ["low", "medium", "high"],
+      },
+    ]);
+    expect(
+      result.blueprint.pageIntents.map((p) => [p.key, p.intent, p.entityKey]),
+    ).toEqual([
+      ["task-overview", "dashboard", "task"],
+      ["task-list", "list", "task"],
+      ["task-form", "form", "task"],
+      ["task-detail", "detail", "task"],
+      ["task-queue", "queue", "task"],
+    ]);
+    expect(
+      result.blueprint.workflows[0].transitions.map((t) => [
+        t.key,
+        t.from,
+        t.to,
+        t.actorKey,
+      ]),
+    ).toEqual([
+      ["start", "not-started", "in-progress", "member"],
+      ["complete", "in-progress", "completed", "member"],
+      ["reopen", "completed", "in-progress", "member"],
+    ]);
+    expect(result.clarifications).toEqual([]);
+    expect(result.blueprint.requirementChecksum).toBe(
+      hashRequirementSpec(result.spec),
+    );
+  });
+  it("rejects provider structure, parameters, unknown keys and unresolved differences", () => {
+    for (const patch of [
+      { businessParameters: {} },
+      { fields: [] },
+      { extra: true },
+      {
+        materialQuestions: [
+          { category: "visibility", question: "Require private tasks?" },
+        ],
+      },
+      { disposition: "needs-clarification" },
+    ]) {
+      expect(
+        definitionSelectionSchema.safeParse({ ...selection, ...patch }).success,
+      ).toBe(false);
+    }
+  });
+  it.each([
+    "authorization",
+    "visibility",
+    "role",
+    "business-rule",
+    "data",
+    "integration",
+  ])("preserves material %s questions", (category) => {
+    const result = projectDefinitionSelection({
+      ...selection,
+      disposition: "needs-clarification",
+      materialQuestions: [
+        { category, question: "Can you accept the bounded shared board?" },
+      ],
+    });
+    expect(result.spec.openQuestions).toEqual([
+      { category, question: "Can you accept the bounded shared board?" },
+    ]);
+    expect(result.clarifications).toHaveLength(1);
+  });
+});
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -697,13 +805,94 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     };
   }
 
-  it("keeps exactly three coherent registrations and refuses schema, guide and projector drift", () => {
+  it("projects Task through the public strict provider envelope and preserves material follow-up questions", async () => {
+    const selection = approvalDefinitionSelection({
+      definitionKey: "team-task-tracking",
+      requirementId: "team-board",
+      title: "Team Board",
+      outcome: "Track shared tasks.",
+    });
+    const { transport, requests } = capturingTransport(selection);
+    const result = await new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    }).interpret({ brief: "Create a shared team task tracker.", answers: {} });
+    expect(result.interpretation.blueprint.entities[0].key).toBe("task");
+    expect(result.interpretation.clarifications).toEqual([]);
+    expect(
+      matchesSelectionJsonSchema(
+        requests[0].jsonSchema as SelectionJsonSchema,
+        selection,
+      ),
+    ).toBe(true);
+    expect(requests[0].instructions).toContain("Assignee is display text only");
+    const unresolved = approvalDefinitionSelection({
+      definitionKey: "team-task-tracking",
+      disposition: "needs-clarification",
+      materialQuestions: [
+        {
+          category: "visibility",
+          question: "Accept shared visibility instead of private tasks?",
+        },
+        { category: "integration", question: "Proceed without reminders?" },
+      ],
+    });
+    const followup = capturingTransport(unresolved);
+    const next = await new OpenAIRequirementInterpreterAdapter({
+      transport: followup.transport,
+      readEnvironment: () => "test-key",
+    }).interpret({
+      brief: "Create private tasks with reminders.",
+      answers: { visibility: "Use shared visibility." },
+      priorInterpretation: result,
+    });
+    expect(next.interpretation.spec.openQuestions).toHaveLength(2);
+    expect(next.interpretation.blueprint.entities[0].fields).toHaveLength(5);
+  });
+  it("rejects mixed Task envelopes and provider-authored structural overrides", async () => {
+    const valid = approvalDefinitionSelection({
+      definitionKey: "team-task-tracking",
+    });
+    for (const candidate of [
+      { ...valid, generatedInterpretation: openaiExpenseCandidate() },
+      approvalDefinitionSelection({
+        definitionKey: "team-task-tracking",
+        businessParameters: {},
+      }),
+      approvalDefinitionSelection({
+        definitionKey: "team-task-tracking",
+        fields: [],
+      }),
+      approvalDefinitionSelection({
+        definitionKey: "team-task-tracking",
+        disposition: "supported-default",
+        materialQuestions: [{ category: "data", question: "Need comments?" }],
+      }),
+    ]) {
+      const { transport, requests } = capturingTransport(candidate);
+      await expect(
+        new OpenAIRequirementInterpreterAdapter({
+          transport,
+          readEnvironment: () => "test-key",
+        }).interpret({ brief: "Team task tracker", answers: {} }),
+      ).rejects.toMatchObject({ code: "output_invalid" });
+      expect(requests).toHaveLength(3);
+      expect(
+        matchesSelectionJsonSchema(
+          requests[0].jsonSchema as SelectionJsonSchema,
+          candidate,
+        ),
+      ).toBe(false);
+    }
+  });
+  it("keeps four coherent registrations and refuses schema, guide and projector drift", () => {
     expect(
       definitionSelectionCatalogue.map((entry) => entry.definitionKey),
     ).toEqual([
       "restaurant-ordering",
       "expense-approval",
       "purchase-request-approval",
+      "team-task-tracking",
     ]);
     expect(Object.isFrozen(definitionSelectionCatalogue)).toBe(true);
     expect(() =>
@@ -1787,7 +1976,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         generatedInterpretation: { anyOf: unknown[] };
       };
     };
-    expect(schema.properties.definitionSelection.anyOf).toHaveLength(4);
+    expect(schema.properties.definitionSelection.anyOf).toHaveLength(5);
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({
       requirement: interpretation.spec,

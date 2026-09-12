@@ -1,0 +1,15 @@
+
+ RUN  v2.1.9 C:/Users/15492/Develop/Archeform/.worktrees/consumer-delivery/packages/compiler
+
+ ✓ test/task-mutation-runtime.test.ts (26 tests) 4953ms
+   ✓ immutable Task compilation and commands > creates once, replays after reconstruction, and completes a version-bound lifecycle 351ms
+   ✓ immutable Task compilation and commands > typechecks the emitted API, store and Task React tree under strict settings 2001ms
+ ✓ test/task-compatibility.test.ts (1 test) 2115ms
+   ✓ Task introduction compatibility with delivered non-Task products > preserves canonical definitions and complete ordered generated bundles from d28f1fed 2114ms
+ ✓ test/mutation-write-protection.test.ts (1 test) 11ms
+
+ Test Files  3 passed (3)
+      Tests  28 passed (28)
+   Start at  01:50:58
+   Duration  13.38s (transform 1.15s, setup 0ms, collect 6.02s, tests 7.08s, environment 0ms, prepare 85ms)
+

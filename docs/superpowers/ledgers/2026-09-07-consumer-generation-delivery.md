@@ -4242,3 +4242,139 @@ plan. Capture non-Task byte baselines from this delivered tip before Task source
 writes. Preserve the expressive UI and focused emitted-DOM checks. No Task
 implementation, template-count increase, managed hosting or main/release action
 is claimed in this acceptance.
+
+### Team Task resumption and scale goal — 2026-09-13
+
+The founder asks to continue the next product type and track hundreds/thousands
+of products. Root starts a new unbudgeted goal from delivered, clean and pushed
+`d28f1fedf4fa0aaefe3e81492cabd857db69d8cb`. Approval correction is not reopened.
+The next business scope remains ADR-0057 Team Task; no Task production code was
+written by the historical failed dispatch.
+
+Before production writes, root captured three canonical definition hashes and
+ten complete ordered generated bundles in
+`packages/compiler/test/fixtures/task-non-task-baseline.json` and verified them
+with the new root-owned `packages/compiler/test/task-compatibility.test.ts`.
+These two paths extend root's disjoint manifest. They cover canonical and true
+Published/immutable-lock shapes, legacy Expense/Purchase/Booking and Restaurant
+V3. The old Task plan approval digest is historical only.
+
+PM dispatched `/root/task_contract_check` (Tech Lead) against both current
+authorities and the exact frozen ADR. The check identified a material collision:
+current threat-model lines 99–100 require idempotency and concurrency/immutable
+binding for writes, but the generic Task create/transition path lacks them.
+ADR-0057 does not authorize changing that API/database mutation contract. Keep
+production held while the same Tech Lead proposes one bounded amendment reusing
+approval recovery concepts for Task-only generated artifacts. Existing founder
+standing independent acceptance is the decision route; no redundant founder
+confirmation or additional component-level gate is introduced.
+
+Root delegates only its new `e2e/consumer-task.spec.ts`,
+`e2e/consumer-task-fixture.ts`, `e2e/task-presentation.ts` paths to
+`/root/task_runtime_tests`. This author may prepare unchanged business, intake,
+visual and lifecycle cases, but must defer final mutation assertions until the
+amendment is frozen. It has no production, Git or live-runtime authority.
+The integration writer remains undispatched until the shared contract is ready.
+All agents preserve other work; no parallel production writers are authorized.
+
+The new scale plan is
+`docs/superpowers/plans/2026-09-13-product-definition-scale.md`. Counts stay three
+registered definitions / two demonstrated runtime families. Task's first scope
+excludes post-creation editing, so even a successful lane is an experiment and
+not a product-complete Task app. Task correction is the immediate next gap.
+Real-model selection, ordinary-user effort reduction, real identity and public
+hosting remain separate unproven outcomes. No service, provider or cloud action
+is authorized by this planning record.
+
+### Team Task amendment standing acceptance and source authority — 2026-09-13
+
+Tech Lead `/root/task_contract_check` proposed ADR-0063 to resolve the current
+Task mutation gap. Initial proposal 50a1aceb received independent P1/P2 feedback
+for Task key storage and approval-byte-compatible authorization reuse. No
+production write occurred against that proposal. The author corrected both in
+one batch; the original rejected digest remains in the decision review history.
+
+Root verified corrected ADR-0063 SHA-256
+`8d5b2042a798b98f130fe7265f6e1bc1389bd67f618cf1f35a9ce0d8b966ea68`.
+Independent nonauthor/nonwriter `/root/task_mutation_decision_review` returns
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 0/0/0 against that exact file.
+The decision report is in this plan's SDD workspace and will be retained in
+Task acceptance evidence. PM records standing acceptance under the founder's
+2026-09-01 authorization: this is bounded, reversible Task-only mutation safety
+with exact old output compatibility, no new external/provider/credential or
+cloud authority and no material unresolved choice. The frozen ADR remains
+unchanged; its Proposed header records authorship, while this exact acceptance
+record is the implementation authority.
+
+PM lifts the production hold and assigns `/root/task_integration_owner` as the
+single integration writer for ADR-0057 MIG-001 plus ADR-0063 MIG-002 only.
+The accepted amendment supersedes old generic Task mutation assumptions and
+requires a shared compiler-private security fragment port, thin business
+adapters, exact Task API/store/client/verifier behavior, and conditional
+Task-only generated storage. Preserve canonical definitions and all old output
+bytes. Post-creation editing remains out of this experiment; product completeness
+is not claimed. Root retains E2E (delegated to `/root/task_runtime_tests`), the
+compatibility test/fixture, docs/evidence/status and Git. No other writer owns
+production paths; nobody may revert another owner's changes.
+
+Focused RED/GREEN, early true-Published/lock and emitted-DOM/CSS checks precede
+full affected suites once at the shared boundary. Required task review, actual
+Terra QA and Sol release review apply once to the completed integrated slice;
+ordinary fix rounds reuse unaffected evidence. Source and deterministic tests
+are authorized now. Services, image builds and actual local Publish/Preview await
+root's separate exact runtime/source record. No live model, cloud, main or
+repository release action is authorized.
+
+Root adds two disjoint regression-only paths to its manifest:
+`e2e/consumer-task-ui.spec.ts` and `scripts/emit-composed-ui.mjs`. These promote
+the development-only emitted React/CSS harness into a reusable checked-in fast
+feedback path rather than losing it in ignored per-plan staging. The emitter
+uses existing public composition/compiler APIs, a true Published-shaped Graph
+and its separate lock, and outputs only emitted UI/CSS for authored fixtures.
+It adds no product behavior, provider, package, service or public contract.
+The existing Task Page helpers are reused; actual backend acceptance remains
+separate. All production ownership stays with the integration writer.
+
+### Routine Task verifier request-assembly extension — 2026-09-13
+
+During implementation, the writer found that ChainJourneyStep inherits one
+journey idempotency key across all steps. Repeated Complete on the same Task
+would therefore correctly conflict at a changed version. Tech Lead
+`/root/task_contract_check` returns KEEP: ADR-0063 VER-001 already requires
+that complete chain and distinct activation semantics; fixing private request
+assembly changes no public Graph/API/data/runtime/security contract. No new ADR
+or additional gate is required.
+
+PM extends the same serialized writer's manifest to existing
+`apps/compiler-worker/src/verifier/role-journey.ts`,
+`apps/compiler-worker/src/verifier/probes.ts`, and
+`apps/compiler-worker/test/verification-probes.test.ts` only. Add a bounded
+optional per-step `idempotencyKeyOverride`, validated by existing key rules,
+and requiring exactly one existing parent idempotency-key header declaration,
+not an arbitrary-header override. Replace only that key after validated inherited
+headers; preserve principal/session headers and the exact old path when absent.
+The already-owned Task graph-plan assigns distinct deterministic bounded step
+keys; final action/replay retains its journey key. Tests must prove five-key
+uniqueness and versions, forwarding, malformed-key denial, unchanged non-Task
+plans/requests and no key disclosure. Root retains docs/Git and existing review
+sequence; ordinary verification remains within current source authority.
+
+Root routine test correction: apps/workbench/components/journey/role-simulator.test.tsx retains the accepted approval fixture's reject -> returned expectation. The full affected suite exposed its stale reject -> rejected assertion; no simulator or approval production behavior changes. Root owns this one-line test-only correction and delegates focused recheck to the current integration owner. It adds no acceptance stage.
+
+Root runtime record, Task attempt 1: serialized source owner frozen; independent task review has no unresolved production finding, final alias denial recheck in progress. Exact source hashes are recorded in docs/acceptance/evidence/consumer-task/source-identity.json. Root authorizes local builds of factory-t9-task-20260913 control-plane/compiler-worker/workbench images from this workspace and isolated Factory/Preview execution after final task verdict. Compose uses infra/docker-compose.yml plus consumer-task/acceptance.compose.yml, local .env credentials without disclosure, loopback 13020/15180/15440/16380, provider keys blank. Only authored selection fixture is permitted; no provider calls/cloud/paid actions. Exact owned Preview and Factory resources must be cleaned and source/image identity verified. Pending actual QA/release remains separate from this runtime authority.
+
+Task B3 independent task review complete: /root/task_business_review TASK_REVIEW_PASS yes, P0/P1/P2 0/0/0. All concrete production/fixture findings closed, including conflict continuity and event-create alias denial. Source matches attempt 1 hash manifest. Root authorizes the recorded isolated Factory start and actual authored-fixture Task E2E after Docker build and image identity verification. The existing Terra QA is active; final readonly receipt/audit assertions receive a scoped recheck only.
+
+Task actual attempt 1 failed before Publish: successful authored interpretation, planned review, no Task delivery region, no Compilation or Preview. Root preserves failed log and source/runtime identity manifests. Focused RED demonstrated confusion between review database ID and checksum-bound semantic Graph requirement ID. Source owner corrected only Task binding recognition in two Workbench source/test files, retaining all nine exact bindings; focused consumer-hook file 34/34 and typecheck pass. Root authorizes rebuilding only Workbench and attempt 2 after scoped review/identity verification. CP/worker implementation is unchanged; image identity compares service-relevant source dependencies, avoiding an unnecessary rebuild of images that merely contain unused Workbench source copies.
+
+Attempt 2 fix scope approved by existing independent reviewer: TASK_REVIEW_PASS yes, P0/P1/P2 0/0/0. Workbench 34/34 focused tests, typecheck and optimized build pass. The readonly QA preflight independently confirmed the database/semantic identity distinction. Runtime fixture now records actual persisted [5,2,1] audit/receipt counts and digest-only key checks; seed-tolerant default-density and authored-result screenshots are being completed within the same existing acceptance matrix. These are ordinary in-scope test corrections, not additional approval stages.
+
+Independent Terra QA completed: QA_PASS yes, P0/P1/P2 0/0/0. Attempt 2 actual lane passed 1/1 in 3.5 minutes, ready177738ms, exact persisted audit/receipt cardinalities [5,2,1], digest-only keys, all16actualscreens visually inspected, source/test identity and three-project cleanup verified. Root retains normalGit ownership: a QA staging action on its ignored report was reversed without removing the report; the durable copy is consumer-task/qa-report.md. No production change. Existing final Sol release review is the sole remaining slice review before PM acceptance/controller delivery.
+
+### Team Task B3 accepted for controller delivery - 2026-09-13
+
+PM accepts the bounded local Team Task slice. Independent task review, Terra QA and Sol release review all PASS, P0/P1/P2 0/0/0; final29production/package-test and5acceptance-source hashes match. Actual attempt2 passes1/1 in3.5m, ready177738ms/business192917ms, immutable graph-derived verification, persisted member lifecycle, viewer/state denials, interrupted Create/API restart and Start recovery, changed-body replay rejection and concurrent200/409. Persisted audit and receipt arrays both[5,2,1], digest-only keys. All16actualscreens inspected, finalfast UI1/1 with additional true-empty/restore state, exact3Factory/Previewprojects resourcezero. Attempt1 failed prePublish and its identity fix/evidence remain recorded.
+
+Coverage advances to4canonical definitions /3demonstrated local runtime families. Task editing remains the next highest-value product gap; no real-model selection accuracy, real identity/private assignment, hosting, arbitrary maturity or hundreds/thousands coverage is claimed. Next order: same-task field correction, accepted data-based definition format and batch validator, meaningful30then100definitions, then expanded Appointment/ContentDirectory/Inventory families. Ordinary fixes reused valid checks; no per-component gates were introduced.
+
+Root is authorized to create one bounded English task commit and normally push codex/consumer-delivery-roadmap, verify remote equality, then close the active goal. No main integration, repository release or cloud deployment is included. Durable acceptance: docs/acceptance/team-task.md and consumer-task evidence directory.

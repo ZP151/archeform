@@ -1,4 +1,14 @@
 import {
+  renderTaskWorkspace,
+  renderTaskWorkspaceStyles,
+} from "./task-workspace-presentation.js";
+import {
+  selectTaskContract,
+  renderTaskMutationRuntime,
+  renderTaskPrismaStore,
+  renderTaskApi,
+} from "./task-mutation-contract.js";
+import {
   selectApprovalCorrection,
   renderApprovalJourney,
   renderApprovalCorrectionPage,
@@ -36,6 +46,8 @@ import {
 import { renderJourneyTest } from "./journey-test-renderer.js";
 import {
   approvalWorkspaceStyles,
+  renderWorkspaceDataHelpers,
+  renderWorkspaceRecordHook,
   renderApprovalWorkspaceShell,
 } from "./approval-workspace-presentation.js";
 import {
@@ -2678,7 +2690,7 @@ function renderFaviconRoute(): string {
   ].join("\n");
 }
 
-type GeneratedPresentationProfile = "legacy" | "approval-v1";
+type GeneratedPresentationProfile = "legacy" | "approval-v1" | "task-v1";
 
 function presentationProfileFor(
   graph: ApplicationGraphV1,
@@ -2873,82 +2885,7 @@ function renderPageRuntime(
           "  ];",
           "  return semanticMatches.length === 1 ? semanticMatches[0]! : 'neutral';",
           "}",
-          "function statusOptions(entityKey: string): readonly string[] {",
-          "  const flows = definition.flow.flows.filter((flow) => flow.entity === entityKey && flow.states !== undefined);",
-          "  if (flows.length !== 1) return [];",
-          "  return Array.from(new Set(flows[0]!.states ?? []));",
-          "}",
-          "function filterRecords(fields: readonly RuntimeField[], records: readonly JsonRecord[], query: string, status: string): readonly JsonRecord[] {",
-          "  const normalizedQuery = query.trim().toLowerCase();",
-          "  return records.filter((record) => {",
-          "    if (status && String(record.status ?? '') !== status) return false;",
-          "    if (!normalizedQuery) return true;",
-          "    return fields.some((field) => { const value = record[field.key]; return (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') && String(value).toLowerCase().includes(normalizedQuery); });",
-          "  });",
-          "}",
-          "class SafeUiError extends Error {}",
-          "function safeResponseMessage(status: number): string {",
-          "  if (status === 400 || status === 409) return 'This record has changed or contains invalid values. Refresh and try again.';",
-          "  if (status === 401 || status === 403) return 'This action is unavailable for your selected role or the current record state.';",
-          "  if (status >= 500) return 'The service is unavailable. Please try again.';",
-          "  return 'The request could not be completed. Please try again.';",
-          "}",
-          "function fieldLabel(key: string): string {",
-          "  const words = key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2').replace(/[_-]+/g, ' ');",
-          "  return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();",
-          "}",
-          "function calendarDateToPrisma(value: string): string {",
-          "  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) throw new Error('Invalid date');",
-          "  const candidate = value + 'T00:00:00.000Z';",
-          "  const date = new Date(candidate);",
-          "  if (!Number.isFinite(date.getTime()) || date.toISOString() !== candidate) throw new Error('Invalid date');",
-          "  return candidate;",
-          "}",
-          "function formPayload(fields: readonly RuntimeField[], values: Readonly<Record<string, string | boolean>>): JsonRecord {",
-          "  const payload: JsonRecord = {};",
-          "  for (const field of fields) {",
-          "    const raw = values[field.key] ?? (field.type === 'boolean' ? false : '');",
-          "    if (field.type === 'boolean') { payload[field.key] = raw === true; continue; }",
-          "    const value = String(raw);",
-          "    if (value === '' && !field.required) continue;",
-          "    try {",
-          "      if (value === '' && field.required) throw new Error();",
-          "      if (field.type === 'integer' || field.type === 'decimal') {",
-          "        const number = Number(value);",
-          "        if (!value.trim() || !Number.isFinite(number) || (field.type === 'integer' && !Number.isInteger(number))) throw new Error();",
-          "        payload[field.key] = number;",
-          "      } else if (field.type === 'json') payload[field.key] = JSON.parse(value) as unknown;",
-          "      else if (field.type === 'date') payload[field.key] = calendarDateToPrisma(value);",
-          "      else if (field.type === 'datetime') {",
-          "        const date = new Date(value);",
-          "        if (!Number.isFinite(date.getTime())) throw new Error();",
-          "        payload[field.key] = date.toISOString();",
-          "      } else if (field.type === 'enum') {",
-          "        if (!field.values?.includes(value)) throw new Error();",
-          "        payload[field.key] = value;",
-          "      } else payload[field.key] = value;",
-          "    } catch { throw new SafeUiError('Enter a valid value for ' + fieldLabel(field.key) + '.'); }",
-          "  }",
-          "  return payload;",
-          "}",
-          "function formatValue(field: Pick<RuntimeField, 'type'>, value: unknown) {",
-          "  if (value === null || value === undefined || value === '') return 'Not provided';",
-          "  if (field.type === 'boolean') return value === true ? 'Yes' : 'No';",
-          "  if (field.type === 'date' || field.type === 'datetime') {",
-          "    const text = String(value);",
-          "    // A date-only business value must not shift to yesterday in western timezones.",
-          "    return <time dateTime={text}>{field.type === 'date' ? text.slice(0, 10) : text.replace('T', ' ').replace(/\\.000Z$/, ' UTC')}</time>;",
-          "  }",
-          "  return typeof value === 'object' ? JSON.stringify(value) : String(value);",
-          "}",
-          "function FieldControl({ field, value, onChange, id }: { readonly field: RuntimeField; readonly value: string | boolean; readonly onChange: (value: string | boolean) => void; readonly id: string }) {",
-          "  const common = { id, name: field.key, required: field.required, value: String(value), onChange: (event: { target: { value: string } }) => onChange(event.target.value) };",
-          "  if (field.type === 'boolean') return <input id={id} name={field.key} type='checkbox' checked={value === true} onChange={(event) => onChange(event.target.checked)} />;",
-          "  if (field.type === 'text' || field.type === 'json') return <textarea {...common} rows={3} />;",
-          "  if (field.type === 'enum') return <select {...common}><option value=''>Choose {fieldLabel(field.key).toLowerCase()}</option>{field.values?.map((option) => <option key={option} value={option}>{option}</option>)}</select>;",
-          "  if (field.type === 'integer' || field.type === 'decimal') return <input {...common} type='number' step={field.type === 'integer' ? 1 : 'any'} />;",
-          "  return <input {...common} type={field.type === 'datetime' ? 'datetime-local' : field.type === 'string' ? 'text' : field.type} />;",
-          "}",
+          renderWorkspaceDataHelpers(),
           "function validTransitions(role: string, entityKey: string, recordStatus: unknown) {",
           "  const seen = new Set<string>();",
           "  return definition.flow.flows.filter((flow) => flow.entity === entityKey).flatMap((flow) => flow.transitions).filter((transition) => {",
@@ -3006,36 +2943,7 @@ function renderPageRuntime(
     "}",
     "",
     ...(approval
-      ? [
-          "function useEntityRecords(entity: RuntimeEntity, role: string, allowed: boolean) {",
-          "  const [records, setRecords] = useState<readonly JsonRecord[]>([]);",
-          "  const [error, setError] = useState<string | null>(null);",
-          "  const [loading, setLoading] = useState(true);",
-          "  const request = useRef(0);",
-          "  const refresh = useCallback(async (): Promise<readonly JsonRecord[]> => {",
-          "    const current = ++request.current;",
-          "    if (!allowed) { setRecords([]); setLoading(false); setError(null); return []; }",
-          "    setLoading(true); setError(null);",
-          "    try {",
-          "      const response = await fetch(`/api/${entity.key}`, { headers: requestHeaders(role) });",
-          "      if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));",
-          "      const next = await response.json() as readonly JsonRecord[];",
-          "      if (current === request.current) setRecords(next);",
-          "      return next;",
-          "    } catch (reason) {",
-          "      const message = errorMessage(reason);",
-          "      if (current === request.current) setError(message);",
-          "      throw new SafeUiError(message);",
-          "    } finally { if (current === request.current) setLoading(false); }",
-          "  }, [entity.key, role, allowed]);",
-          "  useEffect(() => {",
-          "    setRecords([]);",
-          "    void refresh().catch(() => undefined);",
-          "    return () => { request.current++; };",
-          "  }, [refresh]);",
-          "  return { records, error, loading, refresh };",
-          "}",
-        ]
+      ? [renderWorkspaceRecordHook()]
       : [
           "function useEntityRecords(entity: RuntimeEntity, role: string, allowed: boolean) {",
           "  const [records, setRecords] = useState<readonly JsonRecord[]>([]);",
@@ -3416,7 +3324,8 @@ function renderWebStyles(
   // made in the Page Studio therefore survive Publish and compilation.
   const system = resolveExperienceDesignSystem(graph.experience);
   const usesPrivateApprovalCobalt =
-    profile === "approval-v1" && graph.experience.designSystem === undefined;
+    (profile === "approval-v1" || profile === "task-v1") &&
+    graph.experience.designSystem === undefined;
   const themeBlock = (mode: "light" | "dark"): string => {
     const tokenVars: string[] = [];
     for (const [group, tokens] of Object.entries(system.tokens)) {
@@ -3463,6 +3372,7 @@ function renderWebStyles(
     ".generated-stats { display: grid; gap: var(--factory-spacing-space-2); align-items: baseline; grid-auto-flow: column; justify-content: start; } .generated-stats strong { font-size: var(--factory-typography-font-size-xl); } .generated-stats span { color: var(--factory-muted); }",
     ".generated-calendar { display: grid; gap: var(--factory-spacing-space-4); padding: 0; margin: 0; list-style: none; } .generated-calendar > li { display: grid; gap: var(--factory-spacing-space-2); } .generated-calendar > li > strong { color: var(--factory-muted); text-transform: uppercase; font-size: var(--factory-typography-font-size-sm); }",
     "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
+    ...(profile === "task-v1" ? renderTaskWorkspaceStyles() : []),
     ...(profile === "approval-v1"
       ? [
           ...approvalWorkspaceStyles.map((style) =>
@@ -3872,8 +3782,11 @@ export function generateApplicationBundle(
   const compilationInput = buildCompilationInput(input, options);
   const graph = compilationInput.graph;
   const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
+  const taskEntity = selectTaskContract(graph, input.compositionLock);
   const rendererGraph = compilationInput.rendererGraph;
-  const presentationProfile = presentationProfileFor(graph);
+  const presentationProfile = taskEntity
+    ? "task-v1"
+    : presentationProfileFor(graph);
   const {
     restaurantRuntimeEnabled,
     useGenericOrderOperationsPersistence,
@@ -3967,7 +3880,8 @@ export function generateApplicationBundle(
   );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
-    ...(presentationProfile === "approval-v1"
+    ...(presentationProfile === "approval-v1" ||
+    presentationProfile === "task-v1"
       ? [
           {
             path: "THIRD_PARTY_NOTICES.md",
@@ -4085,13 +3999,15 @@ export function generateApplicationBundle(
       render: () =>
         restaurantRuntimeEnabled
           ? renderRestaurantPageRuntime(rendererGraph)
-          : renderPageRuntime(
-              graph,
-              orderEntityKey,
-              !!identityPolicy,
-              presentationProfile,
-              approvalEntity,
-            ),
+          : taskEntity
+            ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
+            : renderPageRuntime(
+                graph,
+                orderEntityKey,
+                !!identityPolicy,
+                presentationProfile,
+                approvalEntity,
+              ),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -4127,7 +4043,15 @@ export function generateApplicationBundle(
                 "export const POST = proxy;",
                 "export const POST = proxy;\nexport const PATCH = proxy;",
               )
-          : renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
+          : taskEntity
+            ? renderWebProxyRoute(
+                restaurantRuntimeEnabled,
+                !!identityPolicy,
+              ).replace(
+                "headers: { 'content-type':",
+                "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
+              )
+            : renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
     },
     {
       path: "web/app/globals.css",
@@ -4208,12 +4132,16 @@ export function generateApplicationBundle(
       path: "api/src/main.ts",
       render: () =>
         restaurantRuntime()?.main ??
-        renderApiMain(
-          graph,
-          usePackageLineConfigurationHandler,
-          usePackageMoneyPricingHandler,
-          identityPolicy,
-          approvalEntity,
+        renderTaskApi(
+          renderApiMain(
+            graph,
+            usePackageLineConfigurationHandler,
+            usePackageMoneyPricingHandler,
+            identityPolicy,
+            approvalEntity,
+          ),
+          !!identityPolicy,
+          taskEntity,
         ),
     },
     ...(restaurantRuntimeEnabled
@@ -4244,29 +4172,37 @@ export function generateApplicationBundle(
       path: "api/src/application-runtime.ts",
       render: () =>
         restaurantRuntime()?.applicationRuntimeContract ??
-        renderApplicationRuntime(
+        renderTaskMutationRuntime(
+          renderApplicationRuntime(
+            graph,
+            useResolvedContributions,
+            usePackageCartHandler,
+            usePackageLineConfigurationHandler,
+            usePackageMoneyPricingHandler,
+            catalogEntityKey,
+            orderEntityKey,
+            orderOperationsEntityKey,
+            useGenericOrderOperationsPersistence,
+            notificationOutbox,
+            approvalEntity,
+          ),
           graph,
-          useResolvedContributions,
-          usePackageCartHandler,
-          usePackageLineConfigurationHandler,
-          usePackageMoneyPricingHandler,
-          catalogEntityKey,
-          orderEntityKey,
-          orderOperationsEntityKey,
-          useGenericOrderOperationsPersistence,
-          notificationOutbox,
-          approvalEntity,
+          taskEntity,
         ),
     },
     {
       path: "api/src/prisma-record-store.ts",
       render: () =>
-        renderPrismaRecordStore(
+        renderTaskPrismaStore(
+          renderPrismaRecordStore(
+            graph,
+            restaurantRuntimeEnabled,
+            useGenericOrderOperationsPersistence,
+            notificationOutbox !== undefined,
+            approvalEntity,
+          ),
           graph,
-          restaurantRuntimeEnabled,
-          useGenericOrderOperationsPersistence,
-          notificationOutbox !== undefined,
-          approvalEntity,
+          taskEntity,
         ),
     },
     ...(notificationOutbox

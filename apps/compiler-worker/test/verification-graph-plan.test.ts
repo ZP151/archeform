@@ -1,4 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { canonicalTeamTaskInterpretation } from "../../../packages/adapters/src/requirements/task-definition-selection.js";
+import {
+  composeProductDraft,
+  planProductAlternatives,
+} from "@factory/capabilities/node";
+import {
+  applyGraphDiffToDraft,
+  createBlankApplicationDraft,
+} from "@factory/graph";
 
 import { VerificationContractError } from "@factory/graph";
 
@@ -19,6 +28,80 @@ import {
 const identityPolicy = graphLock([{ key: "core.identity-policy" }]);
 
 describe("graph-derived verification plan", () => {
+  it("derives protected Task requests and five distinct activation keys through recompletion", () => {
+    const { spec, blueprint } = canonicalTeamTaskInterpretation();
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: "task-verifier",
+      workspaceId: "local",
+      name: "Task verifier",
+    });
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    const graph = applyGraphDiffToDraft(
+      baseDraft,
+      composeProductDraft({ plan: standard.plan, blueprint, baseDraft }).diff,
+    ).graph;
+    const selections = graph.integration.compositionSelections!;
+    delete graph.integration.compositionSelections;
+    const lock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    });
+    const profile = deriveVerificationProfile(graph, lock);
+    expect(profile.journeys["task-start"]).toMatchObject({
+      sessionId: "fixture-session-member",
+      replayExpectation: "stored-success",
+      body: '{"expectedVersion":0}',
+    });
+    expect(
+      Object.keys(JSON.parse(profile.journeys["task-create"].body!)),
+    ).toEqual(["values"]);
+    const final = profile.journeys["task-recomplete"];
+    expect(final).toBeDefined();
+    expect(final.body).toBe('{"expectedVersion":3}');
+    expect(final.chain!.map((step) => step.action)).toEqual([
+      "task.create",
+      "task.start-fresh",
+      "task.complete-fresh",
+      "task.reopen-fresh",
+    ]);
+    expect(
+      final
+        .chain!.slice(1)
+        .map((step) => JSON.parse(step.body!).expectedVersion),
+    ).toEqual([0, 1, 2]);
+    const keys = [
+      ...final.chain!.map((step) => step.idempotencyKeyOverride),
+      final.headers![0].value,
+    ];
+    expect(
+      keys.every(
+        (key) => typeof key === "string" && /^[a-z0-9-]{1,128}$/.test(key),
+      ),
+    ).toBe(true);
+    expect(new Set(keys).size).toBe(5);
+    expect(
+      profile.apiRegistry
+        .filter((a) => a.action.startsWith("task.") && a.method === "POST")
+        .every(
+          (a) => a.expectedStatus === (a.action === "task.create" ? 201 : 200),
+        ),
+    ).toBe(true);
+    expect(
+      profile.apiRegistry
+        .filter((a) => a.method !== "GET")
+        .every((a) => a.action.startsWith("task.")),
+    ).toBe(true);
+    expect(profile.journeys["task-denied-start"].headers).not.toEqual(
+      profile.journeys["task-start"].headers,
+    );
+    expect(JSON.stringify(deriveVerificationProfile(graph, lock))).toBe(
+      JSON.stringify(profile),
+    );
+  });
   it("derives the full plan for the Expense Approval graph", () => {
     const profile = deriveVerificationProfile(
       expenseApprovalGraph(),

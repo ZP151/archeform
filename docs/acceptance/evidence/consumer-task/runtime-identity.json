@@ -1,0 +1,60 @@
+{
+  "recordedAt": "2026-09-12T18:12:33.411Z",
+  "base": "d28f1fedf4fa0aaefe3e81492cabd857db69d8cb",
+  "project": "factory-t9-task-20260913",
+  "images": [
+    {
+      "service": "control-plane",
+      "image": "sha256:4aa8ad10fdb643802991df396edef01a069a59c67fdbd6b9ba9b4263e275cdf5",
+      "sourceFilesMatched": 11,
+      "sources": {
+        "packages/adapters/src/requirements/definition-selection-catalogue.ts": "5b611c3772d7c4e9b80eeea48223cd3f4b1fc7deff6ef001ae72aef2d279f92b",
+        "packages/adapters/src/requirements/openai-interpreter.ts": "db6e9b6c5c98f5dd74c42e6d39dc2100dc2fdcbb591139dd2d780ac09ae89e34",
+        "packages/adapters/src/requirements/task-definition-selection.ts": "d1d355c5c951df96f84cac5fb09d0ee3054222046c87bed64db4aaa70010625f",
+        "packages/compiler/src/approval-mutation-contract.ts": "34ed24c9fd665593547d57c8743b0e6d2d016e4c69e8feffe891b17b9a1d4a17",
+        "packages/compiler/src/approval-workspace-presentation.ts": "210dca9f500c8ab0ffcc6fbfbad3add73c70f7657b38eb62e4107c52768e6f40",
+        "packages/compiler/src/index.ts": "317d3436cf0e9eeb3419190df69f27984958ae90ceb31472ce9ce0c2676d5ba8",
+        "packages/compiler/src/mutation-write-protection.ts": "28c4a6d9a67e644b7f20f7a0a97e6199aac801a4383a2258ac4035e1cc5c98a6",
+        "packages/compiler/src/targets/database/target.ts": "54aceec8fbb1ce5d32942acc1ead05701a317a6a03b4bc904a1dc17983285b24",
+        "packages/compiler/src/task-mutation-contract.ts": "23ea227eeb16e9fe8de40b7d86c78554447f5e5c9ce508e87aa1f451bc63f732",
+        "packages/compiler/src/task-workspace-presentation.ts": "3d4aa45170bab194d5672f069aab2817683e0409e4eb024e2cc9236f9666dc42",
+        "packages/graph/src/product-blueprint.ts": "2111705e119d539509007a0a4d68c64e33ca40c9aae54e26775101b9316d460c"
+      }
+    },
+    {
+      "service": "compiler-worker",
+      "image": "sha256:f3d7bce58f0912a1dcc0fdaa81df4b9394d7baa2624c7ab5a6e93a0886edfd2e",
+      "sourceFilesMatched": 11,
+      "sources": {
+        "apps/compiler-worker/src/verifier/probes.ts": "23e2fe39601f4ee748ed3416393069c1b1a93f10f61b9302dcc2ef96e1b0c7e8",
+        "apps/compiler-worker/src/verifier/role-journey.ts": "34f68695c293fa4df9292aba07cf48821119bf9a9ff9f8f7f91829df8c601a33",
+        "apps/compiler-worker/src/verifier/verification-graph-plan.ts": "2f01b2fe4b75318bcc093a5d00fff27963b10930d8e5cfd97435bafaf4966edc",
+        "packages/compiler/src/approval-mutation-contract.ts": "34ed24c9fd665593547d57c8743b0e6d2d016e4c69e8feffe891b17b9a1d4a17",
+        "packages/compiler/src/approval-workspace-presentation.ts": "210dca9f500c8ab0ffcc6fbfbad3add73c70f7657b38eb62e4107c52768e6f40",
+        "packages/compiler/src/index.ts": "317d3436cf0e9eeb3419190df69f27984958ae90ceb31472ce9ce0c2676d5ba8",
+        "packages/compiler/src/mutation-write-protection.ts": "28c4a6d9a67e644b7f20f7a0a97e6199aac801a4383a2258ac4035e1cc5c98a6",
+        "packages/compiler/src/targets/database/target.ts": "54aceec8fbb1ce5d32942acc1ead05701a317a6a03b4bc904a1dc17983285b24",
+        "packages/compiler/src/task-mutation-contract.ts": "23ea227eeb16e9fe8de40b7d86c78554447f5e5c9ce508e87aa1f451bc63f732",
+        "packages/compiler/src/task-workspace-presentation.ts": "3d4aa45170bab194d5672f069aab2817683e0409e4eb024e2cc9236f9666dc42",
+        "packages/graph/src/product-blueprint.ts": "2111705e119d539509007a0a4d68c64e33ca40c9aae54e26775101b9316d460c"
+      }
+    },
+    {
+      "service": "workbench",
+      "image": "sha256:40368e9102bac8a7d80e4904c486ac55f882fb9e0f53fbf8aa6c94dd58cdf701",
+      "sourceFilesMatched": 7,
+      "sources": {
+        "apps/workbench/components/workbench-home.tsx": "e2c8db14dc45930f88407c748cc6b0088e31345022254699d7a4f6212676c4d5",
+        "apps/workbench/lib/product-journey/consumer-family.ts": "9a4eedb2dcf47737ec60ad9e3bd837ef646c3b4f93651fbec45874876a025ec5",
+        "apps/workbench/lib/product-journey/use-consumer-generation.ts": "0915c7a54b00b2f0fa10fc412cd2f755693720543ba86769f6eaf040e1ea959e",
+        "packages/adapters/src/requirements/definition-selection-catalogue.ts": "5b611c3772d7c4e9b80eeea48223cd3f4b1fc7deff6ef001ae72aef2d279f92b",
+        "packages/adapters/src/requirements/openai-interpreter.ts": "db6e9b6c5c98f5dd74c42e6d39dc2100dc2fdcbb591139dd2d780ac09ae89e34",
+        "packages/adapters/src/requirements/task-definition-selection.ts": "d1d355c5c951df96f84cac5fb09d0ee3054222046c87bed64db4aaa70010625f",
+        "packages/graph/src/product-blueprint.ts": "2111705e119d539509007a0a4d68c64e33ca40c9aae54e26775101b9316d460c"
+      }
+    }
+  ],
+  "providerInvocation": false,
+  "interpretation": "authored fixture",
+  "runtime": "actual local PostgreSQL and generated HTTP/browser"
+}

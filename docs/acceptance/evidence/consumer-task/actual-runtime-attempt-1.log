@@ -1,0 +1,34 @@
+
+Running 1 test using 1 worker
+
+(node:44668) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44668) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_TASK_FAILURE {"stage":"describe","compilationId":null,"interpretationCalls":1,"lifecycle":[],"elapsedMs":63337}
+  x  1 e2e\consumer-task.spec.ts:614:5 › D2.5 deterministic Task selection publishes a safe shared board (1.1m)
+
+
+  1) e2e\consumer-task.spec.ts:614:5 › D2.5 deterministic Task selection publishes a safe shared board 
+
+    Error: [31mTimed out 60000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByRole('region', { name: 'Task delivery' })
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+    [2m  - expect.toBeVisible with timeout 60000ms[22m
+    [2m  - waiting for getByRole('region', { name: 'Task delivery' })[22m
+
+
+      688 |     expect((await interpreted).status()).toBe(200);
+      689 |     const delivery = page.getByRole("region", { name: "Task delivery" });
+    > 690 |     await expect(delivery).toBeVisible({ timeout: 60_000 });
+          |                            ^
+      691 |     const openApp = delivery.getByRole("link", { name: "Open local app" });
+      692 |     await expect
+      693 |       .poll(async () => await openApp.isVisible(), { timeout: 300_000 })
+        at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\consumer-task.spec.ts:690:28
+
+  1 failed
+    e2e\consumer-task.spec.ts:614:5 › D2.5 deterministic Task selection publishes a safe shared board 

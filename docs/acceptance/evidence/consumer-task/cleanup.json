@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-09-12T18:12:37.2459577Z",
+  "projects": [
+    {
+      "project": "factory-t9-task-20260913",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-98005068-a4c3-4c97-ad57-4982a78be1d1",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-verify-77f7bd33-64e9-4c27-891c-d40598c0bfcd",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    }
+  ],
+  "allOwnedResourcesZero": true
+}

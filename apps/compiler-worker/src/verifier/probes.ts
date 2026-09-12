@@ -293,12 +293,21 @@ async function runChainPrologue(
       sessionId: step.sessionId ?? journey.sessionId,
       principal: step.principal ?? journey.principal,
     };
+    const headers = journeyHeaders(merged);
+    const commandHeaders =
+      step.idempotencyKeyOverride === undefined
+        ? headers
+        : headers?.map((header) =>
+            header.name === "x-factory-idempotency-key"
+              ? { ...header, value: step.idempotencyKeyOverride! }
+              : header,
+          );
     const result = await context.environment.request(
       stepAction.method,
       stepRoute,
       "api",
       {
-        headers: journeyHeaders(merged),
+        headers: commandHeaders,
         body: step.body,
       },
       index === 0,

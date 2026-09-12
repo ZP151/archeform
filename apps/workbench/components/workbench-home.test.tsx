@@ -289,6 +289,36 @@ describe("WorkbenchHome", () => {
     ).not.toBeNull();
   });
 
+  it("shows Task delivery as a bounded shared board with display-only assignment", () => {
+    act(() =>
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            consumer: {
+              family: "task",
+              manualReview: false,
+              setManualReview: vi.fn(),
+              active: true,
+              status: "Your local Task app is ready.",
+              readyUrl: "http://127.0.0.1:34123",
+              retry: vi.fn(),
+            },
+          })}
+        />,
+      ),
+    );
+    const delivery = container.querySelector('[aria-label="Task delivery"]');
+    expect(delivery?.querySelector("h2")?.textContent).toBe("Your Task app");
+    expect(delivery?.textContent).toMatch(/shared board/);
+    expect(delivery?.textContent).toMatch(/display text only/);
+    expect(delivery?.textContent).toMatch(/Viewer/);
+    expect(delivery?.textContent).not.toMatch(/Restaurant|approval workflow/);
+  });
+
   it("communicates curated-template loading, empty, and bounded retry states", () => {
     const onRetryTemplates = vi.fn();
     const render = (

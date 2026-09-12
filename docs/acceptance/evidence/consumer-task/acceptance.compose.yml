@@ -1,0 +1,29 @@
+services:
+  postgres:
+    ports: !override
+      - "127.0.0.1:15440:5432"
+  redis:
+    ports: !override
+      - "127.0.0.1:16380:6379"
+  control-plane:
+    image: factory-t9-task-20260913-control-plane:latest
+    ports: !override
+      - "127.0.0.1:13020:3000"
+    environment:
+      OPENAI_API_KEY: ""
+  compiler-worker:
+    image: factory-t9-task-20260913-compiler-worker:latest
+    environment:
+      REDIS_URL: redis://127.0.0.1:16380
+      FACTORY_CONTROL_PLANE_URL: http://127.0.0.1:13020
+  workbench:
+    image: factory-t9-task-20260913-workbench:latest
+    build:
+      args:
+        NEXT_PUBLIC_CONTROL_PLANE_URL: http://127.0.0.1:13020
+    ports: !override
+      - "127.0.0.1:15180:5174"
+    environment:
+      NEXT_PUBLIC_CONTROL_PLANE_URL: http://127.0.0.1:13020
+      FACTORY_FIXTURE_MODE: ""
+      OPENAI_API_KEY: ""

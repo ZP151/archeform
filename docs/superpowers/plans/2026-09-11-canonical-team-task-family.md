@@ -2,6 +2,23 @@
 
 > **For agentic workers:** Use subagent-driven-development for the one serialized integration task below. Root owns disjoint runtime acceptance and Git.
 
+**Active resumption (2026-09-13):** Approval correction is delivered at
+`d28f1fedf4fa0aaefe3e81492cabd857db69d8cb`. Before Task source writes, root
+captured three definition hashes and ten complete bundle hashes in
+`packages/compiler/test/fixtures/task-non-task-baseline.json`, with a passing
+permanent regression in `packages/compiler/test/task-compatibility.test.ts`.
+These replace historical baseline claims below. Accepted ADR-0063 at SHA-256
+`8d5b2042a798b98f130fe7265f6e1bc1389bd67f618cf1f35a9ce0d8b966ea68`
+amends only the old Task mutation assumptions: shared private write-protection
+fragments, protected Task create/events, Task-only version/receipt storage,
+client recovery and verifier requests. Its MIG-002 extends the single writer's
+manifest. The active ledger records exact independent standing acceptance and
+assigns `/root/task_integration_owner`; root retains the compatibility files,
+E2E, evidence/docs and Git. Source work is authorized; runtime remains pending
+separate exact source/image authority. ADR-0057's product scope remains exact.
+Post-creation editing is still a product gap, so this first Task family is a
+bounded experiment rather than a product-complete task management system.
+
 **Scheduling correction (2026-09-12):** Production is held for the approval correction/decision-closure priority. The dispatched agent failed before writing code. Preserve this frozen experiment as planned scope, not delivered capability. Its non-Task byte baseline must be explicitly rebased after any accepted shared UI refinement.
 
 **Next delivery prerequisite:** The founder approved the expressive UI at
@@ -63,19 +80,19 @@ Root owns the new `e2e/consumer-task.spec.ts`, new `e2e/consumer-task-fixture.ts
 Interfaces: adapter exports its canonical interpretation and definition entry only through its private module. Public adapter API remains the existing interpreter. Task E2E requests `team-task-tracking` through that public interpreter using a deterministic provider fixture. Consumer family adds `task` after existing checksum/lock validation. Compiler emits `task-v1` only for the frozen lifecycle/grant shape. Existing generic CRUD/event routes and response/error formats do not change.
 
 - [x] Record exact independent ADR acceptance and production ownership in the ledger.
-- [ ] Add focused RED tests for the three new verbs, canonical structure, strict unknown/non-null/mixed selection rejection, and all unsupported assignment/private-account requirements.
-- [ ] Implement synchronized Graph/provider enums, exact Task projection and static family registration. Retain byte checks for all existing definitions.
-- [ ] Run Graph and adapter focused tests; fix actual failures before continuing.
-- [ ] Add and run RED capability and Workbench tests for six exact locks, bindings, permissions and checksum-bound structural selection, including renamed keys and falsified grants/transitions.
-- [ ] Implement structural consumer recognition using existing delivery state flow; generic composer must prove Task works without hidden approval aliases.
-- [ ] Add compiler RED tests for title/priority/due/assignee summaries, all three event buttons/icons and safe long/empty values; preserve finding, pending/race/error/role behavior.
-- [ ] Extract minimal presentation-neutral helpers, keep approval bytes, and assemble Task output from the frozen contract. Run final emitted TSX/CSS diagnostics before actual runtime. Reject clipped navigation, overlap, sparse oversized rows or approval copy.
-- [ ] In the focused development regressions, feed a true Published Graph and its separate immutable lock through compilation and the generated verification requests. Exercise fixture-session authentication together with declared mutation headers. Catch lifecycle and request-assembly gaps before the broad package run; this is existing test coverage, not another approval stage.
-- [ ] Run affected package checks and focused suites; run complete suites for changed shared contracts/packages once. Reuse valid unaffected evidence for later small corrections.
-- [ ] Independent task review checks specification and implementation. Fix concrete issues within frozen ownership.
-- [ ] Root authorizes one provider-free actual runtime after source freeze, with current topology and exact project/image identities. Run business and actual visual cases below, retain failure/repair attempts honestly and clean only exact resources.
-- [ ] Independent QA evaluates actual business/regression/adversarial evidence; independent release review follows at this shared-contract boundary. These are the delivery-policy gates for this cross-package slice, not per-component reviews. No extra cosmetic gates.
-- [ ] Root records bounded acceptance, product metrics and source/evidence/cleanup identities; commit and normally push the active branch and verify equality. No main, repository release or cloud deployment.
+- [x] Add focused RED tests for the three new verbs, canonical structure, strict unknown/non-null/mixed selection rejection, and all unsupported assignment/private-account requirements.
+- [x] Implement synchronized Graph/provider enums, exact Task projection and static family registration. Retain byte checks for all existing definitions.
+- [x] Run Graph and adapter focused tests; fix actual failures before continuing.
+- [x] Add and run RED capability and Workbench tests for six exact locks, bindings, permissions and checksum-bound structural selection, including renamed keys and falsified grants/transitions.
+- [x] Implement structural consumer recognition using existing delivery state flow; generic composer must prove Task works without hidden approval aliases.
+- [x] Add compiler RED tests for title/priority/due/assignee summaries, all three event buttons/icons and safe long/empty values; preserve finding, pending/race/error/role behavior.
+- [x] Extract minimal presentation-neutral helpers, keep approval bytes, and assemble Task output from the frozen contract. Run final emitted TSX/CSS diagnostics before actual runtime. Reject clipped navigation, overlap, sparse oversized rows or approval copy.
+- [x] In the focused development regressions, feed a true Published Graph and its separate immutable lock through compilation and the generated verification requests. Exercise fixture-session authentication together with declared mutation headers. Catch lifecycle and request-assembly gaps before the broad package run; this is existing test coverage, not another approval stage.
+- [x] Run affected package checks and focused suites; run complete suites for changed shared contracts/packages once. Reuse valid unaffected evidence for later small corrections.
+- [x] Independent task review checks specification and implementation. Fix concrete issues within frozen ownership.
+- [x] Root authorizes one provider-free actual runtime after source freeze, with current topology and exact project/image identities. Run business and actual visual cases below, retain failure/repair attempts honestly and clean only exact resources.
+- [x] Independent QA evaluates actual business/regression/adversarial evidence; independent release review follows at this shared-contract boundary. These are the delivery-policy gates for this cross-package slice, not per-component reviews. No extra cosmetic gates.
+- [x] Root records bounded acceptance, product metrics and source/evidence/cleanup identities, and authorizes controller delivery. The controller task must then record the normal commit, branch push and remote equality before closing its goal. No main, repository release or cloud deployment.
 
 ## Verification commands
 

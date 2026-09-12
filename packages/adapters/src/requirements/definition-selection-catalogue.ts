@@ -6,10 +6,11 @@ import {
 import { expenseApprovalDefinition } from "./approval-definition-selection.js";
 import { purchaseRequestApprovalDefinition } from "./purchase-request-definition-selection.js";
 import { restaurantDefinition } from "./restaurant-definition-selection.js";
+import { teamTaskDefinition } from "./task-definition-selection.js";
 
 type DefinitionEntry = {
   readonly definitionKey: string;
-  readonly family: "restaurant" | "approval";
+  readonly family: "restaurant" | "approval" | "task";
   readonly parameterPolicy: "restaurant-menu" | "none";
   readonly selectionSchema: z.ZodEffects<z.AnyZodObject>;
   readonly jsonSchema: object;
@@ -61,7 +62,7 @@ export function validateDefinitionCatalogue(
         (branch) =>
           branch.properties.definitionKey.const !== entry.definitionKey,
       ) ||
-      (entry.family === "approval") !== (entry.parameterPolicy === "none")
+      (entry.family !== "restaurant") !== (entry.parameterPolicy === "none")
     )
       throw new Error("Definition registration is inconsistent.");
     keys.add(entry.definitionKey);
@@ -85,6 +86,7 @@ export const definitionSelectionCatalogue = Object.freeze([
   Object.freeze(restaurantDefinition),
   Object.freeze(expenseApprovalDefinition),
   Object.freeze(purchaseRequestApprovalDefinition),
+  Object.freeze(teamTaskDefinition),
 ] as const);
 validateDefinitionCatalogue(definitionSelectionCatalogue);
 const schemas = definitionSelectionCatalogue.map(

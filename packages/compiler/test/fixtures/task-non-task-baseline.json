@@ -1,0 +1,20 @@
+{
+  "baseCommit": "d28f1fedf4fa0aaefe3e81492cabd857db69d8cb",
+  "definitions": {
+    "restaurant-ordering": "7b406b4b5e721ea1ec24b8865a5f13308104666f89b260de10b4bb7f41bfa3d6",
+    "expense-approval": "b1a2a2e5f7f5fc3b2a07e0f0e6bc732b18433c79a43400d96f6d6e9e3036ae11",
+    "purchase-request-approval": "6593c83386022e2e9d6e8d6fe3d0cb0055b669cf3727400150bf3fe0e6e4a36c"
+  },
+  "bundles": {
+    "restaurant-ordering": "39fc0256d818eedfdbdefbd27f536b1efeae1b4bad39c251979f9e69445d03a4",
+    "restaurant-ordering-published": "a5c06e1da5ec1e084a73ea82dd13efbefee754dacc970ee3c69fb3a597cda59f",
+    "expense-approval": "a9e7e1eb8a3746c32b1d183ae93c5501786181057b85a1c2d9261e928074b2cf",
+    "expense-approval-published": "44d530ab70529fc5eaac644c294341cf609122d8be68c887872983a548c9fb79",
+    "purchase-request-approval": "d0c33f902e3be46e5c0d228bb6d2e56a074cd8e50212b5db4fa8b00f05f8dfa2",
+    "purchase-request-approval-published": "f0edaf58f51f07f96d993d8bd1475a1ad4cca739ccc3b40e09433d55119a806e",
+    "legacy-expense": "95cf505b03891ad1035c7c4ee2e46d1627cc41cd0b46588ae55e5c12184e6589",
+    "legacy-purchase": "2d40930bc15bdd7e0f8a0333b83cb0cb9c58fecf7189fae7011590c21dbe7364",
+    "legacy-booking": "b0c27c01f5a7a14ec3bf466a679b47c5b0ad72eaef56b0d6ea4639016f51ead9",
+    "restaurant-v3": "4f04d9026038e4bf86bc052e8075e9f15a0ee332ff6eb0a53371db0c556aace3"
+  }
+}

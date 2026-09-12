@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { canonicalTeamTaskInterpretation } from "../../adapters/src/requirements/task-definition-selection.js";
 
 import {
   applyGraphDiffToDraft,
@@ -29,6 +30,80 @@ function blankDraft(applicationId: string, name: string): DraftRevisionV1 {
 }
 
 describe("composeProductDraft", () => {
+  it("composes Task fields and role/state authority without approval effects or an extra business entity", () => {
+    const { spec, blueprint } = canonicalTeamTaskInterpretation(),
+      baseDraft = blankDraft("team-board", "Team board");
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    const graph = applyGraphDiffToDraft(
+      baseDraft,
+      composeProductDraft({ plan: standard.plan, blueprint, baseDraft }).diff,
+    ).graph;
+    expect(graph.domain.entities.map((e) => e.key)).toEqual([
+      "task",
+      "team-board-principal",
+      "team-board-session",
+    ]);
+    expect(
+      graph.domain.entities[0].fields.map((f) => [f.key, f.type, f.required]),
+    ).toEqual([
+      ["title", "string", true],
+      ["description", "text", false],
+      ["assignee", "string", true],
+      ["dueDate", "date", true],
+      ["priority", "enum", true],
+      ["status", "enum", true],
+    ]);
+    expect(graph.flow.flows).toEqual([
+      {
+        id: "task-lifecycle",
+        entity: "task",
+        initialState: "not-started",
+        states: ["not-started", "in-progress", "completed"],
+        events: ["start", "complete", "reopen"],
+        transitions: [
+          {
+            from: "not-started",
+            event: "start",
+            to: "in-progress",
+            roles: ["member"],
+          },
+          {
+            from: "in-progress",
+            event: "complete",
+            to: "completed",
+            roles: ["member"],
+          },
+          {
+            from: "completed",
+            event: "reopen",
+            to: "in-progress",
+            roles: ["member"],
+          },
+        ],
+      },
+    ]);
+    expect(
+      graph.policy.permissions.filter((p) => p.resource === "task"),
+    ).toEqual([
+      {
+        role: "member",
+        resource: "task",
+        actions: ["create", "read", "start", "complete", "reopen"],
+      },
+      { role: "viewer", resource: "task", actions: ["read"] },
+    ]);
+    expect(graph.page.pages.map((p) => p.blocks[0].type)).toEqual([
+      "stats",
+      "list",
+      "form",
+      "detail",
+      "queue",
+    ]);
+  });
   it("composes only the eligible deterministic Restaurant recipe and rejects semantic overrides", () => {
     const fixture = restaurantProductFixture();
     const first = composeProductRecipe(fixture);

@@ -1,5 +1,22 @@
 # Archeform roadmap
 
+## Next delivery and scale — 2026-09-13
+
+Team Task Tracking under accepted ADR-0057/0063 now passes its actual local
+runtime lane after the expressive UI and approval correction at `d28f1fed`.
+The [current scale plan](superpowers/plans/2026-09-13-product-definition-scale.md)
+sets the sequence: Task workflow, ordinary Task correction, reviewed-definition
+expansion, then invariant-backed Appointment, Content/Directory and Inventory.
+Task acceptance advances three definitions/two families to four/three. It keeps
+product-complete journeys separate: the first Task experiment excludes editing
+and real identity. The immediate priority is same-task correction, then a
+data-based definition format and validator before a meaningful 30-entry batch.
+
+Scale targets remain 30, 100, then hundreds/thousands of reviewed definitions
+composed from fewer proven business families. Material and style counts do not
+measure this goal. Focused regressions and one existing review sequence at each
+shared-contract boundary support delivery; small fixes reuse valid evidence.
+
 ## Active delivery roadmap — 2026-09-07
 
 The founder-approved priority is to reduce ordinary users' application-building

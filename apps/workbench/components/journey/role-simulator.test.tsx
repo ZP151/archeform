@@ -110,7 +110,7 @@ describe("RoleSimulator", () => {
       "approve → approved",
     );
     expect(view.querySelector(".simulation-events")?.textContent).toContain(
-      "reject → rejected",
+      "reject → returned",
     );
   });
 

@@ -28,6 +28,7 @@ import {
   type ConsumerGenerationController,
 } from "./use-consumer-generation";
 import { consumerFamilyFor } from "./consumer-family";
+import { canonicalTeamTaskInterpretation } from "../../../../packages/adapters/src/requirements/task-definition-selection";
 import { purchaseRequestInterpretationFixture } from "../../test/consumer-generation-fixture";
 
 declare global {
@@ -171,6 +172,181 @@ async function waitFor(assertion: () => void): Promise<void> {
 }
 
 describe("useConsumerGeneration", () => {
+  function taskJourney(
+    mutate?: (
+      interpretation: ReturnType<typeof canonicalTeamTaskInterpretation>,
+      plan: ProductPlanAlternative["plan"],
+    ) => void,
+  ) {
+    const interpretation = canonicalTeamTaskInterpretation();
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: interpretation.spec.requirementId,
+      workspaceId: "local-workspace",
+      name: "Shared board",
+    });
+    const alternatives = structuredClone(
+      planProductAlternatives({
+        requirement: interpretation.spec,
+        blueprint: interpretation.blueprint,
+        baseDraft,
+      }),
+    );
+    mutate?.(interpretation, alternatives[0].plan);
+    return journeyFor({
+      interpretation: {
+        apiVersion: "factory.requirement-interpretation-result/v1",
+        interpretation,
+        businessParameters: null,
+      },
+      alternatives,
+      review: {
+        ...journeyFor().state.review!,
+        applicationGraphId: "cmstoredapplicationrowidentity",
+      },
+    });
+  }
+  it("recognizes the exact Task composition and announces Task delivery", async () => {
+    const journey = taskJourney();
+    expect(consumerFamilyFor(journey)).toBe("task");
+    await act(async () =>
+      root.render(
+        <Harness
+          journey={journey}
+          release={releaseFor()}
+          applyComposedProduct={vi.fn()}
+        />,
+      ),
+    );
+    expect(globalThis.__consumerGeneration?.family).toBe("task");
+    expect(globalThis.__consumerGeneration?.status).toContain("Task");
+    expect(journey.chooseAlternative).toHaveBeenCalledWith("standard");
+  });
+  it("rejects identity bindings aimed at the database row instead of the Graph requirement key", () => {
+    const journey = taskJourney((_, plan) => {
+      for (const binding of plan.graphBindings) {
+        if (binding.inputKey === "principalEntity")
+          binding.graphSymbol =
+            "graph.domain.cmstoredapplicationrowidentity-principal";
+        if (binding.inputKey === "sessionEntity")
+          binding.graphSymbol =
+            "graph.domain.cmstoredapplicationrowidentity-session";
+      }
+    });
+    expect(consumerFamilyFor(journey)).toBeNull();
+  });
+  it("set-matches Task declarations, options, locks and bindings", () => {
+    const journey = taskJourney((i, p) => {
+      i.blueprint.entities[0].fields.reverse();
+      i.blueprint.entities[0].fields
+        .find((f) => f.key === "priority")!
+        .options!.reverse();
+      i.blueprint.actors.forEach((a) => a.permissions[0].actions.reverse());
+      i.blueprint.pageIntents.reverse();
+      i.blueprint.workflows[0].transitions.reverse();
+      p.capabilityLocks.reverse();
+      p.graphBindings.reverse();
+    });
+    expect(consumerFamilyFor(journey)).toBe("task");
+  });
+  it("accepts renamed Task symbols and reversed actors only with recomputed planner bindings", () => {
+    const journey = taskJourney((i, p) => {
+      const mapping: Record<string, string> = {
+        task: "work-item",
+        "task-lifecycle": "work-status",
+        member: "collaborator",
+        viewer: "reader",
+      };
+      i.blueprint.entities[0].key = "work-item";
+      i.blueprint.entities[0].label = "Work item";
+      for (const actor of i.blueprint.actors) {
+        actor.key = mapping[actor.key];
+        actor.label = "Display " + actor.key;
+        actor.permissions[0].entityKey = "work-item";
+      }
+      i.blueprint.actors.reverse();
+      for (const journey of i.blueprint.acceptanceJourneys)
+        for (const step of journey.steps)
+          step.actorKey = mapping[step.actorKey];
+      const flow = i.blueprint.workflows[0];
+      flow.key = "work-status";
+      flow.entityKey = "work-item";
+      flow.label = "Progress";
+      flow.transitions.forEach((t) => (t.actorKey = "collaborator"));
+      flow.states.splice(1, 2, flow.states[2], flow.states[1]);
+      for (const page of i.blueprint.pageIntents) {
+        mapping[page.key] = "page-" + page.intent;
+        page.key = mapping[page.key];
+        page.entityKey = "work-item";
+        page.label = "Display " + page.intent;
+      }
+      for (const b of p.graphBindings) {
+        const parts = b.graphSymbol.split(".");
+        parts[2] = mapping[parts[2]] ?? parts[2];
+        b.graphSymbol = parts.join(".");
+        if (["defaultRole", "actorRole", "recipientRole"].includes(b.inputKey))
+          b.graphSymbol = "graph.policy.reader";
+        if (b.inputKey === "authenticatedRole")
+          b.graphSymbol = "graph.policy.collaborator";
+      }
+    });
+    expect(consumerFamilyFor(journey)).toBe("task");
+  });
+  it.each([
+    ["field", (i: any) => i.blueprint.entities[0].fields.pop()],
+    [
+      "extra field",
+      (i: any) =>
+        i.blueprint.entities[0].fields.push({
+          key: "notes",
+          label: "Notes",
+          type: "text",
+          required: false,
+        }),
+    ],
+    [
+      "requiredness",
+      (i: any) => (i.blueprint.entities[0].fields[0].required = false),
+    ],
+    [
+      "options",
+      (i: any) => i.blueprint.entities[0].fields[4].options.push("urgent"),
+    ],
+    ["actor", (i: any) => i.blueprint.actors.pop()],
+    [
+      "grant",
+      (i: any) => i.blueprint.actors[0].permissions[0].actions.push("update"),
+    ],
+    [
+      "viewer grant",
+      (i: any) => i.blueprint.actors[1].permissions[0].actions.push("complete"),
+    ],
+    ["page", (i: any) => i.blueprint.pageIntents.pop()],
+    ["transition", (i: any) => i.blueprint.workflows[0].transitions.pop()],
+    ["initial", (i: any) => i.blueprint.workflows[0].states.reverse()],
+    [
+      "checksum",
+      (i: any) =>
+        (i.blueprint.requirementChecksum = "sha256:" + "0".repeat(64)),
+    ],
+    ["lock", (_: any, p: any): unknown => p.capabilityLocks.pop()],
+    [
+      "duplicate lock",
+      (_: any, p: any): unknown =>
+        (p.capabilityLocks[0] = p.capabilityLocks[1]),
+    ],
+    ["binding", (_: any, p: any): unknown => p.graphBindings.pop()],
+    [
+      "duplicate binding",
+      (_: any, p: any): unknown => p.graphBindings.push(p.graphBindings[0]),
+    ],
+    [
+      "binding target",
+      (_: any, p: any): unknown =>
+        (p.graphBindings[0].graphSymbol = "graph.domain.wrong"),
+    ],
+  ] as const)("rejects independently falsified Task %s", (_, mutate) => {
+    expect(consumerFamilyFor(taskJourney(mutate))).toBeNull();
+  });
   let container: HTMLDivElement;
   let root: Root;
 

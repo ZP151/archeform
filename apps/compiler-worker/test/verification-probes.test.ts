@@ -319,6 +319,90 @@ describe("runRoleJourneyProbe", () => {
 });
 
 describe("chain journeys", () => {
+  it("overrides only a declared chain idempotency key and preserves session headers and default inheritance", async () => {
+    const request = capturingRequest(),
+      { context } = probeContext({ kind: "role-journey", request });
+    const journey: RoleJourneyFixture = {
+      journeyId: "key-chain",
+      action: "expense.approve",
+      sessionId: "fixture-session-manager",
+      headers: [{ name: "x-factory-idempotency-key", value: "parent-key" }],
+      chain: [
+        {
+          action: "expense.create",
+          sessionId: "fixture-session-employee",
+          body: "{}",
+          idempotencyKeyOverride: "create-key",
+        } as never,
+        {
+          action: "expense.submit-fresh",
+          sessionId: "fixture-session-employee",
+        },
+      ],
+    };
+    const result = await runRoleJourneyProbe(context, journey, chainRegistry);
+    expect(result.status).toBe("passed");
+    expect(
+      request.mock.calls.map(
+        (call) =>
+          (call[3] as { headers: { name: string; value: string }[] }).headers,
+      ),
+    ).toEqual([
+      [
+        { name: "x-factory-idempotency-key", value: "create-key" },
+        {
+          name: "x-factory-fixture-session",
+          value: "fixture-session-employee",
+        },
+      ],
+      [
+        { name: "x-factory-idempotency-key", value: "parent-key" },
+        {
+          name: "x-factory-fixture-session",
+          value: "fixture-session-employee",
+        },
+      ],
+      [
+        { name: "x-factory-idempotency-key", value: "parent-key" },
+        { name: "x-factory-fixture-session", value: "fixture-session-manager" },
+      ],
+    ]);
+    expect(JSON.stringify(result)).not.toMatch(/parent-key|create-key/);
+  });
+  it("rejects malformed or undeclared chain key overrides before any request", async () => {
+    for (const [key, headers] of [
+      ["bad key", [{ name: "x-factory-idempotency-key", value: "parent" }]],
+      [
+        "x".repeat(129),
+        [{ name: "x-factory-idempotency-key", value: "parent" }],
+      ],
+      ["", []],
+      ["valid", []],
+    ] as const) {
+      const request = capturingRequest(),
+        { context } = probeContext({ kind: "role-journey", request });
+      await expect(
+        runRoleJourneyProbe(
+          context,
+          {
+            journeyId: "key-chain",
+            action: "expense.approve",
+            sessionId: "fixture-session-manager",
+            ...(headers.length ? { headers } : {}),
+            chain: [
+              {
+                action: "expense.create",
+                body: "{}",
+                idempotencyKeyOverride: key,
+              } as never,
+            ],
+          },
+          chainRegistry,
+        ),
+      ).rejects.toBeInstanceOf(VerificationContractError);
+      expect(request).not.toHaveBeenCalled();
+    }
+  });
   // Mirrors the graph-derived registry for a branching flow: the create is a
   // static route, the path step is a `-fresh` template action, and the chained
   // final transition is a natural-name template action.
