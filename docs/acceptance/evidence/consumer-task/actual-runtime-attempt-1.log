@@ -9,7 +9,7 @@ FACTORY_TASK_FAILURE {"stage":"describe","compilationId":null,"interpretationCal
   x  1 e2e\consumer-task.spec.ts:614:5 › D2.5 deterministic Task selection publishes a safe shared board (1.1m)
 
 
-  1) e2e\consumer-task.spec.ts:614:5 › D2.5 deterministic Task selection publishes a safe shared board 
+  1) e2e\consumer-task.spec.ts:614:5 › D2.5 deterministic Task selection publishes a safe shared board
 
     Error: [31mTimed out 60000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
 
@@ -31,4 +31,4 @@ FACTORY_TASK_FAILURE {"stage":"describe","compilationId":null,"interpretationCal
         at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\consumer-task.spec.ts:690:28
 
   1 failed
-    e2e\consumer-task.spec.ts:614:5 › D2.5 deterministic Task selection publishes a safe shared board 
+    e2e\consumer-task.spec.ts:614:5 › D2.5 deterministic Task selection publishes a safe shared board
