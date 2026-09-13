@@ -1,0 +1,11 @@
+Independent QA local emitted-UI check
+Command: pnpm exec playwright test e2e/consumer-task-ui.spec.ts --reporter=list
+Result: exit code 0
+
+Running 2 tests using 1 worker
+  ok 1 emitted Task DOM and CSS keep the usable responsive workspace (3.6s)
+  ok 2 emitted Task correction keeps a same-record draft through recovery states (4.9s)
+
+2 passed (10.4s)
+
+Scope: provider-free emitted React/CSS with deterministic HTTP transport. This evidence does not exercise Factory, PostgreSQL, generated Preview, or actual runtime persistence.

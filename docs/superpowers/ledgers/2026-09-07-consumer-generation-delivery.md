@@ -4378,3 +4378,194 @@ PM accepts the bounded local Team Task slice. Independent task review, Terra QA 
 Coverage advances to4canonical definitions /3demonstrated local runtime families. Task editing remains the next highest-value product gap; no real-model selection accuracy, real identity/private assignment, hosting, arbitrary maturity or hundreds/thousands coverage is claimed. Next order: same-task field correction, accepted data-based definition format and batch validator, meaningful30then100definitions, then expanded Appointment/ContentDirectory/Inventory families. Ordinary fixes reused valid checks; no per-component gates were introduced.
 
 Root is authorized to create one bounded English task commit and normally push codex/consumer-delivery-roadmap, verify remote equality, then close the active goal. No main integration, repository release or cloud deployment is included. Durable acceptance: docs/acceptance/team-task.md and consumer-task evidence directory.
+
+### Task correction started - 2026-09-13
+
+User directs continued delivery along the core roadmap under a long-running goal.
+Baseline: clean `5b65169e56c834f2a466539ee81ec020e76541c3` on
+`codex/consumer-delivery-roadmap`. The active goal is same-task field correction,
+approved responsive presentation, safe retry/conflict recovery, compatibility,
+actual local acceptance, cleanup, branch delivery and an executable definition
+scale handoff. Counts remain four definitions and three demonstrated families;
+correction improves completion of an existing family, not catalog coverage.
+
+Ownership: root owns this ledger, implementation plan, baseline capture,
+acceptance coordination and all Git mutations. `/root/task_correction_decision`
+is the dispatched Tech Lead and owns only a proposed correction ADR. Production
+implementation is held until a separate qualified reviewer approves the exact
+proposal for standing acceptance and PM records its hash and authority. No new
+package, external provider, real credentials, identity claim, cloud deployment,
+main integration or repository release is part of this slice.
+
+Acceptance will cover same-ID field correction, declared editable states,
+Viewer denial, invalid/stale writes, unchanged-payload retry after lost response,
+changed-payload receipt conflict, transactional audit/version counts, persistence,
+cancel/draft/result continuity and actual generated UI at 390/768/1440. Existing
+non-Task hashes are retained; delivered Task output is captured before production
+changes. Use one shared-contract review boundary and reuse unaffected evidence
+for ordinary fixes. The next scale step remains data-based definitions and batch
+validation, ahead of cosmetic catalog expansion.
+
+### Task correction contract accepted and implementation authorized - 2026-09-13
+
+PM records founder standing acceptance under `docs/tech-governance.md`'s
+2026-09-01 authorization for proposed ADR-0064 at exact SHA-256
+`84d6d8d3adae7ad6c712674961523154e1c0a354b2b3a2a796dba2d8221009a0`.
+Separate qualified nonauthor `/root/task_correction_adr_review` returned
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 `0/0/0`, no material ambiguity,
+bounded reversible scope and no forbidden external or destructive authority.
+Evidence: `docs/acceptance/evidence/consumer-task-correction/decision-review.md`.
+The proposed ADR remains frozen; this separate record is its acceptance event.
+
+Root authorizes `/root/task_correction_owner` as the sole serialized production
+and package-test writer within ADR MIG-001..003. Root retains the captured Task
+compatibility test/fixture, all documentation, acceptance coordination and Git.
+Root delegates disjoint `e2e/consumer-task.spec.ts`, `e2e/consumer-task-ui.spec.ts`,
+`e2e/consumer-task-fixture.ts` and necessary `e2e/task-presentation.ts` acceptance
+extensions to `/root/task_correction_acceptance`. Shared contracts are frozen;
+any substantive change stops that shared-contract work for reconciliation.
+No writer may stage, commit, push or launch services. Actual isolated local
+runtime authority will be recorded after task review and source freeze.
+
+The two default implementation agents encountered Spark usage limits before any
+source or E2E write (verified with working-tree status). PM transfers the same
+unchanged manifests to `/root/task_correction_integration` (explicit Astra for
+shared Graph/security contracts) and `/root/task_correction_browser` (Terra
+engineer for disjoint E2E). No credit reset, contract change, new acceptance
+stage or user interruption is needed. Earlier owner identities are superseded
+only for this unstarted implementation work; ADR acceptance remains unchanged.
+
+Root approves the integration owner's bounded test-only manifest addition
+`packages/capabilities/test/product-composer.test.ts`: the focused RED is the
+old canonical Member grant expectation lacking ACT-002 `update`. Update that
+expectation under the frozen ADR; no capability production or contract change.
+This ordinary fixture correction reuses existing authority and review.
+
+### Task correction implementation reviewed; isolated runtime authorized - 2026-09-13
+
+Independent `/root/task_correction_task_review` returns `TASK_REVIEW_PASS: yes`,
+P0/P1/P2 `0/0/0`. Evidence is `consumer-task-correction/task-review.md`.
+Final source identity contains 15 production/package-test paths; acceptance
+identity contains five E2E/helper paths. Workbench 619, adapters 195,
+capabilities 405 and worker 315 full tests pass with package checks. Compiler
+full inventory passed 761/762 while a pre-fix selector was loaded; the affected
+final Task and compatibility run passed 51/51, including the missing-page case.
+Both emitted profiles pass strict typechecking. A demonstrated concurrent test
+directory collision was isolated per run and its focused checks pass. No
+unrelated full-suite evidence was discarded or rerun without a reason.
+
+Final fast emitted UI passes 2/2; root's scoped E2E typecheck passes. It caught
+an invalid APIResponse method before real-runtime acceptance. Browser fixtures
+now require actual Edit/Save, stale-draft review, committed-response loss and
+UI retry after API restart, exact replay body and forbidden event-alias denial.
+The actual PostgreSQL lane remains unexecuted at this authorization point.
+
+Root authorizes building and starting only local Compose project
+`factory-task-correction-20260913`, using `.env` without exposing its contents,
+`infra/docker-compose.yml` and the root-owned correction acceptance override.
+Services bind loopback CP 13020, Workbench 15180, PostgreSQL 15440 and Redis
+16380; model keys remain blank. Root may run the authored-fixture acceptance
+through immutable local Product Publish, Compilation, graph-derived verification
+and task-owned Preview, including a scoped generated API restart for retry
+evidence. The UI supplies no live provider call. Root records exact images,
+source matches, generated identities, attempt outcomes and cleanup, and removes
+only these exact Factory/Preview resources. This is local product acceptance
+under the authorized development goal, not cloud deployment or repository release.
+
+Independent `/root/task_correction_qa` is prepared and may run provider-free
+focused checks and inspect actual evidence when available. No agent may stage,
+commit, push or mutate services; root remains the sole runtime/Git controller.
+
+Actual attempt 1 stopped in 260 ms at the existing Factory project-name guard,
+before any Publish, Compilation or Preview. Root selected a name outside the
+existing `factory-t9-` test prefix. The failed log and first runtime identity are
+retained. Root authorizes exact cleanup of `factory-task-correction-20260913`
+and replacement by `factory-t9-task-correction-20260913`, reusing the same
+verified images, override and loopback ports. No source/test/contract change or
+image rebuild is required; the existing test guard remains unchanged. Root may
+run attempt 2 under this corrected isolated project after source identity and
+health verification. Cleanup evidence must include both exact Factory names.
+
+### Task correction runtime correction wave - 2026-09-13
+
+Actual attempt 2 published and compiled immutable inputs, but verification
+failed before Preview delivery: `task-recomplete` returned `probe.crashed`.
+Creation, reading, start, complete, reopen and denied start passed; update
+probes were skipped. The bounded run is retained in
+`consumer-task-correction/verification-attempt-2.json`, with the failed runtime
+log. Its generated verifier resources were cleaned; no delivered Preview
+existed. This is not a passing runtime acceptance.
+
+Root resumes the existing Astra integration owner for a scoped verifier repair
+and focused regression, without changing the accepted business contract. The
+Terra browser owner may improve the existing readiness wait to report safe
+terminal verification failures promptly while preserving the five-minute ready
+target. Their existing disjoint source ownership remains in force. Root alone
+may rebuild affected images and repeat the exact isolated acceptance lane after
+focused verification and scoped task re-review. Independent QA remains pending;
+unchanged package evidence remains valid. No additional approval stage is added.
+
+The integration owner found two concrete causes: a `null` description fixture
+violated the verifier's existing flat declared-value boundary, and the
+idempotency probe did not execute its already-declared fresh-record chain.
+Root adds `apps/compiler-worker/src/verifier/probes.ts` and
+`apps/compiler-worker/test/verification-probes.test.ts` to that owner's manifest
+for a bounded repair using existing chain helpers. Keep the declared-value
+boundary, authorization/key limits, chain bounds and no-chain behavior. Use a
+string description in the verifier fixture; nullable-description business
+validation remains covered separately. Required regression executes the derived
+Task plan through the real probe path and checks failed-chain short circuit.
+No new API, Graph or security contract is authorized or necessary for this fix.
+
+Scoped independent Sol task re-review returns PASS, P0/P1/P2 0/0/0 for the
+four-path runtime repair. Worker 319 tests and typecheck/lint pass; old verifier
+hash remains exact. Root authorizes rebuilding only compiler-worker and actual
+attempt 3 under the same exact local Factory project. Root may also correct the
+evidence-only task count from three to four and use a new correction scratch
+folder for copied emitted UI; these do not alter acceptance assertions or
+production behavior. Refresh identities before execution.
+
+Actual attempt 3 passed all twelve verifier steps and delivered the app. Browser
+correction reached committed-response loss after editing, conflict review,
+completion and Reopen. The test incorrectly expected Start on that reopened
+in-progress task. Its failure screenshot shows the correct Complete control is
+disabled, with retained frozen fields and Retry. This is a fixture state
+assertion repair, not a product contract change. Root authorizes replacing the
+assertion with explicit in-progress status and disabled Complete, retaining
+all pending-write checks, then actual attempt 4 without rebuilding images.
+
+The shared E2E's legacy evidence base still pointed at old Task evidence. Root
+preserved fourteen attempt-3 PNGs, restored exactly the nine modified accepted
+baseline PNGs from HEAD, and removed the copied task-owned failure original.
+The old acceptance directory is clean. The browser owner must route all new
+actual images to the correction directory. These mechanical fixes use focused
+verification and the current independent QA; no new full review stage is added.
+Attempt-3 source/runtime identities and failed log remain unchanged.
+
+Actual attempt 4 passes the complete generated PostgreSQL/API/browser lane,
+1/1 in 4.0 minutes. Ready 196,950 ms; business evidence complete 224,503 ms;
+correction versions 0 through 7; audit/receipt counts [5,2,1,8]. Immutable
+artifacts, restart replay, conflicts, denials and reload retention pass. One
+fixture interpretation, no live model call and no in-run manual rescue are
+observed. Three prior failed attempts remain recorded. Twenty-four final
+actual PNGs have verified widths and hashes. All seven exact owned project
+resources are removed. Independent QA and final Sol review remain pending;
+root does not yet mark the delivery accepted.
+
+### Task correction accepted for branch delivery - 2026-09-13
+
+Independent Terra QA and independent Sol final release review return PASS,
+P0/P1/P2 0/0/0. Root accepts the bounded Task correction slice under ADR-0064.
+The final source has 17 production/package-test paths and five acceptance/helper
+paths; runtime identity, actual attempt 4, 24 final images and exact seven-project
+cleanup support the acceptance. Unchanged old Task and non-Task bundle evidence
+remains valid. Actual failed attempts and their scoped fixes are preserved.
+
+Root authorizes one bounded English commit on codex/consumer-delivery-roadmap,
+normal push to its existing origin branch, remote-tip equality and a clean
+working tree. No main integration, repository release or cloud deployment is
+part of this acceptance. The next core slice is data-based definition authoring
+and batch validation from the four current round-trip definitions. Report
+configuration-only semantic additions, rather than cosmetic template counts;
+propose its bounded contract before implementation. This roadmap handoff is
+executable scope, not a claim that the scale pipeline is already implemented.

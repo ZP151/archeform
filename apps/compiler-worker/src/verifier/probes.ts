@@ -446,6 +446,18 @@ export async function runIdempotencyProbe(
   registry: readonly RegisteredApiAction[],
 ): Promise<VerificationStepV1> {
   const action = validateIdempotencyJourney(journey, registry);
+  let recordId: string | undefined;
+  if (journey.chain !== undefined) {
+    const prologue = await runChainPrologue(
+      context,
+      journey,
+      registry,
+      "idempotency",
+    );
+    if (!prologue.ok) return prologue.step;
+    recordId = prologue.recordId;
+  }
+  const route = substituteRecordId(action.route, recordId);
   const requestOptions = {
     headers: journeyHeaders(journey),
     body:
@@ -458,7 +470,7 @@ export async function runIdempotencyProbe(
   };
   const first = await context.environment.request(
     action.method,
-    action.route,
+    route,
     "api",
     requestOptions,
     ...(journey.replayExpectation === "stored-success"
@@ -490,7 +502,7 @@ export async function runIdempotencyProbe(
   }
   const repeated = await context.environment.request(
     action.method,
-    action.route,
+    route,
     "api",
     requestOptions,
     ...(journey.replayExpectation === "stored-success"

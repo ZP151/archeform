@@ -1,0 +1,52 @@
+{
+  "recordedAt": "2026-09-13T08:48:31.010Z",
+  "base": "5b65169e56c834f2a466539ee81ec020e76541c3",
+  "project": "factory-task-correction-20260913",
+  "images": [
+    {
+      "service": "control-plane",
+      "image": "sha256:d8e71b3a2b6053d3e5f73d0c2c42a410c50bcdc1fe57707058d33342edb33403",
+      "sourceFilesMatched": 10,
+      "sources": {
+        "packages/adapters/src/requirements/definition-selection-catalogue.ts": "5b611c3772d7c4e9b80eeea48223cd3f4b1fc7deff6ef001ae72aef2d279f92b",
+        "packages/adapters/src/requirements/task-definition-selection.ts": "dad32621b152ff357dbe2fb8aa75e731b929b0ee4d7d5d04319b7dba4f532084",
+        "packages/compiler/src/approval-mutation-contract.ts": "34ed24c9fd665593547d57c8743b0e6d2d016e4c69e8feffe891b17b9a1d4a17",
+        "packages/compiler/src/approval-workspace-presentation.ts": "210dca9f500c8ab0ffcc6fbfbad3add73c70f7657b38eb62e4107c52768e6f40",
+        "packages/compiler/src/index.ts": "d8c29035fda25b870bb06c1d4a8a252f6052b666e30e7a7f251add3b84b958bb",
+        "packages/compiler/src/mutation-write-protection.ts": "28c4a6d9a67e644b7f20f7a0a97e6199aac801a4383a2258ac4035e1cc5c98a6",
+        "packages/compiler/src/targets/database/target.ts": "54aceec8fbb1ce5d32942acc1ead05701a317a6a03b4bc904a1dc17983285b24",
+        "packages/compiler/src/task-mutation-contract.ts": "22f9b217eed8d1345e9d3aebbfbd2cc6ec58dc2bc69f06cdacb6ec244401c8c5",
+        "packages/compiler/src/task-workspace-presentation.ts": "799efb4fb18f91c008cec92718b5253c89913e8c018dd8d9039ae01a1bf3f1cf",
+        "packages/graph/src/product-blueprint.ts": "2111705e119d539509007a0a4d68c64e33ca40c9aae54e26775101b9316d460c"
+      }
+    },
+    {
+      "service": "compiler-worker",
+      "image": "sha256:f6abc8d0024e3db751783d6c80a1435438e0049ab13a6f439648a2a7dbd9fb73",
+      "sourceFilesMatched": 9,
+      "sources": {
+        "apps/compiler-worker/src/verifier/verification-graph-plan.ts": "3b122653d693552a357b6b6301e489aa8acfe4f90673750406eab47d4dc4cccf",
+        "packages/compiler/src/approval-mutation-contract.ts": "34ed24c9fd665593547d57c8743b0e6d2d016e4c69e8feffe891b17b9a1d4a17",
+        "packages/compiler/src/approval-workspace-presentation.ts": "210dca9f500c8ab0ffcc6fbfbad3add73c70f7657b38eb62e4107c52768e6f40",
+        "packages/compiler/src/index.ts": "d8c29035fda25b870bb06c1d4a8a252f6052b666e30e7a7f251add3b84b958bb",
+        "packages/compiler/src/mutation-write-protection.ts": "28c4a6d9a67e644b7f20f7a0a97e6199aac801a4383a2258ac4035e1cc5c98a6",
+        "packages/compiler/src/targets/database/target.ts": "54aceec8fbb1ce5d32942acc1ead05701a317a6a03b4bc904a1dc17983285b24",
+        "packages/compiler/src/task-mutation-contract.ts": "22f9b217eed8d1345e9d3aebbfbd2cc6ec58dc2bc69f06cdacb6ec244401c8c5",
+        "packages/compiler/src/task-workspace-presentation.ts": "799efb4fb18f91c008cec92718b5253c89913e8c018dd8d9039ae01a1bf3f1cf",
+        "packages/graph/src/product-blueprint.ts": "2111705e119d539509007a0a4d68c64e33ca40c9aae54e26775101b9316d460c"
+      }
+    },
+    {
+      "service": "workbench",
+      "image": "sha256:495cd2c64a9e032071414503e82cb1458385c43d0971de3c795e98102d809bdc",
+      "sourceFilesMatched": 5,
+      "sources": {
+        "apps/workbench/components/workbench-home.tsx": "387e8fa84e2b3903edab574a1b0d74b56918848f9caf279ef3892a0a5adc9b61",
+        "apps/workbench/lib/product-journey/consumer-family.ts": "d9b4a6f30cf089e2476ae7b0088d401a816cc189fc332b93f784bee64bc1bca4",
+        "packages/adapters/src/requirements/definition-selection-catalogue.ts": "5b611c3772d7c4e9b80eeea48223cd3f4b1fc7deff6ef001ae72aef2d279f92b",
+        "packages/adapters/src/requirements/task-definition-selection.ts": "dad32621b152ff357dbe2fb8aa75e731b929b0ee4d7d5d04319b7dba4f532084",
+        "packages/graph/src/product-blueprint.ts": "2111705e119d539509007a0a4d68c64e33ca40c9aae54e26775101b9316d460c"
+      }
+    }
+  ]
+}

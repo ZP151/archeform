@@ -1,0 +1,28 @@
+
+Running 1 test using 1 worker
+
+(node:42248) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:42248) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  1 e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board (260ms)
+
+
+  1) e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board
+
+    Error: expect(received).toMatch(expected)
+
+    Expected pattern: /^factory-t9-[a-z0-9-]+$/
+    Received string:  "factory-task-correction-20260913"
+
+      710 |   context.setDefaultTimeout(30_000);
+      711 |   expect(process.env.FACTORY_E2E_ISOLATED).toBe("1");
+    > 712 |   expect(factoryProject).toMatch(/^factory-t9-[a-z0-9-]+$/);
+          |                          ^
+      713 |   expect(
+      714 |     docker([
+      715 |       "ps",
+        at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\consumer-task.spec.ts:712:26
+
+  1 failed
+    e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board

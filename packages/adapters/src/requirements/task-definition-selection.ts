@@ -63,7 +63,8 @@ export function canonicalTeamTaskInterpretation(): RequirementInterpretationV1 {
     {
       key: "member",
       label: "Team member",
-      description: "Creates, starts, completes and reopens shared tasks.",
+      description:
+        "Creates, corrects, starts, completes and reopens shared tasks.",
     },
     { key: "viewer", label: "Viewer", description: "Reads all shared tasks." },
   ];
@@ -71,7 +72,7 @@ export function canonicalTeamTaskInterpretation(): RequirementInterpretationV1 {
     apiVersion: "factory.requirement-spec/v1" as const,
     requirementId: "team-task-tracking-requirement",
     outcome:
-      "A team member creates, starts, completes and reopens shared tasks; a viewer reads the board.",
+      "A team member creates, corrects, starts, completes and reopens shared tasks; a viewer reads the board.",
     actors,
     domainConcepts: [
       {
@@ -122,7 +123,14 @@ export function canonicalTeamTaskInterpretation(): RequirementInterpretationV1 {
         permissions: [
           {
             entityKey: "task",
-            actions: ["create", "read", "start", "complete", "reopen"],
+            actions: [
+              "create",
+              "read",
+              "update",
+              "start",
+              "complete",
+              "reopen",
+            ],
           },
         ],
       },
@@ -227,10 +235,19 @@ export function canonicalTeamTaskInterpretation(): RequirementInterpretationV1 {
     acceptanceJourneys: [
       {
         key: "create-start-complete",
-        description: "A member finishes new work.",
+        description:
+          "A member corrects all five fields in Not started and In progress, then finishes the same task. Completed must be reopened before correction.",
         steps: [
           { actorKey: "member", action: "creates a task" },
+          {
+            actorKey: "member",
+            action: "corrects all five fields on the same task in Not started",
+          },
           { actorKey: "member", action: "starts the task" },
+          {
+            actorKey: "member",
+            action: "corrects all five fields on the same task in In progress",
+          },
           { actorKey: "member", action: "completes the task" },
         ],
       },
@@ -249,7 +266,7 @@ export function canonicalTeamTaskInterpretation(): RequirementInterpretationV1 {
           {
             actorKey: "viewer",
             action:
-              "reads all tasks and cannot create, start, complete or reopen",
+              "reads all tasks and cannot create, correct, start, complete or reopen",
           },
         ],
       },
@@ -345,9 +362,9 @@ export const teamTaskDefinition = {
   guide,
   instruction: [
     "Every Team Task or shared task tracking brief returns definition-selection with definitionKey team-task-tracking, generatedInterpretation null and businessParameters null. Never generate its fields, roles, pages or workflow in the selection.",
-    "A coarse shared team task request accepts the exact canonical default with zero materialQuestions. Team member creates, reads, starts, completes and reopens; Viewer reads every task. Fields are required title, required display-only assignee, required dueDate, required priority (low, medium, high) and optional description. States are not-started, in-progress, completed; start moves not-started to in-progress, complete moves in-progress to completed, reopen moves completed to in-progress.",
+    "A coarse shared team task request accepts the exact canonical default with zero materialQuestions. Team member creates, reads, corrects, starts, completes and reopens; Member may correct title, description, assignee, due date and priority in Not started and In progress. Completed must be reopened before correction. Viewer reads every task. Fields are required title, required display-only assignee, required dueDate, required priority (low, medium, high) and optional description. States are not-started, in-progress, completed; start moves not-started to in-progress, complete moves in-progress to completed, reopen moves completed to in-progress.",
     "Any explicit incompatible or ambiguous requirement returns needs-clarification with every independent material question. Assignment is text, never a principal reference: assignee-only or owner-only actions, personal/private tasks, accounts, invitations, team membership, SSO and tenant boundaries require authorization or visibility clarification. Both demo roles see all records; omitted identity is not an identity claim.",
-    "Edits after creation, custom or optional fields or states, delete or archive, subtasks, dependencies, recurring tasks, comments, attachments, reminders, notifications, calendars, integrations, estimates, time tracking, bulk actions and automation require business-rule, data or integration clarification. Do not silently discard those requirements. No audit or notification delivery claim is made.",
+    "Edits in other states or after completion without reopening, partial/custom fields, custom or optional fields or states, delete or archive, subtasks, dependencies, recurring tasks, comments, attachments, reminders, notifications, calendars, integrations, estimates, time tracking, bulk actions and automation require business-rule, data or integration clarification. Do not silently discard those requirements. No audit or notification delivery claim is made.",
     "Follow-ups retain every still-required unsupported capability. Only explicit acceptance of the exact supported scope resolves a material question. Display title, requirementId and outcome customize safe identity text only. Use only authorization, visibility, role, business-rule, data or integration question categories; no technical handoff or credential question.",
     `<supported-team-task-default>${JSON.stringify(guide)}</supported-team-task-default>`,
   ].join(" "),

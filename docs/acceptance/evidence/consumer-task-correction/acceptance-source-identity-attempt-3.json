@@ -1,0 +1,11 @@
+{
+  "recordedAt": "2026-09-13T09:08:20.7728286Z",
+  "base": "5b65169e56c834f2a466539ee81ec020e76541c3",
+  "files": {
+    "e2e/consumer-task.spec.ts": "7d69e1405a2116c32957238b32dff15bc9444dfcb54bdb6c22ff076c45c3f1c5",
+    "e2e/consumer-task-ui.spec.ts": "7ffada241622299b5523607da3f2f57ffa5475c64e3be72f7876771ea6dc6512",
+    "e2e/consumer-task-fixture.ts": "11df0645bc90190b1e1c275be494fd6a0ac410c813fdc79bc31bd73d407e894e",
+    "e2e/task-presentation.ts": "747e3deabd694d492198f4dab534b26cfbcff76f0ff11c62e62d9f274e938045",
+    "scripts/emit-composed-ui.mjs": "93cdd97188e621f5c9edf8160339389b791a40055486b8d7b57558cc135c18e8"
+  }
+}

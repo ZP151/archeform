@@ -905,6 +905,129 @@ export function deriveVerificationProfile(
       };
     }
   }
+  if (
+    taskEntity &&
+    graph.policy.permissions.some(
+      (p) => p.resource === taskEntity && p.actions.includes("update"),
+    )
+  ) {
+    const entity = graph.domain.entities.find((e) => e.key === taskEntity)!;
+    const member = graph.policy.permissions.find(
+      (p) => p.resource === taskEntity && p.actions.includes("update"),
+    )!.role;
+    const viewer = graph.policy.permissions.find(
+      (p) => p.resource === taskEntity && exactSet(p.actions, ["read"]),
+    )!.role;
+    const values = {
+      ...JSON.parse(createBodyFor(graph, entity, true, false) ?? "{}"),
+      description: "Verification task description",
+    };
+    const corrected = {
+      ...values,
+      title: "Corrected verification task",
+      assignee: "Verification collaborator",
+      dueDate: "2026-10-01T00:00:00.000Z",
+      priority: "high",
+    };
+    const key = (id: string) =>
+      "verify-" + createHash("sha256").update(id).digest("hex").slice(0, 40);
+    const headers = (id: string) => [
+      { name: "x-factory-idempotency-key", value: key(id) },
+    ];
+    const updateAction = taskEntity + ".update",
+      deniedAction = taskEntity + ".update-completed-denied";
+    apiRegistry.push(
+      {
+        action: updateAction,
+        method: "PATCH",
+        route: "/api/" + taskEntity + "/{recordId}",
+        expectedStatus: 200,
+      },
+      {
+        action: deniedAction,
+        method: "PATCH",
+        route: "/api/" + taskEntity + "/{recordId}",
+        expectedStatus: 403,
+      },
+    );
+    const createStep = (id: string): ChainJourneyStep => ({
+      action: taskEntity + ".create",
+      sessionId: "fixture-session-" + member,
+      body: JSON.stringify({ values }),
+      idempotencyKeyOverride: key(id + "-create"),
+    });
+    const updateId = taskEntity + "-update";
+    addStep({ stepId: updateId, kind: "idempotency" });
+    journeys[updateId] = {
+      ...journeyFor(graph, lock, updateId, updateAction, member, {
+        headers: headers(updateId),
+        body: JSON.stringify({ expectedVersion: 0, values: corrected }),
+        chain: [createStep(updateId)],
+      }),
+      idempotencyKey: key(updateId),
+      expectedVersion: 0,
+      replayExpectation: "stored-success",
+    };
+    const deniedId = taskEntity + "-denied-update";
+    addStep({ stepId: deniedId, kind: "authorization-denial" });
+    journeys[deniedId] = journeyFor(
+      graph,
+      lock,
+      deniedId,
+      updateAction,
+      viewer,
+      {
+        headers: headers(deniedId),
+        body: JSON.stringify({ expectedVersion: 0, values: corrected }),
+        chain: [createStep(deniedId)],
+      },
+    );
+    const finalId = taskEntity + "-recomplete";
+    const actions = [
+      updateAction,
+      taskEntity + ".start-fresh",
+      updateAction,
+      taskEntity + ".complete-fresh",
+      deniedAction,
+      taskEntity + ".reopen-fresh",
+    ];
+    const versions = [0, 1, 2, 3, 4, 4];
+    journeys[finalId] = journeyFor(
+      graph,
+      lock,
+      finalId,
+      taskEntity + ".complete-fresh",
+      member,
+      {
+        headers: headers(finalId),
+        body: JSON.stringify({ expectedVersion: 5 }),
+        chain: [
+          createStep(finalId),
+          ...actions.map((action, index) => ({
+            action,
+            sessionId: "fixture-session-" + member,
+            idempotencyKeyOverride: key(finalId + "-correction-step-" + index),
+            body: JSON.stringify({
+              expectedVersion: versions[index],
+              ...(action === updateAction || action === deniedAction
+                ? {
+                    values:
+                      index === 0
+                        ? corrected
+                        : {
+                            ...corrected,
+                            title: "Active verification correction",
+                            description: "Verified active correction",
+                            priority: "low",
+                          },
+                  }
+                : {}),
+            }),
+          })),
+        ],
+      },
+    );
+  }
   if (stepPlan.length > maximumStepPlanLength) {
     throw new VerificationContractError(
       "The derived verification step plan exceeds the bounded plan length.",
@@ -1263,6 +1386,38 @@ function taskProtocolEntity(
 ): string | undefined {
   const selections =
     compositionLock?.packages ?? graph.integration.compositionSelections ?? [];
+  const taskCandidate =
+    selections.filter((s) => s.lock.key in taskLocks).length >= 5 &&
+    graph.page.pages.length >= 4 &&
+    graph.flow.flows.some(
+      (flow) =>
+        exactSet(flow.events, ["start", "complete", "reopen"]) &&
+        graph.domain.entities.some(
+          (entity) =>
+            entity.key === flow.entity &&
+            entity.fields.filter((field) =>
+              businessFields.some(([key]) => key === field.key),
+            ).length >= 3,
+        ) &&
+        (selections.some(
+          (s) =>
+            s.lock.key === "core.workflow" &&
+            isDeepStrictEqual(s.bindings.flowKey, {
+              graphSymbol: "graph.flow." + flow.id,
+            }),
+        ) ||
+          selections.some(
+            (s) =>
+              s.lock.key === "core.crud" &&
+              isDeepStrictEqual(s.bindings.entityKey, {
+                graphSymbol: "graph.domain." + flow.entity,
+              }),
+          )),
+    );
+  const rejectCandidate = (): undefined => {
+    if (taskCandidate) throw new Error("Task contract shape is not supported.");
+    return undefined;
+  };
   const locked =
     selections.length === 6 &&
     exactSet(
@@ -1272,7 +1427,7 @@ function taskProtocolEntity(
     selections.every(
       (s) => taskLocks[s.lock.key as keyof typeof taskLocks] === s.lock.version,
     );
-  if (!locked) return undefined;
+  if (!locked) return rejectCandidate();
   const byKey = new Map(selections.map((s) => [s.lock.key, s]));
   const binding = (key: string, expected: Record<string, string>) => {
     const actual = byKey.get(key)?.bindings ?? {};
@@ -1315,7 +1470,7 @@ function taskProtocolEntity(
         binding("core.policy-declarations", {}),
     ),
   );
-  if (!candidate) return undefined;
+  if (!candidate) return rejectCandidate();
   const deny = (): never => {
     throw new Error("Task contract shape is not supported.");
   };
@@ -1360,8 +1515,17 @@ function taskProtocolEntity(
   const grants = graph.policy.permissions.filter(
     (p) => p.resource === entity.key,
   );
-  const member = grants.find((p) =>
-    exactSet(p.actions, ["create", "read", "start", "complete", "reopen"]),
+  const member = grants.find(
+    (p) =>
+      exactSet(p.actions, ["create", "read", "start", "complete", "reopen"]) ||
+      exactSet(p.actions, [
+        "create",
+        "read",
+        "update",
+        "start",
+        "complete",
+        "reopen",
+      ]),
   )?.role;
   const viewer = grants.find((p) => exactSet(p.actions, ["read"]))?.role;
   if (

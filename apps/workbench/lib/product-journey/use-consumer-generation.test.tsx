@@ -234,6 +234,21 @@ describe("useConsumerGeneration", () => {
     });
     expect(consumerFamilyFor(journey)).toBeNull();
   });
+  it("retains the delivered v1 Task family without correction", () => {
+    expect(
+      consumerFamilyFor(
+        taskJourney((i) => {
+          i.blueprint.actors[0].permissions[0].actions = [
+            "create",
+            "read",
+            "start",
+            "complete",
+            "reopen",
+          ];
+        }),
+      ),
+    ).toBe("task");
+  });
   it("set-matches Task declarations, options, locks and bindings", () => {
     const journey = taskJourney((i, p) => {
       i.blueprint.entities[0].fields.reverse();

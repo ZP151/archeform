@@ -1,3 +1,4 @@
+import { hasTaskCorrection } from "./task-mutation-contract.js";
 import type { ApplicationGraphV1 } from "@factory/graph";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
 import { getCustomerIconAssets } from "./targets/restaurant-v3/customer-icons.js";
@@ -18,9 +19,22 @@ export const taskWorkspacePresentation = {
   reuse: approvalWorkspacePresentation.reuse,
   icons: approvalWorkspacePresentation.icons,
 } as const;
-export function renderTaskWorkspaceStyles(): readonly string[] {
+export const taskCorrectionPresentation = {
+  ...taskWorkspacePresentation,
+  version: "1.1.0",
+} as const;
+export function renderTaskWorkspaceStyles(
+  correction = false,
+): readonly string[] {
   return [
-    ...renderWorkspaceStyles("task"),
+    ...renderWorkspaceStyles("task").map((style) =>
+      correction
+        ? style.replace(
+            "--task-workspace-version: 1.0.0",
+            "--task-workspace-version: 1.1.0",
+          )
+        : style,
+    ),
     `
 .task-v1 .task-record-finder > div { grid-template-columns: minmax(8rem,12rem) 44px 44px; }
 .task-v1 .task-summary { grid-template-columns: minmax(5rem,.6fr) minmax(7rem,1fr) minmax(7rem,1fr) minmax(7rem,1fr); }
@@ -75,7 +89,7 @@ export function renderTaskWorkspace(
       getCustomerIconAssets().icons[key],
     ]),
   );
-  return `"use client";
+  const source = `"use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 type JsonRecord=Record<string,unknown>;
 type RuntimeField={readonly key:string;readonly type:string;readonly required:boolean;readonly values?:readonly string[]};
@@ -184,4 +198,88 @@ export function GeneratedApplication({requestedPath}:{readonly requestedPath:str
  ${renderWorkspaceShell("task").replace("<BlockRenderer key={block.id}", "<BlockRenderer key={role+':'+activePage.id+':'+block.id}")}
 }
 `;
+  return hasTaskCorrection(graph, entityKey)
+    ? renderTaskCorrection(source)
+    : source;
 }
+
+/** Reuse the existing Task shell, forms and record ports; v1 bytes stay exact. */
+function renderTaskCorrection(source: string): string {
+  const change = (before: string, after: string) => {
+    if (!source.includes(before))
+      throw new Error("Task correction presentation anchor is unavailable.");
+    source = source.replace(before, after);
+  };
+  change(
+    "command.recordId?'/'+encodeURIComponent(command.recordId)+'/events/'+command.operation:''",
+    "command.recordId?'/'+encodeURIComponent(command.recordId)+(command.operation==='update'?'':'/events/'+command.operation):''",
+  );
+  change(
+    "method:'POST',headers",
+    "method:command.operation==='update'?'PATCH':'POST',headers",
+  );
+  change(
+    "command.operation==='create'?'Created Task.':'Task: '",
+    "command.operation==='create'?'Created Task.':command.operation==='update'?'Task updated.':'Task: '",
+  );
+  change(
+    "function TaskRecord({record,role,refresh,onResult}",
+    "function TaskRecord({record,role,refresh,onResult,onEdit,editing}",
+  );
+  change(
+    "readonly onResult:(message:string)=>void})",
+    "readonly onResult:(message:string)=>void;readonly onEdit:(record:JsonRecord)=>void;readonly editing:boolean})",
+  );
+  change(
+    "<div className='task-actions'>{can(role,entity.key,event)?",
+    "<div className='task-actions'>{can(role,entity.key,'update')&&state!=='completed'?<button type='button' disabled={editing||command.pending||command.message?.unknown===true} id={'task-edit-open-'+String(record.id)} onClick={()=>onEdit(record)}>Edit</button>:null}{can(role,entity.key,event)?",
+  );
+  change(
+    "disabled={command.pending||command.message?.unknown===true} onClick={()=>command.activate(event",
+    "disabled={editing||command.pending||command.message?.unknown===true} onClick={()=>command.activate(event",
+  );
+  change(
+    "function TaskRecords({role,block}",
+    taskEditorSource + "\nfunction TaskRecords({role,block}",
+  );
+  change(
+    "const [query,setQuery]=useState(''),[statusFilter,setStatusFilter]=useState(''),[result,setResult]=useState('');",
+    "const [query,setQuery]=useState(''),[statusFilter,setStatusFilter]=useState(''),[result,setResult]=useState('');\n const [edit,setEdit]=useState<JsonRecord|null>(null); const editScope=useRef(0),lastEdited=useRef<string|null>(null); const beginEdit=(record:JsonRecord)=>{if(edit)return;editScope.current++;lastEdited.current=String(record.id);setResult('');setEdit(record);}; useEffect(()=>{if(edit||!lastEdited.current)return;const target=document.getElementById('task-edit-open-'+lastEdited.current)??document.getElementById(block.id+'-mutation-result');target?.focus();lastEdited.current=null;},[edit,block.id]);",
+  );
+  change(
+    " <ul className='generated-records task-records'>",
+    " {edit?<TaskEditor key={editScope.current} record={edit} role={role} refresh={refresh} onClose={()=>setEdit(null)} onSaved={()=>{setEdit(null);setResult('Task updated.');}}/>:null}\n <ul className='generated-records task-records'>",
+  );
+  change(
+    "onResult={setResult}/>",
+    "onResult={setResult} onEdit={beginEdit} editing={edit!==null}/>",
+  );
+  change(
+    "className='task-list-mutation' role=",
+    "className='task-list-mutation' id={block.id+'-mutation-result'} tabIndex={-1} role=",
+  );
+  return source;
+}
+const taskEditorSource = `
+function taskEditValues(record:JsonRecord):Record<string,string|boolean>{return Object.fromEntries(entity.fields.filter(field=>field.key!=='status').map(field=>[field.key,record[field.key]==null?'':field.type==='date'?String(record[field.key]).slice(0,10):String(record[field.key])]));}
+function TaskEditor({record,role,refresh,onClose,onSaved}:{readonly record:JsonRecord;readonly role:string;readonly refresh:()=>Promise<readonly JsonRecord[]>;readonly onClose:()=>void;readonly onSaved:()=>void}){
+ const [base,setBase]=useState(record),[values,setValues]=useState(()=>taskEditValues(record)),[validation,setValidation]=useState<string|null>(null);
+ const [conflict,setConflict]=useState(false),[latest,setLatest]=useState<JsonRecord|null>(null),[reviewing,setReviewing]=useState(false);
+ const editor=useRef<HTMLElement>(null);const active=useRef(true),reviewPending=useRef(false);useEffect(()=>{active.current=true;editor.current?.querySelector<HTMLInputElement>('input')?.focus();return()=>{active.current=false;};},[]);
+ const fields=entity.fields.filter(field=>field.key!=='status');
+ const readLatest=async()=>{const rows=await refresh();return rows.find(row=>row.id===record.id)??null;};
+ const command=useTaskCommand(role,async()=>{await refresh().catch(()=>undefined);if(active.current)onSaved();},async()=>{setConflict(true);const current=await readLatest();if(active.current)setLatest(current);});
+ const frozen=command.pending||command.message?.unknown===true||conflict||reviewing;
+ const review=async()=>{if(reviewPending.current||command.pending)return;reviewPending.current=true;setReviewing(true);setValidation(null);try{const current=await readLatest();if(!active.current)return;command.clear();setConflict(true);setLatest(current);if(!current)setValidation('This task is no longer available.');}catch{if(active.current)setValidation('The service is unavailable. Please try again.');}finally{reviewPending.current=false;if(active.current)setReviewing(false);}};
+ const choose=(keep:boolean)=>{if(!latest||reviewing||latest.status==='completed')return;command.clear();setBase(latest);if(!keep)setValues(taskEditValues(latest));setLatest(null);setConflict(false);setValidation(null);};
+ return <section ref={editor} className='generated-card task-form-card' aria-label='Edit Task'><h2>Edit Task</h2><p>{String(base.title)} / {fieldLabel(String(base.status))}</p>
+ <form aria-label='Edit Task' onSubmit={event=>{event.preventDefault();if(frozen)return;setValidation(null);try{const payload=formPayload(fields,values);payload.description=payload.description??null;command.activate('update',{expectedVersion:base.version,values:payload},String(base.id));}catch(reason){setValidation(errorMessage(reason));}}}>
+ <fieldset disabled={frozen}>{fields.map(field=><div className='task-field' key={field.key}><label htmlFor={'task-edit-'+field.key}>{fieldLabel(field.key)}{field.required?' *':''}</label><FieldControl field={field} id={'task-edit-'+field.key} value={values[field.key]??''} onChange={value=>{command.clear();setValidation(null);setValues(current=>({...current,[field.key]:value}));}}/></div>)}</fieldset>
+ {validation?<p className='generated-error' role='alert'>{validation}</p>:null}
+ <CommandFeedback command={command}/>
+ {conflict&&!command.message?<p role='alert'>This task changed. Review the latest version before trying again.</p>:null}
+ {command.message?.unknown||conflict?<div className='task-actions'><button type='button' disabled={reviewing||command.pending} onClick={()=>void review()}>Review latest</button></div>:null}
+ {conflict&&latest?<section aria-label='Latest Task'><h3>Latest Task</h3><p>{fieldLabel(String(latest.status))} / Version {String(latest.version)}</p><dl className='task-details-values'>{fields.map(field=><div key={field.key}><dt>{fieldLabel(field.key)}</dt><dd>{formatValue(field,latest[field.key])}</dd></div>)}</dl>{latest.status==='completed'?<p>Reopen this task before correction.</p>:<div className='task-actions'><button type='button' disabled={reviewing} onClick={()=>choose(true)}>Keep my changes</button><button type='button' disabled={reviewing} onClick={()=>choose(false)}>Use latest values</button></div>}</section>:null}
+ <div className='task-form-footer'><button className='generated-primary' type='submit' disabled={frozen}>Save</button><button type='button' disabled={command.pending||command.message?.unknown===true||reviewing} onClick={onClose}>Cancel</button></div></form></section>;
+}
+`;

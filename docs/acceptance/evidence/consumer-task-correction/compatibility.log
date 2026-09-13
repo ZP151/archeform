@@ -1,0 +1,12 @@
+
+ RUN  v2.1.9 C:/Users/15492/Develop/Archeform/.worktrees/consumer-delivery/packages/compiler
+
+ ✓ test/task-compatibility.test.ts (1 test) 3119ms
+   ✓ Task introduction compatibility with delivered non-Task products > preserves canonical definitions and complete ordered generated bundles from d28f1fed 3117ms
+ ✓ test/task-correction-compatibility.test.ts (1 test) 310ms
+   ✓ Task correction compatibility with delivered immutable Task apps > preserves the complete ordered Published Task bundle captured at 5b65169e 309ms
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  16:24:28
+   Duration  9.00s (transform 1.39s, setup 0ms, collect 5.26s, tests 3.43s, environment 0ms, prepare 92ms)

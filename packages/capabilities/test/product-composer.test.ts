@@ -92,7 +92,7 @@ describe("composeProductDraft", () => {
       {
         role: "member",
         resource: "task",
-        actions: ["create", "read", "start", "complete", "reopen"],
+        actions: ["create", "read", "update", "start", "complete", "reopen"],
       },
       { role: "viewer", resource: "task", actions: ["read"] },
     ]);

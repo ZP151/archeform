@@ -5,6 +5,7 @@ import {
 import {
   selectTaskContract,
   renderTaskMutationRuntime,
+  hasTaskCorrection,
   renderTaskPrismaStore,
   renderTaskApi,
 } from "./task-mutation-contract.js";
@@ -3372,7 +3373,11 @@ function renderWebStyles(
     ".generated-stats { display: grid; gap: var(--factory-spacing-space-2); align-items: baseline; grid-auto-flow: column; justify-content: start; } .generated-stats strong { font-size: var(--factory-typography-font-size-xl); } .generated-stats span { color: var(--factory-muted); }",
     ".generated-calendar { display: grid; gap: var(--factory-spacing-space-4); padding: 0; margin: 0; list-style: none; } .generated-calendar > li { display: grid; gap: var(--factory-spacing-space-2); } .generated-calendar > li > strong { color: var(--factory-muted); text-transform: uppercase; font-size: var(--factory-typography-font-size-sm); }",
     "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
-    ...(profile === "task-v1" ? renderTaskWorkspaceStyles() : []),
+    ...(profile === "task-v1"
+      ? renderTaskWorkspaceStyles(
+          hasTaskCorrection(graph, graph.flow.flows[0]?.entity),
+        )
+      : []),
     ...(profile === "approval-v1"
       ? [
           ...approvalWorkspaceStyles.map((style) =>
@@ -4044,13 +4049,17 @@ export function generateApplicationBundle(
                 "export const POST = proxy;\nexport const PATCH = proxy;",
               )
           : taskEntity
-            ? renderWebProxyRoute(
-                restaurantRuntimeEnabled,
-                !!identityPolicy,
-              ).replace(
-                "headers: { 'content-type':",
-                "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
-              )
+            ? renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy)
+                .replace(
+                  "headers: { 'content-type':",
+                  "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
+                )
+                .replace(
+                  "export const POST = proxy;",
+                  hasTaskCorrection(graph, taskEntity)
+                    ? "export const POST = proxy;\nexport const PATCH = proxy;"
+                    : "export const POST = proxy;",
+                )
             : renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
     },
     {
@@ -4142,6 +4151,7 @@ export function generateApplicationBundle(
           ),
           !!identityPolicy,
           taskEntity,
+          hasTaskCorrection(graph, taskEntity),
         ),
     },
     ...(restaurantRuntimeEnabled

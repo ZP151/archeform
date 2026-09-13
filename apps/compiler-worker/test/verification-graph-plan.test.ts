@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { canonicalTeamTaskInterpretation } from "../../../packages/adapters/src/requirements/task-definition-selection.js";
 import {
@@ -28,8 +30,113 @@ import {
 const identityPolicy = graphLock([{ key: "core.identity-policy" }]);
 
 describe("graph-derived verification plan", () => {
+  it("preserves the exact delivered Task verifier plan from baseline 5b65169e", () => {
+    const baseline = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../../packages/compiler/test/fixtures/task-correction-legacy-baseline.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ).entries[0].input;
+    const profile = deriveVerificationProfile(
+      baseline.graph,
+      baseline.compositionLock,
+    );
+    expect(
+      createHash("sha256").update(JSON.stringify(profile)).digest("hex"),
+    ).toBe("d7de60d2467edeb4d6ba92436df319553744ef86fc4fc079bc97f9c57a6cd71b");
+  });
+  it("derives the v2 correction chain with committed versions, stored replay and denial", () => {
+    const { spec, blueprint } = canonicalTeamTaskInterpretation();
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: "task-verifier",
+      workspaceId: "local",
+      name: "Task verifier",
+    });
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    const graph = applyGraphDiffToDraft(
+      baseDraft,
+      composeProductDraft({ plan: standard.plan, blueprint, baseDraft }).diff,
+    ).graph;
+    const selections = graph.integration.compositionSelections!;
+    delete graph.integration.compositionSelections;
+    const lock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    });
+    const profile = deriveVerificationProfile(graph, lock);
+    expect(profile.apiRegistry.find((a) => a.action === "task.update")).toEqual(
+      {
+        action: "task.update",
+        method: "PATCH",
+        route: "/api/task/{recordId}",
+        expectedStatus: 200,
+      },
+    );
+    const final = profile.journeys["task-recomplete"];
+    expect(final.chain!.map((step) => step.action)).toEqual([
+      "task.create",
+      "task.update",
+      "task.start-fresh",
+      "task.update",
+      "task.complete-fresh",
+      "task.update-completed-denied",
+      "task.reopen-fresh",
+    ]);
+    expect(
+      final
+        .chain!.slice(1)
+        .map((step) => JSON.parse(step.body!).expectedVersion),
+    ).toEqual([0, 1, 2, 3, 4, 4]);
+    expect(final.body).toBe('{"expectedVersion":5}');
+    expect(
+      new Set([
+        ...final.chain!.map((step) => step.idempotencyKeyOverride),
+        final.headers![0].value,
+      ]).size,
+    ).toBe(8);
+    for (const step of final.chain!.filter((step) =>
+      step.action.includes("update"),
+    ))
+      expect(Object.keys(JSON.parse(step.body!).values).sort()).toEqual([
+        "assignee",
+        "description",
+        "dueDate",
+        "priority",
+        "title",
+      ]);
+    expect(
+      profile.apiRegistry.find(
+        (a) => a.action === "task.update-completed-denied",
+      )!.expectedStatus,
+    ).toBe(403);
+    expect(profile.journeys["task-update"]).toMatchObject({
+      replayExpectation: "stored-success",
+      expectedVersion: 0,
+    });
+    expect(profile.journeys["task-denied-update"].sessionId).toBe(
+      "fixture-session-viewer",
+    );
+    expect(JSON.stringify(deriveVerificationProfile(graph, lock))).toBe(
+      JSON.stringify(profile),
+    );
+  });
+
   it("derives protected Task requests and five distinct activation keys through recompletion", () => {
     const { spec, blueprint } = canonicalTeamTaskInterpretation();
+    blueprint.actors[0].permissions[0].actions = [
+      "create",
+      "read",
+      "start",
+      "complete",
+      "reopen",
+    ];
     const baseDraft = createBlankApplicationDraft({
       applicationId: "task-verifier",
       workspaceId: "local",

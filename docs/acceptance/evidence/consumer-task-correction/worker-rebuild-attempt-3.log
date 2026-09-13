@@ -1,0 +1,197 @@
+ Image factory-task-correction-20260913-compiler-worker:latest Building
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.29kB 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 910B 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:22-alpine
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 164B 0.0s done
+#4 DONE 0.0s
+
+#5 [build 1/6] FROM docker.io/library/node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+#5 resolve docker.io/library/node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 0.0s done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 1.06MB 0.3s done
+#6 DONE 0.3s
+
+#7 [build 2/6] WORKDIR /workspace
+#7 CACHED
+
+#8 [build 3/6] COPY . .
+#8 DONE 1.7s
+
+#9 [build 4/6] RUN npm config set fetch-retries 5 && npm config set fetch-retry-maxtimeout 120000 && npm install --global pnpm@9.0.0
+#9 3.529
+#9 3.529 added 1 package in 2s
+#9 3.529
+#9 3.529 1 package is looking for funding
+#9 3.529   run `npm fund` for details
+#9 DONE 3.6s
+
+#10 [build 5/6] RUN pnpm install --frozen-lockfile
+#10 0.823 Scope: all 18 workspace projects
+#10 0.926 Lockfile is up to date, resolution step is skipped
+#10 0.983 Progress: resolved 1, reused 0, downloaded 0, added 0
+#10 1.329 Packages: +616
+#10 1.329 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#10 1.985 Progress: resolved 616, reused 0, downloaded 19, added 14
+#10 2.149
+#10 2.149    ╭──────────────────────────────────────────────────────────────────╮
+#10 2.149    │                                                                  │
+#10 2.149    │                Update available! 9.0.0 → 12.4.1.                 │
+#10 2.149    │   Changelog: https://github.com/pnpm/pnpm/releases/tag/v12.4.1   │
+#10 2.149    │                Run "pnpm add -g pnpm" to update.                 │
+#10 2.149    │                                                                  │
+#10 2.149    │      Follow @pnpmjs for updates: https://twitter.com/pnpmjs      │
+#10 2.149    │                                                                  │
+#10 2.149    ╰──────────────────────────────────────────────────────────────────╯
+#10 2.149
+#10 2.987 Progress: resolved 616, reused 0, downloaded 105, added 102
+#10 3.988 Progress: resolved 616, reused 0, downloaded 226, added 226
+#10 4.989 Progress: resolved 616, reused 0, downloaded 315, added 316
+#10 5.989 Progress: resolved 616, reused 0, downloaded 424, added 424
+#10 6.990 Progress: resolved 616, reused 0, downloaded 516, added 517
+#10 7.990 Progress: resolved 616, reused 0, downloaded 567, added 568
+#10 8.990 Progress: resolved 616, reused 0, downloaded 597, added 598
+#10 9.991 Progress: resolved 616, reused 0, downloaded 607, added 608
+#10 10.32  WARN  GET https://registry.npmjs.org/@img/sharp-libvips-linuxmusl-x64/-/sharp-libvips-linuxmusl-x64-1.2.4.tgz error (ECONNRESET). Will retry in 10 seconds. 5 retries left.
+#10 10.99 Progress: resolved 616, reused 0, downloaded 608, added 609
+#10 11.99 Progress: resolved 616, reused 0, downloaded 609, added 610
+#10 12.99 Progress: resolved 616, reused 0, downloaded 610, added 611
+#10 15.46 Progress: resolved 616, reused 0, downloaded 611, added 611
+#10 16.46 Progress: resolved 616, reused 0, downloaded 611, added 612
+#10 19.63 Progress: resolved 616, reused 0, downloaded 612, added 612
+#10 20.63 Progress: resolved 616, reused 0, downloaded 613, added 614
+#10 21.63 Progress: resolved 616, reused 0, downloaded 614, added 615
+#10 24.31 Progress: resolved 616, reused 0, downloaded 615, added 615
+#10 24.31 Progress: resolved 616, reused 0, downloaded 615, added 616, done
+#10 24.65 .../node_modules/@prisma/engines postinstall$ node scripts/postinstall.js
+#10 24.67 .../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+#10 24.68 .../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+#10 24.68 .../esbuild@0.21.5/node_modules/esbuild postinstall$ node install.js
+#10 24.71 .../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+#10 24.79 .../esbuild@0.21.5/node_modules/esbuild postinstall: Done
+#10 24.79 .../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+#10 24.86 .../node_modules/msgpackr-extract install: Done
+#10 24.86 .../sharp@0.34.5/node_modules/sharp install$ node install/check.js || npm run build
+#10 24.96 .../sharp@0.34.5/node_modules/sharp install: Done
+#10 25.33 .../node_modules/@nestjs/core postinstall:                            Thanks for installing nest
+#10 25.33 .../node_modules/@nestjs/core postinstall:                  Please consider donating to our open collective
+#10 25.33 .../node_modules/@nestjs/core postinstall:                         to help us maintain this package.
+#10 25.33 .../node_modules/@nestjs/core postinstall:
+#10 25.33 .../node_modules/@nestjs/core postinstall:                         Number of contributors: undefined
+#10 25.33 .../node_modules/@nestjs/core postinstall:                              Number of backers: 1218
+#10 25.35 .../node_modules/@nestjs/core postinstall:                              Annual budget: $127,156
+#10 25.35 .../node_modules/@nestjs/core postinstall:                              Current balance: $15,312
+#10 25.35 .../node_modules/@nestjs/core postinstall:
+#10 25.35 .../node_modules/@nestjs/core postinstall:              Become a partner: https://opencollective.com/nest/donate
+#10 25.35 .../node_modules/@nestjs/core postinstall:
+#10 25.37 .../node_modules/@nestjs/core postinstall: Done
+#10 26.40 .../node_modules/@prisma/engines postinstall: Done
+#10 26.51 .../node_modules/prisma preinstall$ node scripts/preinstall-entry.js
+#10 26.57 .../node_modules/prisma preinstall: Done
+#10 26.81 .../node_modules/@prisma/client postinstall$ node scripts/postinstall.js
+#10 29.07 .../node_modules/@prisma/client postinstall: prisma:warn We could not find your Prisma schema in the default locations (see: https://pris.ly/d/prisma-schema-location).
+#10 29.07 .../node_modules/@prisma/client postinstall: If you have a Prisma schema file in a custom path, you will need to run
+#10 29.07 .../node_modules/@prisma/client postinstall: `prisma generate --schema=./path/to/your/schema.prisma` to generate Prisma Client.
+#10 29.07 .../node_modules/@prisma/client postinstall: If you do not have a Prisma schema file yet, you can ignore this message.
+#10 29.09 .../node_modules/@prisma/client postinstall: Done
+#10 29.43
+#10 29.43 devDependencies:
+#10 29.43 + @axe-core/playwright 4.12.1
+#10 29.43 + @playwright/test 1.51.1
+#10 29.43 + @types/node 22.20.1
+#10 29.43 + prettier 3.9.6
+#10 29.43 + turbo 2.10.7
+#10 29.43 + typescript 5.9.3
+#10 29.43
+#10 29.48 Done in 29.1s
+#10 DONE 31.0s
+
+#11 [build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/compiler-worker build
+#11 1.310
+#11 1.310 > @factory/graph@0.1.0 build /workspace/packages/graph
+#11 1.310 > tsc -p tsconfig.json
+#11 1.310
+#11 5.751
+#11 5.751 > @factory/capabilities@0.1.0 build /workspace/packages/capabilities
+#11 5.751 > tsc -p tsconfig.json
+#11 5.751
+#11 9.552
+#11 9.552 > @factory/ui-primitives@0.1.0 build /workspace/packages/ui-primitives
+#11 9.552 > tsc -p tsconfig.json
+#11 9.552
+#11 10.92
+#11 10.92 > @factory/ui-patterns@0.1.0 build /workspace/packages/ui-patterns
+#11 10.92 > tsc -p tsconfig.json
+#11 10.92
+#11 12.23
+#11 12.23 > @factory/generated-ui@0.1.0 build /workspace/packages/generated-ui
+#11 12.23 > tsc -p tsconfig.json
+#11 12.23
+#11 13.57
+#11 13.57 > @factory/screen-recipes@0.1.0 build /workspace/packages/screen-recipes
+#11 13.57 > tsc -p tsconfig.json
+#11 13.57
+#11 14.98
+#11 14.98 > @factory/experience-recipes@0.1.0 build /workspace/packages/experience-recipes
+#11 14.98 > tsc -p tsconfig.json
+#11 14.98
+#11 16.26
+#11 16.26 > @factory/compiler@0.1.0 build /workspace/packages/compiler
+#11 16.26 > tsc -p tsconfig.json
+#11 16.26
+#11 19.31
+#11 19.31 > @factory/compiler-worker@0.1.0 build /workspace/apps/compiler-worker
+#11 19.31 > tsc -p tsconfig.json
+#11 19.31
+#11 DONE 21.7s
+
+#12 [stage-1 3/5] COPY --from=build /workspace /workspace
+#12 DONE 5.7s
+
+#13 [stage-1 4/5] RUN apk add --no-cache docker-cli docker-cli-compose
+#13 1.383 (1/3) Installing ca-certificates (20260611-r0)
+#13 1.423 (2/3) Installing docker-cli (29.5.3-r1)
+#13 2.022 (3/3) Installing docker-cli-compose (5.1.4-r1)
+#13 2.655 Executing busybox-1.37.0-r31.trigger
+#13 2.660 Executing ca-certificates-20260611-r0.trigger
+#13 2.708 OK: 72.9 MiB in 21 packages
+#13 DONE 2.8s
+
+#14 [stage-1 5/5] RUN npm install --global pnpm@9.0.0
+#14 2.163
+#14 2.163 added 1 package in 2s
+#14 2.163
+#14 2.163 1 package is looking for funding
+#14 2.163   run `npm fund` for details
+#14 2.164 npm notice
+#14 2.164 npm notice New major version of npm available! 10.9.8 -> 12.0.2
+#14 2.164 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+#14 2.164 npm notice To update run: npm install -g npm@12.0.2
+#14 2.164 npm notice
+#14 DONE 2.3s
+
+#15 exporting to image
+#15 exporting layers
+#15 exporting layers 31.4s done
+#15 exporting manifest sha256:3f196d702d2e080a107d0e830797287541ec2ca1dbd067ac762dea248302507e 0.0s done
+#15 exporting config sha256:71a487b95012dae1108b233685216fb7aba3571a33f4298dfa941701e4d62b4a done
+#15 exporting attestation manifest sha256:749fc5628b3ebe581b33f6dc8537702322b189832cae56bfbc0d5c1036443ad3 0.0s done
+#15 exporting manifest list sha256:8562f653d64a43fff5ed719754bea82fdb5174f2088a6869fd3f8e1d53ef3830 0.0s done
+#15 naming to docker.io/library/factory-task-correction-20260913-compiler-worker:latest done
+#15 unpacking to docker.io/library/factory-task-correction-20260913-compiler-worker:latest
+#15 unpacking to docker.io/library/factory-task-correction-20260913-compiler-worker:latest 11.6s done
+#15 DONE 43.0s
+
+#16 resolving provenance for metadata file
+#16 DONE 0.0s
+ Image factory-task-correction-20260913-compiler-worker:latest Built

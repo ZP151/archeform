@@ -2,7 +2,22 @@
 
 Updated: 2026-09-13
 
-## Current: Team Task accepted; next is correction and definition scale
+## Current: Task correction accepted; definition scale follows
+
+The accepted core iteration starts from delivered `5b65169e` and implements
+same-task correction through the [bounded implementation plan](superpowers/plans/2026-09-13-task-correction.md).
+ADR-0064 has received independent standing acceptance, with P0/P1/P2 `0/0/0`,
+and implementation plus focused independent review have passed. The old
+Published Task's 63-file bundle and existing non-Task bundles remain unchanged.
+Actual correction attempt 4 passed the generated PostgreSQL/API/browser lane
+in 4.0 minutes, with the app ready in 196,950 ms. Same-task editing, conflict
+review, completed-state denial, Reopen and exact retry after API restart pass;
+audit/receipt counts match `[5,2,1,8]`. The verifier fixture/chain repair and the
+incorrect reopened-state test assertion are closed, with earlier failures
+preserved. All seven exact runtime projects are clean. Independent Terra QA and
+Sol final release review pass with no open P0/P1/P2 findings; root accepts the
+bounded slice. Twenty-four final actual screenshots were inspected. See the
+[correction acceptance record](acceptance/task-correction.md).
 
 Team Task Tracking is implemented from delivered `d28f1fed`. Actual attempt 2
 passed one generated PostgreSQL/API/browser lane in 3.5 minutes, with the local
@@ -16,9 +31,10 @@ with no open P0/P1/P2 findings. The controller accepted the bounded slice.
 
 Three prior canonical definitions and ten complete ordered bundles remain
 byte-identical. Coverage is now four definitions and three
-demonstrated local runtime families. Missing post-creation field editing still
-prevents calling Task a product-complete application. The next delivery is Task
-correction, followed by data-based definition authoring and batch validation.
+demonstrated local runtime families. Same-task field correction now closes the
+next basic Task journey gap; broader task-management maturity remains unproven.
+The next delivery is data-based definition authoring and batch validation,
+starting with the four delivered definitions as exact round-trip fixtures.
 
 The [scale plan](superpowers/plans/2026-09-13-product-definition-scale.md)
 connects each next slice to ordinary-user effort reduction and separates

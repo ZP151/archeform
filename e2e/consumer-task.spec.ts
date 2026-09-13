@@ -30,7 +30,11 @@ const controlPlaneBase = process.env.FACTORY_E2E_CONTROL_PLANE_URL;
 const timeoutMs = 1_800_000;
 const evidenceDirectory = resolve(
   process.cwd(),
-  "docs/acceptance/evidence/consumer-task/team-task-tracking",
+  "docs/acceptance/evidence/consumer-task-correction/team-task-tracking",
+);
+const correctionEvidenceDirectory = resolve(
+  process.cwd(),
+  "docs/acceptance/evidence/consumer-task-correction/team-task-tracking",
 );
 
 type Preview = {
@@ -43,7 +47,7 @@ type Preview = {
 
 type TaskValues = {
   title: string;
-  description: string;
+  description: string | null;
   assignee: string;
   dueDate: string;
   priority: "low" | "medium" | "high";
@@ -86,7 +90,7 @@ function expectTaskRecord(
 }
 
 async function expectTaskError(
-  response: Awaited<ReturnType<APIRequestContext["post"]>>,
+  response: { status(): number; json(): Promise<unknown> },
   status: number,
   body: unknown,
 ) {
@@ -130,7 +134,7 @@ function persistedTaskMutationFacts(
   recordIds: readonly string[],
 ): PersistedTaskMutationFacts {
   expect(previewProject).toMatch(/^factory-preview-[a-z0-9-]+$/);
-  expect(recordIds).toHaveLength(3);
+  expect(recordIds.length).toBeGreaterThan(0);
   expect(recordIds.every((id) => typeof id === "string" && id.length > 0)).toBe(
     true,
   );
@@ -194,7 +198,7 @@ function session(role: "member" | "viewer") {
   return { "x-factory-fixture-session": `fixture-session-${role}` };
 }
 
-function commandHeaders(role: "member" | "viewer", key = randomUUID()) {
+function commandHeaders(role: "member" | "viewer", key: string = randomUUID()) {
   return { ...session(role), "x-factory-idempotency-key": key };
 }
 
@@ -272,7 +276,7 @@ async function createTask(
   await page.getByLabel("Title *", { exact: true }).fill(values.title);
   await page
     .getByLabel("Description", { exact: true })
-    .fill(values.description);
+    .fill(values.description ?? "");
   await page.getByLabel("Assignee *", { exact: true }).fill(values.assignee);
   await page.getByLabel("Due date *", { exact: true }).fill(values.dueDate);
   await page
@@ -336,6 +340,76 @@ async function transitionTask(
   const status = action === "complete" ? "completed" : "in-progress";
   expectTaskRecord(result, { ...values, id, status, version: version + 1 });
   return result.version;
+}
+
+async function patchTask(
+  request: APIRequestContext,
+  href: string,
+  id: string,
+  expectedVersion: number,
+  values: TaskValues,
+  key: string = randomUUID(),
+) {
+  const command = {
+    expectedVersion,
+    values: serializedValues(values),
+  };
+  expect(command, "full correction command").toEqual({
+    expectedVersion,
+    values: serializedValues(values),
+  });
+  const response = await request.patch(
+    new URL(`/api/task/${id}`, href).toString(),
+    {
+      headers: commandHeaders("member", key),
+      data: command,
+    },
+  );
+  return { response, key };
+}
+
+async function editTaskInBrowser(
+  page: Page,
+  title: string,
+  values: TaskValues,
+) {
+  await record(page, title)
+    .getByRole("button", { name: "Edit", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Edit Task", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Title *", { exact: true }).fill(values.title);
+  await page
+    .getByLabel("Description", { exact: true })
+    .fill(values.description ?? "");
+  await page.getByLabel("Assignee *", { exact: true }).fill(values.assignee);
+  await page.getByLabel("Due date *", { exact: true }).fill(values.dueDate);
+  await page
+    .getByLabel("Priority *", { exact: true })
+    .selectOption(values.priority);
+  const response = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === "PATCH" &&
+      new URL(candidate.url()).pathname.includes("/api/task/"),
+  );
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  return response;
+}
+
+async function captureCorrectionState(
+  page: Page,
+  filename: string,
+  width: 390 | 768 | 1440,
+) {
+  await page.setViewportSize({ width, height: 900 });
+  expect(page.viewportSize()?.width, "correction screenshot viewport").toBe(
+    width,
+  );
+  await page.screenshot({
+    path: resolve(correctionEvidenceDirectory, filename),
+    fullPage: true,
+  });
 }
 
 async function verifyTaskFinding(
@@ -490,7 +564,7 @@ async function verifyUnknownCreateRetry(
   await page.getByLabel("Title *", { exact: true }).fill(values.title);
   await page
     .getByLabel("Description", { exact: true })
-    .fill(values.description);
+    .fill(values.description ?? "");
   await page.getByLabel("Assignee *", { exact: true }).fill(values.assignee);
   await page.getByLabel("Due date *", { exact: true }).fill(values.dueDate);
   await page
@@ -652,6 +726,7 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
   );
   let interpretationCalls = 0;
   let compilationId: string | null = null;
+  let verificationRunId: string | null = null;
   const lifecycle: string[] = [];
   const pageErrors: string[] = [];
   let generated: Page | null = null;
@@ -678,8 +753,16 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
         })
         .catch(() => undefined);
     }
-    if (/\/compilations\/[^/]+\/verification-runs$/.test(path))
+    if (/\/compilations\/[^/]+\/verification-runs$/.test(path)) {
       lifecycle.push("verify");
+      void response
+        .json()
+        .then((body: { verificationRunId?: unknown }) => {
+          if (typeof body.verificationRunId === "string")
+            verificationRunId = body.verificationRunId;
+        })
+        .catch(() => undefined);
+    }
     if (/\/compilations\/[^/]+\/preview-runs$/.test(path))
       lifecycle.push("preview");
   });
@@ -705,9 +788,64 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
     const delivery = page.getByRole("region", { name: "Task delivery" });
     await expect(delivery).toBeVisible({ timeout: 60_000 });
     const openApp = delivery.getByRole("link", { name: "Open local app" });
-    await expect
-      .poll(async () => await openApp.isVisible(), { timeout: 300_000 })
-      .toBe(true);
+    const readinessDeadline = startedAt + 300_000;
+    let appReady = false;
+    while (Date.now() < readinessDeadline) {
+      if (verificationRunId) {
+        const response = await request.get(
+          controlPlaneUrl(
+            `/verification-runs/${encodeURIComponent(verificationRunId)}`,
+          ),
+        );
+        if (response.status() !== 200)
+          throw new Error(
+            `Verification status unavailable: run=${verificationRunId}, status=http-${response.status()}, failureCode=unavailable`,
+          );
+        const body: unknown = await response.json();
+        if (!body || typeof body !== "object" || Array.isArray(body))
+          throw new Error(
+            `Verification status invalid: run=${verificationRunId}, status=invalid, failureCode=unavailable`,
+          );
+        const verification = body as Record<string, unknown>;
+        const status = verification.status;
+        const steps: readonly unknown[] =
+          verification.evidence &&
+          typeof verification.evidence === "object" &&
+          !Array.isArray(verification.evidence) &&
+          Array.isArray(
+            (verification.evidence as Record<string, unknown>).steps,
+          )
+            ? ((verification.evidence as Record<string, unknown>)
+                .steps as readonly unknown[])
+            : [];
+        const failedStep = steps.find(
+          (step): step is Record<string, unknown> => {
+            if (!step || typeof step !== "object" || Array.isArray(step))
+              return false;
+            return (step as Record<string, unknown>).status === "failed";
+          },
+        );
+        const candidateCode = failedStep?.failureCode;
+        const failureCode =
+          typeof candidateCode === "string" &&
+          /^[a-z0-9][a-z0-9.-]{0,63}$/.test(candidateCode)
+            ? candidateCode
+            : "unspecified";
+        if (status === "failed" || status === "cancelled")
+          throw new Error(
+            `Verification terminal failure: run=${verificationRunId}, status=${status}, failureCode=${failureCode}`,
+          );
+      }
+      appReady = await openApp.isVisible();
+      if (appReady) break;
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, Math.min(1_000, readinessDeadline - Date.now())),
+      );
+    }
+    if (!appReady)
+      throw new Error(
+        "Prepared local app did not become ready within 300000ms.",
+      );
     const elapsedToReadyMs = Date.now() - startedAt;
     expect(elapsedToReadyMs, "prepared local ready target").toBeLessThanOrEqual(
       300_000,
@@ -730,8 +868,10 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
     generated = await context.newPage();
     generated.on("pageerror", (error) => pageErrors.push(error.name));
     await generated.goto(href);
-    await verifyTaskAssets(generated);
-    await verifyTaskAssetFailureDetection(generated);
+    await verifyTaskAssets(generated, { workspaceVersion: "1.1.0" });
+    await verifyTaskAssetFailureDetection(generated, {
+      workspaceVersion: "1.1.0",
+    });
     await expect(
       generated.getByLabel("Demo role", { exact: true }),
     ).toBeVisible();
@@ -759,6 +899,14 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
     };
     const firstRecord = await createTask(generated, first);
     await createTask(generated, second);
+    const correctionInitial: TaskValues = {
+      title: "Correction acceptance record",
+      description: "Correct the same shared task.",
+      assignee: "Jordan",
+      dueDate: "2026-10-04",
+      priority: "medium",
+    };
+    const correctionRecord = await createTask(generated, correctionInitial);
     await generated.setViewportSize({ width: 390, height: 900 });
     await generated.evaluate(() => window.scrollTo(0, 0));
     await navigateTask(generated, "All tasks");
@@ -818,7 +966,9 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
         bounds!.y + bounds!.height,
         "first member action fits above fold",
       ).toBeLessThanOrEqual(650);
-      await verifyTaskPresentation(generated, width);
+      await verifyTaskPresentation(generated, width, {
+        workspaceVersion: "1.1.0",
+      });
       await generated.screenshot({
         path: resolve(evidenceDirectory, `task-list-${width}.png`),
         fullPage: true,
@@ -926,6 +1076,339 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
     await verifyRecovery(generated, first.title);
     await verifyStaleRoleCallback(generated, first.title);
 
+    stage = "member-correction";
+    const correctedNotStarted: TaskValues = {
+      title: "Synthetic corrected task",
+      description: null,
+      assignee: "Avery",
+      dueDate: "2026-10-05",
+      priority: "high",
+    };
+    const deniedUpdateAlias = await request.post(
+      new URL(
+        `/api/task/${correctionRecord.id}/events/update`,
+        href,
+      ).toString(),
+      {
+        headers: commandHeaders("member"),
+        data: {
+          expectedVersion: 0,
+          values: serializedValues(correctedNotStarted),
+        },
+      },
+    );
+    await expectTaskError(deniedUpdateAlias, 403, { code: "task.denied" });
+    await record(generated, correctionInitial.title)
+      .getByRole("button", { name: "Edit", exact: true })
+      .click();
+    await expect(
+      generated.getByRole("heading", { name: "Edit Task", exact: true }),
+    ).toBeVisible();
+    await expect(generated.getByLabel("Title *", { exact: true })).toHaveValue(
+      correctionInitial.title,
+    );
+    await expect(
+      generated.getByLabel("Description", { exact: true }),
+    ).toHaveValue(correctionInitial.description ?? "");
+    await expect(
+      generated.getByLabel("Assignee *", { exact: true }),
+    ).toHaveValue(correctionInitial.assignee);
+    await expect(
+      generated.getByLabel("Due date *", { exact: true }),
+    ).toHaveValue(correctionInitial.dueDate);
+    await expect(
+      generated.getByLabel("Priority *", { exact: true }),
+    ).toHaveValue(correctionInitial.priority);
+    await expect(
+      generated.getByLabel("Title *", { exact: true }),
+    ).toBeFocused();
+    await generated.keyboard.press("Tab");
+    await expect(
+      generated.getByLabel("Description", { exact: true }),
+    ).toBeFocused();
+    await mkdir(correctionEvidenceDirectory, { recursive: true });
+    for (const width of [390, 768, 1440] as const)
+      await captureCorrectionState(
+        generated,
+        `correction-edit-${width}.png`,
+        width,
+      );
+    await generated
+      .getByLabel("Title *", { exact: true })
+      .fill(correctedNotStarted.title);
+    await generated.getByLabel("Description", { exact: true }).fill("");
+    await generated
+      .getByLabel("Assignee *", { exact: true })
+      .fill(correctedNotStarted.assignee);
+    await generated
+      .getByLabel("Due date *", { exact: true })
+      .fill(correctedNotStarted.dueDate);
+    await generated
+      .getByLabel("Priority *", { exact: true })
+      .selectOption(correctedNotStarted.priority);
+    const firstCorrection = generated.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === "PATCH" &&
+        new URL(candidate.url()).pathname ===
+          `/api/task/${correctionRecord.id}`,
+    );
+    await generated.getByRole("button", { name: "Save", exact: true }).click();
+    const firstCorrectionResponse = await firstCorrection;
+    expect(firstCorrectionResponse.status()).toBe(200);
+    expect(firstCorrectionResponse.request().postDataJSON()).toEqual({
+      expectedVersion: 0,
+      values: serializedValues(correctedNotStarted),
+    });
+    expectTaskRecord(await firstCorrectionResponse.json(), {
+      ...correctedNotStarted,
+      id: correctionRecord.id,
+      status: "not-started",
+      version: 1,
+    });
+    const correctionStarted = await request.post(
+      new URL(`/api/task/${correctionRecord.id}/events/start`, href).toString(),
+      { headers: commandHeaders("member"), data: { expectedVersion: 1 } },
+    );
+    expect(correctionStarted.status()).toBe(200);
+    expectTaskRecord(await correctionStarted.json(), {
+      ...correctedNotStarted,
+      id: correctionRecord.id,
+      status: "in-progress",
+      version: 2,
+    });
+    await generated
+      .getByRole("button", { name: "Refresh", exact: true })
+      .click();
+    await expect(
+      taskField(record(generated, correctedNotStarted.title), "Status"),
+    ).toHaveText("In progress");
+    const correctedActive: TaskValues = {
+      ...correctedNotStarted,
+      title: "Synthetic active correction",
+      description: "An active correction stays on the same record.",
+      assignee: "Casey",
+      dueDate: "2026-10-06",
+      priority: "low",
+    };
+    const activeCorrection = await editTaskInBrowser(
+      generated,
+      correctedNotStarted.title,
+      correctedActive,
+    );
+    expect(activeCorrection.status()).toBe(200);
+    expect(activeCorrection.request().postDataJSON()).toEqual({
+      expectedVersion: 2,
+      values: serializedValues(correctedActive),
+    });
+    expectTaskRecord(await activeCorrection.json(), {
+      ...correctedActive,
+      id: correctionRecord.id,
+      status: "in-progress",
+      version: 3,
+    });
+    const raceWinnerValues: TaskValues = {
+      ...correctedActive,
+      title: "Synthetic race winner",
+    };
+    const raceLoserValues: TaskValues = {
+      ...correctedActive,
+      title: "Synthetic stale draft",
+    };
+    await record(generated, correctedActive.title)
+      .getByRole("button", { name: "Edit", exact: true })
+      .click();
+    await generated
+      .getByLabel("Title *", { exact: true })
+      .fill(raceLoserValues.title);
+    const raceWinner = await patchTask(
+      request,
+      href,
+      correctionRecord.id,
+      3,
+      raceWinnerValues,
+    );
+    expect(raceWinner.response.status()).toBe(200);
+    expectTaskRecord(await raceWinner.response.json(), {
+      ...raceWinnerValues,
+      id: correctionRecord.id,
+      status: "in-progress",
+      version: 4,
+    });
+    const staleSave = generated.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === "PATCH" &&
+        new URL(candidate.url()).pathname ===
+          `/api/task/${correctionRecord.id}`,
+    );
+    await generated.getByRole("button", { name: "Save", exact: true }).click();
+    await expectTaskError(await staleSave, 409, {
+      code: "task.version_conflict",
+      current: { id: correctionRecord.id, status: "in-progress", version: 4 },
+    });
+    await expect(generated.getByLabel("Title *", { exact: true })).toHaveValue(
+      raceLoserValues.title,
+    );
+    await generated
+      .getByRole("button", { name: "Review latest", exact: true })
+      .click();
+    await expect(
+      generated.getByRole("button", { name: "Keep my changes", exact: true }),
+    ).toBeVisible();
+    await captureCorrectionState(generated, "correction-conflict-390.png", 390);
+    await generated
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
+    const winnerValues = raceWinnerValues;
+    await transitionTask(
+      generated,
+      winnerValues.title,
+      correctionRecord.id,
+      4,
+      "complete",
+      "Complete",
+      winnerValues,
+    );
+    await expect(
+      record(generated, winnerValues.title).getByRole("button", {
+        name: "Edit",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    const terminalPatch = await patchTask(
+      request,
+      href,
+      correctionRecord.id,
+      5,
+      winnerValues,
+    );
+    await expectTaskError(terminalPatch.response, 403, { code: "task.denied" });
+    await transitionTask(
+      generated,
+      winnerValues.title,
+      correctionRecord.id,
+      5,
+      "reopen",
+      "Reopen",
+      winnerValues,
+    );
+    const correctionReplayValues: TaskValues = {
+      ...winnerValues,
+      title: "Synthetic replay after restart",
+      description: "Recovered committed correction.",
+      assignee: "Riley",
+      dueDate: "2026-10-07",
+      priority: "high",
+    };
+    await record(generated, winnerValues.title)
+      .getByRole("button", { name: "Edit", exact: true })
+      .click();
+    await generated
+      .getByLabel("Title *", { exact: true })
+      .fill(correctionReplayValues.title);
+    await generated
+      .getByLabel("Description", { exact: true })
+      .fill(correctionReplayValues.description ?? "");
+    await generated
+      .getByLabel("Assignee *", { exact: true })
+      .fill(correctionReplayValues.assignee);
+    await generated
+      .getByLabel("Due date *", { exact: true })
+      .fill(correctionReplayValues.dueDate);
+    await generated
+      .getByLabel("Priority *", { exact: true })
+      .selectOption(correctionReplayValues.priority);
+    const updatePath = `**/api/task/${correctionRecord.id}`;
+    const patchAttempts: Array<{ key: string; body: unknown }> = [];
+    let committedRecord: unknown;
+    let loseFirstResponse = true;
+    await generated.route(updatePath, async (route) => {
+      if (route.request().method() !== "PATCH") return route.continue();
+      patchAttempts.push({
+        key: route.request().headers()["x-factory-idempotency-key"]!,
+        body: route.request().postDataJSON(),
+      });
+      if (!loseFirstResponse) return route.continue();
+      loseFirstResponse = false;
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      committedRecord = await response.json();
+      await route.abort("connectionreset");
+    });
+    try {
+      await generated
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await expect(
+        generated.getByRole("button", { name: "Retry", exact: true }),
+      ).toBeVisible();
+      await expect(
+        generated.getByLabel("Title *", { exact: true }),
+      ).toBeDisabled();
+      await expect(
+        record(generated, winnerValues.title).getByRole("button", {
+          name: "Complete",
+          exact: true,
+        }),
+      ).toBeDisabled();
+      await captureCorrectionState(
+        generated,
+        "correction-unknown-390.png",
+        390,
+      );
+      await restartTaskApi(generated, preview!.composeProjectName, "/api/task");
+      const replayedCorrection = generated.waitForResponse(
+        (candidate) =>
+          candidate.request().method() === "PATCH" &&
+          new URL(candidate.url()).pathname ===
+            `/api/task/${correctionRecord.id}`,
+      );
+      await generated
+        .getByRole("button", { name: "Retry", exact: true })
+        .click();
+      const replayedResponse = await replayedCorrection;
+      expect(replayedResponse.status()).toBe(200);
+      expect(await replayedResponse.json()).toEqual(committedRecord);
+      expect(patchAttempts).toHaveLength(2);
+      expect(patchAttempts[1]!.key === patchAttempts[0]!.key).toBe(true);
+      expect(
+        JSON.stringify(patchAttempts[1]!.body) ===
+          JSON.stringify(patchAttempts[0]!.body),
+      ).toBe(true);
+    } finally {
+      await generated.unroute(updatePath);
+    }
+    expectTaskRecord(committedRecord, {
+      ...correctionReplayValues,
+      id: correctionRecord.id,
+      status: "in-progress",
+      version: 7,
+    });
+    const changedReplay = await patchTask(
+      request,
+      href,
+      correctionRecord.id,
+      6,
+      {
+        ...correctionReplayValues,
+        title: "Synthetic changed correction replay",
+      },
+      patchAttempts[0]!.key,
+    );
+    await expectTaskError(changedReplay.response, 409, {
+      code: "task.idempotency_conflict",
+    });
+    await generated.reload();
+    await expect(record(generated, correctionReplayValues.title)).toHaveCount(
+      1,
+    );
+    await mkdir(correctionEvidenceDirectory, { recursive: true });
+    for (const width of [390, 768, 1440] as const)
+      await captureCorrectionState(
+        generated,
+        `correction-result-${width}.png`,
+        width,
+      );
+
     stage = "viewer-denials";
     await generated
       .getByLabel("Demo role", { exact: true })
@@ -933,11 +1416,14 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
     await expect(
       generated.getByRole("link", { name: "Create Task", exact: true }),
     ).toHaveCount(0);
+    await expect(
+      record(generated, correctionReplayValues.title).getByRole("button", {
+        name: "Edit",
+        exact: true,
+      }),
+    ).toHaveCount(0);
     await expect(record(generated, first.title)).toBeVisible();
-    await generated.screenshot({
-      path: resolve(evidenceDirectory, "task-viewer-read-390.png"),
-      fullPage: true,
-    });
+    await captureCorrectionState(generated, "task-viewer-read-390.png", 390);
     const recordUrl = new URL(`/api/task/${firstRecord.id}`, href).toString();
     const eventUrl = (event: string) =>
       new URL(`/api/task/${firstRecord.id}/events/${event}`, href).toString();
@@ -949,6 +1435,17 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
       },
     );
     await expectTaskError(deniedCreate, 403, { code: "task.denied" });
+    const deniedCorrection = await request.patch(
+      new URL(`/api/task/${correctionRecord.id}`, href).toString(),
+      {
+        headers: commandHeaders("viewer"),
+        data: {
+          expectedVersion: 7,
+          values: serializedValues(correctionReplayValues),
+        },
+      },
+    );
+    await expectTaskError(deniedCorrection, 403, { code: "task.denied" });
     for (const event of ["start", "complete", "reopen"]) {
       const denied = await request.post(eventUrl(event), {
         headers: commandHeaders("viewer"),
@@ -1125,7 +1622,7 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
     expect(webContainer).toMatch(/^[a-f0-9]{12,64}$/);
     const emittedUi = resolve(
       process.cwd(),
-      ".superpowers/sdd/2026-09-11-canonical-team-task-family/task-emitted-ui",
+      ".superpowers/sdd/2026-09-13-task-correction/task-emitted-ui",
     );
     await mkdir(emittedUi, { recursive: true });
     for (const file of ["page-runtime.tsx", "globals.css"])
@@ -1140,19 +1637,27 @@ test("D2.5 deterministic Task selection publishes a safe shared board", async ({
     stage = "persistence-cardinality";
     const persistedMutationFacts = persistedTaskMutationFacts(
       preview!.composeProjectName,
-      [firstRecord.id, replayRecord.id, recoveredCreate.id],
+      [
+        firstRecord.id,
+        replayRecord.id,
+        recoveredCreate.id,
+        correctionRecord.id,
+      ],
     );
-    expect(persistedMutationFacts.auditCounts).toEqual([5, 2, 1]);
-    expect(persistedMutationFacts.receiptCounts).toEqual([5, 2, 1]);
+    expect(persistedMutationFacts.auditCounts).toEqual([5, 2, 1, 8]);
+    expect(persistedMutationFacts.receiptCounts).toEqual([5, 2, 1, 8]);
     expect(persistedMutationFacts.hashedKeyShape).toBe(true);
     expect(persistedMutationFacts.rawKeyRetained).toBe(false);
     console.info(
       "FACTORY_TASK_BUSINESS",
       JSON.stringify({
         lane: "deterministic-selection-real-runtime",
-        tasks: 2,
+        tasks: 4,
         lifecycle: ["start", "complete", "reopen", "complete"],
-        viewerDenied: ["create", "start", "complete", "reopen"],
+        viewerDenied: ["create", "update", "start", "complete", "reopen"],
+        correctionVersions: [0, 1, 2, 3, 4, 5, 6, 7],
+        correctionReplayAfterApiRestart: true,
+        correctionChangedReplayDenied: true,
         invalidTransitionDenied: true,
         idempotentCreateReplay: true,
         staleTransitionDenied: true,

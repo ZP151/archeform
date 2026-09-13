@@ -1,3 +1,8 @@
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { posix } from "node:path";
+import { transpileModule, ModuleKind } from "typescript";
+import { generateApplicationBundle } from "@factory/compiler";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -1378,4 +1383,224 @@ describe("stored-success idempotency probe", () => {
       /fixture-record|verify-correction|HOSTILE-RESPONSE|expectedVersion/,
     );
   });
+});
+
+describe("generated Task correction through bounded probes", () => {
+  function fixture(failCreate = false) {
+    const input = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../../packages/compiler/test/fixtures/task-correction-legacy-baseline.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ).entries[0].input;
+    input.graph.policy.permissions.find(
+      (p: any) => p.resource === "task" && p.actions.includes("create"),
+    ).actions = ["create", "read", "update", "start", "complete", "reopen"];
+    input.compositionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(input.graph),
+      selections: input.compositionLock.packages,
+    });
+    const profile = deriveVerificationProfile(
+        input.graph,
+        input.compositionLock,
+      ),
+      files = generateApplicationBundle(input).files;
+    const cache = new Map<string, any>(),
+      runtimeRequire = createRequire(
+        new URL("../../../packages/compiler/package.json", import.meta.url),
+      );
+    const load = (path: string): any => {
+      if (cache.has(path)) return cache.get(path);
+      const file = files.find((f) => f.path === path)!;
+      const exports: any = {};
+      cache.set(path, exports);
+      new Function(
+        "require",
+        "exports",
+        transpileModule(file.content, {
+          compilerOptions: { module: ModuleKind.CommonJS, target: 99 },
+        }).outputText,
+      )(
+        (name: string) =>
+          name.startsWith(".")
+            ? load(
+                posix.normalize(
+                  posix.join(posix.dirname(path), name.replace(/\.js$/, ".ts")),
+                ),
+              )
+            : runtimeRequire(name),
+        exports,
+      );
+      return exports;
+    };
+    const { ApplicationRuntime, InMemoryRecordStore } = load(
+        "api/src/application-runtime.ts",
+      ),
+      store = new InMemoryRecordStore();
+    const calls: {
+      method: string;
+      path: string;
+      key: string;
+      body: string;
+      status: number;
+    }[] = [];
+    const env = new VerificationEnvironment({
+      artifactRoot: "generated",
+      previewRunId: "preview-task-probe",
+      rootDirectory: "task-probe",
+      composeProjectName: "factory-preview-task-probe",
+      artifacts: [
+        { path: "docker-compose.yml", digest: "sha256:deadbeef", sizeBytes: 5 },
+        { path: "api/package.json", digest: "sha256:deadbeef", sizeBytes: 5 },
+      ],
+      operationTimeoutMs: 1000,
+      startPreviewRun: vi.fn(async () => ({
+        webPort: 3000,
+        apiPort: 3001,
+        previewUrl: "http://127.0.0.1:3000",
+      })),
+      stopPreviewRun: vi.fn(async () => undefined),
+      fetch: vi.fn(async (url, init) => {
+        const path = new URL(String(url)).pathname,
+          parts = path.split("/"),
+          method = String(init?.method),
+          headers = new Headers(init?.headers),
+          session = headers.get("x-factory-fixture-session") ?? "",
+          role = session.replace("fixture-session-", ""),
+          body = String(init?.body),
+          key = headers.get("x-factory-idempotency-key") ?? "",
+          operation =
+            method === "PATCH"
+              ? "update"
+              : parts[4] === "events"
+                ? parts[5]
+                : "create";
+        const call = { method, path, key, body, status: 0 };
+        calls.push(call);
+        if (failCreate && operation === "create") {
+          call.status = 503;
+          return new Response("{}", { status: 503 });
+        }
+        try {
+          const result = await new ApplicationRuntime(store).taskCommand(
+            role,
+            session,
+            parts[2],
+            parts[3],
+            operation,
+            key,
+            JSON.parse(body),
+          );
+          call.status = result.status;
+          return new Response(JSON.stringify(result.body), {
+            status: result.status,
+          });
+        } catch (error) {
+          const rejected = error as { status: number; body: unknown };
+          call.status = rejected.status;
+          return new Response(JSON.stringify(rejected.body), {
+            status: rejected.status,
+          });
+        }
+      }),
+    });
+    return { profile, store, calls, env };
+  }
+  it("stops idempotency before PATCH and replay when its declared create fails", async () => {
+    const { profile, store, calls, env } = fixture(true);
+    await env.boot();
+    const journey = profile.journeys[
+      "task-update"
+    ] as IdempotencyJourneyFixture;
+    const result = await runIdempotencyProbe(
+      {
+        entry: { stepId: "task-update", kind: "idempotency" },
+        environment: env,
+        signal: new AbortController().signal,
+      },
+      journey,
+      profile.apiRegistry,
+    );
+    expect(result).toMatchObject({
+      status: "failed",
+      failureCode: "role-journey.chain_unexpected",
+      httpStatus: 503,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("POST");
+    expect(await store.listAudit()).toHaveLength(0);
+    await env.cleanup();
+  });
+  it.each(["recomplete", "update", "denied-update"])(
+    "executes the generated %s fixture through request bounds and real Task commands",
+    async (suffix) => {
+      const { profile, store, calls, env } = fixture();
+      await env.boot();
+      const id = "task-" + suffix,
+        journey = profile.journeys[id],
+        entry = profile.stepPlan.find((step) => step.stepId === id)!;
+      const context = {
+        entry,
+        environment: env,
+        signal: new AbortController().signal,
+      };
+      const result =
+        suffix === "update"
+          ? await runIdempotencyProbe(
+              context,
+              journey as IdempotencyJourneyFixture,
+              profile.apiRegistry,
+            )
+          : suffix === "denied-update"
+            ? await runAuthorizationDenialProbe(
+                context,
+                journey,
+                profile.apiRegistry,
+              )
+            : await runRoleJourneyProbe(context, journey, profile.apiRegistry);
+      expect(result.status).toBe("passed");
+      expect(calls.every((call) => !call.path.includes("{"))).toBe(true);
+      expect(
+        calls.filter(
+          (call) => call.method === "POST" && call.path === "/api/task",
+        ),
+      ).toHaveLength(1);
+      const audits = await store.listAudit();
+      if (suffix === "recomplete") {
+        expect(calls.map((call) => call.status)).toEqual([
+          201, 200, 200, 200, 200, 403, 200, 200,
+        ]);
+        expect(audits).toHaveLength(7);
+        expect(
+          audits.filter((row: any) => row.action === "update"),
+        ).toHaveLength(2);
+        expect(
+          (await store.list("task")).find(
+            (row: any) => row.id !== "sample-task",
+          ),
+        ).toMatchObject({ status: "completed", version: 6 });
+      } else if (suffix === "update") {
+        expect(calls.map((call) => call.status)).toEqual([201, 200, 200]);
+        expect(calls[1]).toEqual(calls[2]);
+        expect(calls[0].key).not.toBe(calls[1].key);
+        expect(audits).toHaveLength(2);
+        expect(
+          (await store.list("task")).find(
+            (row: any) => row.id !== "sample-task",
+          ),
+        ).toMatchObject({ status: "not-started", version: 1 });
+      } else {
+        expect(calls.map((call) => call.status)).toEqual([201, 403]);
+        expect(audits).toHaveLength(1);
+      }
+      expect(JSON.stringify(result)).not.toContain(calls[0].key);
+      expect(JSON.stringify(result)).not.toContain(
+        "Corrected verification task",
+      );
+      await env.cleanup();
+    },
+  );
 });

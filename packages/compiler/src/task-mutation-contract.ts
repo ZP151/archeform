@@ -11,6 +11,23 @@ export const taskMutationContract = {
   ownership: "factory-authored",
   license: "UNLICENSED",
 } as const;
+export const taskCorrectionContract = {
+  ...taskMutationContract,
+  version: "2.0.0",
+  mutation: "factory.generated.task-mutation/v2",
+} as const;
+/** Called only after the complete lock-bound Task selector succeeds. */
+export function hasTaskCorrection(
+  graph: ApplicationGraphV1,
+  entity?: string,
+): boolean {
+  return (
+    !!entity &&
+    graph.policy.permissions.some(
+      (p) => p.resource === entity && p.actions.includes("update"),
+    )
+  );
+}
 const exactSet = (actual: readonly string[], expected: readonly string[]) =>
   actual.length === expected.length &&
   new Set(actual).size === actual.length &&
@@ -57,6 +74,38 @@ export function selectTaskContract(
 ): string | undefined {
   const selections =
     compositionLock?.packages ?? graph.integration.compositionSelections ?? [];
+  const taskCandidate =
+    selections.filter((s) => s.lock.key in taskLocks).length >= 5 &&
+    graph.page.pages.length >= 4 &&
+    graph.flow.flows.some(
+      (flow) =>
+        exactSet(flow.events, ["start", "complete", "reopen"]) &&
+        graph.domain.entities.some(
+          (entity) =>
+            entity.key === flow.entity &&
+            entity.fields.filter((field) =>
+              businessFields.some(([key]) => key === field.key),
+            ).length >= 3,
+        ) &&
+        (selections.some(
+          (s) =>
+            s.lock.key === "core.workflow" &&
+            isDeepStrictEqual(s.bindings.flowKey, {
+              graphSymbol: "graph.flow." + flow.id,
+            }),
+        ) ||
+          selections.some(
+            (s) =>
+              s.lock.key === "core.crud" &&
+              isDeepStrictEqual(s.bindings.entityKey, {
+                graphSymbol: "graph.domain." + flow.entity,
+              }),
+          )),
+    );
+  const rejectCandidate = (): undefined => {
+    if (taskCandidate) throw new Error("Task contract shape is not supported.");
+    return undefined;
+  };
   const locked =
     selections.length === 6 &&
     exactSet(
@@ -66,7 +115,7 @@ export function selectTaskContract(
     selections.every(
       (s) => taskLocks[s.lock.key as keyof typeof taskLocks] === s.lock.version,
     );
-  if (!locked) return undefined;
+  if (!locked) return rejectCandidate();
   const byKey = new Map(selections.map((s) => [s.lock.key, s]));
   const binding = (key: string, expected: Record<string, string>) => {
     const actual = byKey.get(key)?.bindings ?? {};
@@ -109,7 +158,7 @@ export function selectTaskContract(
         binding("core.policy-declarations", {}),
     ),
   );
-  if (!candidate) return undefined;
+  if (!candidate) return rejectCandidate();
   const deny = (): never => {
     throw new Error("Task contract shape is not supported.");
   };
@@ -154,8 +203,17 @@ export function selectTaskContract(
   const grants = graph.policy.permissions.filter(
     (p) => p.resource === entity.key,
   );
-  const member = grants.find((p) =>
-    exactSet(p.actions, ["create", "read", "start", "complete", "reopen"]),
+  const member = grants.find(
+    (p) =>
+      exactSet(p.actions, ["create", "read", "start", "complete", "reopen"]) ||
+      exactSet(p.actions, [
+        "create",
+        "read",
+        "update",
+        "start",
+        "complete",
+        "reopen",
+      ]),
   )?.role;
   const viewer = grants.find((p) => exactSet(p.actions, ["read"]))?.role;
   if (
@@ -261,11 +319,12 @@ export function renderTaskMutationRuntime(
     "task",
     hashApplicationGraph(graph),
   );
+  const correction = hasTaskCorrection(graph, entity);
   source = 'import {createHash} from "node:crypto";\n' + source;
   source = replace(
     source,
     "export interface RecordStore {",
-    `// factory.generated.task-mutation/v1
+    `// ${correction ? taskCorrectionContract.mutation : taskMutationContract.mutation}
 export type TaskMutationReceipt={scope:string;idempotencyKey:string;requestHash:string;operation:string;recordId:string;responseStatus:number;responseBody:StoredRecord};
 export class TaskMutationError extends Error {constructor(readonly status:number,readonly body:Record<string,unknown>){super('Task request rejected.');}}
 const taskEntity=${JSON.stringify(entity)};
@@ -316,13 +375,13 @@ export interface RecordStore {
     `export class ApplicationRuntime {
  async taskCommand(role:string,actorScope:string,entityKey:string,recordId:string|undefined,operation:string,key:unknown,body:unknown):Promise<{status:number;body:StoredRecord}>{
   if(entityKey!==taskEntity)failTask(404,'task.not_found');
-  if(!['create','start','complete','reopen'].includes(operation)||(operation==='create'&&recordId!==undefined)||!await enforce(role,entityKey,operation))failTask(403,'task.denied');
+  if(!${correction ? "['create','update','start','complete','reopen']" : "['create','start','complete','reopen']"}.includes(operation)||(operation==='create'&&recordId!==undefined)||!await enforce(role,entityKey,operation))failTask(403,'task.denied');
 ${protection.validateKey}
   plainTask(body);
-  const expected=operation==='create'?['values']:['expectedVersion'];
+  const expected=operation==='create'?['values']:${correction ? "operation==='update'?['expectedVersion','values']:" : ""}['expectedVersion'];
   if(Object.keys(body).length!==expected.length||!expected.every(k=>Object.hasOwn(body,k)))failTask(400,'task.invalid_request');
   if(operation!=='create'&&(!Number.isSafeInteger(body.expectedVersion)||(body.expectedVersion as number)<0))failTask(400,'task.invalid_request');
-  const values=operation==='create'?taskValues(body.values):{};
+  ${correction ? "if(operation==='update'){plainTask(body.values);if(Object.keys(body.values).length!==5)failTask(400,'task.invalid_request');}\n  " : ""}const values=${correction ? "['create','update'].includes(operation)" : "operation==='create'"}?taskValues(body.values):{};
   const normalized=body;
 ${protection.identity}
 ${protection.replay}
@@ -333,8 +392,13 @@ ${protection.transactionStart}
         const current=recordId?await store.find(entityKey,recordId):undefined;if(!current)failTask(404,'task.not_found');
         if(current.version!==body.expectedVersion)failTask(409,'task.version_conflict',current);
         const transition=this.flow(entityKey)?.transitions.find(t=>t.event===operation&&t.from===current.status&&t.roles?.includes(role));
-        if(!transition)failTask(403,'task.denied');
-        const status=transition.to;effects=transition.effects??[];
+${
+  correction
+    ? `        if(operation==='update'?!['not-started','in-progress'].includes(current.status!):!transition)failTask(403,'task.denied');
+        const status=operation==='update'?current.status!:transition!.to;effects=operation==='update'?[]:transition!.effects??[];`
+    : `        if(!transition)failTask(403,'task.denied');
+        const status=transition.to;effects=transition.effects??[];`
+}
 ${protection.conditionalWrite}
       }
       const at=new Date().toISOString();
@@ -444,6 +508,7 @@ export function renderTaskApi(
   source: string,
   fixture: boolean,
   entity?: string,
+  correction = false,
 ): string {
   if (!entity) return source;
   source = replace(source, "Param, Post, Req", "Param, Post, HttpCode, Req");
@@ -477,5 +542,28 @@ export function renderTaskApi(
     `try { return await applicationRuntime.transition(${role("event")}, entity, recordId, event, body); }`,
     `try { if(entity===${JSON.stringify(entity)})return (await applicationRuntime.taskCommand(${role("event")},${actor},entity,recordId,event,request.headers['x-factory-idempotency-key'],body)).body; return await applicationRuntime.transition(${role("event")}, entity, recordId, event, body); }`,
   );
+  if (correction) {
+    source = replace(
+      source,
+      "Param, Post, HttpCode, Req",
+      "Param, Post, Patch, HttpCode, Req",
+    );
+    source = replace(
+      source,
+      "  @Post(':entity/:recordId/events/:event')",
+      `  @Patch(':entity/:recordId')
+  async update(@Req() request: { headers: Record<string, string | string[] | undefined> }, @Param('entity') entity: string, @Param('recordId') recordId: string, @Body() body: Record<string, unknown>) {
+    try { return (await applicationRuntime.taskCommand(${role("'update'")},${actor},entity,recordId,'update',request.headers['x-factory-idempotency-key'],body)).body; }
+    catch(error) { throw rejected(error); }
+  }
+  @Post(':entity/:recordId/events/:event')`,
+    );
+    const eventAnchor = `try { if(entity===${JSON.stringify(entity)})return (await applicationRuntime.taskCommand(${role("event")}`;
+    source = replace(
+      source,
+      eventAnchor,
+      `try { if(event==='update')throw new TaskMutationError(403,{code:'task.denied'}); if(entity===${JSON.stringify(entity)})return (await applicationRuntime.taskCommand(${role("event")}`,
+    );
+  }
   return source;
 }

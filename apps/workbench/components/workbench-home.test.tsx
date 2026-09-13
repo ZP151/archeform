@@ -316,6 +316,10 @@ describe("WorkbenchHome", () => {
     expect(delivery?.textContent).toMatch(/shared board/);
     expect(delivery?.textContent).toMatch(/display text only/);
     expect(delivery?.textContent).toMatch(/Viewer/);
+    expect(delivery?.textContent).toMatch(
+      /all five fields in Not started and In progress/,
+    );
+    expect(delivery?.textContent).toMatch(/reopened before correction/);
     expect(delivery?.textContent).not.toMatch(/Restaurant|approval workflow/);
   });
 

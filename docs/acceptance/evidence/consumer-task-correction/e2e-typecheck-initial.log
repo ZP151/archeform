@@ -1,0 +1,6 @@
+e2e/consumer-task-fixture.ts(1,53): error TS2307: Cannot find module '@factory/adapters' or its corresponding type declarations.
+e2e/consumer-task.spec.ts(360,19): error TS2339: Property 'request' does not exist on type 'APIResponse'.
+e2e/consumer-task.spec.ts(1162,27): error TS2345: Argument of type 'Response' is not assignable to parameter of type 'APIResponse'.
+  Type 'Response' is missing the following properties from type 'APIResponse': dispose, [Symbol.asyncDispose]
+e2e/consumer-task.spec.ts(1313,7): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+e2e/task-presentation.ts(303,42): error TS2339: Property 'remove' does not exist on type 'Node'.

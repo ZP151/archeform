@@ -24,7 +24,14 @@ describe("canonical Team Task definition", () => {
         [
           {
             entityKey: "task",
-            actions: ["create", "read", "start", "complete", "reopen"],
+            actions: [
+              "create",
+              "read",
+              "update",
+              "start",
+              "complete",
+              "reopen",
+            ],
           },
         ],
       ],

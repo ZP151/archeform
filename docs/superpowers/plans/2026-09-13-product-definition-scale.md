@@ -82,6 +82,11 @@ reviewed definitions and runnable products.
 2. Before new-family implementation, freeze current canonical definitions and
    complete generated bundle hashes. Before long runtime acceptance, exercise
    the true Published Graph with its separate immutable lock and emitted DOM/CSS.
+   Execute its derived verification journeys through the real bounded probe
+   executor and emitted business runtime, including prerequisite chains and
+   replay. Checking only the generated plan shape misses execution gaps. Stop
+   a failed verification promptly with a bounded failure code, while retaining
+   the overall time-to-ready target and original failed-attempt evidence.
 3. Use a reusable business matrix: happy path, ordinary correction or declared
    gap, invalid state, role denial, persistence, interrupted action, finding and
    result continuity. Adapt its assertions to the actual business invariants.
@@ -106,3 +111,40 @@ not a measured consumer performance claim until actual evidence exists.
 The PM ledger records one next delivery slice and the highest-value unresolved
 product gap. A growing catalog does not outrank a broken core journey or a
 regression in the approved visual baseline.
+
+## Executable handoff after Task correction
+
+The first scale delivery is a definition authoring and validation pipeline, not
+another hand-coded product screen. Its proposed scope starts at
+`packages/adapters/src/requirements/definition-selection-catalogue.ts`, whose
+current private entries combine executable projectors, schemas, instructions and
+canonical structures. The next Tech Lead decision must separate reviewed data
+from fixed family code without allowing a description or catalog file to load
+arbitrary modules, packages, routes or executable templates.
+
+1. Capture the four delivered definition projections and representative immutable
+   bundles. Use these as round-trip fixtures for data-based authoring; do not
+   replace existing historic bundle expectations.
+2. Propose a strict versioned data shape for definition identity and family
+   version, primary job, fields, roles, state/rule bindings, correction and failure
+   journeys, supported defaults, material exclusions, presentation bindings,
+   capability locks and provenance. Exact family support must remain explicit.
+3. Implement a provider-free validator after contract acceptance. Its table-driven
+   tests reject unknown keys/families/versions, executable values, broken bindings,
+   unsupported rules, missing correction cases and duplicate business semantics.
+   Cosmetic title, color or example changes do not create new product coverage.
+4. Round-trip all four current definitions through data and admitted fixed family
+   code. Require no projection or immutable-output drift except an explicitly
+   accepted new version. Verify one representative actual runtime per changed
+   business rule or presentation combination, reusing unchanged family evidence.
+5. Admit a small representative batch only where its distinct semantics can be
+   expressed using supported family features. Record additions requiring runtime,
+   UI or family-contract changes separately; they identify platform gaps rather
+   than successful configuration-only assembly.
+
+Exit report: attempted/admitted/distinct definitions; definitions added without
+handwritten runtime or UI; validation failures by unsupported capability; batch
+validation time; representative assembly failures; and fixture versus real-model
+selection evidence. The 30-entry milestone begins after this pipeline passes.
+Calendar, inventory invariants, real identity and hosted delivery remain separate
+business contracts rather than being inferred from catalog labels.

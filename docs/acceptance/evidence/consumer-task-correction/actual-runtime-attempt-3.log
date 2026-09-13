@@ -1,0 +1,34 @@
+
+Running 1 test using 1 worker
+
+(node:30152) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:30152) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_TASK_FAILURE {"stage":"member-correction","compilationId":"cmtzlg4j7002gnj4t6j4jntmz","interpretationCalls":1,"lifecycle":["publish","compile","verify","preview"],"elapsedMs":217964}
+  x  1 e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board (3.9m)
+
+
+  1) e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board
+
+    Error: Timed out 5000ms waiting for expect(locator).toBeDisabled()
+
+    Locator: locator('.task-records > li').filter({ hasText: 'Synthetic race winner' }).getByRole('button', { name: 'Start', exact: true })
+    Expected: disabled
+    Received: <element(s) not found>
+    Call log:
+      - expect.toBeDisabled with timeout 5000ms
+      - waiting for locator('.task-records > li').filter({ hasText: 'Synthetic race winner' }).getByRole('button', { name: 'Start', exact: true })
+
+
+      1350 |           exact: true,
+      1351 |         }),
+    > 1352 |       ).toBeDisabled();
+           |         ^
+      1353 |       await captureCorrectionState(
+      1354 |         generated,
+      1355 |         "correction-unknown-390.png",
+        at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\consumer-task.spec.ts:1352:9
+
+  1 failed
+    e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board

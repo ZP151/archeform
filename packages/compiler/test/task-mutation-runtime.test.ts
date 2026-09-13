@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { posix } from "node:path";
@@ -202,6 +202,401 @@ function prismaHarness() {
     attempts: () => attempts,
   };
 }
+describe("same-record Task correction", () => {
+  const correctionInput = () =>
+    taskInput((i) => {
+      i.blueprint.actors.find(
+        (a) => a.key === "member",
+      )!.permissions[0].actions = [
+        "create",
+        "read",
+        "update",
+        "start",
+        "complete",
+        "reopen",
+      ];
+    });
+  it("emits PATCH and a parent-owned correction editor only in v2", () => {
+    const files = generateApplicationBundle(correctionInput()).files;
+    const file = (path: string) => files.find((f) => f.path === path)!.content;
+    expect(file("api/src/main.ts")).toContain("@Patch(':entity/:recordId')");
+    expect(file("web/app/api/[...path]/route.ts")).toContain(
+      "export const PATCH = proxy;",
+    );
+    expect(file("web/app/page-runtime.tsx")).toContain("Edit Task");
+    expect(file("web/app/page-runtime.tsx")).toContain("Task updated.");
+    expect(file("web/app/page-runtime.tsx")).toContain("Keep my changes");
+  });
+  it.each(["memory", "prisma"])(
+    "replaces five fields once with durable replay, races and authorization in %s",
+    async (kind) => {
+      const { ApplicationRuntime, InMemoryRecordStore, load } =
+        loadTaskRuntime(correctionInput());
+      const db = prismaHarness();
+      const store =
+        kind === "memory"
+          ? new InMemoryRecordStore()
+          : new (load("api/src/prisma-record-store.ts").PrismaRecordStore)(
+              db.client,
+            );
+      const make = () => new ApplicationRuntime(store);
+      const created = await make().taskCommand(
+        "member",
+        "session",
+        "task",
+        undefined,
+        "create",
+        "correction-create",
+        { values: taskValues },
+      );
+      const id = created.body.id;
+      const body = {
+        expectedVersion: 0,
+        values: {
+          title: "Review the launch checklist",
+          description: null,
+          assignee: "Riley",
+          dueDate: "2026-10-01",
+          priority: "low",
+        },
+      };
+      const patch = (
+        key = "correction-save",
+        payload: unknown = body,
+        role = "member",
+      ) =>
+        make().taskCommand(role, "session", "task", id, "update", key, payload);
+      const updated = await patch();
+      expect(updated).toEqual({
+        status: 200,
+        body: {
+          id,
+          status: "not-started",
+          version: 1,
+          ...body.values,
+          dueDate: "2026-10-01T00:00:00.000Z",
+        },
+      });
+      expect(await patch()).toEqual(updated);
+      await expect(
+        patch("correction-save", {
+          ...body,
+          values: { ...body.values, title: "Different" },
+        }),
+      ).rejects.toMatchObject({
+        status: 409,
+        body: { code: "task.idempotency_conflict" },
+      });
+      await expect(
+        patch("correction-save", body, "viewer"),
+      ).rejects.toMatchObject({ status: 403, body: { code: "task.denied" } });
+      for (const invalid of [
+        { expectedVersion: 1, values: taskValues },
+        { ...body, extra: true },
+        { ...body, values: { ...body.values, status: "completed" } },
+        { ...body, expectedVersion: -1 },
+      ])
+        await expect(patch("invalid", invalid)).rejects.toMatchObject({
+          status: 400,
+          body: { code: "task.invalid_request" },
+        });
+      const race = await Promise.allSettled([
+        patch("race-a", { ...body, expectedVersion: 1 }),
+        patch("race-b", { ...body, expectedVersion: 1 }),
+      ]);
+      expect(race.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      expect(
+        (race.find((r) => r.status === "rejected") as PromiseRejectedResult)
+          .reason.body,
+      ).toEqual({
+        code: "task.version_conflict",
+        current: { id, status: "not-started", version: 2 },
+      });
+      await make().taskCommand(
+        "member",
+        "session",
+        "task",
+        id,
+        "start",
+        "correction-start",
+        { expectedVersion: 2 },
+      );
+      expect(
+        (await patch("active", { ...body, expectedVersion: 3 })).body,
+      ).toMatchObject({ id, status: "in-progress", version: 4 });
+      await make().taskCommand(
+        "member",
+        "session",
+        "task",
+        id,
+        "complete",
+        "correction-complete",
+        { expectedVersion: 4 },
+      );
+      await expect(
+        patch("completed", { ...body, expectedVersion: 5 }),
+      ).rejects.toMatchObject({ status: 403, body: { code: "task.denied" } });
+      const audits = await store.listAudit();
+      expect(audits.filter((a: any) => a.action === "update")).toHaveLength(3);
+      expect(JSON.stringify(audits)).not.toContain(body.values.title);
+      if (kind === "prisma") {
+        expect(db.snapshot().receipts).toHaveLength(6);
+        expect(
+          db
+            .snapshot()
+            .receipts.every((r) =>
+              /^sha256:[a-f0-9]{64}$/.test(r.idempotencyKey),
+            ),
+        ).toBe(true);
+      }
+    },
+  );
+  it.each(["conditionalTaskUpdate", "appendAudit", "saveTaskReceipt"])(
+    "rolls back in-memory correction at %s",
+    async (boundary) => {
+      const { ApplicationRuntime, InMemoryRecordStore } =
+        loadTaskRuntime(correctionInput());
+      const store = new InMemoryRecordStore(),
+        runtime = new ApplicationRuntime(store);
+      const created = await runtime.taskCommand(
+        "member",
+        "session",
+        "task",
+        undefined,
+        "create",
+        "seed",
+        { values: taskValues },
+      );
+      const snapshot = async () => ({
+        records: await store.list("task"),
+        audit: await store.listAudit(),
+        effects: await store.listCapabilityEvents(),
+      });
+      const before = await snapshot(),
+        transaction = store.inTransaction.bind(store);
+      store.inTransaction = (operation: any) =>
+        transaction(async (tx: any) => {
+          const original = tx[boundary].bind(tx);
+          tx[boundary] = async (...args: unknown[]) => {
+            await original(...args);
+            throw Error("Injected correction failure");
+          };
+          return operation(tx);
+        });
+      const patch = () =>
+        new ApplicationRuntime(store).taskCommand(
+          "member",
+          "session",
+          "task",
+          created.body.id,
+          "update",
+          "rollback",
+          {
+            expectedVersion: 0,
+            values: { ...taskValues, description: null, title: "Corrected" },
+          },
+        );
+      await expect(patch()).rejects.toThrow("Injected correction failure");
+      expect(await snapshot()).toEqual(before);
+      store.inTransaction = transaction;
+      const result = await patch();
+      expect(await patch()).toEqual(result);
+      expect(await store.listAudit()).toHaveLength(2);
+    },
+  );
+  it("validates every correction value and hashes the incoming representation without normalization", async () => {
+    const { ApplicationRuntime, InMemoryRecordStore } =
+      loadTaskRuntime(correctionInput());
+    const store = new InMemoryRecordStore(),
+      runtime = new ApplicationRuntime(store);
+    const created = await runtime.taskCommand(
+        "member",
+        "session",
+        "task",
+        undefined,
+        "create",
+        "seed",
+        { values: taskValues },
+      ),
+      id = created.body.id;
+    const values = { ...taskValues, description: null };
+    const patch = (
+      body: unknown,
+      key: unknown,
+      recordId = id,
+      role = "member",
+    ) =>
+      runtime.taskCommand(
+        role,
+        "session",
+        "task",
+        recordId,
+        "update",
+        key,
+        body,
+      );
+    const valid = { expectedVersion: 0, values };
+    for (const body of [
+      null,
+      [],
+      {},
+      values,
+      { values },
+      { expectedVersion: 0 },
+      { ...valid, expectedVersion: 1.5 },
+      { ...valid, expectedVersion: Number.MAX_SAFE_INTEGER + 1 },
+      { ...valid, expectedVersion: "0" },
+      ...Object.keys(values).map((key) => ({
+        expectedVersion: 0,
+        values: Object.fromEntries(
+          Object.entries(values).filter(([k]) => k !== key),
+        ),
+      })),
+      ...Object.entries({
+        title: " ",
+        assignee: "",
+        description: 4,
+        dueDate: "2026-02-30",
+        priority: "urgent",
+        id: "x",
+        version: 1,
+        status: "completed",
+        actor: "member",
+        receipt: {},
+      }).map(([key, value]) => ({
+        expectedVersion: 0,
+        values: { ...values, [key]: value },
+      })),
+    ])
+      await expect(patch(body, "strict")).rejects.toMatchObject({
+        status: 400,
+        body: { code: "task.invalid_request" },
+      });
+    for (const key of [undefined, "", "bad key", "x".repeat(129), ["array"]])
+      await expect(patch(valid, key)).rejects.toMatchObject({ status: 400 });
+    await expect(patch(valid, "missing", "missing")).rejects.toMatchObject({
+      status: 404,
+      body: { code: "task.not_found" },
+    });
+    await expect(patch(null, undefined, id, "viewer")).rejects.toMatchObject({
+      status: 403,
+      body: { code: "task.denied" },
+    });
+    expect(await store.listAudit()).toHaveLength(1);
+    const first = await patch(valid, "body-hash");
+    expect(
+      await patch(
+        {
+          values: Object.fromEntries(Object.entries(values).reverse()),
+          expectedVersion: 0,
+        },
+        "body-hash",
+      ),
+    ).toEqual(first);
+    await expect(
+      patch(
+        {
+          expectedVersion: 0,
+          values: { ...values, dueDate: "2026-09-20T00:00:00.000Z" },
+        },
+        "body-hash",
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      body: { code: "task.idempotency_conflict" },
+    });
+    expect(await store.listAudit()).toHaveLength(2);
+  });
+  it.each([
+    "missing field",
+    "missing list page",
+    "extra field",
+    "duplicate field",
+    "missing grant",
+    "extra grant",
+    "duplicate grant",
+    "extra role",
+    "missing lock",
+    "extra binding",
+    "rebound binding",
+  ])("rejects a correction candidate with %s", (kind) => {
+    const input = correctionInput(),
+      graph = input.graph,
+      entity = graph.domain.entities.find((e) => e.key === "task")!,
+      grant = graph.policy.permissions.find(
+        (p) => p.role === "member" && p.resource === "task",
+      )!;
+    if (kind === "missing field") entity.fields.splice(0, 1);
+    if (kind === "missing list page")
+      graph.page.pages = graph.page.pages.filter(
+        (p) => !p.blocks.some((b) => b.type === "list"),
+      );
+    if (kind === "extra field")
+      entity.fields.push({ key: "notes", type: "text", required: false });
+    if (kind === "duplicate field") entity.fields.push({ ...entity.fields[0] });
+    if (kind === "missing grant")
+      grant.actions.splice(grant.actions.indexOf("start"), 1);
+    if (kind === "extra grant") grant.actions.push("delete");
+    if (kind === "duplicate grant") grant.actions.push("update");
+    if (kind === "extra role") graph.policy.roles.push("extra");
+    const selections = structuredClone(input.compositionLock!.packages);
+    if (kind === "missing lock") selections.pop();
+    if (kind === "extra binding")
+      selections.find((s) => s.lock.key === "core.audit")!.bindings.extra = {
+        graphSymbol: "graph.policy.member",
+      };
+    if (kind === "rebound binding")
+      selections.find((s) => s.lock.key === "core.audit")!.bindings.actorRole =
+        { graphSymbol: "graph.policy.viewer" };
+    graph.integration.compositionSelections = selections;
+    expect(() => selectTaskContract(graph)).toThrow(
+      "Task contract shape is not supported.",
+    );
+  });
+  it.each(["updateMany", "audit", "receipt"])(
+    "rolls back correction at %s",
+    async (boundary) => {
+      const { ApplicationRuntime, load } = loadTaskRuntime(correctionInput());
+      const db = prismaHarness(),
+        store = new (load("api/src/prisma-record-store.ts").PrismaRecordStore)(
+          db.client,
+        ),
+        runtime = new ApplicationRuntime(store);
+      const created = await runtime.taskCommand(
+        "member",
+        "session",
+        "task",
+        undefined,
+        "create",
+        "seed",
+        { values: taskValues },
+      );
+      const before = db.snapshot();
+      const patch = () =>
+        runtime.taskCommand(
+          "member",
+          "session",
+          "task",
+          created.body.id,
+          "update",
+          "rollback",
+          {
+            expectedVersion: 0,
+            values: { ...taskValues, description: null, title: "Corrected" },
+          },
+        );
+      db.fail(boundary);
+      await expect(patch()).rejects.toThrow("Injected Prisma failure");
+      expect(db.snapshot()).toEqual(before);
+      db.fail("");
+      const result = await patch();
+      expect(await patch()).toEqual(result);
+      expect(db.snapshot().audit).toHaveLength(2);
+      expect(db.snapshot().receipts).toHaveLength(2);
+    },
+  );
+});
+
 describe("immutable Task compilation and commands", () => {
   it("matches renamed symbols and declaration permutations through the composer", () => {
     const input = taskInput((i) => {
@@ -299,7 +694,7 @@ describe("immutable Task compilation and commands", () => {
     );
     expect(() => generateApplicationBundle(input)).toThrow();
   });
-  it("does not treat an arbitrary event or mismatched binding as a Task candidate", () => {
+  it("fails closed for partially rebound Task candidates while preserving generic overlap", () => {
     const input = taskInput();
     const selections = structuredClone(input.compositionLock.packages);
     selections.find((s) => s.lock.key === "core.audit")!.bindings.actorRole = {
@@ -309,12 +704,26 @@ describe("immutable Task compilation and commands", () => {
       graphChecksum: hashApplicationGraph(input.graph),
       selections,
     });
-    expect(selectTaskContract(input.graph, lock)).toBeUndefined();
+    expect(() => selectTaskContract(input.graph, lock)).toThrow(
+      "Task contract shape is not supported.",
+    );
     input.graph.domain.entities.find((e) => e.key === "task")!.fields[0].key =
       "subject";
-    expect(
+    expect(() =>
       selectTaskContract(input.graph, input.compositionLock),
-    ).toBeUndefined();
+    ).toThrow("Task contract shape is not supported.");
+    const generic = taskInput();
+    generic.graph.integration.capabilities = [];
+    expect(selectTaskContract(generic.graph)).toBeUndefined();
+    expect(
+      generateApplicationBundle({
+        ...generic,
+        compositionLock: createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(generic.graph),
+          selections: [],
+        }),
+      }),
+    ).toBeDefined();
   });
   it("emits one protected Task family from a true Published Graph and separate lock", () => {
     const input = taskInput(),
@@ -326,7 +735,7 @@ describe("immutable Task compilation and commands", () => {
     ).toContain("task-v1");
     expect(
       files.find((f) => f.path === "api/src/application-runtime.ts")!.content,
-    ).toContain("factory.generated.task-mutation/v1");
+    ).toContain("factory.generated.task-mutation/v2");
     expect(
       files.find((f) => f.path === "api/prisma/schema.prisma")!.content,
     ).toContain("model TaskMutationReceipt");
@@ -789,69 +1198,83 @@ describe("immutable Task compilation and commands", () => {
       expect(db.snapshot().effects).toEqual([]);
     },
   );
-  it("typechecks the emitted API, store and Task React tree under strict settings", () => {
-    const files = generateApplicationBundle(taskInput()).files;
-    const staging = resolve(__dirname, ".typecheck"),
-      directory = resolve(staging, "task");
-    if (!directory.startsWith(staging + requirePathSeparator()))
-      throw new Error("Invalid test staging directory.");
-    mkdirSync(directory, { recursive: true });
-    try {
-      for (const file of files.filter(
-        (f) =>
-          f.path.startsWith("api/src/") ||
-          f.path === "web/app/page-runtime.tsx",
-      )) {
-        const target = join(directory, file.path);
-        mkdirSync(join(target, ".."), { recursive: true });
-        writeFileSync(target, file.content);
-      }
-      writeFileSync(
-        join(directory, "tsconfig.json"),
-        JSON.stringify({
-          compilerOptions: {
-            noEmit: true,
-            strict: true,
-            target: "es2022",
-            module: "esnext",
-            moduleResolution: "bundler",
-            jsx: "react-jsx",
-            lib: ["es2022", "dom"],
-            skipLibCheck: true,
-            experimentalDecorators: true,
-            paths: {
-              "@prisma/client": [
-                join(
-                  __dirname,
-                  "../../../apps/control-plane/node_modules/@prisma/client",
-                ),
-              ],
-              "@nestjs/*": [
-                join(
-                  __dirname,
-                  "../../../apps/control-plane/node_modules/@nestjs/*",
-                ),
-              ],
-            },
-          },
-          include: ["web/**/*.tsx", "api/src/**/*.ts"],
-        }),
-      );
-      const result = spawnSync(
-        process.execPath,
-        [
-          runtimeRequire.resolve("typescript/bin/tsc"),
-          "--noEmit",
-          "-p",
+  it.each(["v1", "v2"])(
+    "typechecks the emitted %s API, store and Task React tree under strict settings",
+    (version) => {
+      const input = taskInput((i) => {
+        if (version === "v1")
+          i.blueprint.actors[0].permissions[0].actions = [
+            "create",
+            "read",
+            "start",
+            "complete",
+            "reopen",
+          ];
+      });
+      const files = generateApplicationBundle(input).files;
+      const staging = resolve(__dirname, ".typecheck");
+      mkdirSync(staging, { recursive: true });
+      const directory = mkdtempSync(join(staging, "task-"));
+      if (!directory.startsWith(staging + requirePathSeparator()))
+        throw new Error("Invalid test staging directory.");
+      mkdirSync(directory, { recursive: true });
+      try {
+        for (const file of files.filter(
+          (f) =>
+            f.path.startsWith("api/src/") ||
+            f.path === "web/app/page-runtime.tsx",
+        )) {
+          const target = join(directory, file.path);
+          mkdirSync(join(target, ".."), { recursive: true });
+          writeFileSync(target, file.content);
+        }
+        writeFileSync(
           join(directory, "tsconfig.json"),
-        ],
-        { encoding: "utf8" },
-      );
-      expect(result.status, result.stdout + result.stderr).toBe(0);
-    } finally {
-      rmSync(directory, { recursive: true, force: true });
-    }
-  });
+          JSON.stringify({
+            compilerOptions: {
+              noEmit: true,
+              strict: true,
+              target: "es2022",
+              module: "esnext",
+              moduleResolution: "bundler",
+              jsx: "react-jsx",
+              lib: ["es2022", "dom"],
+              skipLibCheck: true,
+              experimentalDecorators: true,
+              paths: {
+                "@prisma/client": [
+                  join(
+                    __dirname,
+                    "../../../apps/control-plane/node_modules/@prisma/client",
+                  ),
+                ],
+                "@nestjs/*": [
+                  join(
+                    __dirname,
+                    "../../../apps/control-plane/node_modules/@nestjs/*",
+                  ),
+                ],
+              },
+            },
+            include: ["web/**/*.tsx", "api/src/**/*.ts"],
+          }),
+        );
+        const result = spawnSync(
+          process.execPath,
+          [
+            runtimeRequire.resolve("typescript/bin/tsc"),
+            "--noEmit",
+            "-p",
+            join(directory, "tsconfig.json"),
+          ],
+          { encoding: "utf8" },
+        );
+        expect(result.status, result.stdout + result.stderr).toBe(0);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
 });
 function requirePathSeparator() {
   return process.platform === "win32" ? "\\" : "/";

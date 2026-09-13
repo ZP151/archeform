@@ -1,0 +1,3 @@
+Independent QA focused E2E typecheck
+Command: pnpm exec tsc -p docs/acceptance/evidence/consumer-task-correction/e2e-typecheck.json
+Result: exit code 0; no TypeScript diagnostics.

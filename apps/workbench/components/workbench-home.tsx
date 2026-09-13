@@ -173,9 +173,10 @@ function ConsumerDelivery({
       {task ? (
         <p>
           This is a bounded local shared board prototype with selectable demo
-          roles. Team members can create, start, complete and reopen every task;
-          Viewer can read all tasks. Assignee is display text only. Tasks cannot
-          be edited after creation.
+          roles. Team members can create, correct, start, complete and reopen
+          every task; Viewer can read all tasks. Assignee is display text only.
+          Members can correct all five fields in Not started and In progress.
+          Completed tasks must be reopened before correction.
         </p>
       ) : approval ? (
         <p>

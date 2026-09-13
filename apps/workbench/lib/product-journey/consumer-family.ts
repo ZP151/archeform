@@ -76,13 +76,21 @@ function isTask(
     (a) =>
       a.permissions.length === 1 &&
       a.permissions[0].entityKey === entity.key &&
-      exactSet(a.permissions[0].actions, [
+      (exactSet(a.permissions[0].actions, [
         "create",
         "read",
+        "update",
         "start",
         "complete",
         "reopen",
-      ]),
+      ]) ||
+        exactSet(a.permissions[0].actions, [
+          "create",
+          "read",
+          "start",
+          "complete",
+          "reopen",
+        ])),
   );
   const viewer = blueprint.actors.find(
     (a) =>

@@ -26,6 +26,8 @@ const taskNavigationLabels = [
 type TaskAssetExpectation = {
   /** A currently rendered interactive icon that this call must retain. */
   readonly visibleIconClass?: string;
+  /** The private workspace profile selected by the immutable Task graph. */
+  readonly workspaceVersion?: "1.0.0" | "1.1.0";
 };
 
 export function taskField(row: Locator, label: string): Locator {
@@ -141,7 +143,9 @@ export async function verifyTaskAssets(
   }
   const facts = await taskPresentationFacts(page);
   expect(facts, "task workspace root").not.toBeNull();
-  expect(facts!.workspaceVersion, "task recipe marker").toBe("1.0.0");
+  expect(facts!.workspaceVersion, "task recipe marker").toBe(
+    expectation.workspaceVersion ?? "1.0.0",
+  );
   expect(facts!.appDisplay, "task workspace grid").toBe("grid");
   expect(facts!.gridTemplateColumns, "task workspace columns").not.toBe("");
   expect(facts!.resolvedColourTokens, "task colour tokens resolve").toEqual({
@@ -173,8 +177,12 @@ export function verifyTaskEmittedIconSupply(source: string) {
     );
 }
 
-export async function verifyTaskPresentation(page: Page, width: number) {
-  await verifyTaskAssets(page);
+export async function verifyTaskPresentation(
+  page: Page,
+  width: number,
+  expectation: TaskAssetExpectation = {},
+) {
+  await verifyTaskAssets(page, expectation);
   const app = page.locator("main.task-v1");
   const disclosure = page
     .locator("details")
@@ -235,7 +243,10 @@ export async function verifyTaskPresentation(page: Page, width: number) {
 }
 
 /** Proves the visual checks are capable of rejecting asset regressions. */
-export async function verifyTaskAssetFailureDetection(page: Page) {
+export async function verifyTaskAssetFailureDetection(
+  page: Page,
+  expectation: TaskAssetExpectation = {},
+) {
   const stylesheetStates = await page
     .locator('link[rel="stylesheet"]')
     .evaluateAll((links) =>
@@ -247,7 +258,7 @@ export async function verifyTaskAssetFailureDetection(page: Page) {
       }),
     );
   try {
-    await expect(verifyTaskAssets(page)).rejects.toThrow();
+    await expect(verifyTaskAssets(page, expectation)).rejects.toThrow();
   } finally {
     await page
       .locator('link[rel="stylesheet"]')
@@ -257,7 +268,7 @@ export async function verifyTaskAssetFailureDetection(page: Page) {
         });
       }, stylesheetStates);
   }
-  await verifyTaskAssets(page);
+  await verifyTaskAssets(page, expectation);
   const iconClass = await page.evaluate(() => {
     const icon = [
       ...document.querySelectorAll<SVGElement>(
@@ -276,22 +287,28 @@ export async function verifyTaskAssetFailureDetection(page: Page) {
     return className.replace(/^lucide-/, "");
   });
   expect(iconClass, "visible interactive task icon").not.toBeNull();
-  await verifyTaskAssets(page, { visibleIconClass: iconClass! });
+  await verifyTaskAssets(page, {
+    ...expectation,
+    visibleIconClass: iconClass!,
+  });
   const hidden = await page.addStyleTag({
     content:
       "[data-task-asset-probe='true'] { visibility: hidden !important; }",
   });
   try {
     await expect(
-      verifyTaskAssets(page, { visibleIconClass: iconClass! }),
+      verifyTaskAssets(page, { ...expectation, visibleIconClass: iconClass! }),
     ).rejects.toThrow();
   } finally {
-    await hidden.evaluate((node) => node.remove());
+    await hidden.evaluate((node) => node.parentNode?.removeChild(node));
     await page.evaluate(() => {
       document
         .querySelector("[data-task-asset-probe='true']")
         ?.removeAttribute("data-task-asset-probe");
     });
   }
-  await verifyTaskAssets(page, { visibleIconClass: iconClass! });
+  await verifyTaskAssets(page, {
+    ...expectation,
+    visibleIconClass: iconClass!,
+  });
 }
