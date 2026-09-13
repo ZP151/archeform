@@ -98,7 +98,7 @@ contract change stops the implementation wave until resolved.
       apart from duration. Exercise a small hostile/unsupported candidate batch.
 - [x] Complete one independent task review, independent QA and final Sol review;
       use scoped checks for fixes and reuse byte-identical real-runtime/UI evidence.
-- [ ] Reconcile the product scorecard, family-support gaps and next 30-definition
+- [x] Reconcile the product scorecard, family-support gaps and next 30-definition
       batch plan, then root accepts, commits and pushes with remote equality.
 
 ## Acceptance and product scorecard

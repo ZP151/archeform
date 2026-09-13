@@ -3,6 +3,8 @@
 Date: 2026-09-13. Base: f8cdfe812c6c5ab2710a641862aa8f026134ab15.
 Status: accepted by root for bounded branch delivery; task review, independent
 Terra QA and independent Sol release review pass with P0/P1/P2 0/0/0.
+Source delivery: `22f5842a96e9cf165fd866ee1117d92adc0c14e7`, pushed to the
+iteration branch with remote-tip equality and a clean working tree verified.
 
 ## Product outcome
 
