@@ -95,7 +95,7 @@ the implementation's own mutation log.
 - [x] Complete independent task review, then authorize one isolated local Factory acceptance lane tied to source/image identities. Reuse the actual Task lane and extend correction cases rather than duplicating lifecycle orchestration.
 - [x] Prove actual persisted correction and recovery; inspect phone/tablet/desktop screenshots and record all relevant outcomes in the acceptance evidence.
 - [x] Clean exact Factory and Preview projects, verify resource zero, complete independent Terra QA and Sol release review, reconcile PM acceptance and product scorecard.
-- [ ] Root creates a bounded English commit, pushes the iteration branch normally and verifies local/remote equality and clean status before closing the goal.
+- [x] Root creates a bounded English commit, pushes the iteration branch normally and verifies local/remote equality and clean status before closing the goal.
 
 ## Predeclared acceptance matrix
 

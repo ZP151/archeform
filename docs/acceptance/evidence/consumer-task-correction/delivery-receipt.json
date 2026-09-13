@@ -1,0 +1,12 @@
+{
+  "recordedAt": "2026-09-13T09:30:32.5264865Z",
+  "sourceCommit": "d7e0d69d5706b920577f5ba7b552a1948f240f52",
+  "branch": "codex/consumer-delivery-roadmap",
+  "remoteSourceCommit": "d7e0d69d5706b920577f5ba7b552a1948f240f52",
+  "cleanAtSourceDelivery": true,
+  "actualAttempt": 4,
+  "qa": "PASS",
+  "releaseReview": "PASS",
+  "cleanup": "7 exact projects: zero containers, networks and volumes",
+  "nextSlice": "Data-based definition authoring and batch validation"
+}
