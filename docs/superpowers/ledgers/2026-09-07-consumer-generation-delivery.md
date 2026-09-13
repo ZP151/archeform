@@ -4576,3 +4576,75 @@ and the working tree was clean. The source, tests, accepted evidence and next
 scale handoff are delivered. The following documentation-only receipt records
 that observed delivery and checks the final plan item; it changes no tested
 source or runtime contract and reuses the existing acceptance.
+
+### Product definition data foundation started - 2026-09-13
+
+User authorizes continuing the core goal after delivered f8cdfe81. Root opens a
+new goal for strict reviewed definition data, safe fixed-family binding,
+provider-free batch validation and all-four canonical/output compatibility.
+The definition count must reflect meaningful business semantics, not cosmetic
+aliases. Existing UI, generated behavior and immutable lifecycle remain the
+baseline. Current worktree is clean at goal start.
+
+PM dispatches /root/definition_data_decision (Tech Lead) to read current
+technology/threat authorities and propose only ADR-0065. Implementation is not
+yet authorized. Root owns the plan/status, pre-change compatibility capture,
+evidence and all Git/runtime operations. No other writers are active. The
+existing standing independent-review authorization applies only after a
+separate qualified reviewer accepts the exact proposed contract.
+
+Current Spark quota failure is already demonstrated in this session; do not
+repeat Spark attempts or consume a reset. Use the configured Tech Lead/Sol and
+engineer/Terra roles for bounded work; keep lifecycle, security and cross-package
+implementation judgment on Astra. All writers must have disjoint explicit
+ownership; shared contract changes pause the implementation wave.
+
+### ADR-0065 accepted and implementation authorized - 2026-09-13
+
+Independent read-only /root/definition_data_admission_review returns
+APPROVED_FOR_STANDING_ACCEPTANCE: yes, P0/P1/P2 0/0/0 for exact ADR-0065 SHA-256
+40aeafc6a532d85fae26aa3420c0f910e5870a8ffe286c4e6e97988bcdc4f333.
+Root verifies that hash and records acceptance under the founder standing
+authorization in docs/tech-governance.md, 2026-09-01. The reviewer is separate
+from Tech Lead and implementation. Receipt: docs/acceptance/evidence/
+product-definition-data/decision-review.md. Earlier proposals were not accepted.
+
+Root authorizes /root/definition_data_implementation (Astra) as the sole source
+writer for the exact adapters source/test/build paths in the frozen plan and
+ADR. Root retains documentation, compiler compatibility fixtures, external CLI
+evidence, and all Git/runtime ownership. No other source writers are active.
+Candidate input is stdin-only, preserving a fixed shipped-file loader. No new
+family, UI, runtime, dependency, public API or lifecycle behavior is authorized.
+No services or external calls are needed. One contract-level task review, QA and
+final review follow; exact output equality can reuse unchanged runtime/UI proof.
+
+Root's independent acceptance ownership also includes
+scripts/verify-product-definition-data.mjs and
+packages/compiler/test/definition-data-authoring.test.ts. These exercise the
+built default/stdin boundary and a supported data-only Approval field variation
+through the existing immutable compiler. They add no runtime entry or contract,
+and do not overlap the sole adapters implementation writer. Existing baseline
+values remain immutable.
+
+### Product definition data accepted for branch delivery - 2026-09-13
+
+Independent task review, Terra QA and Sol release review all return PASS with
+P0/P1/P2 0/0/0. Root accepts the exact 18-file implementation/test/helper
+manifest under ADR-0065. All four definitions are data-driven; actual Restaurant
+V3 execution retains 20 locks, Approval/Task retain six. Current and historic
+canonical/Published output hashes remain exact. The data-only Approval field
+compiler probe passes without registering a product. Shipped counts: 4/4/4/4;
+one observed provider-free validation duration: 381 ms.
+
+Independent QA runs 174 data/interpreter tests and 16 built CLI cases. Final root
+compiler tests (4) and Workbench build pass; 64 affected consumer tests support the
+loader repair. Existing runtime and responsive UI evidence is reused through
+exact emitted bytes. No service/provider/cloud action or new runtime product
+was introduced. Coverage remains four definitions and three local families.
+
+Root authorizes the bounded English commit and normal push to the current
+codex/consumer-delivery-roadmap branch, followed by remote equality and clean
+workspace verification. No main integration, repository release or deployment
+is authorized. Next: six representative candidate briefs, measuring useful
+data-only admissions, duplicates and capability gaps before the 30-entry stage.
+The authoring guide, executable roadmap and product scorecard carry this handoff.

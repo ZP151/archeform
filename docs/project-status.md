@@ -2,7 +2,32 @@
 
 Updated: 2026-09-13
 
-## Current: Task correction accepted; definition scale follows
+## Current: definition data foundation accepted
+
+The core goal from `f8cdfe81` is accepted: all four reviewed definitions now
+come from strict data plus three fixed family implementations, with a
+provider-free batch validator. A configuration-only Approval field variation
+reaches generated database/UI output without handwritten runtime or UI changes.
+Candidate validation uses bounded stdin and cannot register runtime entries.
+See the [acceptance record](acceptance/product-definition-data.md) and
+[authoring guide](product-definition-authoring.md).
+
+All four canonical definitions, supported/clarification projections, schemas,
+guidance and complete Published outputs retain their pre-change hashes.
+Final compiler authoring/compatibility tests pass 4/4; independent QA passes
+174 data/interpreter tests and 16 built CLI cases. Workbench production build
+and 64 affected consumer tests pass after fixing its actual JSON-loader
+integration defect. Task review, Terra QA and Sol release review pass 0/0/0.
+Shipped counts are 4/4/4/4; one local validation run took 381 ms.
+
+Coverage remains four definitions and three demonstrated local runtime families,
+with zero new product admissions. The next core delivery is the six-candidate
+representative batch in the [scale roadmap](superpowers/plans/2026-09-13-product-definition-scale.md):
+measure configuration-only additions, semantic duplicates and capability gaps
+before expanding to 30. Real-model selection, ordinary-user effort and hosted
+operations remain unproven.
+
+## Delivered: Task correction accepted
 
 The accepted core iteration starts from delivered `5b65169e` and implements
 same-task correction through the [bounded implementation plan](superpowers/plans/2026-09-13-task-correction.md).

@@ -1,0 +1,57 @@
+{
+  "base": "f8cdfe812c6c5ab2710a641862aa8f026134ab15",
+  "entries": [
+    {
+      "definitionKey": "restaurant-ordering",
+      "canonicalSha256": "45d5ffc8af3adee3d8eb11b1971fc85b97268691e7de9cef8745e50823985df0",
+      "guideSha256": "f3a2db0df4a225266d8a96a586e1c0cbeb05c829be8a5fbd0632f77626e5ebc4",
+      "instructionSha256": "e71d571dbb283288e862a0199b70d90d3bfd589e6128b9329ff8980574322916",
+      "selectionSchemaSha256": "55a58118bd6d343c5109f0998d14911269b2846900d4a6d0373b0467310e545f",
+      "supportedProjectionSha256": "5af3d1d80044bf76761ad7cd03364b474d2b2ed8ddcd76b6f7058ff639974d46",
+      "clarificationProjectionSha256": "6db544c70909fd30e91937f0c1de6be5f886af760fd5ea9fc0c2047110841828",
+      "separatePublishedLockBundle": {
+        "fileCount": 62,
+        "sha256": "e88c7890d4d09a618523bd1b6fb8aca42658e963d17f02bdab14130a3235d570"
+      }
+    },
+    {
+      "definitionKey": "expense-approval",
+      "canonicalSha256": "7078a1632e6f5436b27c3f92f2531f0ac9f9d5dd97a337106fc11694aa88ad65",
+      "guideSha256": "b3fdca68da012e1b72e3c25cc5841bd1d1c4e2621040a090471cd22c65bdf078",
+      "instructionSha256": "679b585ee2833ff21a3b0ce6c418827fb1b89d1f525298cf32d7b6f54337a5b8",
+      "selectionSchemaSha256": "ad64203844a790ce379e28077ac65b1f1aef6042d3d6311b23a7448e1c10077b",
+      "supportedProjectionSha256": "3be87059c9d4026b575e7747f848b0d2f6f1fa5a47563626c233f077a8d1faf9",
+      "clarificationProjectionSha256": "fcc8c10c308aeac2c5c740f2fc55a319bcce57da1fd96fd6efb364021bcc1b49",
+      "separatePublishedLockBundle": {
+        "fileCount": 63,
+        "sha256": "e4a6db55452449316e5e343c3e70b3541ca32f0d3fff4b8ad3758f8c4babdaf7"
+      }
+    },
+    {
+      "definitionKey": "purchase-request-approval",
+      "canonicalSha256": "0e9eb78ce0597d72f741a37271a8e909bd67a2f9c10f11a514e1cd8d05af9e6e",
+      "guideSha256": "180853986dbf923db6e1bce97f7fb81c5338d80b0abc8e247cab0b7662094fd7",
+      "instructionSha256": "bf11a81819e19d8b8eb6d023428bef5a08a2debec2be3cdd21b36ea3b28df9ea",
+      "selectionSchemaSha256": "cb6e737d0e3305057011941b3654d367a5e61f82a5b4675ea446cacbe495ea60",
+      "supportedProjectionSha256": "8df26524c8227a484b534c85b24ffbfd84650a2353258078b1a41015ec83a761",
+      "clarificationProjectionSha256": "9bab92631dc16e866d5acc68e1ccd0f6af76ec4269e1e696c4e8e038e98e7410",
+      "separatePublishedLockBundle": {
+        "fileCount": 63,
+        "sha256": "4807ca45f7dab3e652a4e84f2de23f9384d925678615984842e739288bb63b6b"
+      }
+    },
+    {
+      "definitionKey": "team-task-tracking",
+      "canonicalSha256": "dfde00aef43ad869b6fac65aeac85d641779bee07372a9a2c58d48406e63a7de",
+      "guideSha256": "40d92941ef8f12de9a9856d2648dad1018ebd346125aaf83dc2cc4d76d877434",
+      "instructionSha256": "c008fbaa8a78dfaf6d955cd3b70050250a226b4471a7c9f2b7fc111d59579bdd",
+      "selectionSchemaSha256": "f20c441cb4b984c11e71b26bf5bb1c7116e93b94090f36443ec6a6111a280597",
+      "supportedProjectionSha256": "f388edb71c9da952e1ce13ac612a619363a2e84f78fc2e21ce82db34a0f8ad71",
+      "clarificationProjectionSha256": "31717bbfc515f701c8ea1e03feed0629fa2b8f0111956327240fd23c8500beea",
+      "separatePublishedLockBundle": {
+        "fileCount": 63,
+        "sha256": "b8dd32e126c9f2a913d81f683af286da2eb3599f5ec916637c2c7575eea014e6"
+      }
+    }
+  ]
+}

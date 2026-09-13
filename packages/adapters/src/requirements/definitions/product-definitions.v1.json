@@ -1,0 +1,2283 @@
+{
+  "apiVersion": "factory.product-definition-catalogue/v1",
+  "definitions": [
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "restaurant-ordering",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "restaurant",
+        "version": "restaurant-ordering/v3"
+      },
+      "parameterPolicy": "restaurant-menu/v1",
+      "primaryJob": {
+        "actorKey": "customer",
+        "operation": "submit",
+        "entityKey": "order",
+        "successState": "submitted"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "restaurant-definition",
+          "productType": "restaurant-ordering",
+          "outcome": "Customers place orders and staff fulfill them.",
+          "actors": [
+            {
+              "key": "customer",
+              "label": "Guest",
+              "description": "Discover dishes and place a table order."
+            },
+            {
+              "key": "cashier",
+              "label": "Cashier",
+              "description": "Collect simulated payment and serve orders."
+            },
+            {
+              "key": "kitchen",
+              "label": "Kitchen",
+              "description": "Prepare accepted orders in priority order."
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "description": "Manage menu, tables, users, settings, and exceptions."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "order",
+              "label": "Order",
+              "description": "A restaurant order."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "restaurant-order",
+              "label": "Restaurant Order",
+              "description": "Restaurant restaurant-order workflow."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "customer-place-order",
+              "given": "a order is cart",
+              "when": "Guest performs submit",
+              "then": "the order becomes submitted"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:ee4f7917a1d68cff234cb09de42ef6ffcdff56e06aff9d7d83a170a16ed8d349",
+          "title": "Restaurant",
+          "actors": [
+            {
+              "key": "customer",
+              "label": "Guest",
+              "description": "Discover dishes and place a table order.",
+              "permissions": [
+                {
+                  "entityKey": "order",
+                  "actions": ["submit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "order",
+              "label": "Order",
+              "description": "Restaurant order planning subset.",
+              "fields": [
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "description": "The current order workflow state.",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["cart", "submitted"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "customer-orders",
+              "label": "Orders",
+              "intent": "list",
+              "entityKey": "order"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "restaurant-order",
+              "label": "Restaurant Order",
+              "entityKey": "order",
+              "states": [
+                {
+                  "key": "cart",
+                  "label": "Cart"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "cart",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "customer"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "customer-place-order",
+              "description": "Customer submits an order for planning.",
+              "steps": [
+                {
+                  "actorKey": "customer",
+                  "action": "Guest performs submit."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "definitionKey": "restaurant-ordering",
+          "productType": "restaurant-ordering",
+          "actorKeys": ["customer", "cashier", "kitchen", "manager"],
+          "acceptanceJourneyKeys": [
+            "customer-place-order",
+            "manager-cancel-submitted-order",
+            "manager-cancel-paid-order",
+            "manager-table-session",
+            "manager-expire-open-table-session",
+            "manager-expire-active-table-session",
+            "manager-adjust-inventory"
+          ],
+          "constraints": {
+            "moneyMovement": "simulated",
+            "externalSideEffects": false
+          },
+          "surfaces": [
+            {
+              "key": "customer-mobile",
+              "device": "mobile",
+              "audience": ["customer"],
+              "navigation": "bottom-tabs"
+            },
+            {
+              "key": "merchant-desktop",
+              "device": "desktop",
+              "audience": ["cashier", "kitchen", "manager"],
+              "navigation": "sidebar"
+            }
+          ]
+        },
+        "providerInstruction": "For every Restaurant brief, use this scoped canonical Restaurant definition when deciding its definition-selection disposition: <supported-restaurant-default>{\"productType\":\"restaurant-ordering\",\"actorKeys\":[\"customer\",\"cashier\",\"kitchen\",\"manager\"],\"acceptanceJourneyKeys\":[\"customer-place-order\",\"manager-cancel-submitted-order\",\"manager-cancel-paid-order\",\"manager-table-session\",\"manager-expire-open-table-session\",\"manager-expire-active-table-session\",\"manager-adjust-inventory\"],\"constraints\":{\"moneyMovement\":\"simulated\",\"externalSideEffects\":false},\"surfaces\":[{\"key\":\"customer-mobile\",\"device\":\"mobile\",\"audience\":[\"customer\"],\"navigation\":\"bottom-tabs\"},{\"key\":\"merchant-desktop\",\"device\":\"desktop\",\"audience\":[\"cashier\",\"kitchen\",\"manager\"],\"navigation\":\"sidebar\"}]}</supported-restaurant-default> Apply every omitted canonical Restaurant detail as its own supported default, independently of whether another requested capability needs clarification. Every Restaurant result returns definition-selection with generatedInterpretation null; do not produce a full blueprint. When a Restaurant brief explicitly supplies an application display name, place that exact validated display name in the existing definition-selection title. A Restaurant display name must be trimmed safe business text from 2 through 80 characters. It must have no leading or trailing whitespace and no control characters. When no application display name is explicit, keep the validated provider title and do not ask a naming question. If an explicit display name is invalid, return needs-clarification with one material question that asks for a valid shorter display name; never truncate, replace, or encode the invalid name in title. If an answer still lacks a valid display name, retain needs-clarification so the existing bounded fail-closed follow-up behavior applies. Do not infer a legal or corporate identity from an application display name. Treat a sample, demo, or default menu, generic menu browsing, and application branding as canonical-default menu parameters with currency USD and zero items. A complete supplied initial menu of 1 through 100 dishes with names and explicit USD prices is supported: return provided businessParameters in supplied order, convert explicit prices exactly to integer minor units (cents), and use null description when omitted. Do not ask to edit a complete menu. Names must be trimmed safe text of 1..120 characters and non-null descriptions 1..1000, normalized to NFC; integer prices are 0..10000000. Never invent a missing name or price. An incomplete or unspecified custom menu requires businessParameters null and one consolidated material data question asking for the missing names and USD prices. Never encode menu data in title or other free-text fields as a transport substitute. The supplied-menu contract supports only names, optional descriptions, explicit USD prices, and order. Explicit currency other than USD, stock, availability, preparation time, images, categories, options, tax, or service-charge requirements remain material data clarification; never discard these requirements, convert another currency, or relabel it USD. Fixed omitted details are category mains, availability true, stock 100, preparation 15 minutes, and a local no-photo placeholder. Preserve a complete businessParameters value during unrelated material questions. For follow-ups, priorInterpretation is the exact versioned result wrapper: carry any complete provided menu unchanged through every clarification, including data questions about stock, currency, and options. Menu editing during clarification is not supported; incomplete null prior menu data may be completed with missing names and USD prices. Reevaluate and retain every independent unsupported requirement. An explicit contradiction remains unresolved. Do not suppress material access, privacy, business-rule, data or compliance, or integration questions. Never silently discard a material question or impose a count target to return supported-default. For an unsupported live payment or external capability, clearly state the current supported limitation and ask one meaningful scope decision for each genuinely independent material difference. When an unavailable external capability is the only explicit difference from the canonical Restaurant default, return exactly one integration material question that states the current supported limitation and asks whether to accept the supported scope or retain that capability as required. Do not infer downstream policy, data, authorization, implementation, processor, setup, or configuration questions from that one unavailable external capability. Preserve an access, privacy, data, or business-rule decision when the brief separately makes it explicit. Do not ask for provider setup, credentials, configuration, or integration implementation details that the supported product cannot implement. The simulated money movement and no external side effects default do not satisfy an explicit live payment request. A Restaurant follow-up may return supported-default when the supplied answer resolves its material question and no unresolved material requirement remains: missing menu names or USD prices must become complete, and an unsupported-scope question requires explicit acceptance of the supported scope. If an answer continues to require unsupported live payment or another external capability, retain needs-clarification."
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-record-recovery",
+            "steps": [
+              {
+                "actorKey": "manager",
+                "entityKey": "order",
+                "operation": "cancel",
+                "fromState": "submitted",
+                "toState": "cancelled",
+                "expectation": "success"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "unauthorized-mutation",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "order",
+                "operation": "cancel",
+                "fromState": "submitted",
+                "toState": "cancelled",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "commerce.cart",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:20b9900c018b5590bb6481b1c6fb30a0bece3fd1b42baa8ebfceb6a6bd5c5216"
+          },
+          {
+            "key": "commerce.catalog",
+            "version": "1.2.0",
+            "manifestDigest": "sha256:9819588b9b59c13a80a561c91ee1f14ebf73bbde16c3504f2de52e41934a8fcc"
+          },
+          {
+            "key": "commerce.inventory",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:a6abfec1b2f2ff7d12c776a2efa706cab4267766ae309f3f3fbfa597c3fde34e"
+          },
+          {
+            "key": "commerce.inventory-ledger",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:611d7b77c806ffbaea4fbe262a7df4a459bb0f7a1d9e1b95150d8053744e4cbb"
+          },
+          {
+            "key": "commerce.line-configuration",
+            "version": "1.1.2",
+            "manifestDigest": "sha256:c1913c2b949728d859d363812476200ed57d57d992c7f6cd8d6b3ec90c9a2872"
+          },
+          {
+            "key": "commerce.money-pricing",
+            "version": "1.1.0",
+            "manifestDigest": "sha256:09c15dd80f6bf8f15f37f7bd9f334f1a65c63e875fc0c6a7e4655a283b0d3a23"
+          },
+          {
+            "key": "commerce.order",
+            "version": "1.2.0",
+            "manifestDigest": "sha256:c8f5451b3144daac59ad589cb4e8483b5014c6c9cd98a4bc3e7b23577cb56f77"
+          },
+          {
+            "key": "commerce.order-operations",
+            "version": "1.1.0",
+            "manifestDigest": "sha256:652fe4c0e6695a92b2622c934af56b8175374bdecdb3bac3834d90a2c00b3a71"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.files-media",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:5c4fbf964825b8504efc91c965b68e63eb6c7e139201d333d806989f16d2e249"
+          },
+          {
+            "key": "core.identity-context",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:c2fc92f426d6e3995565681e55a8d7d5a5c8379c30ce4b9d2ecb0b538c2b8ca1"
+          },
+          {
+            "key": "core.location-context",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:591b260f53f2fa0b8e838cb8b9ab350819aa720326b49c1a67f99990ae61df0d"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "restaurant.cashier",
+            "version": "1.1.0",
+            "manifestDigest": "sha256:c95c35b2069c9c331d8b7cb591ec0472c72acf59fddfdb65c1550e05283fd6ba"
+          },
+          {
+            "key": "restaurant.kitchen",
+            "version": "1.1.0",
+            "manifestDigest": "sha256:a1a925c3519fc135be3c1290aa85b1914025ba64440128abfe7cc9c7567702c7"
+          },
+          {
+            "key": "restaurant.menu",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:1efb3891dba96a724ac2e07050d4d0d0ce34648bb0745c48799c85c2b486bf30"
+          },
+          {
+            "key": "restaurant.ordering",
+            "version": "1.1.0",
+            "manifestDigest": "sha256:9f6af7bff7e06ac630a80ae781955c13145666f38492632a04eabe092dd8cf30"
+          },
+          {
+            "key": "restaurant.reporting",
+            "version": "1.1.0",
+            "manifestDigest": "sha256:400fb6c041e1f2f4191c779be37af2144ba7c8d8be5675dc16191d676fa7d221"
+          },
+          {
+            "key": "restaurant.table-session",
+            "version": "1.1.0",
+            "manifestDigest": "sha256:9dff8a3a0348e30d19d2f2e62ce4dabab82885e2db80053791a6b6d30d3fdbf2"
+          }
+        ],
+        "presentation": {
+          "key": "restaurant-v3",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "restaurant-ordering/v3"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-13",
+        "decision": "ADR-0065"
+      }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "expense-approval",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "approval",
+        "version": "approval-correction/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "employee",
+        "operation": "submit",
+        "entityKey": "expense",
+        "successState": "submitted"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "expense-approval-requirement",
+          "outcome": "Employees submit expenses and managers decide them; finance audits the decisions.",
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "Submits expenses with amount, category, date, receipt, and notes."
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "description": "Approves or returns submitted expenses."
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "description": "Audits all approval decisions."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "expense",
+              "label": "Expense",
+              "description": "A claim for reimbursement."
+            },
+            {
+              "key": "approval",
+              "label": "Approval",
+              "description": "A manager decision on a submitted expense."
+            },
+            {
+              "key": "audit-trail",
+              "label": "Audit trail",
+              "description": "The record of every decision."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "expense-approval",
+              "label": "Expense approval",
+              "description": "Create and edit a draft, submit, return with a required reason, revise the same record, resubmit and approve."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "employee-submits",
+              "given": "an employee with an expense",
+              "when": "the employee submits it",
+              "then": "the expense is submitted for approval"
+            },
+            {
+              "key": "manager-approves",
+              "given": "a submitted expense",
+              "when": "the manager approves it",
+              "then": "the expense is approved"
+            },
+            {
+              "key": "manager-rejects",
+              "given": "a submitted expense",
+              "when": "the manager returns it with a reason",
+              "then": "the expense is returned with a required reason for same-record revision and resubmission"
+            },
+            {
+              "key": "finance-audits",
+              "given": "decided expenses",
+              "when": "finance audits them",
+              "then": "every decision is recorded in the audit trail"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:6adb860e104c495b1ad0b06abc7713ec241a3e97d4a8a5e39c444977a82a186b",
+          "title": "Expense Approval",
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "permissions": [
+                {
+                  "entityKey": "expense",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                {
+                  "entityKey": "employee",
+                  "actions": ["read", "update"]
+                }
+              ]
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "permissions": [
+                {
+                  "entityKey": "expense",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "permissions": [
+                {
+                  "entityKey": "expense",
+                  "actions": ["read", "audit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "expense",
+              "label": "Expense",
+              "description": "A claim for reimbursement.",
+              "fields": [
+                {
+                  "key": "amount",
+                  "label": "Amount",
+                  "type": "currency",
+                  "required": true
+                },
+                {
+                  "key": "category",
+                  "label": "Category",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["travel", "meals", "software", "office", "other"]
+                },
+                {
+                  "key": "date",
+                  "label": "Date",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "key": "receipt",
+                  "label": "Receipt",
+                  "type": "file",
+                  "required": false
+                },
+                {
+                  "key": "notes",
+                  "label": "Notes",
+                  "type": "long-text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "The person who submits expenses.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "expense-dashboard",
+              "label": "Expense dashboard",
+              "intent": "dashboard",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-list",
+              "label": "Expense list",
+              "intent": "list",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-form",
+              "label": "New expense",
+              "intent": "form",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-detail",
+              "label": "Expense detail",
+              "intent": "detail",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-queue",
+              "label": "Approval queue",
+              "intent": "queue",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-settings",
+              "label": "Expense settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "expense-approval",
+              "label": "Expense approval",
+              "entityKey": "expense",
+              "states": [
+                {
+                  "key": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "key": "returned",
+                  "label": "Returned"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "employee"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "employee"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "employee-submits-expense",
+              "description": "An employee submits an expense.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an expense"
+                }
+              ]
+            },
+            {
+              "key": "manager-decides-expense",
+              "description": "A manager approves or returns a submitted expense.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an expense"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "approves or returns it"
+                },
+                {
+                  "actorKey": "employee",
+                  "action": "edits the returned record, saves it as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "finance-audits-decisions",
+              "description": "Finance audits every decision.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an expense"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "decides it"
+                },
+                {
+                  "actorKey": "finance",
+                  "action": "audits the decision"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "definitionKey": "expense-approval",
+          "template": {
+            "key": "approval-definition-template",
+            "version": "2.0.0"
+          },
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "permissions": [
+                {
+                  "entityKey": "expense",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                {
+                  "entityKey": "employee",
+                  "actions": ["read", "update"]
+                }
+              ]
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "permissions": [
+                {
+                  "entityKey": "expense",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "permissions": [
+                {
+                  "entityKey": "expense",
+                  "actions": ["read", "audit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "expense",
+              "label": "Expense",
+              "description": "A claim for reimbursement.",
+              "fields": [
+                {
+                  "key": "amount",
+                  "label": "Amount",
+                  "type": "currency",
+                  "required": true
+                },
+                {
+                  "key": "category",
+                  "label": "Category",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["travel", "meals", "software", "office", "other"]
+                },
+                {
+                  "key": "date",
+                  "label": "Date",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "key": "receipt",
+                  "label": "Receipt",
+                  "type": "file",
+                  "required": false
+                },
+                {
+                  "key": "notes",
+                  "label": "Notes",
+                  "type": "long-text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "The person who submits expenses.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "expense-dashboard",
+              "label": "Expense dashboard",
+              "intent": "dashboard",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-list",
+              "label": "Expense list",
+              "intent": "list",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-form",
+              "label": "New expense",
+              "intent": "form",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-detail",
+              "label": "Expense detail",
+              "intent": "detail",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-queue",
+              "label": "Approval queue",
+              "intent": "queue",
+              "entityKey": "expense"
+            },
+            {
+              "key": "expense-settings",
+              "label": "Expense settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "expense-approval",
+              "label": "Expense approval",
+              "entityKey": "expense",
+              "states": [
+                {
+                  "key": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "key": "returned",
+                  "label": "Returned"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "employee"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "employee"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "employee-submits-expense",
+              "description": "An employee submits an expense.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an expense"
+                }
+              ]
+            },
+            {
+              "key": "manager-decides-expense",
+              "description": "A manager approves or returns a submitted expense.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an expense"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "approves or returns it"
+                },
+                {
+                  "actorKey": "employee",
+                  "action": "edits the returned record, saves it as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "finance-audits-decisions",
+              "description": "Finance audits every decision.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an expense"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "decides it"
+                },
+                {
+                  "actorKey": "finance",
+                  "action": "audits the decision"
+                }
+              ]
+            }
+          ],
+          "identity": "Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation.",
+          "integrations": "No external identity, HR, accounting, notification delivery or real receipt storage integration."
+        },
+        "providerInstruction": "Every Expense Approval brief returns definition-selection with definitionKey expense-approval, generatedInterpretation null and businessParameters null. Do not generate its blueprint or supply fields, pages, permissions or workflows in the selection. A coarse expense submission and manager approval request accepts omitted canonical fields, permissions, page intents and workflow details as supported defaults, with zero materialQuestions. A detailed request is supported-default only when every explicit requirement is compatible with this exact default. A display title and requirementId customize identity text only; neither changes business structure. Use a trimmed safe display title of 2 through 80 characters, a lowercase kebab-case requirementId of at most 128 characters and an outcome of at most 2000 characters. The supported workflow is draft to submitted by employee, then approved or returned with a required reason by a single manager; employees may edit drafts, revise returned records to draft and resubmit the same record; finance audits all decisions. Amount, category and date are required; receipt and notes are optional; category options are travel, meals, software, office and other. Employee name is required and department optional. The roles are explicitly selectable demo roles with role-wide reads. Omitted routine details do not require questions. Any explicit or ambiguous change to authority, visibility, identity, tenant boundary, fields or requiredness, enum values, workflow or integrations requires needs-clarification with at least one material question. Never discard or approximate an explicit incompatible requirement to select supported-default. Preserve every independent material question in the first response, using only authorization, visibility, role, business-rule, data or integration categories. Keep technical plans, packages, provider setup and credentials out of the questions. Multiple approval levels, thresholds or an ambiguous decision owner require a role or business-rule question; missing reviewer read permission or changed decision rights require authorization clarification. Requester-only privacy, requests that each employee sees only their own records, and private multiuser access require visibility or authorization clarification: role-wide demo reads do not satisfy requester-only privacy. External authentication, SSO, tenant isolation or real users require authorization or integration clarification. Changed required fields require data clarification. Withdrawal, reopening approved records, editing submitted or approved records, configurable reason policy and post-approval changes require business-rule clarification. HR, accounting, external notifications, file upload storage and other external integrations require integration clarification; a receipt placeholder is not real receipt storage. For Expense Approval follow-ups, retain needs-clarification for every still-required unsupported capability, even when the user has answered a prior question. Only explicit acceptance of the exact supported scope can resolve an unsupported-scope question; an answer that still demands requester privacy, external identity or different authority/workflow is never supported-default. Never infer acceptance from an answer, omit a material requirement or implement unsupported semantics through title or outcome. <supported-expense-default>{\"definitionKey\":\"expense-approval\",\"template\":{\"key\":\"approval-definition-template\",\"version\":\"2.0.0\"},\"actors\":[{\"key\":\"employee\",\"label\":\"Employee\",\"permissions\":[{\"entityKey\":\"expense\",\"actions\":[\"create\",\"read\",\"update\",\"submit\"]},{\"entityKey\":\"employee\",\"actions\":[\"read\",\"update\"]}]},{\"key\":\"manager\",\"label\":\"Manager\",\"permissions\":[{\"entityKey\":\"expense\",\"actions\":[\"read\",\"approve\",\"reject\"]}]},{\"key\":\"finance\",\"label\":\"Finance\",\"permissions\":[{\"entityKey\":\"expense\",\"actions\":[\"read\",\"audit\"]}]}],\"entities\":[{\"key\":\"expense\",\"label\":\"Expense\",\"description\":\"A claim for reimbursement.\",\"fields\":[{\"key\":\"amount\",\"label\":\"Amount\",\"type\":\"currency\",\"required\":true},{\"key\":\"category\",\"label\":\"Category\",\"type\":\"enum\",\"required\":true,\"options\":[\"travel\",\"meals\",\"software\",\"office\",\"other\"]},{\"key\":\"date\",\"label\":\"Date\",\"type\":\"date\",\"required\":true},{\"key\":\"receipt\",\"label\":\"Receipt\",\"type\":\"file\",\"required\":false},{\"key\":\"notes\",\"label\":\"Notes\",\"type\":\"long-text\",\"required\":false}]},{\"key\":\"employee\",\"label\":\"Employee\",\"description\":\"The person who submits expenses.\",\"fields\":[{\"key\":\"name\",\"label\":\"Name\",\"type\":\"text\",\"required\":true},{\"key\":\"department\",\"label\":\"Department\",\"type\":\"text\",\"required\":false}]}],\"pageIntents\":[{\"key\":\"expense-dashboard\",\"label\":\"Expense dashboard\",\"intent\":\"dashboard\",\"entityKey\":\"expense\"},{\"key\":\"expense-list\",\"label\":\"Expense list\",\"intent\":\"list\",\"entityKey\":\"expense\"},{\"key\":\"expense-form\",\"label\":\"New expense\",\"intent\":\"form\",\"entityKey\":\"expense\"},{\"key\":\"expense-detail\",\"label\":\"Expense detail\",\"intent\":\"detail\",\"entityKey\":\"expense\"},{\"key\":\"expense-queue\",\"label\":\"Approval queue\",\"intent\":\"queue\",\"entityKey\":\"expense\"},{\"key\":\"expense-settings\",\"label\":\"Expense settings\",\"intent\":\"settings\"}],\"workflows\":[{\"key\":\"expense-approval\",\"label\":\"Expense approval\",\"entityKey\":\"expense\",\"states\":[{\"key\":\"draft\",\"label\":\"Draft\"},{\"key\":\"submitted\",\"label\":\"Submitted\"},{\"key\":\"approved\",\"label\":\"Approved\"},{\"key\":\"returned\",\"label\":\"Returned\"}],\"transitions\":[{\"key\":\"submit\",\"from\":\"draft\",\"to\":\"submitted\",\"label\":\"Submit\",\"actorKey\":\"employee\"},{\"key\":\"approve\",\"from\":\"submitted\",\"to\":\"approved\",\"label\":\"Approve\",\"actorKey\":\"manager\"},{\"key\":\"reject\",\"from\":\"submitted\",\"to\":\"returned\",\"label\":\"Return\",\"actorKey\":\"manager\"},{\"key\":\"update\",\"from\":\"returned\",\"to\":\"draft\",\"label\":\"Revise\",\"actorKey\":\"employee\"}]}],\"acceptanceJourneys\":[{\"key\":\"employee-submits-expense\",\"description\":\"An employee submits an expense.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits an expense\"}]},{\"key\":\"manager-decides-expense\",\"description\":\"A manager approves or returns a submitted expense.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits an expense\"},{\"actorKey\":\"manager\",\"action\":\"approves or returns it\"},{\"actorKey\":\"employee\",\"action\":\"edits the returned record, saves it as draft and resubmits the same record\"}]},{\"key\":\"finance-audits-decisions\",\"description\":\"Finance audits every decision.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits an expense\"},{\"actorKey\":\"manager\",\"action\":\"decides it\"},{\"actorKey\":\"finance\",\"action\":\"audits the decision\"}]}],\"identity\":\"Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation.\",\"integrations\":\"No external identity, HR, accounting, notification delivery or real receipt storage integration.\"}</supported-expense-default>"
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-record-recovery",
+            "steps": [
+              {
+                "actorKey": "manager",
+                "entityKey": "expense",
+                "operation": "reject",
+                "fromState": "submitted",
+                "toState": "returned",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "employee",
+                "entityKey": "expense",
+                "operation": "update",
+                "fromState": "returned",
+                "toState": "draft",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "employee",
+                "entityKey": "expense",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "submitted",
+                "expectation": "success"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "unauthorized-mutation",
+            "steps": [
+              {
+                "actorKey": "finance",
+                "entityKey": "expense",
+                "operation": "approve",
+                "fromState": "submitted",
+                "toState": "approved",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "approval-v1",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "approval-correction/v1"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-13",
+        "decision": "ADR-0065"
+      }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "purchase-request-approval",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "approval",
+        "version": "approval-correction/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "requester",
+        "operation": "submit",
+        "entityKey": "purchase-request",
+        "successState": "submitted"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "purchase-request-approval-requirement",
+          "outcome": "Requesters submit purchase requests and managers decide them; procurement audits the decisions.",
+          "actors": [
+            {
+              "key": "requester",
+              "label": "Requester",
+              "description": "Submits purchase requests with amount, category, needed date, item, supplier, and business justification."
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "description": "Approves or returns submitted purchase requests."
+            },
+            {
+              "key": "procurement",
+              "label": "Procurement",
+              "description": "Audits all approval decisions."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "purchase-request",
+              "label": "Purchase request",
+              "description": "A request for a manager decision before a purchase."
+            },
+            {
+              "key": "approval",
+              "label": "Approval",
+              "description": "A manager decision on a submitted purchase request."
+            },
+            {
+              "key": "audit-trail",
+              "label": "Audit trail",
+              "description": "The record of every decision."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "purchase-request-approval",
+              "label": "Purchase request approval",
+              "description": "Create and edit a draft, submit, return with a required reason, revise the same record, resubmit and approve."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "requester-submits",
+              "given": "a requester with a purchase request",
+              "when": "the requester submits it",
+              "then": "the purchase request is submitted for approval"
+            },
+            {
+              "key": "manager-approves",
+              "given": "a submitted purchase request",
+              "when": "the manager approves it",
+              "then": "the purchase request is approved"
+            },
+            {
+              "key": "manager-rejects",
+              "given": "a submitted purchase request",
+              "when": "the manager returns it with a reason",
+              "then": "the purchase request is returned with a required reason for same-record revision and resubmission"
+            },
+            {
+              "key": "procurement-audits",
+              "given": "decided purchase requests",
+              "when": "procurement audits them",
+              "then": "every decision is recorded in the audit trail"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:d994be119033ab272b856ad52125b70f8262ecc19947d80832d8be2150500513",
+          "title": "Purchase Request Approval",
+          "actors": [
+            {
+              "key": "requester",
+              "label": "Requester",
+              "permissions": [
+                {
+                  "entityKey": "purchase-request",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                {
+                  "entityKey": "requester",
+                  "actions": ["read", "update"]
+                }
+              ]
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "permissions": [
+                {
+                  "entityKey": "purchase-request",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "procurement",
+              "label": "Procurement",
+              "permissions": [
+                {
+                  "entityKey": "purchase-request",
+                  "actions": ["read", "audit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "purchase-request",
+              "label": "Purchase request",
+              "description": "A request for a manager decision before a purchase.",
+              "fields": [
+                {
+                  "key": "amount",
+                  "label": "Amount",
+                  "type": "currency",
+                  "required": true
+                },
+                {
+                  "key": "category",
+                  "label": "Category",
+                  "type": "enum",
+                  "required": true,
+                  "options": [
+                    "equipment",
+                    "software",
+                    "services",
+                    "supplies",
+                    "other"
+                  ]
+                },
+                {
+                  "key": "neededBy",
+                  "label": "Needed by",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "key": "item",
+                  "label": "Item",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "supplier",
+                  "label": "Supplier",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "businessJustification",
+                  "label": "Business justification",
+                  "type": "long-text",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "requester",
+              "label": "Requester",
+              "description": "The person who submits purchase requests.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "purchase-request-dashboard",
+              "label": "Purchase request dashboard",
+              "intent": "dashboard",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-list",
+              "label": "Purchase request list",
+              "intent": "list",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-form",
+              "label": "New purchase request",
+              "intent": "form",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-detail",
+              "label": "Purchase request detail",
+              "intent": "detail",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-queue",
+              "label": "Approval queue",
+              "intent": "queue",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-settings",
+              "label": "Purchase request settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "purchase-request-approval",
+              "label": "Purchase request approval",
+              "entityKey": "purchase-request",
+              "states": [
+                {
+                  "key": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "key": "returned",
+                  "label": "Returned"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "requester"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "requester"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "requester-submits-purchase-request",
+              "description": "A requester submits a purchase request.",
+              "steps": [
+                {
+                  "actorKey": "requester",
+                  "action": "submits a purchase request"
+                }
+              ]
+            },
+            {
+              "key": "manager-decides-purchase-request",
+              "description": "A manager approves or returns a submitted purchase request.",
+              "steps": [
+                {
+                  "actorKey": "requester",
+                  "action": "submits a purchase request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "approves or returns it"
+                },
+                {
+                  "actorKey": "requester",
+                  "action": "edits the returned record, saves it as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "procurement-audits-decisions",
+              "description": "Procurement audits every decision.",
+              "steps": [
+                {
+                  "actorKey": "requester",
+                  "action": "submits a purchase request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "decides it"
+                },
+                {
+                  "actorKey": "procurement",
+                  "action": "audits the decision"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "definitionKey": "purchase-request-approval",
+          "template": {
+            "key": "approval-definition-template",
+            "version": "2.0.0"
+          },
+          "actors": [
+            {
+              "key": "requester",
+              "label": "Requester",
+              "permissions": [
+                {
+                  "entityKey": "purchase-request",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                {
+                  "entityKey": "requester",
+                  "actions": ["read", "update"]
+                }
+              ]
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "permissions": [
+                {
+                  "entityKey": "purchase-request",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "procurement",
+              "label": "Procurement",
+              "permissions": [
+                {
+                  "entityKey": "purchase-request",
+                  "actions": ["read", "audit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "purchase-request",
+              "label": "Purchase request",
+              "description": "A request for a manager decision before a purchase.",
+              "fields": [
+                {
+                  "key": "amount",
+                  "label": "Amount",
+                  "type": "currency",
+                  "required": true
+                },
+                {
+                  "key": "category",
+                  "label": "Category",
+                  "type": "enum",
+                  "required": true,
+                  "options": [
+                    "equipment",
+                    "software",
+                    "services",
+                    "supplies",
+                    "other"
+                  ]
+                },
+                {
+                  "key": "neededBy",
+                  "label": "Needed by",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "key": "item",
+                  "label": "Item",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "supplier",
+                  "label": "Supplier",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "businessJustification",
+                  "label": "Business justification",
+                  "type": "long-text",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "requester",
+              "label": "Requester",
+              "description": "The person who submits purchase requests.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "purchase-request-dashboard",
+              "label": "Purchase request dashboard",
+              "intent": "dashboard",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-list",
+              "label": "Purchase request list",
+              "intent": "list",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-form",
+              "label": "New purchase request",
+              "intent": "form",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-detail",
+              "label": "Purchase request detail",
+              "intent": "detail",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-queue",
+              "label": "Approval queue",
+              "intent": "queue",
+              "entityKey": "purchase-request"
+            },
+            {
+              "key": "purchase-request-settings",
+              "label": "Purchase request settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "purchase-request-approval",
+              "label": "Purchase request approval",
+              "entityKey": "purchase-request",
+              "states": [
+                {
+                  "key": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "key": "returned",
+                  "label": "Returned"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "requester"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "requester"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "requester-submits-purchase-request",
+              "description": "A requester submits a purchase request.",
+              "steps": [
+                {
+                  "actorKey": "requester",
+                  "action": "submits a purchase request"
+                }
+              ]
+            },
+            {
+              "key": "manager-decides-purchase-request",
+              "description": "A manager approves or returns a submitted purchase request.",
+              "steps": [
+                {
+                  "actorKey": "requester",
+                  "action": "submits a purchase request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "approves or returns it"
+                },
+                {
+                  "actorKey": "requester",
+                  "action": "edits the returned record, saves it as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "procurement-audits-decisions",
+              "description": "Procurement audits every decision.",
+              "steps": [
+                {
+                  "actorKey": "requester",
+                  "action": "submits a purchase request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "decides it"
+                },
+                {
+                  "actorKey": "procurement",
+                  "action": "audits the decision"
+                }
+              ]
+            }
+          ],
+          "identity": "Local demo with explicitly selectable requester, manager and procurement roles; role-wide reads, no requester-owned record privacy or tenant isolation.",
+          "integrations": "No external purchasing, inventory, invoice, payment, identity or notification integration."
+        },
+        "providerInstruction": "Every Purchase Request approval brief returns definition-selection with definitionKey purchase-request-approval, generatedInterpretation null and businessParameters null. The reviewed correction local demo lets a requester create and edit drafts, submit, revise returned records and resubmit the same record; one manager approves or returns with a required reason, and procurement read and audit. An approval records a decision only: it does not place purchase orders, reserve inventory, contact suppliers, create invoices, or spend or transfer money. Omitted routine pages and presentation accept supported-default with zero questions. Explicit or ambiguous requester-only or private records, real identity, SSO, tenant isolation, thresholds, budgets, multiple or sequential reviewers, editing submitted or approved records, reopening approved records, configurable reason policy, changed fields, requiredness or category options, currency codes or symbols or conversion, quote or file storage, purchase orders, vendor management, ERP or procurement integrations, inventory, fulfilment, invoices, payments or external notification delivery require needs-clarification. Preserve every independent material question using authorization, visibility, role, business-rule, data or integration. Follow-ups retain every still-required exclusion until the user explicitly accepts supported scope; never infer acceptance or hide requirements in identity text. Amount is numeric requested amount without an invented currency code, symbol or payment. The exact roles are selectable local demo roles with role-wide reads. <supported-purchase-request-default>{\"definitionKey\":\"purchase-request-approval\",\"template\":{\"key\":\"approval-definition-template\",\"version\":\"2.0.0\"},\"actors\":[{\"key\":\"requester\",\"label\":\"Requester\",\"permissions\":[{\"entityKey\":\"purchase-request\",\"actions\":[\"create\",\"read\",\"update\",\"submit\"]},{\"entityKey\":\"requester\",\"actions\":[\"read\",\"update\"]}]},{\"key\":\"manager\",\"label\":\"Manager\",\"permissions\":[{\"entityKey\":\"purchase-request\",\"actions\":[\"read\",\"approve\",\"reject\"]}]},{\"key\":\"procurement\",\"label\":\"Procurement\",\"permissions\":[{\"entityKey\":\"purchase-request\",\"actions\":[\"read\",\"audit\"]}]}],\"entities\":[{\"key\":\"purchase-request\",\"label\":\"Purchase request\",\"description\":\"A request for a manager decision before a purchase.\",\"fields\":[{\"key\":\"amount\",\"label\":\"Amount\",\"type\":\"currency\",\"required\":true},{\"key\":\"category\",\"label\":\"Category\",\"type\":\"enum\",\"required\":true,\"options\":[\"equipment\",\"software\",\"services\",\"supplies\",\"other\"]},{\"key\":\"neededBy\",\"label\":\"Needed by\",\"type\":\"date\",\"required\":true},{\"key\":\"item\",\"label\":\"Item\",\"type\":\"text\",\"required\":true},{\"key\":\"supplier\",\"label\":\"Supplier\",\"type\":\"text\",\"required\":false},{\"key\":\"businessJustification\",\"label\":\"Business justification\",\"type\":\"long-text\",\"required\":true}]},{\"key\":\"requester\",\"label\":\"Requester\",\"description\":\"The person who submits purchase requests.\",\"fields\":[{\"key\":\"name\",\"label\":\"Name\",\"type\":\"text\",\"required\":true},{\"key\":\"department\",\"label\":\"Department\",\"type\":\"text\",\"required\":false}]}],\"pageIntents\":[{\"key\":\"purchase-request-dashboard\",\"label\":\"Purchase request dashboard\",\"intent\":\"dashboard\",\"entityKey\":\"purchase-request\"},{\"key\":\"purchase-request-list\",\"label\":\"Purchase request list\",\"intent\":\"list\",\"entityKey\":\"purchase-request\"},{\"key\":\"purchase-request-form\",\"label\":\"New purchase request\",\"intent\":\"form\",\"entityKey\":\"purchase-request\"},{\"key\":\"purchase-request-detail\",\"label\":\"Purchase request detail\",\"intent\":\"detail\",\"entityKey\":\"purchase-request\"},{\"key\":\"purchase-request-queue\",\"label\":\"Approval queue\",\"intent\":\"queue\",\"entityKey\":\"purchase-request\"},{\"key\":\"purchase-request-settings\",\"label\":\"Purchase request settings\",\"intent\":\"settings\"}],\"workflows\":[{\"key\":\"purchase-request-approval\",\"label\":\"Purchase request approval\",\"entityKey\":\"purchase-request\",\"states\":[{\"key\":\"draft\",\"label\":\"Draft\"},{\"key\":\"submitted\",\"label\":\"Submitted\"},{\"key\":\"approved\",\"label\":\"Approved\"},{\"key\":\"returned\",\"label\":\"Returned\"}],\"transitions\":[{\"key\":\"submit\",\"from\":\"draft\",\"to\":\"submitted\",\"label\":\"Submit\",\"actorKey\":\"requester\"},{\"key\":\"approve\",\"from\":\"submitted\",\"to\":\"approved\",\"label\":\"Approve\",\"actorKey\":\"manager\"},{\"key\":\"reject\",\"from\":\"submitted\",\"to\":\"returned\",\"label\":\"Return\",\"actorKey\":\"manager\"},{\"key\":\"update\",\"from\":\"returned\",\"to\":\"draft\",\"label\":\"Revise\",\"actorKey\":\"requester\"}]}],\"acceptanceJourneys\":[{\"key\":\"requester-submits-purchase-request\",\"description\":\"A requester submits a purchase request.\",\"steps\":[{\"actorKey\":\"requester\",\"action\":\"submits a purchase request\"}]},{\"key\":\"manager-decides-purchase-request\",\"description\":\"A manager approves or returns a submitted purchase request.\",\"steps\":[{\"actorKey\":\"requester\",\"action\":\"submits a purchase request\"},{\"actorKey\":\"manager\",\"action\":\"approves or returns it\"},{\"actorKey\":\"requester\",\"action\":\"edits the returned record, saves it as draft and resubmits the same record\"}]},{\"key\":\"procurement-audits-decisions\",\"description\":\"Procurement audits every decision.\",\"steps\":[{\"actorKey\":\"requester\",\"action\":\"submits a purchase request\"},{\"actorKey\":\"manager\",\"action\":\"decides it\"},{\"actorKey\":\"procurement\",\"action\":\"audits the decision\"}]}],\"identity\":\"Local demo with explicitly selectable requester, manager and procurement roles; role-wide reads, no requester-owned record privacy or tenant isolation.\",\"integrations\":\"No external purchasing, inventory, invoice, payment, identity or notification integration.\"}</supported-purchase-request-default>"
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-record-recovery",
+            "steps": [
+              {
+                "actorKey": "manager",
+                "entityKey": "purchase-request",
+                "operation": "reject",
+                "fromState": "submitted",
+                "toState": "returned",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "requester",
+                "entityKey": "purchase-request",
+                "operation": "update",
+                "fromState": "returned",
+                "toState": "draft",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "requester",
+                "entityKey": "purchase-request",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "submitted",
+                "expectation": "success"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "unauthorized-mutation",
+            "steps": [
+              {
+                "actorKey": "procurement",
+                "entityKey": "purchase-request",
+                "operation": "approve",
+                "fromState": "submitted",
+                "toState": "approved",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "approval-v1",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "approval-correction/v1"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-13",
+        "decision": "ADR-0065"
+      }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "team-task-tracking",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "task",
+        "version": "task-correction/v2"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "member",
+        "operation": "complete",
+        "entityKey": "task",
+        "successState": "completed"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "team-task-tracking-requirement",
+          "outcome": "A team member creates, corrects, starts, completes and reopens shared tasks; a viewer reads the board.",
+          "actors": [
+            {
+              "key": "member",
+              "label": "Team member",
+              "description": "Creates, corrects, starts, completes and reopens shared tasks."
+            },
+            {
+              "key": "viewer",
+              "label": "Viewer",
+              "description": "Reads all shared tasks."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "task",
+              "label": "Task",
+              "description": "Shared work with a display-only assignee, due date and priority."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "task-lifecycle",
+              "label": "Task lifecycle",
+              "description": "Start new work, complete it and reopen completed work."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "member-completes-task",
+              "given": "a team member has new work",
+              "when": "the member creates, starts and completes a task",
+              "then": "the task is completed and persists through reload"
+            },
+            {
+              "key": "member-reopens-task",
+              "given": "a completed task",
+              "when": "the member reopens and completes it again",
+              "then": "the same task returns to completed"
+            },
+            {
+              "key": "viewer-reads",
+              "given": "shared tasks",
+              "when": "a viewer reads the board",
+              "then": "all tasks are visible and every mutation is denied"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:85ae1a74bb5457782cb4d7e2fa49ac93c930b69887d85b2abae833892504912a",
+          "title": "Team Task Tracking",
+          "actors": [
+            {
+              "key": "member",
+              "label": "Team member",
+              "permissions": [
+                {
+                  "entityKey": "task",
+                  "actions": [
+                    "create",
+                    "read",
+                    "update",
+                    "start",
+                    "complete",
+                    "reopen"
+                  ]
+                }
+              ]
+            },
+            {
+              "key": "viewer",
+              "label": "Viewer",
+              "permissions": [
+                {
+                  "entityKey": "task",
+                  "actions": ["read"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "task",
+              "label": "Task",
+              "description": "A shared team task.",
+              "fields": [
+                {
+                  "key": "title",
+                  "label": "Title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "description",
+                  "label": "Description",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "assignee",
+                  "label": "Assignee",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "dueDate",
+                  "label": "Due date",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "key": "priority",
+                  "label": "Priority",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["low", "medium", "high"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "task-overview",
+              "label": "Task overview",
+              "intent": "dashboard",
+              "entityKey": "task"
+            },
+            {
+              "key": "task-list",
+              "label": "All tasks",
+              "intent": "list",
+              "entityKey": "task"
+            },
+            {
+              "key": "task-form",
+              "label": "New task",
+              "intent": "form",
+              "entityKey": "task"
+            },
+            {
+              "key": "task-detail",
+              "label": "Task details",
+              "intent": "detail",
+              "entityKey": "task"
+            },
+            {
+              "key": "task-queue",
+              "label": "Task workflow",
+              "intent": "queue",
+              "entityKey": "task"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "task-lifecycle",
+              "label": "Task lifecycle",
+              "entityKey": "task",
+              "states": [
+                {
+                  "key": "not-started",
+                  "label": "Not started"
+                },
+                {
+                  "key": "in-progress",
+                  "label": "In progress"
+                },
+                {
+                  "key": "completed",
+                  "label": "Completed"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "start",
+                  "from": "not-started",
+                  "to": "in-progress",
+                  "label": "Start",
+                  "actorKey": "member"
+                },
+                {
+                  "key": "complete",
+                  "from": "in-progress",
+                  "to": "completed",
+                  "label": "Complete",
+                  "actorKey": "member"
+                },
+                {
+                  "key": "reopen",
+                  "from": "completed",
+                  "to": "in-progress",
+                  "label": "Reopen",
+                  "actorKey": "member"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "create-start-complete",
+              "description": "A member corrects all five fields in Not started and In progress, then finishes the same task. Completed must be reopened before correction.",
+              "steps": [
+                {
+                  "actorKey": "member",
+                  "action": "creates a task"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "corrects all five fields on the same task in Not started"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "starts the task"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "corrects all five fields on the same task in In progress"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "completes the task"
+                }
+              ]
+            },
+            {
+              "key": "reopen-complete",
+              "description": "A member resumes completed work.",
+              "steps": [
+                {
+                  "actorKey": "member",
+                  "action": "reopens the completed task"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "completes the task again"
+                }
+              ]
+            },
+            {
+              "key": "viewer-reads",
+              "description": "A viewer reads the shared board.",
+              "steps": [
+                {
+                  "actorKey": "viewer",
+                  "action": "reads all tasks and cannot create, correct, start, complete or reopen"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "definitionKey": "team-task-tracking",
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:85ae1a74bb5457782cb4d7e2fa49ac93c930b69887d85b2abae833892504912a",
+          "title": "Team Task Tracking",
+          "actors": [
+            {
+              "key": "member",
+              "label": "Team member",
+              "permissions": [
+                {
+                  "entityKey": "task",
+                  "actions": [
+                    "create",
+                    "read",
+                    "update",
+                    "start",
+                    "complete",
+                    "reopen"
+                  ]
+                }
+              ]
+            },
+            {
+              "key": "viewer",
+              "label": "Viewer",
+              "permissions": [
+                {
+                  "entityKey": "task",
+                  "actions": ["read"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "task",
+              "label": "Task",
+              "description": "A shared team task.",
+              "fields": [
+                {
+                  "key": "title",
+                  "label": "Title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "description",
+                  "label": "Description",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "assignee",
+                  "label": "Assignee",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "dueDate",
+                  "label": "Due date",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "key": "priority",
+                  "label": "Priority",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["low", "medium", "high"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "task-overview",
+              "label": "Task overview",
+              "intent": "dashboard",
+              "entityKey": "task"
+            },
+            {
+              "key": "task-list",
+              "label": "All tasks",
+              "intent": "list",
+              "entityKey": "task"
+            },
+            {
+              "key": "task-form",
+              "label": "New task",
+              "intent": "form",
+              "entityKey": "task"
+            },
+            {
+              "key": "task-detail",
+              "label": "Task details",
+              "intent": "detail",
+              "entityKey": "task"
+            },
+            {
+              "key": "task-queue",
+              "label": "Task workflow",
+              "intent": "queue",
+              "entityKey": "task"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "task-lifecycle",
+              "label": "Task lifecycle",
+              "entityKey": "task",
+              "states": [
+                {
+                  "key": "not-started",
+                  "label": "Not started"
+                },
+                {
+                  "key": "in-progress",
+                  "label": "In progress"
+                },
+                {
+                  "key": "completed",
+                  "label": "Completed"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "start",
+                  "from": "not-started",
+                  "to": "in-progress",
+                  "label": "Start",
+                  "actorKey": "member"
+                },
+                {
+                  "key": "complete",
+                  "from": "in-progress",
+                  "to": "completed",
+                  "label": "Complete",
+                  "actorKey": "member"
+                },
+                {
+                  "key": "reopen",
+                  "from": "completed",
+                  "to": "in-progress",
+                  "label": "Reopen",
+                  "actorKey": "member"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "create-start-complete",
+              "description": "A member corrects all five fields in Not started and In progress, then finishes the same task. Completed must be reopened before correction.",
+              "steps": [
+                {
+                  "actorKey": "member",
+                  "action": "creates a task"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "corrects all five fields on the same task in Not started"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "starts the task"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "corrects all five fields on the same task in In progress"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "completes the task"
+                }
+              ]
+            },
+            {
+              "key": "reopen-complete",
+              "description": "A member resumes completed work.",
+              "steps": [
+                {
+                  "actorKey": "member",
+                  "action": "reopens the completed task"
+                },
+                {
+                  "actorKey": "member",
+                  "action": "completes the task again"
+                }
+              ]
+            },
+            {
+              "key": "viewer-reads",
+              "description": "A viewer reads the shared board.",
+              "steps": [
+                {
+                  "actorKey": "viewer",
+                  "action": "reads all tasks and cannot create, correct, start, complete or reopen"
+                }
+              ]
+            }
+          ],
+          "identity": "Local shared board with selectable demo roles. Assignee is display text only; both roles read every task. No real accounts or tenant isolation."
+        },
+        "providerInstruction": "Every Team Task or shared task tracking brief returns definition-selection with definitionKey team-task-tracking, generatedInterpretation null and businessParameters null. Never generate its fields, roles, pages or workflow in the selection. A coarse shared team task request accepts the exact canonical default with zero materialQuestions. Team member creates, reads, corrects, starts, completes and reopens; Member may correct title, description, assignee, due date and priority in Not started and In progress. Completed must be reopened before correction. Viewer reads every task. Fields are required title, required display-only assignee, required dueDate, required priority (low, medium, high) and optional description. States are not-started, in-progress, completed; start moves not-started to in-progress, complete moves in-progress to completed, reopen moves completed to in-progress. Any explicit incompatible or ambiguous requirement returns needs-clarification with every independent material question. Assignment is text, never a principal reference: assignee-only or owner-only actions, personal/private tasks, accounts, invitations, team membership, SSO and tenant boundaries require authorization or visibility clarification. Both demo roles see all records; omitted identity is not an identity claim. Edits in other states or after completion without reopening, partial/custom fields, custom or optional fields or states, delete or archive, subtasks, dependencies, recurring tasks, comments, attachments, reminders, notifications, calendars, integrations, estimates, time tracking, bulk actions and automation require business-rule, data or integration clarification. Do not silently discard those requirements. No audit or notification delivery claim is made. Follow-ups retain every still-required unsupported capability. Only explicit acceptance of the exact supported scope resolves a material question. Display title, requirementId and outcome customize safe identity text only. Use only authorization, visibility, role, business-rule, data or integration question categories; no technical handoff or credential question. <supported-team-task-default>{\"definitionKey\":\"team-task-tracking\",\"apiVersion\":\"factory.product-blueprint/v1\",\"requirementChecksum\":\"sha256:85ae1a74bb5457782cb4d7e2fa49ac93c930b69887d85b2abae833892504912a\",\"title\":\"Team Task Tracking\",\"actors\":[{\"key\":\"member\",\"label\":\"Team member\",\"permissions\":[{\"entityKey\":\"task\",\"actions\":[\"create\",\"read\",\"update\",\"start\",\"complete\",\"reopen\"]}]},{\"key\":\"viewer\",\"label\":\"Viewer\",\"permissions\":[{\"entityKey\":\"task\",\"actions\":[\"read\"]}]}],\"entities\":[{\"key\":\"task\",\"label\":\"Task\",\"description\":\"A shared team task.\",\"fields\":[{\"key\":\"title\",\"label\":\"Title\",\"type\":\"text\",\"required\":true},{\"key\":\"description\",\"label\":\"Description\",\"type\":\"long-text\",\"required\":false},{\"key\":\"assignee\",\"label\":\"Assignee\",\"type\":\"text\",\"required\":true},{\"key\":\"dueDate\",\"label\":\"Due date\",\"type\":\"date\",\"required\":true},{\"key\":\"priority\",\"label\":\"Priority\",\"type\":\"enum\",\"required\":true,\"options\":[\"low\",\"medium\",\"high\"]}]}],\"pageIntents\":[{\"key\":\"task-overview\",\"label\":\"Task overview\",\"intent\":\"dashboard\",\"entityKey\":\"task\"},{\"key\":\"task-list\",\"label\":\"All tasks\",\"intent\":\"list\",\"entityKey\":\"task\"},{\"key\":\"task-form\",\"label\":\"New task\",\"intent\":\"form\",\"entityKey\":\"task\"},{\"key\":\"task-detail\",\"label\":\"Task details\",\"intent\":\"detail\",\"entityKey\":\"task\"},{\"key\":\"task-queue\",\"label\":\"Task workflow\",\"intent\":\"queue\",\"entityKey\":\"task\"}],\"workflows\":[{\"key\":\"task-lifecycle\",\"label\":\"Task lifecycle\",\"entityKey\":\"task\",\"states\":[{\"key\":\"not-started\",\"label\":\"Not started\"},{\"key\":\"in-progress\",\"label\":\"In progress\"},{\"key\":\"completed\",\"label\":\"Completed\"}],\"transitions\":[{\"key\":\"start\",\"from\":\"not-started\",\"to\":\"in-progress\",\"label\":\"Start\",\"actorKey\":\"member\"},{\"key\":\"complete\",\"from\":\"in-progress\",\"to\":\"completed\",\"label\":\"Complete\",\"actorKey\":\"member\"},{\"key\":\"reopen\",\"from\":\"completed\",\"to\":\"in-progress\",\"label\":\"Reopen\",\"actorKey\":\"member\"}]}],\"acceptanceJourneys\":[{\"key\":\"create-start-complete\",\"description\":\"A member corrects all five fields in Not started and In progress, then finishes the same task. Completed must be reopened before correction.\",\"steps\":[{\"actorKey\":\"member\",\"action\":\"creates a task\"},{\"actorKey\":\"member\",\"action\":\"corrects all five fields on the same task in Not started\"},{\"actorKey\":\"member\",\"action\":\"starts the task\"},{\"actorKey\":\"member\",\"action\":\"corrects all five fields on the same task in In progress\"},{\"actorKey\":\"member\",\"action\":\"completes the task\"}]},{\"key\":\"reopen-complete\",\"description\":\"A member resumes completed work.\",\"steps\":[{\"actorKey\":\"member\",\"action\":\"reopens the completed task\"},{\"actorKey\":\"member\",\"action\":\"completes the task again\"}]},{\"key\":\"viewer-reads\",\"description\":\"A viewer reads the shared board.\",\"steps\":[{\"actorKey\":\"viewer\",\"action\":\"reads all tasks and cannot create, correct, start, complete or reopen\"}]}],\"identity\":\"Local shared board with selectable demo roles. Assignee is display text only; both roles read every task. No real accounts or tenant isolation.\"}</supported-team-task-default>"
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-record-recovery",
+            "steps": [
+              {
+                "actorKey": "member",
+                "entityKey": "task",
+                "operation": "reopen",
+                "fromState": "completed",
+                "toState": "in-progress",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "member",
+                "entityKey": "task",
+                "operation": "update",
+                "fromState": "in-progress",
+                "toState": "in-progress",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "member",
+                "entityKey": "task",
+                "operation": "complete",
+                "fromState": "in-progress",
+                "toState": "completed",
+                "expectation": "success"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "unauthorized-mutation",
+            "steps": [
+              {
+                "actorKey": "viewer",
+                "entityKey": "task",
+                "operation": "update",
+                "fromState": "in-progress",
+                "toState": "in-progress",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "task-v1",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "task-correction/v2"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-13",
+        "decision": "ADR-0065"
+      }
+    }
+  ]
+}

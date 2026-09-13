@@ -3,10 +3,8 @@ import {
   assertRequirementInterpretation,
   type RequirementInterpretationV1,
 } from "./requirement-interpreter.js";
-import { expenseApprovalDefinition } from "./approval-definition-selection.js";
-import { purchaseRequestApprovalDefinition } from "./purchase-request-definition-selection.js";
-import { restaurantDefinition } from "./restaurant-definition-selection.js";
-import { teamTaskDefinition } from "./task-definition-selection.js";
+import { loadProductDefinitionData } from "./product-definition-data.js";
+import { createDefinitionEntry } from "./definition-family-registry.js";
 
 type DefinitionEntry = {
   readonly definitionKey: string;
@@ -82,12 +80,16 @@ export function validateDefinitionCatalogue(
       throw new Error("Definition projector is inconsistent.");
   }
 }
-export const definitionSelectionCatalogue = Object.freeze([
-  Object.freeze(restaurantDefinition),
-  Object.freeze(expenseApprovalDefinition),
-  Object.freeze(purchaseRequestApprovalDefinition),
-  Object.freeze(teamTaskDefinition),
-] as const);
+export const definitionSelectionCatalogue = Object.freeze(
+  loadProductDefinitionData().definitions.map(createDefinitionEntry),
+);
+export function registeredDefinition(key: string) {
+  const entry = definitionSelectionCatalogue.find(
+    (item) => item.definitionKey === key,
+  );
+  if (!entry) throw new Error("Definition is not registered.");
+  return entry;
+}
 validateDefinitionCatalogue(definitionSelectionCatalogue);
 const schemas = definitionSelectionCatalogue.map(
   (entry) => entry.selectionSchema,

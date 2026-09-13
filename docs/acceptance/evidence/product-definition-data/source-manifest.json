@@ -1,0 +1,96 @@
+{
+  "base": "f8cdfe812c6c5ab2710a641862aa8f026134ab15",
+  "adrSha256": "40aeafc6a532d85fae26aa3420c0f910e5870a8ffe286c4e6e97988bcdc4f333",
+  "files": [
+    {
+      "path": "packages/adapters/package.json",
+      "bytes": 1161,
+      "sha256": "e2202b69d3e3e8f1fda70ee1ecb0bebfea4dbf99398749f659cda0688bdf5e03"
+    },
+    {
+      "path": "packages/adapters/scripts/copy-product-definition-data.mjs",
+      "bytes": 459,
+      "sha256": "4f5b0cb0c04aa7e0e4be5ee351712964a0c725396f9db1fa90c820284a99a180"
+    },
+    {
+      "path": "packages/adapters/src/requirements/approval-definition-selection.ts",
+      "bytes": 661,
+      "sha256": "a7415652c7746dc1d3ba6f43bb3698b59a9e72e5bd43a2f6e98383803d8e92f5"
+    },
+    {
+      "path": "packages/adapters/src/requirements/approval-definition-template.ts",
+      "bytes": 202,
+      "sha256": "a8a8bafd7d23473b0ac457f5eb8c6379d5b5c2e853913da3993c731c111f9f30"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definition-batch-cli.ts",
+      "bytes": 1345,
+      "sha256": "ada53c5ce651f83c2f175ff6187e66d7fde1207094925f196ea50ca39371215d"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definition-family-registry.ts",
+      "bytes": 41188,
+      "sha256": "eb709763773e9d91ca44fd88ad2f1749b8e6bc1a35ff8fd55354826439277f1e"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definition-selection-catalogue.ts",
+      "bytes": 4275,
+      "sha256": "5e101b1e05c7a34d1adee82e5ccaf497a55c0b007dc04fa967384183dc42f890"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+      "bytes": 97762,
+      "sha256": "7a7ae966c7240fdab6a5597f373c08bf0edebf62ab8c57c89bc6eb4edecca81d"
+    },
+    {
+      "path": "packages/adapters/src/requirements/product-definition-data.ts",
+      "bytes": 15384,
+      "sha256": "56ec38929ef41e84e5bafdf1733c2d2fa99003809018e6b84aad3cfe6bc7e4f9"
+    },
+    {
+      "path": "packages/adapters/src/requirements/purchase-request-definition-selection.ts",
+      "bytes": 741,
+      "sha256": "a4e96dd6dfd41e68a731a3fc317256e7ac6a144205c5953e3773eeff76c79458"
+    },
+    {
+      "path": "packages/adapters/src/requirements/restaurant-definition-selection.ts",
+      "bytes": 562,
+      "sha256": "91a0802af2d20a006e5d228c4ba6acb6b0603a56c11c3633f15d1e2962318eb6"
+    },
+    {
+      "path": "packages/adapters/src/requirements/task-definition-selection.ts",
+      "bytes": 328,
+      "sha256": "81dfc50978e52c58aa07259dfb251635a07aa7ef96e6cadec27ec39d01d6901f"
+    },
+    {
+      "path": "packages/adapters/test/product-definition-data.test.ts",
+      "bytes": 12540,
+      "sha256": "07ff5f9fe3dbcfc9f53b3643a98c539a8a02dd3e1fc615ef9805de5616a497bb"
+    },
+    {
+      "path": "packages/compiler/test/definition-data-authoring.test.ts",
+      "bytes": 4072,
+      "sha256": "5bc48a26fa5958acba5c0000dffc3f98011102ed439cf8618e2a602af3fcaf44"
+    },
+    {
+      "path": "packages/compiler/test/definition-data-compatibility.test.ts",
+      "bytes": 734,
+      "sha256": "0463d75f7f515c22ce4c480a690657fa1cd4af7cc51f94e5b218ae45ee5e598a"
+    },
+    {
+      "path": "packages/compiler/test/fixtures/definition-data-baseline.json",
+      "bytes": 3286,
+      "sha256": "585efce4cf6383abdf323ba8d9de1d2f9b928f254a9cdb907e83698d2c3b28ea"
+    },
+    {
+      "path": "packages/compiler/test/fixtures/definition-data-compatibility.ts",
+      "bytes": 3228,
+      "sha256": "d3150d1d7de284b5e1c154e9b0c8eb897d551a53faf239df7573ad85eaa0f297"
+    },
+    {
+      "path": "scripts/verify-product-definition-data.mjs",
+      "bytes": 7163,
+      "sha256": "1f8833c6ea3801441751b3a8f42996947f00652fbe5689cce6e98357285bf2b0"
+    }
+  ]
+}

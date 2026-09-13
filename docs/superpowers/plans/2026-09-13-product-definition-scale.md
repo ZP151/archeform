@@ -21,10 +21,15 @@ real authentication, public hosting or arbitrary application maturity.
 Team Task Tracking under ADR-0057/0063 is now accepted: actual attempt 2 passed
 its local PostgreSQL/API/browser journey and presentation, ready in 177,738 ms.
 It adds one definition and one demonstrated family, taking totals to four/three.
-Its lack of post-creation editing means it remains a bounded functional
-prototype, not a product-complete task management system. This distinction
-follows the current consumer acceptance checklist. Task correction is the next
-delivery, followed by data-based definition authoring and batch validation.
+Task correction under ADR-0064 is also delivered at `f8cdfe81`: same-record
+editing, stale-write recovery, completed-state denial, Reopen and retry after
+restart passed the actual generated runtime journey. The local app was ready
+in 196,950 ms. This remains a bounded prototype with demo roles; real identity,
+private assignment, notifications and hosted operations are still unproven.
+Data-based definition authoring and batch validation under ADR-0065 are now
+accepted. Four immutable round trips, the data-only field compiler probe,
+174 independent QA tests and 16 built CLI cases pass. The next delivery is
+semantically distinct candidate expansion through the representative batch below.
 
 ## Ordered delivery slices
 
@@ -48,16 +53,14 @@ capability locks, presentation bindings, provenance and concrete test cases.
 Prioritize useful semantic breadth over a numeric deadline. A product definition
 is distinct only when these business semantics differ meaningfully.
 
-The current bank uses private static TypeScript registrations and exact family
-selectors. This is useful for proving a few contracts but is not a thousand-entry
-authoring system. Before the 30-entry batch, propose a data-based definition
-format and validator that composes already admitted family features without
-loading executable template code from a prompt. Distinct field sets, permissions
-or rules must first be supported by a reviewed family contract; they cannot be
-forced through exact Expense or Task selectors by renaming labels. Measure how
-many definitions can be added through data and bindings without handwritten
-runtime or UI code. This is a future accepted-contract implementation, not a
-capability claimed by the present static bank.
+The bank now uses a strict reviewed JSON catalogue and fixed family code under
+accepted ADR-0065. The validator and a data-only field compiler probe establish
+the authoring foundation; they do not establish a thousand-entry catalogue.
+Distinct fields, permissions or rules must still be supported by the reviewed
+family contract, and renaming labels does not add semantic coverage. Measure how
+many candidate products can be admitted through data and bindings without
+handwritten runtime or UI code. Use the authoring guide and report real family
+gaps before the 30-entry milestone.
 
 **100 reviewed definitions:** expand only after measured selection and assembly
 quality hold across the 30-definition set. Propose bounded retrieval of a small
@@ -112,15 +115,14 @@ The PM ledger records one next delivery slice and the highest-value unresolved
 product gap. A growing catalog does not outrank a broken core journey or a
 regression in the approved visual baseline.
 
-## Executable handoff after Task correction
+## Foundation sequence after Task correction
 
-The first scale delivery is a definition authoring and validation pipeline, not
-another hand-coded product screen. Its proposed scope starts at
-`packages/adapters/src/requirements/definition-selection-catalogue.ts`, whose
-current private entries combine executable projectors, schemas, instructions and
-canonical structures. The next Tech Lead decision must separate reviewed data
-from fixed family code without allowing a description or catalog file to load
-arbitrary modules, packages, routes or executable templates.
+The first scale delivery is the accepted definition authoring and validation
+pipeline. Steps 1 through 4 below are complete under ADR-0065; step 5 is the
+next admission task. Reviewed data now supplies the catalogue while fixed code
+owns execution. A description or catalogue file cannot load arbitrary modules,
+packages, routes or executable templates. The sequence remains the regression
+and admission reference for future expansions.
 
 1. Capture the four delivered definition projections and representative immutable
    bundles. Use these as round-trip fixtures for data-based authoring; do not
@@ -148,3 +150,38 @@ validation time; representative assembly failures; and fixture versus real-model
 selection evidence. The 30-entry milestone begins after this pipeline passes.
 Calendar, inventory invariants, real identity and hosted delivery remain separate
 business contracts rather than being inferred from catalog labels.
+
+## Next representative batch after the data foundation
+
+The first batch is an authoring experiment with explicit outcomes, not a promise
+that current exact family contracts can admit 30 products. Use six candidate
+briefs to distinguish data-only reuse, duplicate semantics and capability gaps:
+
+| Candidate brief           | Distinct business demand to test                                           | Evidence before admission                                                                                              |
+| ------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Training funding approval | Course, session date, fee and justification reviewed by one decision maker | Data-only fields, required input, return/revise/resubmit, persistence and approved responsive presentation             |
+| Publication review        | Review and correct a proposed title/body, then record a decision           | Demonstrate the review closure; external publication is an explicit unsupported integration, never implied by approval |
+| Equipment requisition     | Quantity, cost and item details                                            | Compare to existing Purchase Request semantics; a duplicate is reported and not admitted                               |
+| Travel authorization      | Trip interval and budget                                                   | Date ordering and any budget rules must be supported and tested; typed dates alone do not prove these invariants       |
+| Leave request             | Date interval, overlap and allowance                                       | Identify missing interval/entitlement rules; do not admit a generic approval form as a complete leave system           |
+| Access request            | Resource, requested authority and provisioning result                      | Identify real identity/provisioning boundaries; demo roles and an approval record do not prove access delivery         |
+
+For each candidate record attempted, strict-valid, semantically distinct,
+family-supported, runtime-admitted and actual-journey-passed separately. A
+supported field-variation compiler probe is evidence of composition, not a
+new admitted product or end-to-end acceptance. Zero handwritten runtime/UI
+changes is the target; any required source change is a measured platform gap.
+
+Use the first successful data-only candidate to publish a concise authoring
+recipe and reusable business regression case. Run one complete local generated
+journey for each new rule/presentation combination, batching visual inspection
+at 390/768/1440. Reuse identical contract evidence; no new gate per field or
+definition. Every materially unsupported requirement remains visible to the
+ordinary-user clarification flow.
+
+Expand to 30 only after this batch demonstrates meaningful additions without
+per-product execution code. If exact family support blocks the batch, prioritize
+the narrowest reusable capability extension or the next appointment family,
+using actual failed demands to choose. At 30, measure rough-description
+selection and material-requirement retention before the 100-definition
+retrieval milestone. A larger material inventory remains a separate measure.
