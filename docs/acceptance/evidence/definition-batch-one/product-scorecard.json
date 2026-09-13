@@ -1,0 +1,101 @@
+{
+  "status": "accepted-local",
+  "base": "327eb9086ff79f521e87e4db072120763b95b3e5",
+  "reviewedCandidateBriefs": 6,
+  "newAuthoredCandidates": 1,
+  "newActualJourneysPassed": 1,
+  "newDefinitionKeys": ["publication-review"],
+  "registeredDefinitions": 5,
+  "acceptedLocalDefinitions": 5,
+  "independentReviewOpenInScopeFindings": { "P0": 0, "P1": 0, "P2": 0 },
+  "shippedStrictValidDefinitions": 5,
+  "shippedSemanticallyDistinctDefinitions": 5,
+  "demonstratedRuntimeFamilies": 3,
+  "originalDefinitionEntriesUnchanged": 4,
+  "originalOrderedBundlesByteIdentical": true,
+  "perProductExecutionOrUiBranchesAdded": 0,
+  "sharedPresentationExtensions": 1,
+  "entireExpansionNeededNoSourceChanges": false,
+  "newDependencies": 0,
+  "newVisualAssets": 0,
+  "actualAcceptance": {
+    "attempts": 5,
+    "successfulAttempt": 5,
+    "testResult": "1 passed (4.3m)",
+    "elapsedToReadyMs": 191368,
+    "timingSamples": 1,
+    "timingEnvironment": "Prepared local Factory; authored provider fixture; generated PostgreSQL/API/browser",
+    "compilationId": "cmtzswgoo006yo255vft4jnfo",
+    "previewRunId": "preview-7534db51-8288-4e9a-9437-534051fbcc4b",
+    "authoredApprovedRecords": 2,
+    "firstRecordVersion": 7,
+    "firstRecordDecisions": 2,
+    "firstRecordAuditEvents": 8,
+    "immutableCompilationPreserved": true,
+    "responsiveWidths": [390, 768, 1440],
+    "finalScreenshots": 37,
+    "imageFailureRecovery": true,
+    "realModelCalls": 0,
+    "ordinaryUserSessions": 0,
+    "externalPublication": false,
+    "cloudDeployment": false,
+    "cleanedExactProjects": 10
+  },
+  "priorFailures": [
+    {
+      "attempt": 1,
+      "cause": "Inherited mandatory record-photo assertion; diagnostic also exposed the generic blank-card identity gap"
+    },
+    {
+      "attempt": 2,
+      "cause": "Reused authored requirement ID correctly rejected with HTTP 409"
+    },
+    {
+      "attempt": 3,
+      "cause": "Existing long-ID generated database constraint truncation; short unique fixture repairs setup only"
+    },
+    {
+      "attempt": 4,
+      "cause": "Initial-list viewport check ran with decision history expanded; real correction closure already passed"
+    }
+  ],
+  "unwrittenCandidates": [
+    {
+      "key": "training-funding",
+      "strictValid": null,
+      "runtimeAdmitted": false,
+      "gap": "Numeric domains"
+    },
+    {
+      "key": "equipment-requisition",
+      "strictValid": null,
+      "runtimeAdmitted": false,
+      "gap": "Positive integer quantity, numeric domains and calculated total"
+    },
+    {
+      "key": "travel-authorization",
+      "strictValid": null,
+      "runtimeAdmitted": false,
+      "gap": "Date ordering and budget rules"
+    },
+    {
+      "key": "leave-request",
+      "strictValid": null,
+      "runtimeAdmitted": false,
+      "gap": "Intervals, overlap and allowance"
+    },
+    {
+      "key": "access-request",
+      "strictValid": null,
+      "runtimeAdmitted": false,
+      "gap": "Real identity, authority and provisioning"
+    }
+  ],
+  "next": [
+    "Resolve bounded database identifier naming before broad batch scale",
+    "Add shared numeric-domain rules and admit Training Funding through the reusable actual regression",
+    "Admit Equipment only after calculated totals are supported",
+    "Measure real-model requirement retention and ordinary-user effort separately from catalogue growth"
+  ],
+  "limits": "Five data admissions are not five mature hosted products. No classification accuracy or ordinary-user timing claim. Candidate briefs are not unwritten JSON validator runs. Arbitrary long application IDs remain unsupported by the demonstrated path."
+}

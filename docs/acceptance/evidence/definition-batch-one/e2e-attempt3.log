@@ -1,0 +1,34 @@
+
+Running 1 test using 1 worker
+
+(node:61668) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61668) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_APPROVAL_DEFINITION_BATCH_FAILURE {"compilationId":"cmtzsj07g002so255rh7nvji4","definitionKey":"publication-review","lifecycle":["publish","compile","verify"],"pageErrors":[],"requestDiagnostics":[{"code":null,"path":"/api/requirements/interpret","status":200},{"code":null,"path":"/product/requirements","status":201}]}
+  x  1 e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey (23.9s)
+
+
+  1) e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey
+
+    Error: definition delivery terminal outcome
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"ready"[39m
+    Received: [31m"failed"[39m
+
+       at helpers\approval-definition-batch.ts:540
+
+      538 |       )
+      539 |       .not.toBe("pending");
+    > 540 |     expect(outcome, "definition delivery terminal outcome").toBe("ready");
+          |                                                             ^
+      541 |     const elapsedToReadyMs = Date.now() - startedAt;
+      542 |     expect(elapsedToReadyMs, "prepared local ready target").toBeLessThanOrEqual(
+      543 |       300_000,
+        at runApprovalDefinitionBatch (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\helpers\approval-definition-batch.ts:540:61)
+        at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\approval-definition-batch.spec.ts:15:3
+
+  1 failed
+    e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey

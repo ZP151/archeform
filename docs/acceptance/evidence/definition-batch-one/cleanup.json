@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-09-13T12:48:12.477Z",
+  "method": "Exact task Compose labels, including stopped containers and verifier projects; no unrelated resources changed",
+  "resources": [
+    {
+      "project": "factory-t9-definition-batch-20260913",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-t9-definition-batch-diagnostic",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-85f18eb9-fda6-4d35-b484-7bc62d94209a",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-80d225ce-2d22-45b1-8eb7-3864fbad11a0",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-415dfb94-4c2d-4bfc-bf59-de31ad237d21",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-7534db51-8288-4e9a-9437-534051fbcc4b",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-verify-4481665d-ad55-41e1-b417-ac59c26491c5",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-verify-0e02b8a6-2e93-4abe-9aff-c296d0f3b71d",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-verify-b4fda98b-337f-417f-b412-c23527d62a32",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-verify-ac13e840-036d-4ba4-9de2-c623db2f2e1e",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    }
+  ]
+}

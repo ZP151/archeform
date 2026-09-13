@@ -2278,6 +2278,588 @@
         "reviewedOn": "2026-09-13",
         "decision": "ADR-0065"
       }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "publication-review",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "approval",
+        "version": "approval-correction/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "author",
+        "operation": "submit",
+        "entityKey": "submission",
+        "successState": "submitted"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "publication-review-requirement",
+          "outcome": "Authors submit content and editors decide it; auditors read every decision.",
+          "actors": [
+            {
+              "key": "author",
+              "label": "Author",
+              "description": "Drafts and submits content for editorial review."
+            },
+            {
+              "key": "editor",
+              "label": "Editor",
+              "description": "Approves or returns submitted content with a reason."
+            },
+            {
+              "key": "auditor",
+              "label": "Auditor",
+              "description": "Audits every editorial decision."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "submission",
+              "label": "Submission",
+              "description": "Content prepared for editorial review."
+            },
+            {
+              "key": "approval",
+              "label": "Editorial decision",
+              "description": "An editor decision on submitted content."
+            },
+            {
+              "key": "audit-trail",
+              "label": "Audit trail",
+              "description": "The record of every editorial decision."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "submission-approval",
+              "label": "Publication review",
+              "description": "Create and edit a draft, submit, return with a required reason, revise the same record, resubmit and approve."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "author-submits",
+              "given": "an author with content",
+              "when": "the author submits it",
+              "then": "the submission is sent for editorial review"
+            },
+            {
+              "key": "editor-approves",
+              "given": "a submitted publication",
+              "when": "the editor approves it",
+              "then": "the submission is approved"
+            },
+            {
+              "key": "editor-returns",
+              "given": "a submitted publication",
+              "when": "the editor returns it with a reason",
+              "then": "the submission is returned for same-record revision and resubmission"
+            },
+            {
+              "key": "auditor-reads-decisions",
+              "given": "decided submissions",
+              "when": "the auditor reads them",
+              "then": "every decision is recorded in the audit trail"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:0823d9f105c4df23c72fd9cff6cc16e36025725ff0587eb7dd138e039a8e7de4",
+          "title": "Publication Review",
+          "actors": [
+            {
+              "key": "author",
+              "label": "Author",
+              "permissions": [
+                {
+                  "entityKey": "submission",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                { "entityKey": "author", "actions": ["read", "update"] }
+              ]
+            },
+            {
+              "key": "editor",
+              "label": "Editor",
+              "permissions": [
+                {
+                  "entityKey": "submission",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "auditor",
+              "label": "Auditor",
+              "permissions": [
+                { "entityKey": "submission", "actions": ["read", "audit"] }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "submission",
+              "label": "Submission",
+              "description": "Content prepared for editorial review.",
+              "fields": [
+                {
+                  "key": "articleTitle",
+                  "label": "Article title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "contentBody",
+                  "label": "Content body",
+                  "type": "long-text",
+                  "required": true
+                },
+                {
+                  "key": "channel",
+                  "label": "Channel",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["blog", "newsletter", "social", "documentation"]
+                },
+                {
+                  "key": "editorialNotes",
+                  "label": "Editorial notes",
+                  "type": "long-text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "author",
+              "label": "Author",
+              "description": "The author who submits content.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "submission-dashboard",
+              "label": "Publication review dashboard",
+              "intent": "dashboard",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-list",
+              "label": "All submissions",
+              "intent": "list",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-form",
+              "label": "New submission",
+              "intent": "form",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-detail",
+              "label": "Submission details",
+              "intent": "detail",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-queue",
+              "label": "Editorial review queue",
+              "intent": "queue",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-settings",
+              "label": "Publication review settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "submission-approval",
+              "label": "Publication review",
+              "entityKey": "submission",
+              "states": [
+                { "key": "draft", "label": "Draft" },
+                { "key": "submitted", "label": "Submitted" },
+                { "key": "approved", "label": "Approved" },
+                { "key": "returned", "label": "Returned" }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "author"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "editor"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "editor"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "author"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "author-submits-content",
+              "description": "An author submits content for editorial review.",
+              "steps": [{ "actorKey": "author", "action": "submits content" }]
+            },
+            {
+              "key": "editor-decides-submission",
+              "description": "An editor approves or returns a submitted publication.",
+              "steps": [
+                { "actorKey": "author", "action": "submits content" },
+                { "actorKey": "editor", "action": "approves or returns it" },
+                {
+                  "actorKey": "author",
+                  "action": "edits the returned record, saves it as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "auditor-reads-decisions",
+              "description": "An auditor reads every editorial decision.",
+              "steps": [
+                { "actorKey": "author", "action": "submits content" },
+                { "actorKey": "editor", "action": "decides it" },
+                { "actorKey": "auditor", "action": "audits the decision" }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "definitionKey": "publication-review",
+          "template": {
+            "key": "approval-definition-template",
+            "version": "2.0.0"
+          },
+          "actors": [
+            {
+              "key": "author",
+              "label": "Author",
+              "permissions": [
+                {
+                  "entityKey": "submission",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                { "entityKey": "author", "actions": ["read", "update"] }
+              ]
+            },
+            {
+              "key": "editor",
+              "label": "Editor",
+              "permissions": [
+                {
+                  "entityKey": "submission",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "auditor",
+              "label": "Auditor",
+              "permissions": [
+                { "entityKey": "submission", "actions": ["read", "audit"] }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "submission",
+              "label": "Submission",
+              "description": "Content prepared for editorial review.",
+              "fields": [
+                {
+                  "key": "articleTitle",
+                  "label": "Article title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "contentBody",
+                  "label": "Content body",
+                  "type": "long-text",
+                  "required": true
+                },
+                {
+                  "key": "channel",
+                  "label": "Channel",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["blog", "newsletter", "social", "documentation"]
+                },
+                {
+                  "key": "editorialNotes",
+                  "label": "Editorial notes",
+                  "type": "long-text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "author",
+              "label": "Author",
+              "description": "The author who submits content.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "submission-dashboard",
+              "label": "Publication review dashboard",
+              "intent": "dashboard",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-list",
+              "label": "All submissions",
+              "intent": "list",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-form",
+              "label": "New submission",
+              "intent": "form",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-detail",
+              "label": "Submission details",
+              "intent": "detail",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-queue",
+              "label": "Editorial review queue",
+              "intent": "queue",
+              "entityKey": "submission"
+            },
+            {
+              "key": "submission-settings",
+              "label": "Publication review settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "submission-approval",
+              "label": "Publication review",
+              "entityKey": "submission",
+              "states": [
+                { "key": "draft", "label": "Draft" },
+                { "key": "submitted", "label": "Submitted" },
+                { "key": "approved", "label": "Approved" },
+                { "key": "returned", "label": "Returned" }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "author"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "editor"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "editor"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "author"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "author-submits-content",
+              "description": "An author submits content for editorial review.",
+              "steps": [{ "actorKey": "author", "action": "submits content" }]
+            },
+            {
+              "key": "editor-decides-submission",
+              "description": "An editor approves or returns a submitted publication.",
+              "steps": [
+                { "actorKey": "author", "action": "submits content" },
+                { "actorKey": "editor", "action": "approves or returns it" },
+                {
+                  "actorKey": "author",
+                  "action": "edits the returned record, saves it as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "auditor-reads-decisions",
+              "description": "An auditor reads every editorial decision.",
+              "steps": [
+                { "actorKey": "author", "action": "submits content" },
+                { "actorKey": "editor", "action": "decides it" },
+                { "actorKey": "auditor", "action": "audits the decision" }
+              ]
+            }
+          ],
+          "identity": "Local demo with explicitly selectable author, editor and auditor roles; role-wide reads, no author-owned record privacy or tenant isolation.",
+          "integrations": "No external publishing, scheduled publication, rich-text, media or file storage, identity or notification integration."
+        },
+        "providerInstruction": "Every Publication Review brief returns definition-selection with definitionKey publication-review, generatedInterpretation null and businessParameters null. The reviewed correction local demo lets an author create and edit drafts, submit, revise returned records and resubmit the same record; one editor approves or returns with a required reason, and an auditor reads and audits decisions. An approval records an editorial decision only: it does not externally publish or schedule publication. Omitted routine pages and presentation accept supported-default with zero questions. Explicit or ambiguous author-only or private records, real identity, SSO, tenant isolation, editing submitted or approved records, reopening approved records, configurable reason policy, changed fields, requiredness or channel options, rich-text, media or file storage, external publishing, scheduled publication, multiple review stages or external notification delivery require needs-clarification. Preserve every independent material question using authorization, visibility, role, business-rule, data or integration. Follow-ups retain every still-required exclusion until the user explicitly accepts supported scope; never infer acceptance or hide requirements in identity text. The exact roles are selectable local demo roles with role-wide reads."
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-record-recovery",
+            "steps": [
+              {
+                "actorKey": "editor",
+                "entityKey": "submission",
+                "operation": "reject",
+                "fromState": "submitted",
+                "toState": "returned",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "author",
+                "entityKey": "submission",
+                "operation": "update",
+                "fromState": "returned",
+                "toState": "draft",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "author",
+                "entityKey": "submission",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "submitted",
+                "expectation": "success"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "unauthorized-mutation",
+            "steps": [
+              {
+                "actorKey": "auditor",
+                "entityKey": "submission",
+                "operation": "approve",
+                "fromState": "submitted",
+                "toState": "approved",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": { "key": "approval-v1", "version": "1.0.0" },
+        "compilerProfile": "approval-correction/v1"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-13",
+        "decision": "ADR-0065"
+      }
     }
   ]
 }

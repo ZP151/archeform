@@ -856,6 +856,91 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     expect(next.interpretation.spec.openQuestions).toHaveLength(2);
     expect(next.interpretation.blueprint.entities[0].fields).toHaveLength(5);
   });
+  it("projects an authored Publication selection and retains its material exclusions", async () => {
+    const selection = approvalDefinitionSelection({
+      definitionKey: "publication-review",
+      requirementId: "publication-review-requirement",
+      title: "Publication Review",
+      outcome:
+        "Authors submit content and editors decide it; auditors read decisions.",
+    });
+    const { transport, requests } = capturingTransport(selection);
+    const result = await new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    }).interpret({ brief: "Build a publication review application." });
+    expect(
+      result.interpretation.blueprint.actors.map(({ key }) => key),
+    ).toEqual(["author", "editor", "auditor"]);
+    expect(
+      result.interpretation.blueprint.entities[0]!.fields.map(
+        ({ key, type, required, options }) => ({
+          key,
+          type,
+          required,
+          options,
+        }),
+      ),
+    ).toEqual([
+      { key: "articleTitle", type: "text", required: true, options: undefined },
+      {
+        key: "contentBody",
+        type: "long-text",
+        required: true,
+        options: undefined,
+      },
+      {
+        key: "channel",
+        type: "enum",
+        required: true,
+        options: ["blog", "newsletter", "social", "documentation"],
+      },
+      {
+        key: "editorialNotes",
+        type: "long-text",
+        required: false,
+        options: undefined,
+      },
+    ]);
+    expect(result.interpretation.clarifications).toEqual([]);
+    expect(
+      matchesSelectionJsonSchema(
+        requests[0].jsonSchema as SelectionJsonSchema,
+        selection,
+      ),
+    ).toBe(true);
+
+    const unresolved = approvalDefinitionSelection({
+      definitionKey: "publication-review",
+      disposition: "needs-clarification",
+      requirementId: "publication-review-requirement",
+      title: "Publication Review",
+      outcome:
+        "Authors submit content and editors decide it; auditors read decisions.",
+      materialQuestions: [
+        {
+          category: "integration",
+          question: "Is external publishing required after approval?",
+        },
+        {
+          category: "data",
+          question: "Are rich-text and media storage required?",
+        },
+      ],
+    });
+    const followup = capturingTransport(unresolved);
+    const clarification = await new OpenAIRequirementInterpreterAdapter({
+      transport: followup.transport,
+      readEnvironment: () => "test-key",
+    }).interpret({
+      brief: "Publish the approved article to a website with media.",
+    });
+    expect(clarification.interpretation.spec.openQuestions).toEqual(
+      unresolved.definitionSelection.materialQuestions,
+    );
+    expect(followup.requests[0]!.instructions).toContain("external publishing");
+    expect(followup.requests[0]!.instructions).toContain("rich-text");
+  });
   it("rejects mixed Task envelopes and provider-authored structural overrides", async () => {
     const valid = approvalDefinitionSelection({
       definitionKey: "team-task-tracking",
@@ -892,7 +977,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       ).toBe(false);
     }
   });
-  it("keeps four coherent registrations and refuses schema, guide and projector drift", () => {
+  it("keeps five coherent registrations and refuses schema, guide and projector drift", () => {
     expect(
       definitionSelectionCatalogue.map((entry) => entry.definitionKey),
     ).toEqual([
@@ -900,6 +985,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       "expense-approval",
       "purchase-request-approval",
       "team-task-tracking",
+      "publication-review",
     ]);
     expect(Object.isFrozen(definitionSelectionCatalogue)).toBe(true);
     expect(() =>
@@ -1983,7 +2069,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         generatedInterpretation: { anyOf: unknown[] };
       };
     };
-    expect(schema.properties.definitionSelection.anyOf).toHaveLength(5);
+    expect(schema.properties.definitionSelection.anyOf).toHaveLength(6);
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({
       requirement: interpretation.spec,

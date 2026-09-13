@@ -1,0 +1,72 @@
+
+Running 1 test using 1 worker
+
+(node:30580) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:30580) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_CORRECTION {"entity":"submission","recordId":"cmtzssix50000mt01v7r8n0rm","finalVersion":7,"finalStatus":"approved","sameRecordCorrection":true,"returnedReasonSurvivesReload":true,"retainedDecisions":2,"auditEvents":8,"createLostResponseReplayed":true,"apiRestartBeforeCreateReplay":true,"returnLostResponseReplayed":true,"concurrentEditRejected":true,"concurrentApiWritesCommitOnce":true,"duplicateActivationIgnored":true,"submittedEditDenied":true,"responsiveWidths":[390,768,1440],"modelCalls":0}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_DEFINITION_BATCH_FAILURE {"compilationId":"cmtzsoa6q004vo255f03737sg","definitionKey":"publication-review","lifecycle":["publish","compile","verify","preview"],"pageErrors":[],"requestDiagnostics":[{"code":null,"path":"/api/requirements/interpret","status":200},{"code":null,"path":"/product/requirements","status":201}]}
+  x  1 e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey (4.3m)
+
+
+  1) e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey
+
+    Error: [31mTimed out 5000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeInViewport[2m()[22m
+
+    Locator: locator('.generated-records > li').nth(1).locator('.approval-summary')
+    Expected: in viewport
+    Received: viewport ratio 0
+    Call log:
+    [2m  - expect.toBeInViewport with timeout 5000ms[22m
+    [2m  - waiting for locator('.generated-records > li').nth(1).locator('.approval-summary')[22m
+    [2m    9 × locator resolved to <dl class="approval-summary">…</dl>[22m
+    [2m      - unexpected value "viewport ratio 0"[22m
+
+
+       at approval-presentation.ts:166
+
+      164 |   if ((await rows.count()) >= 2) {
+      165 |     const second = rows.nth(1);
+    > 166 |     await expect(second.locator(".approval-summary")).toBeInViewport({
+          |                                                       ^
+      167 |       ratio: 1,
+      168 |     });
+      169 |     const title = second.locator(".approval-record-title");
+        at verifyWorkspaceComposition (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\approval-presentation.ts:166:55)
+        at verifyVisibleBusinessIdentity (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\helpers\approval-definition-batch.ts:291:5)
+        at runApprovalDefinitionBatch (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\helpers\approval-definition-batch.ts:595:5)
+        at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\approval-definition-batch.spec.ts:15:3
+
+  1 failed
+    e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey

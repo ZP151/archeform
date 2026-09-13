@@ -93,9 +93,15 @@ export async function navigateApproval(page: Page, name: string) {
     .click();
 }
 
-export async function verifyWorkspaceComposition(page: Page, width: number) {
+export type ApprovalRecordMediaPolicy = "optional" | "required";
+
+export async function verifyWorkspaceComposition(
+  page: Page,
+  width: number,
+  recordMedia: ApprovalRecordMediaPolicy = "required",
+) {
   await verifyApprovalAssets(page);
-  await verifyExpressiveMaterials(page);
+  await verifyExpressiveMaterials(page, recordMedia);
   await verifyBrandColors(page);
   await verifyDecisionColors(page);
   const disclosure = page
@@ -206,7 +212,10 @@ export async function verifyApprovalAssets(page: Page) {
   }
 }
 
-export async function verifyExpressiveMaterials(page: Page) {
+export async function verifyExpressiveMaterials(
+  page: Page,
+  recordMedia: ApprovalRecordMediaPolicy = "required",
+) {
   const hero = page.locator(".approval-family-hero");
   await expect(hero).toHaveCount(1);
   const photos = page.locator("img[data-approval-material]");
@@ -251,9 +260,11 @@ export async function verifyExpressiveMaterials(page: Page) {
   );
   expect(totalBytes).toBeLessThanOrEqual(160 * 1024);
   for (const row of await page.locator(".approval-record").all()) {
-    await expect(
-      row.locator(".approval-material img[data-approval-material]"),
-    ).toHaveCount(1);
+    const recordPhoto = row.locator(
+      ".approval-material img[data-approval-material]",
+    );
+    if (recordMedia === "required") await expect(recordPhoto).toHaveCount(1);
+    else expect(await recordPhoto.count()).toBeLessThanOrEqual(1);
     const status = (
       await row.locator(".approval-summary-status dd").innerText()
     ).trim();
@@ -265,10 +276,14 @@ export async function verifyExpressiveMaterials(page: Page) {
 }
 
 /** Corrupt one decoded image in the real app; preserve real API records/actions. */
-export async function verifyExpressiveRecovery(page: Page, evidence: string) {
+export async function verifyExpressiveRecovery(
+  page: Page,
+  evidence: string,
+  recordMedia: ApprovalRecordMediaPolicy = "required",
+) {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.evaluate(() => scrollTo(0, 0));
-  await verifyExpressiveMaterials(page);
+  await verifyExpressiveMaterials(page, recordMedia);
   const role = await page.getByLabel("Demo role", { exact: true }).inputValue();
   const before = await page.locator(".approval-record").allTextContents();
   const material = page
@@ -299,7 +314,7 @@ export async function verifyExpressiveRecovery(page: Page, evidence: string) {
   await page.reload();
   await page.getByLabel("Demo role", { exact: true }).selectOption(role);
   await expect(page.locator(".approval-record")).toHaveCount(before.length);
-  await verifyExpressiveMaterials(page);
+  await verifyExpressiveMaterials(page, recordMedia);
   for (const width of [390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page
@@ -307,7 +322,7 @@ export async function verifyExpressiveRecovery(page: Page, evidence: string) {
       .evaluate((node) => node.setAttribute("data-theme", "dark"));
     await page.evaluate(() => scrollTo(0, 0));
     await verifyApprovalAssets(page);
-    await verifyExpressiveMaterials(page);
+    await verifyExpressiveMaterials(page, recordMedia);
     expect(
       (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
         .violations,
@@ -766,29 +781,87 @@ async function verifyDecisionColors(page: Page) {
   }).toPass({ timeout: 2000 });
 }
 
+export type ApprovalCorrectionOptions = {
+  readonly entity: string;
+  readonly requester: string;
+  readonly reviewer?: string;
+  readonly auditor: string;
+  readonly list: string;
+  readonly create: string;
+  readonly createAction: string;
+  readonly identity: string;
+  readonly identityField: string;
+  readonly identityKey?: string;
+  readonly fields: Record<string, string>;
+  /** Legacy Approval field retained for the existing expense and purchase cases. */
+  readonly category?: string;
+  /** A data-defined native enum control, when the family has one. */
+  readonly select?: {
+    readonly key: string;
+    readonly label: string;
+    readonly value: string;
+    readonly invalidValue?: string;
+  };
+  /** Required native controls to exercise before the valid create payload. */
+  readonly requiredFieldLabels?: readonly string[];
+  /** Required controls with their API keys for native and server-side denial. */
+  readonly requiredFields?: readonly {
+    readonly key: string;
+    readonly label: string;
+  }[];
+  /** Publication Review permits no record photo; existing Approval cases require one. */
+  readonly recordMedia?: ApprovalRecordMediaPolicy;
+  /** Explicitly exercise auditor denial of create, edit, and state transition. */
+  readonly assertAuditorDenied?: boolean;
+  /** The field that must survive correction, conflicts, and final approval. */
+  readonly correction?: {
+    readonly key: string;
+    readonly label: string;
+    readonly initialInput: string;
+    readonly firstEditInput: string;
+    readonly concurrentApiValue: string | number;
+    readonly expectedConflictValue: string | number;
+    readonly finalInput: string;
+    readonly expectedFinalValue: string | number;
+  };
+  readonly evidence: string;
+  readonly previewProject: string;
+};
+
 /** Real HTTP/database correction journey. Only response delivery is interrupted. */
 export async function verifyApprovalCorrection(
   page: Page,
-  options: {
-    entity: string;
-    requester: string;
-    auditor: string;
-    list: string;
-    create: string;
-    createAction: string;
-    identity: string;
-    identityField: string;
-    fields: Record<string, string>;
-    category: string;
-    evidence: string;
-    previewProject: string;
-  },
+  options: ApprovalCorrectionOptions,
 ) {
   type RecordValue = {
     id: string;
     status: string;
     version: number;
-    amount: number | string;
+    [key: string]: unknown;
+  };
+  const reviewer = options.reviewer ?? "manager";
+  const select =
+    options.select ??
+    (options.category === undefined
+      ? undefined
+      : { key: "category", label: "Category", value: options.category });
+  const correction =
+    options.correction ??
+    ({
+      key: "amount",
+      label: "Amount",
+      initialInput: "89.5",
+      firstEditInput: "90.50",
+      concurrentApiValue: 91.5,
+      expectedConflictValue: 91.5,
+      finalInput: "93.50",
+      expectedFinalValue: 93.5,
+    } as const);
+  const recordValue = (record: RecordValue) => {
+    const value = record[correction.key];
+    return typeof correction.expectedFinalValue === "number"
+      ? Number(value)
+      : value;
   };
   const url = (path: string) => new URL(path, page.url()).toString();
   const headers = (role: string, key = randomUUID()) => ({
@@ -810,7 +883,8 @@ export async function verifyApprovalCorrection(
       await page.setViewportSize({ width, height: 900 });
       await scope.scrollIntoViewIfNeeded();
       await verifyApprovalAssets(page);
-      if (presentation === "records") await verifyExpressiveMaterials(page);
+      if (presentation === "records")
+        await verifyExpressiveMaterials(page, options.recordMedia);
       for (const control of await scope
         .locator(
           "button:visible, input:visible, select:visible, textarea:visible, summary:visible",
@@ -856,11 +930,36 @@ export async function verifyApprovalCorrection(
   await role.selectOption(options.requester);
   await page.getByRole("link", { name: options.create, exact: true }).click();
   await role.selectOption(options.requester);
+  const requiredFields = options.requiredFields ?? [];
+  for (const label of [
+    ...(options.requiredFieldLabels ?? []),
+    ...requiredFields.map((field) => field.label),
+  ]) {
+    const field = page.getByLabel(label, { exact: true });
+    await expect(field).toHaveAttribute("required", "");
+    expect(
+      await field.evaluate((node) =>
+        (node as HTMLInputElement | HTMLTextAreaElement).checkValidity(),
+      ),
+      `${label} uses native required validation`,
+    ).toBe(false);
+  }
+  if (select) {
+    const field = page.getByLabel(select.label, { exact: true });
+    await expect(field).toHaveAttribute("required", "");
+    expect(
+      await field.evaluate((node) =>
+        (node as HTMLSelectElement).checkValidity(),
+      ),
+      `${select.label} uses native required validation`,
+    ).toBe(false);
+  }
   for (const [label, value] of Object.entries(options.fields))
     await page.getByLabel(label, { exact: true }).fill(value);
-  await page
-    .getByLabel("Category", { exact: true })
-    .selectOption(options.category);
+  if (select)
+    await page
+      .getByLabel(select.label, { exact: true })
+      .selectOption(select.value);
 
   const createPath = `/api/${options.entity}`;
   const createKeys: string[] = [];
@@ -957,11 +1056,54 @@ export async function verifyApprovalCorrection(
   await navigateApproval(page, options.list);
   await expect(row).toHaveCount(1);
   await expect(status).toHaveText("Draft");
+  if (select?.invalidValue !== undefined) {
+    const invalidEnum = await page.request.patch(url(recordPath), {
+      headers: headers(options.requester),
+      data: {
+        expectedVersion: 0,
+        values: { [select.key]: select.invalidValue },
+      },
+    });
+    expect(invalidEnum.status(), "invalid enum value is rejected").toBe(400);
+    expect(await readRecord(id)).toMatchObject({ version: 0, status: "draft" });
+  }
+  for (const field of requiredFields) {
+    const invalidRequired = await page.request.patch(url(recordPath), {
+      headers: headers(options.requester),
+      data: { expectedVersion: 0, values: { [field.key]: "" } },
+    });
+    expect(
+      invalidRequired.status(),
+      `${field.label} is rejected by the API when blank`,
+    ).toBe(400);
+    expect(await readRecord(id)).toMatchObject({ version: 0, status: "draft" });
+  }
+  if (options.assertAuditorDenied) {
+    const deniedCreate = await page.request.post(url(createPath), {
+      headers: headers(options.auditor),
+      data: { values: {} },
+    });
+    expect(deniedCreate.status(), "auditor cannot create").toBe(403);
+    const deniedEdit = await page.request.patch(url(recordPath), {
+      headers: headers(options.auditor),
+      data: { expectedVersion: 0, values: { [correction.key]: "denied" } },
+    });
+    expect(deniedEdit.status(), "auditor cannot edit").toBe(403);
+    const deniedTransition = await page.request.post(
+      url(`${recordPath}/events/submit`),
+      { headers: headers(options.auditor), data: { expectedVersion: 0 } },
+    );
+    expect(deniedTransition.status(), "auditor cannot transition").toBe(403);
+  }
   await row.getByRole("button", { name: "Edit", exact: true }).focus();
   await page.keyboard.press("Enter");
   const edit = row.locator("form");
-  await expect(edit.getByLabel("Amount", { exact: true })).toHaveValue("89.5");
-  await edit.getByLabel("Amount", { exact: true }).fill("90.50");
+  await expect(edit.getByLabel(correction.label, { exact: true })).toHaveValue(
+    correction.initialInput,
+  );
+  await edit
+    .getByLabel(correction.label, { exact: true })
+    .fill(correction.firstEditInput);
   await capture("draft-edit");
   let releaseSave!: () => void;
   const heldSave = new Promise<void>((resolve) => {
@@ -989,9 +1131,9 @@ export async function verifyApprovalCorrection(
       .getByRole("button", { name: "Clear filters", exact: true })
       .click();
     await expect(row).toHaveCount(1);
-    await expect(edit.getByLabel("Amount", { exact: true })).toHaveValue(
-      "90.50",
-    );
+    await expect(
+      edit.getByLabel(correction.label, { exact: true }),
+    ).toHaveValue(correction.firstEditInput);
     await expect(save).toBeDisabled();
     for (const button of await row
       .getByRole("button", { name: /^(Submit|Edit|Save|Return|Approve)$/ })
@@ -1007,7 +1149,10 @@ export async function verifyApprovalCorrection(
       id,
       status: "draft",
       version: 1,
-      amount: 90.5,
+      [correction.key]:
+        typeof correction.expectedConflictValue === "number"
+          ? Number(correction.firstEditInput)
+          : correction.firstEditInput,
     });
   } finally {
     releaseSave();
@@ -1017,12 +1162,17 @@ export async function verifyApprovalCorrection(
 
   // Two real concurrent requests race at the version this UI has already read.
   await row.getByRole("button", { name: "Edit", exact: true }).click();
-  await edit.getByLabel("Amount", { exact: true }).fill("92.50");
+  await edit
+    .getByLabel(correction.label, { exact: true })
+    .fill(correction.firstEditInput);
   const competitors = await Promise.all(
     [0, 1].map(() =>
       page.request.patch(url(recordPath), {
         headers: headers(options.requester),
-        data: { expectedVersion: 1, values: { amount: 91.5 } },
+        data: {
+          expectedVersion: 1,
+          values: { [correction.key]: correction.concurrentApiValue },
+        },
       }),
     ),
   );
@@ -1041,7 +1191,7 @@ export async function verifyApprovalCorrection(
   expect(await otherWriter.json()).toMatchObject({
     id,
     version: 2,
-    amount: 91.5,
+    [correction.key]: correction.expectedConflictValue,
   });
   const conflict = waitCommand(recordPath, "PATCH");
   await edit.getByRole("button", { name: "Save", exact: true }).click();
@@ -1062,7 +1212,7 @@ export async function verifyApprovalCorrection(
   expect(persistedConflict).toMatchObject({ id, version: 2 });
   // Existing GET lists serialize Prisma Decimal as a string. Mutation response
   // assertions above retain their exact numeric contract.
-  expect(Number(persistedConflict.amount)).toBe(91.5);
+  expect(recordValue(persistedConflict)).toBe(correction.expectedConflictValue);
   if (await edit.count())
     await edit.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.reload();
@@ -1088,14 +1238,23 @@ export async function verifyApprovalCorrection(
         })
       : await page.request.patch(url(recordPath), {
           headers: headers(options.requester),
-          data: { expectedVersion: 3, values: { amount: 777 } },
+          data: {
+            expectedVersion: 3,
+            values: {
+              [correction.key]:
+                typeof correction.expectedFinalValue === "number"
+                  ? 777
+                  : "denied",
+            },
+          },
         });
     expect(denied.status()).toBe(403);
   }
-  await role.selectOption("manager");
+  await role.selectOption(reviewer);
   await row.getByRole("button", { name: "Return", exact: true }).click();
-  const reason =
-    "Please correct the amount to 93.50 and resubmit this request.";
+  const reason = options.correction
+    ? `Please correct the ${correction.label.toLowerCase()} and resubmit this request.`
+    : "Please correct the amount to 93.50 and resubmit this request.";
   const reasonField = row.getByLabel("Reason for return", { exact: true });
   await expect(reasonField).toHaveAttribute("required", "");
   expect(
@@ -1106,7 +1265,7 @@ export async function verifyApprovalCorrection(
   const invalidReason = await page.request.post(
     url(`${recordPath}/events/reject`),
     {
-      headers: headers("manager"),
+      headers: headers(reviewer),
       data: { expectedVersion: 3, reason: "   " },
     },
   );
@@ -1189,7 +1348,9 @@ export async function verifyApprovalCorrection(
   expect(reasonBounds!.y).toBeLessThan(editBounds!.y);
   await capture("returned");
   await row.getByRole("button", { name: "Edit", exact: true }).click();
-  await edit.getByLabel("Amount", { exact: true }).fill("93.50");
+  await edit
+    .getByLabel(correction.label, { exact: true })
+    .fill(correction.finalInput);
   const revised = waitCommand(recordPath, "PATCH");
   await edit.getByRole("button", { name: "Save", exact: true }).click();
   const revision = await revised;
@@ -1198,7 +1359,7 @@ export async function verifyApprovalCorrection(
     id,
     status: "draft",
     version: 5,
-    amount: 93.5,
+    [correction.key]: correction.expectedFinalValue,
   });
   await page.reload();
   await role.selectOption(options.requester);
@@ -1207,7 +1368,7 @@ export async function verifyApprovalCorrection(
   await row.getByRole("button", { name: "Submit", exact: true }).click();
   expect((await resubmitted).status()).toBe(200);
   await expect(status).toHaveText("Submitted");
-  await role.selectOption("manager");
+  await role.selectOption(reviewer);
   const approved = waitCommand(`${recordPath}/events/approve`, "POST");
   await row.getByRole("button", { name: "Approve", exact: true }).click();
   expect((await approved).status()).toBe(200);
@@ -1218,14 +1379,20 @@ export async function verifyApprovalCorrection(
     status: "approved",
     version: 7,
   });
-  expect(Number(persistedApproval.amount)).toBe(93.5);
+  expect(recordValue(persistedApproval)).toBe(correction.expectedFinalValue);
   await role.selectOption(options.requester);
   await expect(
     row.getByRole("button", { name: "Edit", exact: true }),
   ).toHaveCount(0);
   const approvedEdit = await page.request.patch(url(recordPath), {
     headers: headers(options.requester),
-    data: { expectedVersion: 7, values: { amount: 777 } },
+    data: {
+      expectedVersion: 7,
+      values: {
+        [correction.key]:
+          typeof correction.expectedFinalValue === "number" ? 777 : "denied",
+      },
+    },
   });
   expect(approvedEdit.status()).toBe(403);
 
@@ -1257,7 +1424,7 @@ export async function verifyApprovalCorrection(
     ]);
     expect(event).toMatchObject({
       recordId: id,
-      actor: "manager",
+      actor: reviewer,
       entity: options.entity,
     });
   }
@@ -1309,4 +1476,5 @@ export async function verifyApprovalCorrection(
     JSON.stringify(facts, null, 2) + "\n",
   );
   console.info("FACTORY_APPROVAL_CORRECTION", JSON.stringify(facts));
+  return facts;
 }

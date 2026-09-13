@@ -29,6 +29,18 @@ assert.deepEqual(
   "The built catalogue must be the exact source bytes.",
 );
 const catalogue = JSON.parse(source.toString("utf8"));
+const expectedKeys = [
+  "restaurant-ordering",
+  "expense-approval",
+  "purchase-request-approval",
+  "team-task-tracking",
+  "publication-review",
+];
+assert.deepEqual(
+  catalogue.definitions.map((entry) => entry.definitionKey),
+  expectedKeys,
+);
+const currentCount = expectedKeys.length;
 const reportKeys = [
   "admitted",
   "apiVersion",
@@ -149,7 +161,7 @@ const second = invoke("shipped-repeat", [], undefined, 0);
 assert.deepEqual(first, second, "Only validation duration may differ.");
 assert.deepEqual(
   [first.attempted, first.valid, first.distinct, first.admitted],
-  [4, 4, 4, 4],
+  [currentCount, currentCount, currentCount, currentCount],
 );
 assert.deepEqual(invoke("shipped-stdin", ["--stdin"], source, 0), first);
 invoke(
@@ -227,7 +239,7 @@ const cosmetic = candidate(
 assert.equal(cosmetic.reasonCounts["definition.duplicate-semantics"], 2);
 assert.deepEqual(
   [cosmetic.attempted, cosmetic.valid, cosmetic.distinct, cosmetic.admitted],
-  [5, 5, 3, 3],
+  [currentCount + 1, currentCount + 1, currentCount - 1, currentCount - 1],
 );
 candidate(
   "missing-failure",

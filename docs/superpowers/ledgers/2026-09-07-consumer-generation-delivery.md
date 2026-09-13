@@ -4654,3 +4654,127 @@ pushed to origin/codex/consumer-delivery-roadmap. Root verified local HEAD equal
 that exact remote tip and the working tree is clean. This documentation-only
 receipt closes the plan and records the delivered scorecard; it changes no
 tested source and reuses the accepted task, QA and release evidence.
+
+### Representative definition batch one authorized - 2026-09-13
+
+User requests continued roadmap execution and gradual definition growth. Plan:
+docs/superpowers/plans/2026-09-13-definition-batch-one.md. Base 327eb908.
+Tech Lead /root/definition_batch_scope returns KEEP: Publication Review fits
+ADR-0065 and the existing Approval family; no new ADR is required. Target 4 to 5
+current definitions, keeping three families and historic fixture bytes intact.
+Training/Equipment numeric constraints, Travel/Leave interval rules and Access
+identity/provisioning remain explicit gaps, not admitted products.
+
+Frozen ownership: /root/publication_definition_owner owns only the catalogue JSON
+and adapters tests; root owns loader investigation, compiler historical-key/CLI
+regressions, plans/ledger/evidence, services and Git. A later test writer may own
+e2e/approval-presentation.ts and new batch-only test modules after loader repair.
+No production runtime/UI, Graph, package or public contract changes authorized.
+Spark quota failure persists; use Terra fallback without retry/reset. Shared
+contract changes stop the writing wave. Provider-free replay never establishes
+model classification accuracy. One independent bounded acceptance review follows.
+
+Definition batch Task 1: complete. Root reproduces collection failure in both
+Playwright configs, traces native ESM package path, applies build.external for
+built workspace packages. Fresh collection: 3 actual lanes and 20 WB cases pass.
+No production source change. Task 3: implementing. Root authorizes
+/root/definition_batch_runtime_tests as sole writer for e2e/approval-presentation.ts,
+e2e/approval-definition-batch.spec.ts and new e2e/helpers/approval-definition-batch.ts
+(or equivalent new batch-only fixture module). The frozen test-only interface
+parameterizes edited field, selections and reviewer; old numeric defaults and
+family state/version/history assertions remain intact. No service or Git actions.
+Root retains configs, runtime launch/identity/cleanup and all documentation.
+
+Root runtime authorization: source catalogue strict/built CLI passes 16 cases,
+current 5/5/5/5; historical4/compiler authoring tests2 pass. Data SHA256
+989994897bcbdd39927009c9f8ddae22ff6f92bd09baec49a52c20ca2980cf97.
+Build final source images and launch only factory-t9-definition-batch-20260913
+with infra/docker-compose.yml plus definition-batch-one/acceptance.compose.yml.
+Use local .env without disclosure, provider keys blank, no real model/cloud.
+Loopback ports13020/15180/15440/16380 are free and no containers were running.
+Root owns image/source identity and exact Factory/owned Preview cleanup. Actual
+journey/UI evidence and independent acceptance remain pending.
+
+Actual attempt 1 fails after successful compile/verification/Preview (3.6 min):
+styles/icons/grid v5 loaded without overflow, but inherited row-photo assertion
+expects one image and Publication has none. Review reconciles this with frozen
+design: decorative record photos are not required for content review. The test
+writer may parameterize an explicit optional record-media policy for Publication;
+legacy cases remain required, present assets and progress/style checks stay.
+A separate substantive admission gap is confirmed in compiler call paths:
+articleTitle/channel never appear in visible card summaries and decision history
+falls back to a generic label/raw ID. Tech Lead is proposing the narrow shared
+presentation correction before source edits. Five registered rows do not yet
+mean five accepted runtime products. Task 3 remains open; first failure retained.
+Final-source images were built after formatting: d789963f619e4d97dd42ba3da7fe84c64696f777c65a039b952ea6903707f45f.
+Runtime identity verifies three images and final copied data; earlier989994
+hash records the pre-format local probe, not the running source.
+
+### ADR-0066 accepted; shared presentation repair authorized - 2026-09-13
+
+Independent read-only /root/generic_identity_decision_review returns
+APPROVED_FOR_STANDING_ACCEPTANCE: yes; P0/P1/P2 0/0/0 for exact ADR0066 SHA256
+d49e33da56a46e9d5a87856ff46e8d21ea61c20104cf311758727f140abc1048.
+Root verifies the unchanged proposal hash and records founder standing acceptance
+under docs/tech-governance.md 2026-09-01. Receipt:
+docs/acceptance/evidence/definition-batch-one/decision-review.md. No source or
+compiler test changes preceded this acceptance.
+
+Task3A implementing: root authorizes /root/generic_identity_owner (Astra) as the
+sole serialized Compiler Presentation Owner for ADR OWN002: index.ts and
+approval-decision-history.ts; workspace-presentation/mutation-contract only for
+private descriptor/source-comment version routing; focused compiler tests.
+No new module/public export, Graph/API/data/asset/CSS/package/runtime contract
+changes. Root retains immutable fixtures/integration/runtime/evidence/Git; existing
+E2E test writer retains its disjoint helper/newbatch files under unchanged API.
+Production source must freeze before image build. Exact original4 output drift
+aborts acceptance. Existing approval correction behavior is retained; generic
+list/history share one structurally derived title/enum projection.
+
+Task 3A: complete. Compiler owner froze the three source files; 12 generic
+emitted-JSX cases and exact original-four compatibility pass. Root full compiler
+suite passes 776/776 across 48 files; owner typecheck/build/lint pass. Final worker
+image rebuilt; runtime identity verifies all executing source and copied data.
+Task 3: actual attempt 2 failed on reused fixture requirement ID (HTTP 409),
+confirmed by entry-diagnostic.json. Attempt 3 passed creation/Publish/compile but
+exposed existing long-ID Prisma constraint truncation. Same-artifact build
+reproduced P1012; shorter unique batch UUID fixes fixture setup only. The platform
+identifier limitation remains an explicit roadmap follow-up. Attempt 4 is active.
+Test writer froze per-run identity and safe diagnostics plus optional-media
+recovery. Three actual product specs collect; formatting/diff checks pass.
+Task 4: /root/definition_batch_acceptance_astra owns the single independent
+acceptance receipt. Static review clean; actual business/visual/cleanup pending.
+
+### Definition batch one accepted for local delivery - 2026-09-13
+
+Tasks 1-4 and ADR-0066 presentation correction accepted by root. Independent
+/root/definition_batch_acceptance_astra reviewed frozen source, tests, 22 final
+actual screenshots, runtime identity and cleanup; in-scope P0/P1/P2 0/0/0.
+Receipt: docs/acceptance/evidence/definition-batch-one/independent-review.md.
+
+Final actual attempt 5 passes: 1 test in 4.3 minutes, prepared local ready in
+191,368 ms, compilation cmtzswgoo006yo255vft4jnfo. Two authored submissions are
+visibly distinct and approved; same-record correction finishes at version 7,
+with two decisions and eight audit events. Native/API validation, role/state
+denials, replay after API restart, concurrent writes, persistent reload, all
+three widths, dark presentation and broken-image recovery pass. Final source
+identity matches; four Preview rows stopped; ten exact projects have no
+containers, networks or volumes. Root also inspected final list/history/fallback.
+
+Coverage: 4 -> 5 accepted local definitions, three runtime families, one new
+Publication data row, zero per-product execution/UI branches, one shared
+presentation extension, no dependency or new visual asset. Original-four data
+and ordered bundles remain exact; immutable fixture hash unchanged. Compiler
+776 tests, adapters 223 tests and built CLI 16 cases pass. Authored selections
+and timing do not establish real-model accuracy or ordinary-user effort.
+
+The recorded earlier failures remain visible. Long application IDs can still
+produce colliding truncated database constraint names; the shorter test ID
+repairs fixture isolation only. Resolve bounded naming before broad scale,
+then add shared numeric rules and admit Training Funding. Equipment also needs
+calculated totals. Other candidates retain their material gaps. Reuse this
+parameterized acceptance and one proportionate review for ordinary row additions.
+
+Root is authorized to create the bounded English commit and normally push
+codex/consumer-delivery-roadmap, then verify clean status and remote equality.
+No main merge, repository release or cloud deployment is part of this delivery.

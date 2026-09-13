@@ -2,7 +2,37 @@
 
 Updated: 2026-09-13
 
-## Current: definition data foundation accepted
+## Current: five reviewed definitions; representative batch accepted
+
+Publication Review is the fifth registered definition, composed from data and
+the existing Approval correction family. Six candidate briefs were assessed;
+the other five retain unsupported numeric, interval or identity requirements.
+The actual first run exposed blank card identity despite correctly loaded UI.
+Accepted ADR-0066 adds one shared title/enum projection for generic cards and
+decision history; no per-product renderer, dependency or visual asset was added.
+
+The complete compiler suite passes 776 tests and all original-four bundles remain
+byte-identical. Adapters pass 223 tests and the built CLI passes 16 cases.
+Final actual attempt 5 passes in 4.3 minutes; the app became ready in 191,368 ms.
+Two authored submissions are visibly distinct in cards/history and complete the
+correction/approval journey. Responsive, dark and image-failure checks pass;
+all ten exact runtime projects are clean. Independent review passes with in-scope
+P0/P1/P2 0/0/0, and the controller accepts the bounded local delivery.
+Earlier failed attempts are retained: inherited photo policy, reused test ID,
+long-ID database constraint collision and open-history density-test setup.
+The shorter unique test ID fixes isolation; arbitrary long application IDs
+remain a platform limitation.
+See the [batch acceptance record](acceptance/definition-batch-one.md).
+
+Next: address bounded database identifier naming before broad scale, then add
+shared numeric rules and admit Training Funding. Equipment still needs total
+calculation; dates, entitlement and real identity remain later capabilities.
+Track distinct accepted jobs and ordinary-user effort separately from catalogue
+or material counts. Real-model selection, ordinary-user effort and hosted
+operations remain unproven. The [scale roadmap](superpowers/plans/2026-09-13-product-definition-scale.md)
+records the next bounded steps and proportionate regression requirements.
+
+## Delivered: definition data foundation accepted
 
 The core goal from `f8cdfe81` is accepted: all four reviewed definitions now
 come from strict data plus three fixed family implementations, with a

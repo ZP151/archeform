@@ -6,7 +6,7 @@ run the validator or manage Draft/Publish/Compilation steps.
 
 The reviewed catalogue is
 `packages/adapters/src/requirements/definitions/product-definitions.v1.json`.
-Its four entries supply canonical requirements/blueprints and selection
+Its five entries supply canonical requirements/blueprints and selection
 guidance. Fixed adapter family code owns validation, projection and execution
 bindings. A definition cannot select a package, module, route or executable
 template. The exact private data authority is accepted ADR-0065.
@@ -84,3 +84,42 @@ rule/presentation combination. Reuse unchanged evidence and the existing
 contract-level review sequence; do not create an approval stage per field.
 Record unsupported requirements as reusable platform gaps instead of silently
 dropping them to make a candidate pass.
+
+## Publication Review recipe
+
+The first additional row is `publication-review`, composed through
+`approval-correction/v1` and `none/v1`. Its primary `submission` entity uses
+required `articleTitle` text, required `contentBody` long text, required `channel`
+enum (`blog`, `newsletter`, `social`, `documentation`), and optional
+`editorialNotes` long text. Author/editor/auditor fill the existing three role
+slots. The secondary author directory and six page intents reuse the family
+composition; no custom projector, generated runtime, form or stylesheet is added.
+
+Start from the checked-in row for the envelope structure, then review the new
+job's actual demands. Keep field, actor, page and workflow references consistent
+between canonical data and provider guidance; recalculate the canonical
+requirement checksum. Preserve fixed execution expectations and supply correction
+and failure cases. The existing generic adapter derives selection admission.
+
+Reuse `e2e/helpers/approval-definition-batch.ts` for the real business journey:
+declare field controls, selected enum, correction values and actual page labels.
+The shared runner drives Describe through immutable delivery and the common
+correction helper verifies retry, concurrency, same-record return/resubmit,
+history, persistence and responsive presentation. Build packages before
+Playwright collection; built workspace dependencies retain native ESM format.
+Use `docs/acceptance/definition-batch-one.md` for current acceptance and limits.
+
+Current catalogue assertions explicitly name five keys. Historical compatibility
+still compares the original four keys against the unchanged
+`definition-data-baseline.json`; never regenerate that baseline to admit a row.
+CLI membership alone does not establish a finished business product.
+
+Publication's actual admission found a shared presentation gap: legacy summary
+selection recognized Expense/Purchase field keys only. ADR-0066 defines a
+conditional generic projection using one unique required short-string business
+field as title and up to two non-status enum summaries in declaration order.
+List and decision history share it. This is one reusable platform extension,
+with no per-product field-name branch. Definitions without an unambiguous title
+remain a presentation gap; do not count them as complete because Details exists.
+The family hero remains available while record photos are optional for this
+product. Existing Expense/Purchase media requirements remain unchanged.

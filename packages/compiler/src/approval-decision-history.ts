@@ -18,6 +18,7 @@ export const approvalDecisionHistory = {
 export function renderApprovalDecisionHistory(
   entityKey: string,
   correction = false,
+  genericIdentity = false,
 ): string {
   return `
 type DecisionEvent = { actor: string; action: string; entity: string; recordId: string;${correction ? " reason: string | null;" : ""} at: string };
@@ -36,19 +37,28 @@ function decisionHistoryPayload(audit: unknown, records: unknown, entity: string
 }
 function decisionIdentityFields(entity: RuntimeEntity, record: JsonRecord | undefined): readonly RuntimeField[] {
   if (!record) return [];
-  const item = entity.fields.filter((field) => field.key === 'item' && field.type === 'string');
+${
+  genericIdentity
+    ? `  const title = selectRecordTitleField(entity.fields, entity.key);
+  return [title?.key, ...selectSummaryFields(entity.fields, entity.key)].flatMap((key) => {
+    const field = entity.fields.find((candidate) => candidate.key === key);
+    const value = key ? record[key] : undefined;
+    return field && value !== null && value !== undefined && value !== '' && (typeof value !== 'string' || value.trim()) ? [field] : [];
+  });`
+    : `  const item = entity.fields.filter((field) => field.key === 'item' && field.type === 'string');
   if (item.length === 1 && typeof record.item === 'string' && record.item.trim()) return item;
   return selectSummaryFields(entity.fields).flatMap((key) => {
     const field = entity.fields.find((candidate) => candidate.key === key);
     const value = key ? record[key] : undefined;
     return field && value !== null && value !== undefined && value !== '' && (typeof value !== 'string' || value.trim()) ? [field] : [];
-  }).slice(0, 2);
+  }).slice(0, 2);`
+}
 }
 function DecisionHistoryRow({ event, entity, record }: { readonly event: DecisionEvent; readonly entity: RuntimeEntity; readonly record: JsonRecord | undefined }) {
   const identity = decisionIdentityFields(entity, record);
   const safeValue = (field: RuntimeField, value: unknown) => value && typeof value === 'object' ? 'Structured value' : formatValue(field, value);
   return <li className={'approval-history-row approval-tone-' + (event.action === 'approve' ? 'positive' : 'negative')}>
-    <h3>{identity.length ? identity.map((field, index) => <span key={field.key}>{index ? ' · ' : ''}{field.key === 'item' ? null : fieldLabel(field.key) + ': '}{safeValue(field, record![field.key])}</span>) : entity.label + ' decision'}</h3>
+    <h3>{identity.length ? identity.map((field, index) => <span key={field.key}>{index ? ' · ' : ''}{field.key === ${genericIdentity ? "approvalRecordIdentity.titleFieldKey" : "'item'"} ? null : fieldLabel(field.key) + ': '}{safeValue(field, record![field.key])}</span>) : entity.label + ' decision'}</h3>
     <div className='approval-history-outcome'><span className='approval-badge'><ApprovalIcon name={event.action === 'approve' ? 'circle-check' : 'circle-x'} />{${correction ? "event.action === 'reject' ? 'Return' : fieldLabel(event.action)" : "fieldLabel(event.action)"}}</span><span>Demo role: {fieldLabel(event.actor)}</span>{formatValue({ type: 'datetime' }, event.at)}</div>
 ${correction ? "    {event.reason ? <p className='approval-return-reason'>{event.reason}</p> : null}\n" : ""}    {!identity.length ? <p className='approval-history-reference'>Record ID: {event.recordId}</p> : null}
     {record ? <details><summary>Details</summary><dl className='approval-details-values'><div><dt>ID</dt><dd>{event.recordId}</dd></div>{entity.fields.filter((field) => !identity.includes(field)).map((field) => <div key={field.key}><dt>{fieldLabel(field.key)}</dt><dd>{safeValue(field, record[field.key])}</dd></div>)}</dl></details> : null}

@@ -20,7 +20,17 @@ const digest = (value: unknown) =>
 
 /** Independent baseline captured before data-authoring implementation. */
 export function currentDefinitionDataCompatibility() {
-  return definitionSelectionCatalogue.map((entry) => {
+  const historicalKeys = [
+    "restaurant-ordering",
+    "expense-approval",
+    "purchase-request-approval",
+    "team-task-tracking",
+  ];
+  return historicalKeys.map((key) => {
+    const entry = definitionSelectionCatalogue.find(
+      (candidate) => candidate.definitionKey === key,
+    );
+    if (!entry) throw new Error(`Historical definition missing: ${key}`);
     const selection = {
       definitionKey: entry.definitionKey,
       disposition: "supported-default",

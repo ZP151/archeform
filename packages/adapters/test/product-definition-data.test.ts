@@ -22,9 +22,9 @@ const report = (definitions: unknown[]) =>
   validateDefinitionBatch(bytes(definitions));
 
 describe("Product definition data", () => {
-  it("loads four immutable data entries and admits only the shipped catalogue", () => {
+  it("loads five immutable data entries and admits only the shipped catalogue", () => {
     const data = loadProductDefinitionData();
-    expect(data.definitions).toHaveLength(4);
+    expect(data.definitions).toHaveLength(5);
     expect(
       Object.isFrozen(
         data.definitions[1]!.canonical.blueprint.entities[0]!.fields,
@@ -39,7 +39,69 @@ describe("Product definition data", () => {
           ),
         ),
       ),
-    ).toMatchObject({ attempted: 4, valid: 4, distinct: 4, admitted: 4 });
+    ).toMatchObject({ attempted: 5, valid: 5, distinct: 5, admitted: 5 });
+  });
+  it("admits the distinct reviewed Publication definition with its bounded scope", () => {
+    const publication = loadProductDefinitionData().definitions.find(
+      (definition) => definition.definitionKey === "publication-review",
+    );
+    expect(publication).toMatchObject({
+      definitionVersion: "1.0.0",
+      familyBinding: { key: "approval", version: "approval-correction/v1" },
+      parameterPolicy: "none/v1",
+      primaryJob: {
+        actorKey: "author",
+        operation: "submit",
+        entityKey: "submission",
+        successState: "submitted",
+      },
+    });
+    expect(
+      publication?.canonical.blueprint.actors.map(({ key }) => key),
+    ).toEqual(["author", "editor", "auditor"]);
+    expect(
+      publication?.canonical.blueprint.entities[0]!.fields.map(
+        ({ key, type, required, options }) => ({
+          key,
+          type,
+          required,
+          options,
+        }),
+      ),
+    ).toEqual([
+      { key: "articleTitle", type: "text", required: true, options: undefined },
+      {
+        key: "contentBody",
+        type: "long-text",
+        required: true,
+        options: undefined,
+      },
+      {
+        key: "channel",
+        type: "enum",
+        required: true,
+        options: ["blog", "newsletter", "social", "documentation"],
+      },
+      {
+        key: "editorialNotes",
+        type: "long-text",
+        required: false,
+        options: undefined,
+      },
+    ]);
+    expect(publication?.selection.providerInstruction).toContain(
+      "external publishing",
+    );
+    expect(publication?.selection.providerInstruction).toContain(
+      "scheduled publication",
+    );
+    expect(publication?.selection.providerInstruction).toContain("rich-text");
+    expect(publication?.selection.providerInstruction).toContain(
+      "multiple review stages",
+    );
+    expect(publication?.selection.providerInstruction).toContain(
+      "real identity",
+    );
   });
   it("projects a validated supported Approval field variant from data without registration", () => {
     const data = candidate();
@@ -76,7 +138,7 @@ describe("Product definition data", () => {
       distinct: 1,
       admitted: 0,
     });
-    expect(loadProductDefinitionData().definitions).toHaveLength(4);
+    expect(loadProductDefinitionData().definitions).toHaveLength(5);
   });
   it.each([
     '{"apiVersion":"x","apiVersion":"y"}',

@@ -1,0 +1,48 @@
+
+Running 1 test using 1 worker
+
+(node:50344) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50344) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_CORRECTION {"entity":"submission","recordId":"cmtzt0nps0000qo01xwmk77c9","finalVersion":7,"finalStatus":"approved","sameRecordCorrection":true,"returnedReasonSurvivesReload":true,"retainedDecisions":2,"auditEvents":8,"createLostResponseReplayed":true,"apiRestartBeforeCreateReplay":true,"returnLostResponseReplayed":true,"concurrentEditRejected":true,"concurrentApiWritesCommitOnce":true,"duplicateActivationIgnored":true,"submittedEditDenied":true,"responsiveWidths":[390,768,1440],"modelCalls":0}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_EXPRESSIVE_MATERIALS {"localOnly":true,"fallbackPreservesLayoutAndRecords":true,"reloaded":true,"darkWidths":[390,768,1440]}
+FACTORY_APPROVAL_DEFINITION_BATCH {"compilationId":"cmtzswgoo006yo255vft4jnfo","definitionKey":"publication-review","elapsedToReadyMs":191368,"externalIntegration":null,"lifecycle":["publish","compile","verify","preview"],"modelCalls":0,"previewRunId":"preview-7534db51-8288-4e9a-9437-534051fbcc4b","requestDiagnostics":[{"code":null,"path":"/api/requirements/interpret","status":200},{"code":null,"path":"/product/requirements","status":201}]}
+  ok 1 e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey (4.2m)
+
+  1 passed (4.3m)

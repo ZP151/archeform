@@ -1,0 +1,57 @@
+{
+  "base": "327eb9086ff79f521e87e4db072120763b95b3e5",
+  "providerCalls": 0,
+  "checks": [
+    {
+      "command": "pnpm --filter @factory/compiler test",
+      "passed": 776,
+      "files": 48,
+      "durationSeconds": 308.39,
+      "evidence": "compiler-full.log"
+    },
+    {
+      "command": "pnpm --filter @factory/adapters test",
+      "passed": 223,
+      "files": 12,
+      "evidence": "adapters-full.log"
+    },
+    { "check": "Focused data and interpreter tests", "passed": 176 },
+    {
+      "check": "Generic emitted JSX and original-four compatibility",
+      "passed": 13,
+      "includedInCompilerSuite": true
+    },
+    {
+      "check": "Built definition CLI regression",
+      "passed": 16,
+      "evidence": "cli-regression.json"
+    },
+    { "check": "Workbench consumer generation tests", "passed": 35 },
+    {
+      "check": "Compiler typecheck, build and lint",
+      "status": "passed",
+      "owner": "/root/generic_identity_owner"
+    },
+    {
+      "check": "Adapters typecheck and lint",
+      "status": "passed",
+      "owner": "/root/publication_definition_owner"
+    },
+    {
+      "check": "Workbench production build",
+      "status": "passed",
+      "environment": "initial isolated acceptance image build"
+    },
+    {
+      "check": "Final compiler-worker production build and running source identity",
+      "status": "passed",
+      "evidence": "runtime-identity.json"
+    },
+    {
+      "check": "Impeccable detector",
+      "newBlockingFindings": 0,
+      "retainedBaselineWarning": "Existing Inter font in the approved presentation; no font or CSS change in this slice"
+    }
+  ],
+  "limits": "Counts overlap where focused tests also belong to a package suite. Authored fixtures do not measure real-model accuracy or ordinary-user effort. Actual generated application acceptance is recorded separately."
+}

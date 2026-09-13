@@ -185,3 +185,64 @@ the narrowest reusable capability extension or the next appointment family,
 using actual failed demands to choose. At 30, measure rough-description
 selection and material-requirement retention before the 100-definition
 retrieval milestone. A larger material inventory remains a separate measure.
+
+## Batch-one execution update
+
+The first six briefs produced one accepted local addition and five shared
+capability gaps. Publication Review is the fifth row; actual admission exposed
+missing generic record identity in the shared Approval presentation. The reusable
+title/enum-summary/history correction is delivered under ADR-0066. Final actual
+acceptance passes in 4.3 minutes, with a 191,368 ms prepared-local ready sample;
+independent review and exact cleanup pass. Existing record-media rules remain:
+unknown signatures use the family hero, without forced decorative record photos.
+
+After the separately recorded identifier repair, prioritize the smallest shared
+numeric-domain extension to unlock Training and Equipment. Define positive or
+nonnegative amount semantics, positive integer quantity and any calculated-total
+requirements explicitly; do not silently omit them. Date intervals and allowance,
+real identity/provisioning, appointment capacity and inventory transactions remain
+separate subsequent business capabilities. Do not start the 30-definition count by
+renaming current products or disguising unsupported rules as typed input fields.
+
+Each new batch must report reviewed briefs, authored/strict-valid data, distinct
+registered definitions, shared platform changes, per-product execution/UI changes,
+and actual accepted business journeys separately. A fifth registered JSON row
+counts as accepted only after visible record identity and the business closure
+pass. Reuse the parameterized regression case and keep the original four fixtures
+immutable. Acceptance status and final evidence: docs/acceptance/definition-batch-one.md.
+
+### Next bounded delivery: numeric rules, then Training admission
+
+Before broad batch scale, repair the separately reproduced long-application-ID
+namespace defect: generated Principal/Session database constraint names can
+truncate to the same PostgreSQL identifier. Propose deterministic bounded naming
+or fail-early validation under its compiler contract authority; test colliding
+prefixes and unchanged historic outputs. The batch's shorter unique test ID is
+test isolation and does not close this platform issue.
+
+1. Use the rejected Training and Equipment demands as failing examples. The
+   first decision must specify finite numeric bounds, inclusive versus exclusive
+   limits, integer quantities, and consistent create/edit validation. Tech Lead
+   proposes the smallest Graph/runtime/verifier contract; record its independent
+   standing acceptance before implementation when the standing criteria apply.
+2. Implement one reusable numeric-domain capability, with server-authoritative
+   validation and useful native form feedback. Exercise zero, negative,
+   fractional quantity, boundary values, malformed direct API input, correction
+   and exact retry; preserve existing immutable compilations. Do not introduce
+   a branch for Training or Equipment.
+3. Admit Training Funding only after its actual fee/date/justification journey
+   passes with return/revise/resubmit and the approved responsive presentation.
+   Reuse the batch helper, required-field/denial cases, image fallback and visible
+   multi-record identity checks. Record the new definition separately from the
+   shared numeric implementation cost.
+4. Keep Equipment pending until calculated-total semantics are supported and
+   tested. Numeric bounds alone do not establish arithmetic correctness. Select
+   the next shared capability from observed blocked demand, then expand the next
+   small batch using data and reused components.
+
+The exit measure is a newly usable business job with fewer user corrections,
+not the number of JSON rows. Track authored versus real-model selection, actual
+ready time, material requirements retained, business closure, visual acceptance,
+and per-product implementation changes. Retain one independent review per
+ordinary accepted slice; apply the existing full gate only to its load-bearing
+Graph/API/security contract boundary, not again for each catalogue row.

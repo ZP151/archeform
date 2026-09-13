@@ -1,0 +1,26 @@
+{
+  "responses": [
+    {
+      "path": "/api/requirements/interpret",
+      "status": 200
+    },
+    {
+      "path": "/product/requirements",
+      "status": 409
+    }
+  ],
+  "errors": [],
+  "alerts": [
+    "The product requirement moved or already has a decision; start over.",
+    ""
+  ],
+  "regions": [
+    "Apps canvas",
+    "Apps",
+    "Start a product",
+    "Product creation",
+    "Describe a product",
+    "Start from a template",
+    "Recent products"
+  ]
+}

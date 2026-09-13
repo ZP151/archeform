@@ -2767,6 +2767,49 @@ function renderPageRuntime(
   const approvalEntity = approvalFlow
     ? graph.domain.entities.find((entity) => entity.key === approvalFlow.entity)
     : undefined;
+  // The correction selector has already proven the immutable family contract.
+  // Preserve the incumbent item and Expense summary identity paths verbatim.
+  const businessFields =
+    approvalEntity?.fields.filter(
+      (field) =>
+        !["id", "status", "version", "createdAt", "updatedAt"].includes(
+          field.key,
+        ),
+    ) ?? [];
+  const titleCandidates = businessFields.filter(
+    (field) => field.type === "string" && field.required === true,
+  );
+  const legacyIdentity =
+    businessFields.some(
+      (field) => field.key === "item" && field.type === "string",
+    ) ||
+    (
+      [
+        ["amount", ["integer", "decimal"]],
+        ["category", ["string", "enum"]],
+        ["date", ["date", "datetime"]],
+      ] as const
+    ).every(([key, types]) =>
+      businessFields.some(
+        (field) =>
+          field.key === key &&
+          (types as readonly string[]).includes(field.type),
+      ),
+    );
+  const recordIdentity =
+    correctionEntity &&
+    approvalEntity?.key === correctionEntity &&
+    !legacyIdentity &&
+    titleCandidates.length === 1
+      ? {
+          entityKey: correctionEntity,
+          titleFieldKey: titleCandidates[0]!.key,
+          summaryFieldKeys: businessFields
+            .filter((field) => field.type === "enum")
+            .slice(0, 2)
+            .map((field) => field.key),
+        }
+      : undefined;
   const projection = createGeneratedPageRuntimeProjection(graph, {
     ...(orderEntityKey ? { orderEntity: orderEntityKey } : {}),
   });
@@ -2856,24 +2899,41 @@ function renderPageRuntime(
           "  if (transitions.some((transition) => transition.event === 'approve' && transition.from === status)) return 'clock';",
           "  return null;",
           "}",
-          ...(extendedSummary
+          ...(recordIdentity
             ? [
-                "function selectRecordTitleField(fields: readonly RuntimeField[]): RuntimeField | undefined {",
-                "  const matches = fields.filter((field) => field.key === 'item' && field.type === 'string');",
-                "  return matches.length === 1 ? matches[0] : undefined;",
+                "// approval-record-identity/v1; approval-decision-history@1.1.0",
+                `const approvalRecordIdentity = Object.freeze({ entityKey: ${JSON.stringify(recordIdentity.entityKey)}, titleFieldKey: ${JSON.stringify(recordIdentity.titleFieldKey)}, summaryFieldKeys: Object.freeze(${JSON.stringify(recordIdentity.summaryFieldKeys)}) });`,
+                "function selectRecordTitleField(fields: readonly RuntimeField[], entityKey: string): RuntimeField | undefined {",
+                "  return entityKey === approvalRecordIdentity.entityKey ? fields.find((field) => field.key === approvalRecordIdentity.titleFieldKey) : undefined;",
                 "}",
+                "function safeApprovalValue(field: RuntimeField, value: unknown) { return value && typeof value === 'object' ? 'Structured value' : formatValue(field, value); }",
               ]
-            : []),
-          "function selectSummaryFields(fields: readonly RuntimeField[]): readonly (string | undefined)[] {",
-          "  const select = (key: string, types: readonly string[]) => { const matches = fields.filter((field) => field.key === key && types.includes(field.type)); return matches.length === 1 ? matches[0]!.key : undefined; };",
-          ...(extendedSummary
+            : extendedSummary
+              ? [
+                  "function selectRecordTitleField(fields: readonly RuntimeField[]): RuntimeField | undefined {",
+                  "  const matches = fields.filter((field) => field.key === 'item' && field.type === 'string');",
+                  "  return matches.length === 1 ? matches[0] : undefined;",
+                  "}",
+                ]
+              : []),
+          recordIdentity
+            ? "function selectSummaryFields(fields: readonly RuntimeField[], entityKey: string): readonly (string | undefined)[] {"
+            : "function selectSummaryFields(fields: readonly RuntimeField[]): readonly (string | undefined)[] {",
+          ...(recordIdentity
             ? [
-                "  const temporal = fields.filter((field) => field.type === 'date' || field.type === 'datetime');",
-                "  const date = select('date', ['date', 'datetime']) ?? (!fields.some((field) => field.key === 'date') && temporal.length === 1 ? temporal[0]!.key : undefined);",
-                "  return [select('amount', ['integer', 'decimal']), select('category', ['string', 'enum']), date];",
+                "  return entityKey === approvalRecordIdentity.entityKey ? approvalRecordIdentity.summaryFieldKeys : [];",
               ]
             : [
-                "  return [select('amount', ['integer', 'decimal']), select('category', ['string', 'enum']), select('date', ['date', 'datetime'])];",
+                "  const select = (key: string, types: readonly string[]) => { const matches = fields.filter((field) => field.key === key && types.includes(field.type)); return matches.length === 1 ? matches[0]!.key : undefined; };",
+                ...(extendedSummary
+                  ? [
+                      "  const temporal = fields.filter((field) => field.type === 'date' || field.type === 'datetime');",
+                      "  const date = select('date', ['date', 'datetime']) ?? (!fields.some((field) => field.key === 'date') && temporal.length === 1 ? temporal[0]!.key : undefined);",
+                      "  return [select('amount', ['integer', 'decimal']), select('category', ['string', 'enum']), date];",
+                    ]
+                  : [
+                      "  return [select('amount', ['integer', 'decimal']), select('category', ['string', 'enum']), select('date', ['date', 'datetime'])];",
+                    ]),
               ]),
           "}",
           "function statusTone(entityKey: string, status: unknown): 'positive' | 'negative' | 'pending' | 'neutral' {",
@@ -2899,7 +2959,13 @@ function renderPageRuntime(
         ]
       : []),
     ...(approvalFlow
-      ? [renderApprovalDecisionHistory(approvalFlow.entity, !!correctionEntity)]
+      ? [
+          renderApprovalDecisionHistory(
+            approvalFlow.entity,
+            !!correctionEntity,
+            !!recordIdentity,
+          ),
+        ]
       : []),
     ...(approval
       ? [
@@ -3049,25 +3115,35 @@ function renderPageRuntime(
           "    } finally { pendingSet.delete(recordId); }",
           "  };",
           "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read these records.</p></section>;",
-          "  const summaryKeys = selectSummaryFields(entity.fields).filter((key): key is string => Boolean(key));",
+          recordIdentity
+            ? "  const summaryKeys = selectSummaryFields(entity.fields, entity.key).filter((key): key is string => Boolean(key));"
+            : "  const summaryKeys = selectSummaryFields(entity.fields).filter((key): key is string => Boolean(key));",
           "  const visibleRecords = filterRecords(entity.fields, records, query, statusFilter);",
           "  const statuses = statusOptions(entity.key);",
-          ...(extendedSummary
-            ? ["  const titleField = selectRecordTitleField(entity.fields);"]
-            : []),
+          ...(recordIdentity
+            ? [
+                "  const titleField = selectRecordTitleField(entity.fields, entity.key);",
+              ]
+            : extendedSummary
+              ? ["  const titleField = selectRecordTitleField(entity.fields);"]
+              : []),
           "  return <section className='generated-card approval-records-section'><div className='approval-record-finder'><label htmlFor={block.id + '-record-search'}><span className='approval-finder-label'>Search records</span><input id={block.id + '-record-search'} name='record-search' placeholder='Search records' type='text' value={query} onChange={(event) => setQuery(event.target.value)} /></label><div><label htmlFor={block.id + '-status-filter'}><span className='approval-finder-label'>Status filter</span><select id={block.id + '-status-filter'} name='status-filter' value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value=''>All statuses</option>{statuses.map((status) => <option key={status} value={status}>{fieldLabel(status)}</option>)}</select></label><button type='button' aria-label='Clear filters' title='Clear filters' onClick={() => { setQuery(''); setStatusFilter(''); }}><ApprovalIcon name='circle-x' /></button><button className='approval-refresh' aria-label='Refresh' title='Refresh' type='button' disabled={loading} onClick={() => void refresh().catch(() => undefined)}><ApprovalIcon name='refresh-cw' /></button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{loading ? <p role='status' aria-live='polite'>Loading records\u2026</p> : null}{!loading && !error ? <p className='approval-result-count' role='status' aria-live='polite'>{visibleRecords.length} of {records.length} records</p> : null}{listMutation ? <p className={'approval-list-mutation' + (listMutation.status === 'error' ? ' generated-error' : '')} role={listMutation.status === 'error' ? 'alert' : 'status'} aria-live={listMutation.status === 'error' ? 'assertive' : 'polite'}>{listMutation.message}</p> : null}{!loading && !error && records.length === 0 ? <div role='status' className='approval-empty'><ApprovalIcon name='receipt-text' /><p>No {entity.label.toLowerCase()} records yet.</p>{formRoute && can(role, entity.key, 'create') ? <a href={formRoute}>Create {entity.label}</a> : null}</div> : null}{!loading && !error && records.length > 0 && visibleRecords.length === 0 ? <div role='status' className='approval-empty'><p>No matching records.</p></div> : null}<ul className='generated-records'>{visibleRecords.map((record) => {",
           "    const mutation = mutations[String(record.id)];",
           "    const icon = stateIcon(entity.key, record.status);",
           "    const tone = statusTone(entity.key, record.status);",
           "    return <li className={'approval-record approval-tone-' + tone} key={String(record.id)} aria-busy={mutation?.status === 'pending'}>" +
-            (extendedSummary
-              ? "{titleField ? <h3 className='approval-record-title'><span>{fieldLabel(titleField.key)}</span>{formatValue(titleField, record[titleField.key])}</h3> : null}"
-              : "") +
+            (recordIdentity
+              ? "{titleField ? <h3 className='approval-record-title'><span>{fieldLabel(titleField.key)}</span>{safeApprovalValue(titleField, record[titleField.key])}</h3> : null}"
+              : extendedSummary
+                ? "{titleField ? <h3 className='approval-record-title'><span>{fieldLabel(titleField.key)}</span>{formatValue(titleField, record[titleField.key])}</h3> : null}"
+                : "") +
             "{approvalMaterialKey(entity.fields, entity.key) ? <ApprovalMaterial materialKey={approvalMaterialKey(entity.fields, entity.key)!} className='approval-record-media' /> : null}<dl className='approval-summary'>{summaryKeys.map((key) => { const field = entity.fields.find((candidate) => candidate.key === key)!; return <div className={key === 'amount' ? 'approval-summary-amount' : 'approval-summary-support'} key={key}><dt>{fieldLabel(key)}</dt><dd>{formatValue(field, record[key])}</dd></div>; })}<div className='approval-summary-status'><dt>Status</dt><dd><span className='approval-badge'>{icon ? <ApprovalIcon name={icon} /> : null}{fieldLabel(String(record.status ?? 'Not provided'))}</span></dd></div></dl><div className='approval-actions'>{validTransitions(role, entity.key, record.status).map((action) => {",
           "      const actionAsset = actionIcon(action.event);",
           "      return <button key={action.event} type='button' disabled={mutation?.status === 'pending'} onClick={() => void transition(record, action.event)}>{actionAsset ? <ApprovalIcon name={actionAsset} /> : null}{fieldLabel(action.event)}</button>;",
           "    })}</div><ApprovalProgress entity={entity} status={record.status} />{mutation ? <p className={mutation.status === 'error' ? 'generated-error' : undefined} role={mutation.status === 'error' ? 'alert' : 'status'} aria-live={mutation.status === 'error' ? 'assertive' : 'polite'}>{mutation.message}</p> : null}<details><summary>Details</summary><dl className='approval-details-values'><div><dt>ID</dt><dd>{String(record.id ?? 'Not provided')}</dd></div>{entity.fields.filter((field) => field.key !== 'status' && !summaryKeys.includes(field.key)" +
-            (extendedSummary ? " && field.key !== titleField?.key" : "") +
+            (recordIdentity || extendedSummary
+              ? " && field.key !== titleField?.key"
+              : "") +
             ").map((field) => <div key={field.key}><dt>{fieldLabel(field.key)}</dt><dd>{formatValue(field, record[field.key])}</dd></div>)}</dl></details></li>;",
           "  })}</ul></section>;",
           "}",
@@ -3268,7 +3344,27 @@ function renderPageRuntime(
     "}",
     "",
   ].join("\n");
-  return renderApprovalCorrectionPage(source, graph, correctionEntity);
+  const presentedSource = recordIdentity
+    ? source
+        .replaceAll(
+          "formatValue(field, record[key])",
+          "safeApprovalValue(field, record[key])",
+        )
+        .replaceAll(
+          "formatValue(field, record[field.key])",
+          "safeApprovalValue(field, record[field.key])",
+        )
+        .replace(
+          "className={key === 'amount' ? 'approval-summary-amount' : 'approval-summary-support'}",
+          "className='approval-summary-support'",
+        )
+    : source;
+  return renderApprovalCorrectionPage(
+    presentedSource,
+    graph,
+    correctionEntity,
+    !!recordIdentity,
+  );
 }
 
 function renderWebProxyRoute(

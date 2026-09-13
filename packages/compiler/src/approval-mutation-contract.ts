@@ -597,12 +597,13 @@ export function renderApprovalCorrectionPage(
   source: string,
   graph: ApplicationGraphV1,
   entity = selectApprovalCorrection(graph),
+  genericIdentity = false,
 ): string {
   if (!entity) return source;
   source = replace(
     source,
     "type JsonRecord =",
-    `// approval-workspace-presentation@2.1.0; approval-presentation-components@1.1.0; approval-visual-assets@1.1.0
+    `// approval-workspace-presentation@${genericIdentity ? "2.2.0" : "2.1.0"}; approval-presentation-components@1.1.0; approval-visual-assets@1.1.0
 const correctionEntity = ${JSON.stringify(entity)};
 type JsonRecord =`,
   );

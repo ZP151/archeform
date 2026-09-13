@@ -102,6 +102,8 @@ describe("configuration-only definition authoring", () => {
     );
     expect(JSON.stringify(input)).toBe(beforeInput);
     expect(JSON.stringify(loadProductDefinitionData())).toBe(beforeCatalogue);
-    expect(loadProductDefinitionData().definitions).toHaveLength(4);
+    expect(loadProductDefinitionData().definitions).toHaveLength(
+      original.definitions.length,
+    );
   });
 });
