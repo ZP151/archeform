@@ -4890,3 +4890,24 @@ Root may create the bounded English commit and push the iteration branch.
 After clean-state and remote-tip equality, merge PR #4 only with passing CI and
 normal reviewed integration. Recheck the exact merged main via the CI matrix
 and fast-forward local main, preserving the original checkout's pending work.
+
+### Remote CI timing fixture correction - 2026-09-15
+
+Push CI run 34876048661 on Node 22.11.0 passes external-intake 436/436 but
+fails compiler-worker preview readiness: expected one health request, observed
+two. This suspends merge while preserving prior local acceptance evidence.
+Root owns only apps/compiler-worker/test/preview-runner.test.ts for a bounded
+deterministic-clock correction plus this ledger and integration assessment.
+The 20 ms cap, 600 ms readiness option, failure outcome and request-count
+assertion remain fixed. No production source or timeout contract changes.
+Use scoped review and affected checks, then the complete remote gate again.
+
+The preview timing correction is accepted: independent /root/integration_review
+reports P0/P1/P2 0/0/0; focused test 1/1, compiler-worker suite 319/319, owning
+typecheck, scoped formatting and diff checks pass. Date.now restoration is
+protected by finally; all production source and original assertions remain
+unchanged. The separate PR Node 22.11.0 run passed the old commit's complete
+gates, corroborating timing sensitivity without waiving the failed push run.
+Root may commit and normally push this three-file fixture/evidence correction.
+Iteration integration acceptance remains valid conditional on a fresh green
+remote matrix for this final commit, followed by exact-main verification.

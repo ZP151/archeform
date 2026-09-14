@@ -154,3 +154,17 @@ conditional on passing remote CI; the exact merged main commit must pass the
 same matrix and local main must equal origin/main. Existing product runtime
 acceptance and resource-cleanup evidence remain valid for the unchanged product
 implementations; no new runtime acceptance, release or deployment is claimed.
+
+### Remote CI follow-up
+
+Push run 34876048661 on Node 22.11.0 passed external-intake 436/436 but
+failed one compiler-worker timing assertion: the 20 ms readiness cap observed
+two requests instead of one. The same commit's PR run 34876054380 on Node
+22.11.0 passed all gates. The fixture relied on a real timer reaching an exact
+Date.now deadline; timer precision can leave time for another request. Root
+uses a local Date.now spy and consumes exactly 20 ms in the mocked failed
+health request, restoring the spy in finally. The operation/readiness values,
+error and one-request assertion are unchanged; production source is unchanged.
+Focused test passes 1/1 in 34 ms; owning tests pass 319/319, owning typecheck,
+focused formatting and diff checks pass. Both remote observations remain
+recorded; the deterministic fixture correction requires a new green CI commit.

@@ -691,6 +691,8 @@ describe("preview runner", () => {
 
   it("caps the web readiness budget at the overall operation timeout", async () => {
     const { root } = await sourceFixture();
+    let now = 0;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
     let healthChecks = 0;
     const processRunner: PreviewProcessRunner = async (command) => {
       if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
@@ -699,6 +701,8 @@ describe("preview runner", () => {
         return "127.0.0.1:49102\n";
       if (command.args.includes("exec")) {
         healthChecks += 1;
+        // Exhaust the operation budget independently of host timer precision.
+        now += 20;
         throw new Error("Generated Web remains unavailable.");
       }
     };
@@ -712,6 +716,7 @@ describe("preview runner", () => {
       ).rejects.toMatchObject({ code: "preview_readiness_failed" });
       expect(healthChecks).toBe(1);
     } finally {
+      clock.mockRestore();
       await rm(root, { recursive: true, force: true });
     }
   });
