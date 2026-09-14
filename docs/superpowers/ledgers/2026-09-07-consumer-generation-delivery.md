@@ -4778,3 +4778,31 @@ parameterized acceptance and one proportionate review for ordinary row additions
 Root is authorized to create the bounded English commit and normally push
 codex/consumer-delivery-roadmap, then verify clean status and remote equality.
 No main merge, repository release or cloud deployment is part of this delivery.
+
+### README refresh and main inspection - 2026-09-15
+
+The founder requests an up-to-date main and a product-facing README based on
+iteration history, product goals, and public GitHub peers. Root owns this
+documentation correction: README.md, this appended ledger entry, and
+docs/research/2026-09-15-readme-and-main-assessment.md. No other writer is active
+in these paths. Existing source, historical evidence, and ADR bytes are retained.
+
+The inspected functional base is 6c937d61; local main equals origin/main at
+ff9ae7ec. The consumer branch is 29 commits ahead. Main integration remains
+blocked: both latest consumer CI lanes fail formatting before later gates,
+and the previously recorded Candidate concurrency baseline remains unresolved.
+The independent integration review is read-only and does not grant integration
+or repository-release acceptance. The README labels branch availability,
+bounded local capabilities, and production goals separately.
+
+Focused verification passes all 29 local documentation links/anchors, referenced
+package-script existence, README/research-note Prettier, and git diff --check.
+Local full Prettier reports 30 inherited paths; the remote run reports 14.
+Those separate observations are not a new Candidate reproduction. Runtime and
+real-model acceptance were not rerun for this documentation correction.
+Independent reviewer /root/integration_review returns DOC_REVIEW_PASS: yes,
+with no actionable P0/P1/P2 findings for this three-path documentation delivery.
+Root accepts this bounded documentation correction for one English commit and
+normal push to codex/consumer-delivery-roadmap, followed by clean-state and
+remote-tip verification. A draft integration PR may expose the outstanding
+gates; main merge and production/repository-release acceptance remain blocked.
