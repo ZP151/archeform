@@ -168,7 +168,7 @@ cannot silently add template, compiler, or UI-registry work here.
   does not claim private hosted access or real identity.
 - **PRO-013**: Freeze the frontend family classifier as
   `consumerFamilyFor(journey: ProductJourneyController):
-  "restaurant-ordering" | "approval" | null` in
+"restaurant-ordering" | "approval" | null` in
   `apps/workbench/lib/product-journey/consumer-family.ts`. It returns
   `restaurant-ordering` under the existing ADR-0038 predicate, `approval` only
   under **PRO-004** through **PRO-008**, and `null` for every ambiguity or

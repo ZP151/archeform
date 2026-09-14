@@ -62,7 +62,6 @@ Superseding source identities:
 - `apps/workbench/lib/product-journey/consumer-family.ts`: `9a4eedb2dcf47737ec60ad9e3bd837ef646c3b4f93651fbec45874876a025ec5`.
 - `apps/workbench/lib/product-journey/use-consumer-generation.test.tsx`: `b091deb11d7b2ff86b7ee7fbe21b9aea8d2b11f951d324b82a189873ca8e4e18`.
 
-
 ## Reviewed identities
 
 SHA-256 over current bytes. Initial identities were captured during review; changed production and fixture paths were re-read after repairs. Root may retain this manifest with the final source freeze.

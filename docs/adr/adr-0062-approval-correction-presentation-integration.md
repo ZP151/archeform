@@ -107,9 +107,9 @@ release.
   `submit: draft -> submitted`, `approve: submitted -> approved`,
   `reject: submitted -> returned`, and `update: returned -> draft`. The exact
   current-state projection is `Draft current / Submitted pending / Decision
-  pending` for draft; `Draft complete / Submitted current / Decision pending`
+pending` for draft; `Draft complete / Submitted current / Decision pending`
   for submitted; and `Draft complete / Submitted complete / Approved|Returned
-  current` for the two decision states. The current item has
+current` for the two decision states. The current item has
   `aria-current='step'`; Returned reuses the admitted `circle-x` icon. After
   Revise returns the record to draft, the projection resets to the draft row;
   decision history, not progress, preserves earlier return/approval evidence.

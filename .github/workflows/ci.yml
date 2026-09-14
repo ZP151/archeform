@@ -29,6 +29,7 @@ jobs:
           DATABASE_URL: postgresql://factory:factory@127.0.0.1:1/factory_pilot?schema=public
       - run: pnpm format:check
       - run: pnpm typecheck
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test
       - run: pnpm build
       - run: pnpm verify:third-party

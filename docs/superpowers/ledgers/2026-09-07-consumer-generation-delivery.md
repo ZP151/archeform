@@ -4806,3 +4806,87 @@ Root accepts this bounded documentation correction for one English commit and
 normal push to codex/consumer-delivery-roadmap, followed by clean-state and
 remote-tip verification. A draft integration PR may expose the outstanding
 gates; main merge and production/repository-release acceptance remain blocked.
+
+### Founder-requested PR integration and Restaurant screenshot - 2026-09-15
+
+The founder reiterates that main must be updated through a PR and asks for the
+previous Restaurant application screenshot in README. Root owns README,
+integration assessment, this ledger, formatting digest reconciliation and Git.
+Root authorizes a bounded formatter over the 26 non-ADR evidence paths reported
+by the fresh Prettier baseline; the exact manifest and before/after digests are
+recorded in the integration assessment. Root retains the three flagged ADRs
+and this ledger. Formatting changes no behavior, decision or historical result;
+original digests continue to identify the historical accepted bytes in Git.
+The formatter may not change ignore rules, dependencies, tests, or source outside
+the fixed evidence manifest. Root owns provider-free integration checks and
+diagnosis of existing failures; a behavioral or shared-contract repair requires
+a separate bounded dispatch before editing. Existing runtime acceptance and
+cleanup evidence remain reusable for unchanged implementations. Integration
+acceptance remains pending until the actual checks and scoped review are clean.
+
+ADR-0067 is founder-accepted under the existing standing independent-review
+policy: reviewer /root/integration_review returns
+APPROVED_FOR_STANDING_ACCEPTANCE: yes, P0/P1/P2 0/0/0, for exact SHA256
+d07c2b1d12d32a5d40a8378e71f12c316d5652bd91a69e8667e5631267bd713b.
+The prior decision-record P1 and its documentation correction remain recorded
+in the integration assessment. Root now owns the bounded two-path Candidate
+repair in ADR-0067, with deterministic RED before production edits. The stopped
+R0 storage experiment and the original checkout's uncommitted tests are untouched.
+
+The initial full test gate passed 28 of 29 tasks and failed two existing compiler
+browser layout cases (774/776 compiler tests) on the 30-second timeout. Root
+assigns /root/format_evidence the single existing
+packages/compiler/test/approval-correction-runtime.test.ts for a mechanical
+fixture/browser correction only; 650px/44px/accent/state assertions stay intact.
+Root retains .github/workflows/ci.yml for the already-pinned Playwright Chromium
+test prerequisite if needed by the existing tests. No product UI, runtime,
+dependency version, concurrency setting or acceptance threshold may change in
+this test-helper scope. Typecheck passes 29/29 tasks; build passes 17/17.
+
+Candidate review found a residual interleaving between snapshot acquisition and
+the second reconciling strict accessor. Root reproduced it deterministically
+(one focused failure with the same verification error). ADR-0067 DEC-002 now
+binds the verified snapshot and delegates later winners to the existing verified
+indexed/CAS path. Independent reviewer /root/integration_review accepts the
+scoped amendment under standing policy, P0/P1/P2 0/0/0, exact SHA256
+e0ba319f101914878c9eccb4acfe2da3061395cc51522c5ba442d2606f434933.
+This supersedes the earlier proposal hash for implementation authority while
+retaining its review history. Root authorizes the matching local source repair.
+
+### Final integration correction ownership and evidence - 2026-09-15
+
+Root resumed the compiler test fixture after the bounded Spark writer became
+unavailable. Temporary timing instrumentation was removed. The unchanged layout
+assertions exposed slow implicit browser teardown; explicit context cleanup now
+passes both focused cases in 3.53 seconds, retaining nested finally cleanup for
+the browser. The existing CI installs the pinned Chromium test prerequisite.
+No product UI, timeout, assertion, dependency version or concurrency changed.
+
+Candidate review P1 is closed by the accepted bound-snapshot correction and sixth
+deterministic regression. The final focused cases pass 6/6 and the complete
+external-intake suite passes 436/436, including separate-process races. The
+remaining review P2 was formatting only and is corrected; owning typecheck,
+build and lint pass. The 29-file formatting provenance and both byte-identical
+Restaurant screenshot copies verify. README local links and anchors pass 29/29.
+Root retains all final writes and Git integration ownership. Final full checks
+and independent integration review are still required before acceptance.
+
+### Consumer iteration accepted for reviewed main integration - 2026-09-15
+
+State: accepted. Root accepts the previously delivered consumer slices and the
+bounded integration corrections under the founder's explicit PR/main request.
+All required existing product task/QA/release reviews and actual runtime cleanup
+evidence are retained; unchanged implementations need no new acceptance run.
+The final independent /root/integration_review reports P0/P1/P2 0/0/0 for the
+Candidate repair, browser fixture, CI prerequisite, screenshots and provenance.
+No load-bearing review finding remains. This is iteration integration acceptance,
+not repository-release or production-deployment acceptance.
+
+Fresh final local gates pass: pnpm test 29/29 tasks, including compiler 776/776
+and external-intake 436/436; pnpm typecheck 29/29; pnpm build 17/17; full
+formatting; frozen install; third-party and source-study verification; README
+links 29/29; digest reconciliation 29/29; screenshot identity 2/2; diff check.
+Root may create the bounded English commit and push the iteration branch.
+After clean-state and remote-tip equality, merge PR #4 only with passing CI and
+normal reviewed integration. Recheck the exact merged main via the CI matrix
+and fast-forward local main, preserving the original checkout's pending work.

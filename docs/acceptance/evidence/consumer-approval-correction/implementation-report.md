@@ -42,11 +42,11 @@ Commands run from the assigned consumer-delivery worktree using pnpm.
 
 Permanent standalone `packages/compiler/test/fixtures/approval-legacy.ts` was captured before implementation from base `92f21089beeb184a236a1512cb4c1866f158e903`; it imports no mutable adapter builder. Tests regenerate each input twice and compare every ordered path, byte length and SHA-256 plus whole-manifest and bundle hashes.
 
-| Input | Files | Manifest SHA-256 | Bundle SHA-256 |
-| --- | ---: | --- | --- |
-| Expense | 63 | ba92104233b89d77cba794aa5bac632294aa3f436a14d114ab94f9f17e61c19e | 1f2e8cd027720107ac48a44cb2ca5335ddbe4380f2f58073250309dde75adac6 |
-| Purchase | 63 | 0e9f7c95065f7261e9ca4bff271294d78e475644d84e8d6853d11d944e8c5791 | e1a4aa49712f7b79fb9214c89c8439a1dbb4c61b6c6833545787fc81473f35fb |
-| Booking | 62 | c96ec5e61fdc8c2b5a4163c429fa4dfea8c13a2964e607561439f2b8eb5e2888 | cd1c3e4693bb6f3056ca667f17985f5fcefbe07c8d4dffd1ad151edc4819ce18 |
+| Input    | Files | Manifest SHA-256                                                 | Bundle SHA-256                                                   |
+| -------- | ----: | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Expense  |    63 | ba92104233b89d77cba794aa5bac632294aa3f436a14d114ab94f9f17e61c19e | 1f2e8cd027720107ac48a44cb2ca5335ddbe4380f2f58073250309dde75adac6 |
+| Purchase |    63 | 0e9f7c95065f7261e9ca4bff271294d78e475644d84e8d6853d11d944e8c5791 | e1a4aa49712f7b79fb9214c89c8439a1dbb4c61b6c6833545787fc81473f35fb |
+| Booking  |    62 | c96ec5e61fdc8c2b5a4163c429fa4dfea8c13a2964e607561439f2b8eb5e2888 | cd1c3e4693bb6f3056ca667f17985f5fcefbe07c8d4dffd1ad151edc4819ce18 |
 
 Manifest hash is SHA-256 of JSON ordered `{path,bytes,sha256}` entries. Bundle hash is SHA-256 of ordered length-delimited path/content (`UTF8ByteLength:pathUTF8ByteLength:content`). Existing old-purpose composition/database/journey tests use these frozen inputs instead of rewriting legacy expected hashes to correction output.
 
@@ -149,28 +149,28 @@ Root's inspection of the original mobile screenshots found the same direct-child
 
 All owned implementation/test paths below are ready for review. Source and test writes are paused. Hashes below match the final owned files. Report-only completion updates do not alter emitted bytes.
 
-| Owned path | SHA-256 |
-| --- | --- |
-| packages/adapters/src/requirements/approval-definition-template.ts | fbb8bc45f6d616fd1cf8c238ff275bd22100a952c179f0889196681a485c6d37 |
-| packages/adapters/src/requirements/approval-definition-selection.ts | 38893e071880b1de004c26c37db489af5f519303824686ef601eeb03a2e4344a |
+| Owned path                                                                  | SHA-256                                                          |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| packages/adapters/src/requirements/approval-definition-template.ts          | fbb8bc45f6d616fd1cf8c238ff275bd22100a952c179f0889196681a485c6d37 |
+| packages/adapters/src/requirements/approval-definition-selection.ts         | 38893e071880b1de004c26c37db489af5f519303824686ef601eeb03a2e4344a |
 | packages/adapters/src/requirements/purchase-request-definition-selection.ts | 92d3bfc907c248ecbeec86b4f985c406a71c5869e80baa6335b108980770fa90 |
-| packages/adapters/test/requirement-interpreter.test.ts | 0acca796e5bee29184e9b6b0d666b2e2c284c91941aa1e744b944e1f45536469 |
-| packages/compiler/src/approval-mutation-contract.ts | e0887dee854c59c3fff2521a50cbe61b89fd47a26db4c4f167b7b90114bcaab4 |
-| packages/compiler/src/index.ts | 42a87b685943fadb86b745978f9667b5252901b3fafb84ed8f81c0d21bca4ddc |
-| packages/compiler/src/approval-workspace-presentation.ts | db5bb0c753f2a3e0b1667f6868a56849f201fe3fbedf0f127a323f635e1b1725 |
-| packages/compiler/src/approval-decision-history.ts | 2d0668557182c2e9ebef8fd44da235701facc3abbcc8b46229e9269d19c602d1 |
-| packages/compiler/src/approval-presentation-components.ts | 30fb07dfd0b5add46c549529c3ac2a066d6cf011ea6b74aad6a3c50b78f5c031 |
-| packages/compiler/src/approval-visual-assets.ts | 34f0085f7bb9339b72ae3b23678c7715307cd7fe4db98c7cb1c3548726f0d991 |
-| packages/compiler/src/targets/database/target.ts | 688ee494c07190d012790f40bc6239428bd4d3887eb02a75bd6731636f73a955 |
-| packages/compiler/test/composition-page-runtime.test.ts | 1bbcba839d2cfe511bdaea2a5f120bcb77618204b0098605008c8c6796a43c1b |
-| packages/compiler/test/database-target-parity.test.ts | de3b1331f6004dcc9aee60513b15fec1e56e515d7c2d251ccc370e10d963b011 |
-| packages/compiler/test/role-journey-runtime.test.ts | 08db1033abc65802a7de7ae659b12dd2714e46682b009f44fed53ec7a60f8472 |
-| packages/compiler/test/approval-correction-runtime.test.ts | 07a6dec059377557b408413f23ccacc5ed75776b1547f5e2e9fb0bcad56b7ff1 |
-| packages/compiler/test/fixtures/approval-legacy.ts | 0fef3e089a838e38091da2e78910ae460e21834eda18a12ffb272b27757a1614 |
-| apps/compiler-worker/src/verifier/verification-graph-plan.ts | f9ad9d69d719b36b5cdc364ab74399c64292101e7fad09dc4bba02e92357f5b4 |
-| apps/compiler-worker/src/verifier/role-journey.ts | 784cf622a6e548fafd22dfe6011a7d2596e155f33cc80b79e0c46d0ee1d84f9e |
-| apps/compiler-worker/src/verifier/probes.ts | e3fcd97d6b86ceee8e786cc8edcbd1298f7c83d2539091c5980ad28d7f36d0d9 |
-| apps/compiler-worker/src/verifier/verification-environment.ts | 63f9c248c1dfe0367d6b921f08267f42b01c4571c29fbf204359e8eeba12dfbb |
-| apps/compiler-worker/test/verification-graph-plan.test.ts | 8de2e27daf57d257dea347cd3b6421f8e1dfd39d16f4f5de796915f288c8e246 |
-| apps/compiler-worker/test/verification-probes.test.ts | e51644b7c987461ce1be13c5a424291d103d3f9a5656fb56362d55c20680552a |
-| apps/compiler-worker/test/verification-environment.test.ts | 7ff4b1de49c0b0f312a321d0eaa674b2f021d8705d8dd0ada4b44121cfc253c5 |
+| packages/adapters/test/requirement-interpreter.test.ts                      | 0acca796e5bee29184e9b6b0d666b2e2c284c91941aa1e744b944e1f45536469 |
+| packages/compiler/src/approval-mutation-contract.ts                         | e0887dee854c59c3fff2521a50cbe61b89fd47a26db4c4f167b7b90114bcaab4 |
+| packages/compiler/src/index.ts                                              | 42a87b685943fadb86b745978f9667b5252901b3fafb84ed8f81c0d21bca4ddc |
+| packages/compiler/src/approval-workspace-presentation.ts                    | db5bb0c753f2a3e0b1667f6868a56849f201fe3fbedf0f127a323f635e1b1725 |
+| packages/compiler/src/approval-decision-history.ts                          | 2d0668557182c2e9ebef8fd44da235701facc3abbcc8b46229e9269d19c602d1 |
+| packages/compiler/src/approval-presentation-components.ts                   | 30fb07dfd0b5add46c549529c3ac2a066d6cf011ea6b74aad6a3c50b78f5c031 |
+| packages/compiler/src/approval-visual-assets.ts                             | 34f0085f7bb9339b72ae3b23678c7715307cd7fe4db98c7cb1c3548726f0d991 |
+| packages/compiler/src/targets/database/target.ts                            | 688ee494c07190d012790f40bc6239428bd4d3887eb02a75bd6731636f73a955 |
+| packages/compiler/test/composition-page-runtime.test.ts                     | 1bbcba839d2cfe511bdaea2a5f120bcb77618204b0098605008c8c6796a43c1b |
+| packages/compiler/test/database-target-parity.test.ts                       | de3b1331f6004dcc9aee60513b15fec1e56e515d7c2d251ccc370e10d963b011 |
+| packages/compiler/test/role-journey-runtime.test.ts                         | 08db1033abc65802a7de7ae659b12dd2714e46682b009f44fed53ec7a60f8472 |
+| packages/compiler/test/approval-correction-runtime.test.ts                  | 07a6dec059377557b408413f23ccacc5ed75776b1547f5e2e9fb0bcad56b7ff1 |
+| packages/compiler/test/fixtures/approval-legacy.ts                          | 0fef3e089a838e38091da2e78910ae460e21834eda18a12ffb272b27757a1614 |
+| apps/compiler-worker/src/verifier/verification-graph-plan.ts                | f9ad9d69d719b36b5cdc364ab74399c64292101e7fad09dc4bba02e92357f5b4 |
+| apps/compiler-worker/src/verifier/role-journey.ts                           | 784cf622a6e548fafd22dfe6011a7d2596e155f33cc80b79e0c46d0ee1d84f9e |
+| apps/compiler-worker/src/verifier/probes.ts                                 | e3fcd97d6b86ceee8e786cc8edcbd1298f7c83d2539091c5980ad28d7f36d0d9 |
+| apps/compiler-worker/src/verifier/verification-environment.ts               | 63f9c248c1dfe0367d6b921f08267f42b01c4571c29fbf204359e8eeba12dfbb |
+| apps/compiler-worker/test/verification-graph-plan.test.ts                   | 8de2e27daf57d257dea347cd3b6421f8e1dfd39d16f4f5de796915f288c8e246 |
+| apps/compiler-worker/test/verification-probes.test.ts                       | e51644b7c987461ce1be13c5a424291d103d3f9a5656fb56362d55c20680552a |
+| apps/compiler-worker/test/verification-environment.test.ts                  | 7ff4b1de49c0b0f312a321d0eaa674b2f021d8705d8dd0ada4b44121cfc253c5 |

@@ -689,8 +689,10 @@ describe("executed correction presentation", () => {
       const browser = await runtimeRequire("@playwright/test").chromium.launch({
         headless: true,
       });
+      let context: import("@playwright/test").BrowserContext | undefined;
       try {
-        const page = await browser.newPage();
+        context = await browser.newContext();
+        const page = await context.newPage();
         const expectAccent = async (button: any) => {
           const colors = await button.evaluate((element: HTMLElement) => {
             const reference = document.createElement("span");
@@ -830,7 +832,11 @@ describe("executed correction presentation", () => {
           }
         }
       } finally {
-        await browser.close();
+        try {
+          await context?.close();
+        } finally {
+          await browser.close();
+        }
       }
     },
   );

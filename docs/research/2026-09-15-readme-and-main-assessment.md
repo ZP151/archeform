@@ -1,7 +1,9 @@
 # README references and main integration assessment
 
-Date: 2026-09-15. Scope: public README correction and read-only delivery review.
-This document records observations, not a technology decision or release acceptance.
+Date: 2026-09-15. The initial documentation-only assessment below is historical.
+The founder's follow-up explicitly requests main integration through PR #4 and
+the earlier Restaurant app screenshot. The final section records that repair;
+ADR-0067 and the active ledger control its decision and acceptance.
 
 ## Product evidence and editorial choices
 
@@ -13,7 +15,7 @@ and Publication Review supply actual business and recovery evidence.
 The product-definition scale plan supplies the next coverage goals.
 The threat model supplies the production identity and operating limitations.
 
-The README now leads with that user outcome, shows an inspected actual generated
+The first README correction led with that user outcome, showing an actual generated
 Publication Review screenshot, links each supported application to acceptance,
 and separates local capability from production work. It replaces the old
 assembler clone address, pins the documented package manager, protects an
@@ -84,3 +86,71 @@ the merged commit, and verify local main equals origin/main.
 This task does not restart the stopped PostgreSQL publication experiment,
 publish a product revision, run a model, launch runtime resources, create a
 repository release, or deploy to a cloud.
+
+## Follow-up: Restaurant result and PR integration repair
+
+The founder requested completion of main integration rather than stopping at
+a draft PR. The README result now uses the previously captured Saffron & Sage
+Restaurant order page at desktop and mobile widths. Original files are
+`acceptance-artifacts/d1.8/orders-1440.png` and `orders-390.png`; copies under
+`docs/images/` are byte-identical and inspected. They contain sample ordering
+data and explicitly simulated payment. The earlier D1.8 Restaurant delivery is
+the provenance; this task does not claim a new generated-product screenshot run.
+
+The formatting baseline had 30 local paths but 14 canonical Git content changes;
+the remaining differences were local line endings. The 26-file evidence manifest
+and three existing ADRs were formatted with the already-installed Prettier.
+Fifteen JSON files preserve parsed values. The two evidence scripts preserve the
+TypeScript syntax tree's node kinds and literal values; comparing full printer
+output was initially inconclusive because formatting itself changes that text.
+The three ADRs change only inline-code continuation indentation, retaining all
+decisions. [Digest reconciliation](2026-09-15-format-reconciliation.json) links
+the original Git blobs to formatted files and records screenshot identity.
+Historical acceptance digests and result fields are not rewritten as new results.
+
+The historical main Candidate failure was reproduced deterministically before
+source edits. A second process commits the sole terminal winner between
+`verifyIdentity` and current-entry access. Reconciliation correctly marks the
+newly loaded entry unverified, so the old code rejects a valid idempotent caller.
+ADR-0067 retains the existing strict verifier, serializers and CAS. The first
+decision review required explicit version/manifests, effects, commands and
+evidence destinations; the amended proposal received independent standing
+acceptance with zero findings before implementation.
+
+The correction performs one bounded verification of the changed current snapshot.
+Deterministic RED was 4 failed/1 passed; the positive case reproduced the exact
+historical verification error. Initial GREEN passed 5/5, including denial for
+tampered, blocked, rejected and conflicting results, and the owning suite passed
+435/435. One assertion was corrected because the receipt helper enumerates only
+candidate-ready statuses; complete lifecycle record counts remain unchanged.
+Independent review then found a residual interleaving before a second reconciling
+accessor. A sixth deterministic test reproduced that error. The accepted ADR
+amendment binds the verified snapshot and leaves later winners to the existing
+strict indexed/CAS path. Final focused tests pass 6/6, with owning typecheck,
+build and lint passing. The review's remaining formatting finding is corrected.
+No storage migration or R0 restart is involved, and the original checkout's
+unfinished tests remain untouched.
+
+Initial full checks: frozen install, typecheck (29 tasks), build (17 tasks),
+third-party notices and source studies pass. Full tests passed 28/29 tasks;
+compiler passed 774/776 and timed out in two existing browser layout cases.
+A focused rerun passed 2/2 in 26.77 seconds of test time, retaining the full-run
+failure as evidence. Instrumentation isolated slow browser teardown: one case
+finished assertions at 6,844 ms but browser close completed at 21,652 ms. Root
+removed diagnostics and explicitly closes the browser context before the browser,
+with both cleanup calls protected by finally. The focused cases now pass 2/2 in
+3.53 seconds. All widths, assertions, page content loads, timeouts and concurrency
+settings remain unchanged. CI installs Chromium and its system prerequisites for
+the already-pinned Playwright dependency before tests.
+
+Final local checks pass: full tests 29/29 tasks (compiler 776/776 and external
+intake 436/436), typecheck 29/29, build 17/17, repository formatting, frozen
+install, third-party notices and source-study verification. README local links
+and anchors pass 29/29. Independent final integration review reports P0/P1/P2
+0/0/0 and confirms the bound-snapshot repair, unchanged layout assertions,
+Chromium prerequisite, image provenance and all formatting digests. Root accepts
+the integration correction for normal commit and push to PR #4. Merge remains
+conditional on passing remote CI; the exact merged main commit must pass the
+same matrix and local main must equal origin/main. Existing product runtime
+acceptance and resource-cleanup evidence remain valid for the unchanged product
+implementations; no new runtime acceptance, release or deployment is claimed.

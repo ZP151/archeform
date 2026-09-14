@@ -14,10 +14,6 @@
   "concurrentApiWritesCommitOnce": true,
   "duplicateActivationIgnored": true,
   "submittedEditDenied": true,
-  "responsiveWidths": [
-    390,
-    768,
-    1440
-  ],
+  "responsiveWidths": [390, 768, 1440],
   "modelCalls": 0
 }

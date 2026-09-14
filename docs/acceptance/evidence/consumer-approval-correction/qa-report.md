@@ -102,9 +102,9 @@ attempt-1 fixture bridge was no longer the immediate blocker. Both lanes then
 published and compiled successfully but reached terminal automatic-delivery
 outcome `failed` instead of `ready` before Preview creation:
 
-| Lane | Compilation | Verification | Safe persisted result |
-| --- | --- | --- | --- |
-| Expense | `cmtyij0ja0009o54twcmsym0f` | `cmtyij1qo0022o54tnr1mnrbl` | `failed`, `binding.status_mismatch` (`binding`) |
+| Lane     | Compilation                 | Verification                | Safe persisted result                           |
+| -------- | --------------------------- | --------------------------- | ----------------------------------------------- |
+| Expense  | `cmtyij0ja0009o54twcmsym0f` | `cmtyij1qo0022o54tnr1mnrbl` | `failed`, `binding.status_mismatch` (`binding`) |
 | Purchase | `cmtyimlrs002co54t9jboi55s` | `cmtyimmyv0045o54t6gsbihq0` | `failed`, `binding.status_mismatch` (`binding`) |
 
 This is one shared P1 acceptance blocker: the generated correction
@@ -145,10 +145,10 @@ total), while the helper required a bare 64-character hexadecimal string. The
 runner recorded this same mismatch for Expense and Purchase. The defect is in
 the acceptance helper assertion; it is not evidence of a product hash failure.
 
-| Lane | Compilation | Verification | Preview |
-| --- | --- | --- | --- |
-| Expense | `cmtyj1swf004fo54thl7pafhx` | `cmtyj1u3n0068o54t8ch0jrl7` succeeded | `preview-f00a9781-e3e4-4232-ba7d-10897ee9a901` stopped |
-| Purchase | `cmtyj67g7006io54tamh0v2nd` | verification succeeded | `preview-af7f12e0-5b0c-4365-86d9-3bf011b7866f` stopped |
+| Lane     | Compilation                 | Verification                          | Preview                                                |
+| -------- | --------------------------- | ------------------------------------- | ------------------------------------------------------ |
+| Expense  | `cmtyj1swf004fo54thl7pafhx` | `cmtyj1u3n0068o54t8ch0jrl7` succeeded | `preview-f00a9781-e3e4-4232-ba7d-10897ee9a901` stopped |
+| Purchase | `cmtyj67g7006io54tamh0v2nd` | verification succeeded                | `preview-af7f12e0-5b0c-4365-86d9-3bf011b7866f` stopped |
 
 The exact Preview projects were
 `factory-preview-preview-f00a9781-e3e4-4232-ba7d-10897ee9a901` (Expense) and
@@ -412,7 +412,6 @@ coverage; the test run deliberately recorded `modelCalls: 0`.
 
 Current result: **QA_PASS: yes; P0/P1/P2: `0/0/0`**. QA made no production,
 test, service, dependency, environment, or Git changes.
-
 
 ### Resolution of the historical Attempt-6 Decimal observation
 

@@ -20,26 +20,25 @@ The platform's job is to assemble and verify the application; understanding
 frameworks, schemas, and compilation should not be a prerequisite for users.
 
 **Status: local Alpha.** Five reviewed product definitions across three runtime
-families have bounded local acceptance evidence on the development branch.
+families have bounded local acceptance evidence.
 Managed hosting, production identity, and ordinary-user success at scale remain
 open work. See [delivery status](docs/project-status.md) for evidence and limitations.
 
-> **Branch availability — September 15, 2026:** the capabilities below describe
-> `codex/consumer-delivery-roadmap`, through `6c937d61`.
-> `main` remains at `ff9ae7ec`; this functional iteration is not yet integrated.
-> Branch CI fails formatting, and the recorded Candidate concurrency baseline
-> remains unresolved. The quick start selects the development branch explicitly.
-> See the [integration assessment](docs/research/2026-09-15-readme-and-main-assessment.md).
-
 ## See the result
 
-![Generated Publication Review application with submissions, search, status filtering, editing, and workflow progress](docs/acceptance/evidence/definition-batch-one/publication-review/primary-1440.png)
+![Previously generated Saffron and Sage Restaurant app showing customer navigation, an order ready for collection, and simulated payment](docs/images/restaurant-orders-desktop.png)
 
-An actual generated Publication Review app from the accepted local run, using
-sample data and a demo role selector. Acceptance also covers correction,
-resubmission, decision history, restart/retry behavior, mobile layouts, dark
-presentation, and missing-image recovery.
-[Read the evidence](docs/acceptance/definition-batch-one.md).
+The Restaurant app from the earlier D1.8 local acceptance run: a customer has
+placed an order and can follow its fulfilment status. This is an actual
+generated application with sample data and simulated payment.
+[Read the Restaurant delivery evidence](docs/superpowers/ledgers/2026-09-07-consumer-generation-delivery.md).
+
+<details>
+<summary>View the same Restaurant app on mobile</summary>
+
+![Mobile Restaurant app with order status and customer navigation](docs/images/restaurant-orders-mobile.png)
+
+</details>
 
 ## Supported applications
 
@@ -97,7 +96,7 @@ Restaurant journey. A hosted signup experience is still planned.
 ### Install and configure
 
 ```powershell
-git clone --branch codex/consumer-delivery-roadmap https://github.com/ZP151/archeform.git
+git clone https://github.com/ZP151/archeform.git
 cd archeform
 corepack enable
 corepack prepare pnpm@9.0.0 --activate
@@ -200,7 +199,7 @@ outcomes; an updated README does not establish it.
 | Ease of use            | Bounded automated generation and authored local journeys                   | Real-model selection and ordinary-user sessions measuring success, questions, time to useful action, and manual intervention        |
 | Identity and security  | Tested demo roles, state denial, and bounded runtime controls              | Production identity, tenant isolation, key management, audit retention, rate limits, and incident response                          |
 | Hosting and operations | Local verification and Preview with cleanup evidence                       | Approved hosting and runner isolation, durable delivery, stable URLs, recovery, and operating ownership                             |
-| Release reliability    | Profile-specific acceptance and immutable output checks                    | Resolve formatting and Candidate concurrency blockers; passing integration gates on the exact merged commit                         |
+| Release reliability    | Profile-specific acceptance and immutable output checks                    | Passing integration gates on each merged commit; traceable fixes for baseline failures                                              |
 
 The [scale roadmap](docs/superpowers/plans/2026-09-13-product-definition-scale.md)
 prioritizes useful semantic coverage and ordinary-user effort over template

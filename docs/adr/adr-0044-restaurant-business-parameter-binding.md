@@ -102,7 +102,7 @@ implemented.
   remains runtime state and does not rewrite the immutable Published Graph.
 - **PRO-005**: For an explicit phrase such as “a restaurant app named Saffron
   Table,” instruct the existing private Restaurant selection to put `Saffron
-  Table` in its `title`. Tighten only the private
+Table` in its `title`. Tighten only the private
   `RestaurantDefinitionSelectionV1.title` boundary to trimmed safe business
   text of 2..80 characters, matching the already-accepted compiler admission.
   If an explicit name is longer, return one material clarification requesting
