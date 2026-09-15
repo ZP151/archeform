@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-09-12T18:15:00.3384093Z",
+  "attempt": 2,
+  "hashes": {
+    "e2e/consumer-task.spec.ts": "c24d2a2b8e9697964c9e7b9eedfb5c69dbd097890db0fd938722776bd1f04870",
+    "e2e/consumer-task-fixture.ts": "11df0645bc90190b1e1c275be494fd6a0ac410c813fdc79bc31bd73d407e894e",
+    "e2e/task-presentation.ts": "7e73c8f8a1ed62d0145473f2692b6471d857a29b09edbd1ac4fdead2a5108949",
+    "e2e/consumer-task-ui.spec.ts": "a79c1bae23db7819cdbeecf857d44010137a95b5565ed116507b31e5405be263",
+    "scripts/emit-composed-ui.mjs": "93cdd97188e621f5c9edf8160339389b791a40055486b8d7b57558cc135c18e8"
+  },
+  "note": "Actual attempt 2 E2E sources unchanged; final fast emitted UI test adds separate authored empty-state coverage."
+}

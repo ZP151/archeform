@@ -1,3 +1,22 @@
+import {
+  renderTaskWorkspace,
+  renderTaskWorkspaceStyles,
+} from "./task-workspace-presentation.js";
+import {
+  selectTaskContract,
+  renderTaskMutationRuntime,
+  hasTaskCorrection,
+  renderTaskPrismaStore,
+  renderTaskApi,
+} from "./task-mutation-contract.js";
+import {
+  selectApprovalCorrection,
+  renderApprovalJourney,
+  renderApprovalCorrectionPage,
+  renderApprovalMutationRuntime,
+  renderApprovalPrismaStore,
+  renderApprovalApi,
+} from "./approval-mutation-contract.js";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -26,6 +45,20 @@ import {
   type PublishedApplicationGraphInput,
 } from "@factory/graph";
 import { renderJourneyTest } from "./journey-test-renderer.js";
+import {
+  approvalWorkspaceStyles,
+  renderWorkspaceDataHelpers,
+  renderWorkspaceRecordHook,
+  renderApprovalWorkspaceShell,
+} from "./approval-workspace-presentation.js";
+import {
+  approvalDecisionHistoryStyles,
+  renderApprovalDecisionHistory,
+} from "./approval-decision-history.js";
+import {
+  approvalPresentationComponentStyles,
+  renderApprovalPresentationComponents,
+} from "./approval-presentation-components.js";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
 import {
   renderRestaurantCustomerCommandRuntime,
@@ -49,6 +82,7 @@ import {
 import { databaseTargetPlugin } from "./targets/database/target.js";
 import { documentationTargetPlugin } from "./targets/documentation/target.js";
 import { policyTargetPlugin } from "./targets/policy/target.js";
+import { getCustomerIconAssets } from "./targets/restaurant-v3/customer-icons.js";
 import { generateRestaurantProductApplicationBundle } from "./targets/restaurant-v3/product-target.js";
 
 /**
@@ -1667,6 +1701,7 @@ function renderApplicationRuntime(
   orderOperationsEntityKey: string | undefined,
   persistentOrderOperationReceipts: boolean,
   notificationOutbox: NotificationOutboxRuntimeContribution | undefined,
+  approvalEntity?: string,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityRegistryImports = [
@@ -1685,7 +1720,7 @@ function renderApplicationRuntime(
     "getWorkflowHandler",
     "providedEffects",
   ];
-  return [
+  const source = [
     useResolvedContributions
       ? `import { ${capabilityRegistryImports.join(", ")} } from "./capabilities/registry.js";`
       : 'import { providedEffects } from "./capabilities/registry.js";',
@@ -2358,6 +2393,7 @@ function renderApplicationRuntime(
     "export const applicationRuntime = new ApplicationRuntime();",
     "",
   ].join("\n");
+  return renderApprovalMutationRuntime(source, graph, approvalEntity);
 }
 
 function renderPrismaRecordStore(
@@ -2365,6 +2401,7 @@ function renderPrismaRecordStore(
   hasRestaurantRuntime: boolean,
   persistentOrderOperationReceipts: boolean,
   notificationOutbox: boolean,
+  approvalEntity?: string,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
@@ -2383,7 +2420,7 @@ function renderPrismaRecordStore(
       toCamelCase(entity.key),
     ]),
   );
-  return [
+  const source = [
     'import { PrismaClient } from "@prisma/client";',
     `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""}${notificationOutbox ? " NotificationOutboxEntry, NotificationOutboxInput," : ""}${persistentOrderOperationReceipts ? " OrderOperationReceipt," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
     'import { assertFactoryOwnedRecordIdentityInput } from "./application-runtime.js";',
@@ -2606,6 +2643,7 @@ function renderPrismaRecordStore(
     "}",
     "",
   ].join("\n");
+  return renderApprovalPrismaStore(source, graph, approvalEntity);
 }
 
 function renderWebRootPage(): string {
@@ -2653,11 +2691,125 @@ function renderFaviconRoute(): string {
   ].join("\n");
 }
 
+type GeneratedPresentationProfile = "legacy" | "approval-v1" | "task-v1";
+
+function presentationProfileFor(
+  graph: ApplicationGraphV1,
+): GeneratedPresentationProfile {
+  const matches = graph.flow.flows.flatMap((flow) =>
+    flow.transitions
+      .filter((transition) => transition.event === "approve")
+      .flatMap((approve) =>
+        flow.transitions.filter(
+          (reject) =>
+            reject.event === "reject" &&
+            reject.from === approve.from &&
+            flow.transitions.some(
+              (submit) =>
+                submit.event === "submit" &&
+                submit.to === approve.from &&
+                submit.from !== approve.from,
+            ),
+        ),
+      ),
+  );
+  return matches.length === 1 ? "approval-v1" : "legacy";
+}
+
+function needsApprovalSummaryExtension(graph: ApplicationGraphV1): boolean {
+  return graph.domain.entities.some(
+    ({ key, fields }) =>
+      graph.flow.flows.some(
+        (flow) =>
+          flow.entity === key &&
+          flow.transitions.some(
+            (transition) => transition.event === "approve",
+          ) &&
+          flow.transitions.some((transition) => transition.event === "reject"),
+      ) &&
+      (fields.filter((field) => field.key === "item" && field.type === "string")
+        .length === 1 ||
+        (!fields.some((field) => field.key === "date") &&
+          fields.filter(
+            (field) => field.type === "date" || field.type === "datetime",
+          ).length === 1)),
+  );
+}
+
 function renderPageRuntime(
   graph: ApplicationGraphV1,
   orderEntityKey: string | undefined,
   useFixtureSessions: boolean,
+  profile: GeneratedPresentationProfile,
+  correctionEntity?: string,
 ): string {
+  const approval = profile === "approval-v1";
+  const extendedSummary = approval && needsApprovalSummaryExtension(graph);
+  const approvalFlow = approval
+    ? graph.flow.flows.find((flow) =>
+        flow.transitions.some(
+          (transition) =>
+            transition.event === "approve" &&
+            flow.transitions.filter(
+              (candidate) =>
+                candidate.event === "reject" &&
+                candidate.from === transition.from,
+            ).length === 1 &&
+            flow.transitions.some(
+              (candidate) =>
+                candidate.event === "submit" &&
+                candidate.to === transition.from &&
+                candidate.from !== transition.from,
+            ),
+        ),
+      )
+    : undefined;
+  const approvalEntity = approvalFlow
+    ? graph.domain.entities.find((entity) => entity.key === approvalFlow.entity)
+    : undefined;
+  // The correction selector has already proven the immutable family contract.
+  // Preserve the incumbent item and Expense summary identity paths verbatim.
+  const businessFields =
+    approvalEntity?.fields.filter(
+      (field) =>
+        !["id", "status", "version", "createdAt", "updatedAt"].includes(
+          field.key,
+        ),
+    ) ?? [];
+  const titleCandidates = businessFields.filter(
+    (field) => field.type === "string" && field.required === true,
+  );
+  const legacyIdentity =
+    businessFields.some(
+      (field) => field.key === "item" && field.type === "string",
+    ) ||
+    (
+      [
+        ["amount", ["integer", "decimal"]],
+        ["category", ["string", "enum"]],
+        ["date", ["date", "datetime"]],
+      ] as const
+    ).every(([key, types]) =>
+      businessFields.some(
+        (field) =>
+          field.key === key &&
+          (types as readonly string[]).includes(field.type),
+      ),
+    );
+  const recordIdentity =
+    correctionEntity &&
+    approvalEntity?.key === correctionEntity &&
+    !legacyIdentity &&
+    titleCandidates.length === 1
+      ? {
+          entityKey: correctionEntity,
+          titleFieldKey: titleCandidates[0]!.key,
+          summaryFieldKeys: businessFields
+            .filter((field) => field.type === "enum")
+            .slice(0, 2)
+            .map((field) => field.key),
+        }
+      : undefined;
   const projection = createGeneratedPageRuntimeProjection(graph, {
     ...(orderEntityKey ? { orderEntity: orderEntityKey } : {}),
   });
@@ -2673,12 +2825,18 @@ function renderPageRuntime(
           key: field.key,
           required: field.required,
           type: field.type,
+          ...(approval && field.type === "enum"
+            ? { values: field.values }
+            : {}),
         })),
     })),
     policy: graph.policy,
     flow: {
       flows: graph.flow.flows.map((flow) => ({
         entity: flow.entity,
+        ...(flow === approvalFlow
+          ? { states: flow.states, initialState: flow.initialState }
+          : {}),
         transitions: flow.transitions.map((transition) => ({
           from: transition.from,
           event: transition.event,
@@ -2699,21 +2857,125 @@ function renderPageRuntime(
     2,
   ).replaceAll("<", "\\u003c");
 
-  return [
+  const source = [
     '"use client";',
     "",
-    'import { useEffect, useState } from "react";',
+    approval
+      ? 'import { useCallback, useEffect, useRef, useState } from "react";'
+      : 'import { useEffect, useState } from "react";',
     "",
     "type JsonRecord = Record<string, unknown>;",
     "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout' | 'stats' | 'list' | 'detail' | 'calendar' | 'settings'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
     "type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
-    "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string }[] };",
-    "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
+    approval
+      ? "type RuntimeField = { readonly key: string; readonly required: boolean; readonly type: string; readonly values?: readonly string[] }; type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly RuntimeField[] };"
+      : "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string }[] };",
+    approval
+      ? "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly states?: readonly string[]; readonly initialState?: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };"
+      : "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly checkoutRoute: string | null; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly configureLine: (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]) => Promise<JsonRecord>; readonly checkoutCart: () => Promise<void> };",
     "",
     `const projection: PageRuntimeProjection = ${serializedProjection};`,
     `const definition: RuntimeDefinition = ${serializedDefinition};`,
     "",
+    ...(approval
+      ? [
+          `const approvalIcons = ${JSON.stringify(Object.fromEntries((["house", "receipt-text", "user-round", "refresh-cw", "clock", "circle-check", "circle-x"] as const).map((key) => [key, getCustomerIconAssets().icons[key]]))).replaceAll("<", "\\u003c")};`,
+          "type ApprovalIconKey = 'house' | 'receipt-text' | 'user-round' | 'refresh-cw' | 'clock' | 'circle-check' | 'circle-x';",
+          "function ApprovalIcon({ name }: { readonly name: ApprovalIconKey }) {",
+          "  if (!Object.hasOwn(approvalIcons, name)) return null;",
+          "  return <span className='approval-icon' aria-hidden={true} dangerouslySetInnerHTML={{ __html: approvalIcons[name] }} />;",
+          "}",
+          "function actionIcon(event: string): ApprovalIconKey | null {",
+          "  if (event === 'submit') return 'receipt-text';",
+          "  if (event === 'approve') return 'circle-check';",
+          "  if (event === 'reject') return 'circle-x';",
+          "  return null;",
+          "}",
+          "function stateIcon(entityKey: string, status: unknown): ApprovalIconKey | null {",
+          "  const transitions = definition.flow.flows.filter((flow) => flow.entity === entityKey).flatMap((flow) => flow.transitions);",
+          "  if (transitions.some((transition) => transition.event === 'approve' && transition.to === status)) return 'circle-check';",
+          "  if (transitions.some((transition) => transition.event === 'reject' && transition.to === status)) return 'circle-x';",
+          "  if (transitions.some((transition) => transition.event === 'approve' && transition.from === status)) return 'clock';",
+          "  return null;",
+          "}",
+          ...(recordIdentity
+            ? [
+                "// approval-record-identity/v1; approval-decision-history@1.1.0",
+                `const approvalRecordIdentity = Object.freeze({ entityKey: ${JSON.stringify(recordIdentity.entityKey)}, titleFieldKey: ${JSON.stringify(recordIdentity.titleFieldKey)}, summaryFieldKeys: Object.freeze(${JSON.stringify(recordIdentity.summaryFieldKeys)}) });`,
+                "function selectRecordTitleField(fields: readonly RuntimeField[], entityKey: string): RuntimeField | undefined {",
+                "  return entityKey === approvalRecordIdentity.entityKey ? fields.find((field) => field.key === approvalRecordIdentity.titleFieldKey) : undefined;",
+                "}",
+                "function safeApprovalValue(field: RuntimeField, value: unknown) { return value && typeof value === 'object' ? 'Structured value' : formatValue(field, value); }",
+              ]
+            : extendedSummary
+              ? [
+                  "function selectRecordTitleField(fields: readonly RuntimeField[]): RuntimeField | undefined {",
+                  "  const matches = fields.filter((field) => field.key === 'item' && field.type === 'string');",
+                  "  return matches.length === 1 ? matches[0] : undefined;",
+                  "}",
+                ]
+              : []),
+          recordIdentity
+            ? "function selectSummaryFields(fields: readonly RuntimeField[], entityKey: string): readonly (string | undefined)[] {"
+            : "function selectSummaryFields(fields: readonly RuntimeField[]): readonly (string | undefined)[] {",
+          ...(recordIdentity
+            ? [
+                "  return entityKey === approvalRecordIdentity.entityKey ? approvalRecordIdentity.summaryFieldKeys : [];",
+              ]
+            : [
+                "  const select = (key: string, types: readonly string[]) => { const matches = fields.filter((field) => field.key === key && types.includes(field.type)); return matches.length === 1 ? matches[0]!.key : undefined; };",
+                ...(extendedSummary
+                  ? [
+                      "  const temporal = fields.filter((field) => field.type === 'date' || field.type === 'datetime');",
+                      "  const date = select('date', ['date', 'datetime']) ?? (!fields.some((field) => field.key === 'date') && temporal.length === 1 ? temporal[0]!.key : undefined);",
+                      "  return [select('amount', ['integer', 'decimal']), select('category', ['string', 'enum']), date];",
+                    ]
+                  : [
+                      "  return [select('amount', ['integer', 'decimal']), select('category', ['string', 'enum']), select('date', ['date', 'datetime'])];",
+                    ]),
+              ]),
+          "}",
+          "function statusTone(entityKey: string, status: unknown): 'positive' | 'negative' | 'pending' | 'neutral' {",
+          "  if (typeof status !== 'string' || !status) return 'neutral';",
+          "  const transitions = definition.flow.flows.filter((flow) => flow.entity === entityKey).flatMap((flow) => flow.transitions);",
+          "  const semanticMatches = [",
+          "    ...transitions.filter((transition) => transition.event === 'approve' && transition.to === status).map(() => 'positive' as const),",
+          "    ...transitions.filter((transition) => transition.event === 'reject' && transition.to === status).map(() => 'negative' as const),",
+          "    ...transitions.filter((transition) => transition.event === 'approve' && transition.from === status && transitions.filter((candidate) => candidate.event === 'reject' && candidate.from === status).length === 1).map(() => 'pending' as const),",
+          "  ];",
+          "  return semanticMatches.length === 1 ? semanticMatches[0]! : 'neutral';",
+          "}",
+          renderWorkspaceDataHelpers(),
+          "function validTransitions(role: string, entityKey: string, recordStatus: unknown) {",
+          "  const seen = new Set<string>();",
+          "  return definition.flow.flows.filter((flow) => flow.entity === entityKey).flatMap((flow) => flow.transitions).filter((transition) => {",
+          "    if (transition.from !== recordStatus || seen.has(transition.event)) return false;",
+          "    const allowed = transition.roles.length ? transition.roles.includes(role) && (can(role, entityKey, transition.event) || can(role, entityKey, 'update')) : can(role, entityKey, 'read');",
+          "    if (allowed) seen.add(transition.event);",
+          "    return allowed;",
+          "  });",
+          "}",
+        ]
+      : []),
+    ...(approvalFlow
+      ? [
+          renderApprovalDecisionHistory(
+            approvalFlow.entity,
+            !!correctionEntity,
+            !!recordIdentity,
+          ),
+        ]
+      : []),
+    ...(approval
+      ? [
+          renderApprovalPresentationComponents(
+            approvalEntity?.key,
+            approvalEntity?.fields ?? [],
+            !!correctionEntity,
+          ),
+        ]
+      : []),
     "function can(role: string, entity: string, action: string): boolean {",
     "  return definition.policy.permissions.some((permission) => permission.role === role && (permission.resource === entity || permission.resource === '*') && permission.actions.includes(action));",
     "}",
@@ -2734,7 +2996,9 @@ function renderPageRuntime(
     "}",
     "",
     "function errorMessage(reason: unknown): string {",
-    "  return reason instanceof Error ? reason.message : 'The request could not be completed.';",
+    approval
+      ? "  return reason instanceof SafeUiError ? reason.message : 'The request could not be completed. Please try again.'"
+      : "  return reason instanceof Error ? reason.message : 'The request could not be completed.';",
     "}",
     "",
     "function transitionBody(entityKey: string, record: JsonRecord, event: string): string {",
@@ -2745,54 +3009,161 @@ function renderPageRuntime(
     "  return JSON.stringify({ expectedVersion: version, idempotencyKey: `generated-web-${recordId}-${event}-${version}` });",
     "}",
     "",
-    "function useEntityRecords(entity: RuntimeEntity, role: string, allowed: boolean) {",
-    "  const [records, setRecords] = useState<readonly JsonRecord[]>([]);",
-    "  const [error, setError] = useState<string | null>(null);",
-    "  const refresh = async () => {",
-    "    if (!allowed) { setRecords([]); return; }",
-    "    const response = await fetch(\`/api/${entity.key}\`, { headers: requestHeaders(role) });",
-    "    if (!response.ok) throw new Error(await response.text());",
-    "    setRecords(await response.json() as readonly JsonRecord[]);",
-    "  };",
-    "  useEffect(() => {",
-    "    if (!allowed) { setRecords([]); return; }",
-    "    void refresh().catch((reason) => setError(errorMessage(reason)));",
-    "  }, [entity.key, role, allowed]);",
-    "  return { records, error, refresh };",
-    "}",
-    "",
+    ...(approval
+      ? [renderWorkspaceRecordHook()]
+      : [
+          "function useEntityRecords(entity: RuntimeEntity, role: string, allowed: boolean) {",
+          "  const [records, setRecords] = useState<readonly JsonRecord[]>([]);",
+          "  const [error, setError] = useState<string | null>(null);",
+          "  const refresh = async () => {",
+          "    if (!allowed) { setRecords([]); return; }",
+          "    const response = await fetch(\`/api/${entity.key}\`, { headers: requestHeaders(role) });",
+          "    if (!response.ok) throw new Error(await response.text());",
+          "    setRecords(await response.json() as readonly JsonRecord[]);",
+          "  };",
+          "  useEffect(() => {",
+          "    if (!allowed) { setRecords([]); return; }",
+          "    void refresh().catch((reason) => setError(errorMessage(reason)));",
+          "  }, [entity.key, role, allowed]);",
+          "  return { records, error, refresh };",
+          "}",
+          "",
+        ]),
     "function HeroBlock({ block }: { readonly block: PageRuntimeBlock }) {",
     "  const primaryNavigation = projection.navigation[0];",
     "  return <section className='generated-hero'><p>{block.props.eyebrow ?? 'Published Graph'}</p><h1>{block.props.heading ?? block.props.title ?? projection.applicationName}</h1>{primaryNavigation ? <a className='generated-primary' href={primaryNavigation.route}>{primaryNavigation.label}</a> : null}</section>;",
     "}",
     "",
-    "function FormBlock({ block, entity, role, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly reportError: (reason: unknown) => void }) {",
-    "  const [values, setValues] = useState<Record<string, string>>({});",
-    "  const fields = entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status');",
-    "  if (!can(role, entity.key, 'create')) return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><p>Your selected role cannot create this record.</p></section>;",
-    "  const createRecord = async () => {",
-    "    const payload = Object.fromEntries(fields.map((field) => [field.key, values[field.key] ?? '']));",
-    "    const response = await fetch(\`/api/${entity.key}\`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify(payload) });",
-    "    if (!response.ok) throw new Error(await response.text());",
-    "    setValues({});",
-    "  };",
-    "  return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><form onSubmit={(event) => { event.preventDefault(); void createRecord().catch(reportError); }}>{fields.map((field) => <label key={field.key}>{field.key}<input required={field.required} value={values[field.key] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}<button className='generated-primary' type='submit'>Create {entity.label}</button></form></section>;",
-    "}",
-    "",
-    "function EntityRecords({ block, entity, role, formRoute, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly formRoute?: string; readonly reportError: (reason: unknown) => void }) {",
-    "  const allowed = can(role, entity.key, 'read');",
-    "  const { records, error, refresh } = useEntityRecords(entity, role, allowed);",
-    "  const events = definition.flow.flows.find((flow) => flow.entity === entity.key)?.transitions.map((transition) => transition.event) ?? [];",
-    "  const transition = async (record: JsonRecord, event: string) => {",
-    "    const recordId = String(record.id);",
-    "    const response = await fetch(\`/api/${entity.key}/${recordId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(entity.key, record, event) });",
-    "    if (!response.ok) throw new Error(await response.text());",
-    "    await refresh();",
-    "  };",
-    "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read these records.</p></section>;",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.type}</p><h2>{block.props.title ?? entity.label}</h2></div><div>{formRoute ? <a href={formRoute}>New {entity.label.toLowerCase()}</a> : null}<button type='button' onClick={() => void refresh().catch(reportError)}>Refresh</button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code><span>{events.filter((event) => canTriggerEvent(role, entity.key, event)).map((event) => <button key={event} type='button' onClick={() => void transition(record, event).catch(reportError)}>{event}</button>)}</span></li>)}</ul></section>;",
-    "}",
-    "",
+    ...(approval
+      ? [
+          "type SubmissionState = 'idle' | 'pending' | 'success' | 'error';",
+          "function FormBlock({ block, entity, role }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly reportError: (reason: unknown) => void }) {",
+          "  const [values, setValues] = useState<Record<string, string | boolean>>({});",
+          "  const [state, setState] = useState<SubmissionState>('idle');",
+          "  const [message, setMessage] = useState('');",
+          "  const pending = useRef(false);",
+          "  const fields = entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status');",
+          "  if (!can(role, entity.key, 'create')) return <section className='generated-card'><h2>{block.props.title ?? `Create ${entity.label}`}</h2><p>Your selected role cannot create this record.</p></section>;",
+          "  const createRecord = async () => {",
+          "    if (pending.current) return;",
+          "    pending.current = true; setState('pending'); setMessage('Creating ' + entity.label + '\u2026');",
+          "    try {",
+          "      const payload = formPayload(fields, values);",
+          "      const response = await fetch(`/api/${entity.key}`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify(payload) });",
+          "      if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));",
+          "      await response.json();",
+          "      setValues({}); setState('success'); setMessage('Created ' + entity.label + '.');",
+          "    } catch (reason) { setState('error'); setMessage(errorMessage(reason)); }",
+          "    finally { pending.current = false; }",
+          "  };",
+          "  return <section className='generated-card approval-form-card'><h2>{block.props.title ?? `Create ${entity.label}`}</h2><form aria-busy={state === 'pending'} onSubmit={(event) => { event.preventDefault(); void createRecord(); }}><fieldset disabled={state === 'pending'}>{fields.map((field) => <div className='approval-field' key={field.key}><label htmlFor={block.id + '-' + field.key}>{fieldLabel(field.key)}</label><FieldControl id={block.id + '-' + field.key} field={field} value={values[field.key] ?? (field.type === 'boolean' ? false : '')} onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))} /></div>)}</fieldset><div className='approval-form-footer'><button className='generated-primary' disabled={state === 'pending'} type='submit'>Create {entity.label}</button></div></form>{message ? <p className={state === 'error' ? 'generated-error' : undefined} role={state === 'error' ? 'alert' : 'status'} aria-live={state === 'error' ? 'assertive' : 'polite'}>{message}</p> : null}</section>;",
+          "}",
+        ]
+      : [
+          "function FormBlock({ block, entity, role, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly reportError: (reason: unknown) => void }) {",
+          "  const [values, setValues] = useState<Record<string, string>>({});",
+          "  const fields = entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status');",
+          "  if (!can(role, entity.key, 'create')) return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><p>Your selected role cannot create this record.</p></section>;",
+          "  const createRecord = async () => {",
+          "    const payload = Object.fromEntries(fields.map((field) => [field.key, values[field.key] ?? '']));",
+          "    const response = await fetch(\`/api/${entity.key}\`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify(payload) });",
+          "    if (!response.ok) throw new Error(await response.text());",
+          "    setValues({});",
+          "  };",
+          "  return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><form onSubmit={(event) => { event.preventDefault(); void createRecord().catch(reportError); }}>{fields.map((field) => <label key={field.key}>{field.key}<input required={field.required} value={values[field.key] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}<button className='generated-primary' type='submit'>Create {entity.label}</button></form></section>;",
+          "}",
+          "",
+        ]),
+    ...(approval
+      ? [
+          "type MutationStatus = 'pending' | 'success' | 'error';",
+          "type MutationState = { event: string; status: MutationStatus; message: string } | null;",
+          "function EntityRecords({ block, entity, role, formRoute }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly formRoute?: string; readonly reportError: (reason: unknown) => void }) {",
+          "  const allowed = can(role, entity.key, 'read');",
+          "  const { records, error, loading, refresh } = useEntityRecords(entity, role, allowed);",
+          "  const [query, setQuery] = useState('');",
+          "  const [statusFilter, setStatusFilter] = useState('');",
+          "  const [mutations, setMutations] = useState<Record<string, MutationState>>({});",
+          "  const [listMutation, setListMutation] = useState<MutationState>(null);",
+          "  const pending = useRef(new Set<string>());",
+          "  const scope = entity.key + '\\u0000' + block.id + '\\u0000' + role;",
+          "  const currentScope = useRef(scope);",
+          "  const scopeGeneration = useRef(0);",
+          "  if (currentScope.current !== scope) { currentScope.current = scope; scopeGeneration.current++; pending.current = new Set(); }",
+          "  useEffect(() => { setQuery(''); setStatusFilter(''); setMutations({}); setListMutation(null); return () => { scopeGeneration.current++; }; }, [scope]);",
+          "  const transition = async (record: JsonRecord, event: string) => {",
+          "    const recordId = String(record.id);",
+          "    const transitionGeneration = scopeGeneration.current;",
+          "    const pendingSet = pending.current;",
+          "    if (pendingSet.has(recordId)) return;",
+          "    pendingSet.add(recordId);",
+          "    setMutations((current) => ({ ...current, [recordId]: { event, status: 'pending', message: fieldLabel(event) + ' in progress\u2026' } }));",
+          "    setListMutation({ event, status: 'pending', message: fieldLabel(event) + ' in progress\u2026' });",
+          "    try {",
+          "      const response = await fetch(`/api/${entity.key}/${encodeURIComponent(recordId)}/events/${encodeURIComponent(event)}`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(entity.key, record, event) });",
+          "      if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));",
+          "      const updated = await response.json() as JsonRecord;",
+          "      if (scopeGeneration.current !== transitionGeneration) return;",
+          "      await refresh();",
+          "      if (scopeGeneration.current !== transitionGeneration) return;",
+          "      setMutations((current) => ({ ...current, [recordId]: { event, status: 'success', message: entity.label + ': ' + fieldLabel(String(updated.status ?? 'updated')) + '.' } }));",
+          "      setListMutation({ event, status: 'success', message: entity.label + ': ' + fieldLabel(String(updated.status ?? 'updated')) + '.' });",
+          "    } catch (reason) {",
+          "      if (scopeGeneration.current !== transitionGeneration) return;",
+          "      setMutations((current) => ({ ...current, [recordId]: { event, status: 'error', message: errorMessage(reason) } }));",
+          "      setListMutation({ event, status: 'error', message: errorMessage(reason) });",
+          "    } finally { pendingSet.delete(recordId); }",
+          "  };",
+          "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read these records.</p></section>;",
+          recordIdentity
+            ? "  const summaryKeys = selectSummaryFields(entity.fields, entity.key).filter((key): key is string => Boolean(key));"
+            : "  const summaryKeys = selectSummaryFields(entity.fields).filter((key): key is string => Boolean(key));",
+          "  const visibleRecords = filterRecords(entity.fields, records, query, statusFilter);",
+          "  const statuses = statusOptions(entity.key);",
+          ...(recordIdentity
+            ? [
+                "  const titleField = selectRecordTitleField(entity.fields, entity.key);",
+              ]
+            : extendedSummary
+              ? ["  const titleField = selectRecordTitleField(entity.fields);"]
+              : []),
+          "  return <section className='generated-card approval-records-section'><div className='approval-record-finder'><label htmlFor={block.id + '-record-search'}><span className='approval-finder-label'>Search records</span><input id={block.id + '-record-search'} name='record-search' placeholder='Search records' type='text' value={query} onChange={(event) => setQuery(event.target.value)} /></label><div><label htmlFor={block.id + '-status-filter'}><span className='approval-finder-label'>Status filter</span><select id={block.id + '-status-filter'} name='status-filter' value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value=''>All statuses</option>{statuses.map((status) => <option key={status} value={status}>{fieldLabel(status)}</option>)}</select></label><button type='button' aria-label='Clear filters' title='Clear filters' onClick={() => { setQuery(''); setStatusFilter(''); }}><ApprovalIcon name='circle-x' /></button><button className='approval-refresh' aria-label='Refresh' title='Refresh' type='button' disabled={loading} onClick={() => void refresh().catch(() => undefined)}><ApprovalIcon name='refresh-cw' /></button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{loading ? <p role='status' aria-live='polite'>Loading records\u2026</p> : null}{!loading && !error ? <p className='approval-result-count' role='status' aria-live='polite'>{visibleRecords.length} of {records.length} records</p> : null}{listMutation ? <p className={'approval-list-mutation' + (listMutation.status === 'error' ? ' generated-error' : '')} role={listMutation.status === 'error' ? 'alert' : 'status'} aria-live={listMutation.status === 'error' ? 'assertive' : 'polite'}>{listMutation.message}</p> : null}{!loading && !error && records.length === 0 ? <div role='status' className='approval-empty'><ApprovalIcon name='receipt-text' /><p>No {entity.label.toLowerCase()} records yet.</p>{formRoute && can(role, entity.key, 'create') ? <a href={formRoute}>Create {entity.label}</a> : null}</div> : null}{!loading && !error && records.length > 0 && visibleRecords.length === 0 ? <div role='status' className='approval-empty'><p>No matching records.</p></div> : null}<ul className='generated-records'>{visibleRecords.map((record) => {",
+          "    const mutation = mutations[String(record.id)];",
+          "    const icon = stateIcon(entity.key, record.status);",
+          "    const tone = statusTone(entity.key, record.status);",
+          "    return <li className={'approval-record approval-tone-' + tone} key={String(record.id)} aria-busy={mutation?.status === 'pending'}>" +
+            (recordIdentity
+              ? "{titleField ? <h3 className='approval-record-title'><span>{fieldLabel(titleField.key)}</span>{safeApprovalValue(titleField, record[titleField.key])}</h3> : null}"
+              : extendedSummary
+                ? "{titleField ? <h3 className='approval-record-title'><span>{fieldLabel(titleField.key)}</span>{formatValue(titleField, record[titleField.key])}</h3> : null}"
+                : "") +
+            "{approvalMaterialKey(entity.fields, entity.key) ? <ApprovalMaterial materialKey={approvalMaterialKey(entity.fields, entity.key)!} className='approval-record-media' /> : null}<dl className='approval-summary'>{summaryKeys.map((key) => { const field = entity.fields.find((candidate) => candidate.key === key)!; return <div className={key === 'amount' ? 'approval-summary-amount' : 'approval-summary-support'} key={key}><dt>{fieldLabel(key)}</dt><dd>{formatValue(field, record[key])}</dd></div>; })}<div className='approval-summary-status'><dt>Status</dt><dd><span className='approval-badge'>{icon ? <ApprovalIcon name={icon} /> : null}{fieldLabel(String(record.status ?? 'Not provided'))}</span></dd></div></dl><div className='approval-actions'>{validTransitions(role, entity.key, record.status).map((action) => {",
+          "      const actionAsset = actionIcon(action.event);",
+          "      return <button key={action.event} type='button' disabled={mutation?.status === 'pending'} onClick={() => void transition(record, action.event)}>{actionAsset ? <ApprovalIcon name={actionAsset} /> : null}{fieldLabel(action.event)}</button>;",
+          "    })}</div><ApprovalProgress entity={entity} status={record.status} />{mutation ? <p className={mutation.status === 'error' ? 'generated-error' : undefined} role={mutation.status === 'error' ? 'alert' : 'status'} aria-live={mutation.status === 'error' ? 'assertive' : 'polite'}>{mutation.message}</p> : null}<details><summary>Details</summary><dl className='approval-details-values'><div><dt>ID</dt><dd>{String(record.id ?? 'Not provided')}</dd></div>{entity.fields.filter((field) => field.key !== 'status' && !summaryKeys.includes(field.key)" +
+            (recordIdentity || extendedSummary
+              ? " && field.key !== titleField?.key"
+              : "") +
+            ").map((field) => <div key={field.key}><dt>{fieldLabel(field.key)}</dt><dd>{formatValue(field, record[field.key])}</dd></div>)}</dl></details></li>;",
+          "  })}</ul></section>;",
+          "}",
+        ]
+      : [
+          "function EntityRecords({ block, entity, role, formRoute, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly formRoute?: string; readonly reportError: (reason: unknown) => void }) {",
+          "  const allowed = can(role, entity.key, 'read');",
+          "  const { records, error, refresh } = useEntityRecords(entity, role, allowed);",
+          "  const events = definition.flow.flows.find((flow) => flow.entity === entity.key)?.transitions.map((transition) => transition.event) ?? [];",
+          "  const transition = async (record: JsonRecord, event: string) => {",
+          "    const recordId = String(record.id);",
+          "    const response = await fetch(\`/api/${entity.key}/${recordId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(entity.key, record, event) });",
+          "    if (!response.ok) throw new Error(await response.text());",
+          "    await refresh();",
+          "  };",
+          "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read these records.</p></section>;",
+          "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.type}</p><h2>{block.props.title ?? entity.label}</h2></div><div>{formRoute ? <a href={formRoute}>New {entity.label.toLowerCase()}</a> : null}<button type='button' onClick={() => void refresh().catch(reportError)}>Refresh</button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code><span>{events.filter((event) => canTriggerEvent(role, entity.key, event)).map((event) => <button key={event} type='button' onClick={() => void transition(record, event).catch(reportError)}>{event}</button>)}</span></li>)}</ul></section>;",
+          "}",
+          "",
+        ]),
     "function CollectionBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
     "  return <EntityRecords block={block} entity={entity} role={context.role} formRoute={context.formRouteByEntity[entity.key]} reportError={context.reportError} />;",
     "}",
@@ -2815,14 +3186,18 @@ function renderPageRuntime(
     "  const dateField = entity.fields.find((field) => field.type === 'date' || field.type === 'datetime');",
     "  const groups = dateField ? records.reduce((grouped, record) => { const label = String(record[dateField.key] ?? '').slice(0, 10); if (!label) return grouped; const bucket = grouped.find((entry) => entry.label === label); if (bucket) bucket.records.push(record); else grouped.push({ label, records: [record] }); return grouped; }, [] as { label: string; records: JsonRecord[] }[]) : null;",
     "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? 'Schedule'}</h2><p>Your selected role cannot read this schedule.</p></section>;",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{dateField ? 'calendar' : 'schedule'}</p><h2>{block.props.title ?? 'Schedule'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{groups ? <ul className='generated-calendar'>{groups.map((group) => <li key={group.label}><strong>{group.label}</strong><ul className='generated-records'>{group.records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul></li>)}</ul> : <ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul>}</section>;",
+    approval
+      ? "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{dateField ? 'calendar' : 'schedule'}</p><h2>{block.props.title ?? 'Schedule'}</h2></div><button className='approval-refresh' aria-label='Refresh' title='Refresh' type='button' onClick={() => void refresh().catch(context.reportError)}><ApprovalIcon name='refresh-cw' /></button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{groups ? <ul className='generated-calendar'>{groups.map((group) => <li key={group.label}><strong>{group.label}</strong><ul className='generated-records'>{group.records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul></li>)}</ul> : <ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul>}</section>;"
+      : "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{dateField ? 'calendar' : 'schedule'}</p><h2>{block.props.title ?? 'Schedule'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{groups ? <ul className='generated-calendar'>{groups.map((group) => <li key={group.label}><strong>{group.label}</strong><ul className='generated-records'>{group.records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul></li>)}</ul> : <ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul>}</section>;",
     "}",
     "",
     "function StatsBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity?: RuntimeEntity; readonly context: BlockContext }) {",
     "  if (!entity) return <section className='generated-card generated-stats'><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? 'Overview'}</h2><span>No entity bound</span></section>;",
     "  const allowed = can(context.role, entity.key, 'read');",
     "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? `Overview`}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<div className='generated-stats'><strong>{allowed ? records.length : '–'}</strong><span>{entity.label.toLowerCase()} records</span></div></section>;",
+    approval
+      ? "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? `Overview`}</h2></div><button className='approval-refresh' aria-label='Refresh' title='Refresh' type='button' onClick={() => void refresh().catch(context.reportError)}><ApprovalIcon name='refresh-cw' /></button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<div className='generated-stats'><strong>{allowed ? records.length : '–'}</strong><span>{entity.label.toLowerCase()} records</span></div></section>;"
+      : "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? `Overview`}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<div className='generated-stats'><strong>{allowed ? records.length : '–'}</strong><span>{entity.label.toLowerCase()} records</span></div></section>;",
     "}",
     "",
     "function SettingsBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity?: RuntimeEntity; readonly context: BlockContext }) {",
@@ -2835,7 +3210,9 @@ function renderPageRuntime(
     "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
     "  const mayAddToCart = definition.commerce.orderEntity !== null && can(context.role, definition.commerce.orderEntity, 'create');",
     "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read this catalog.</p></section>;",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>catalog</p><h2>{block.props.title ?? entity.label}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code>{mayAddToCart ? <button className='generated-primary' type='button' onClick={() => void context.addToCart(entity.key, String(record.id)).catch(context.reportError)}>Add to cart</button> : null}</li>)}</ul><CartSummary context={context} /></section>;",
+    approval
+      ? "  return <section className='generated-card'><div className='generated-section-heading'><div><p>catalog</p><h2>{block.props.title ?? entity.label}</h2></div><button className='approval-refresh' aria-label='Refresh' title='Refresh' type='button' onClick={() => void refresh().catch(context.reportError)}><ApprovalIcon name='refresh-cw' /></button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code>{mayAddToCart ? <button className='generated-primary' type='button' onClick={() => void context.addToCart(entity.key, String(record.id)).catch(context.reportError)}>Add to cart</button> : null}</li>)}</ul><CartSummary context={context} /></section>;"
+      : "  return <section className='generated-card'><div className='generated-section-heading'><div><p>catalog</p><h2>{block.props.title ?? entity.label}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code>{mayAddToCart ? <button className='generated-primary' type='button' onClick={() => void context.addToCart(entity.key, String(record.id)).catch(context.reportError)}>Add to cart</button> : null}</li>)}</ul><CartSummary context={context} /></section>;",
     "}",
     "",
     "function CatalogConfiguratorBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
@@ -2846,7 +3223,9 @@ function renderPageRuntime(
     "  const [configured, setConfigured] = useState<JsonRecord | null>(null);",
     "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? 'Configure options'}</h2><p>Your selected role cannot read this catalog.</p></section>;",
     "  const submit = async () => { const selected = optionIds.split(',').map((option) => option.trim()).filter(Boolean); setConfigured(await context.configureLine(entity.key, catalogRecordId, selected)); };",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>Server-authoritative selection</p><h2>{block.props.title ?? 'Configure options'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<form onSubmit={(event) => { event.preventDefault(); void submit().catch(context.reportError); }}><label>Catalog item<select required value={catalogRecordId} onChange={(event) => setCatalogRecordId(event.target.value)}><option value=''>Choose an item</option>{records.map((record) => <option key={String(record.id)} value={String(record.id)}>{String(record.name ?? record.id)}</option>)}</select></label><label>Option identifiers<input value={optionIds} onChange={(event) => setOptionIds(event.target.value)} placeholder='option-a, option-b' /></label><button className='generated-primary' type='submit'>Validate selection</button></form>{configured ? <pre className='generated-records'>{JSON.stringify(configured, null, 2)}</pre> : null}</section>;",
+    approval
+      ? "  return <section className='generated-card'><div className='generated-section-heading'><div><p>Server-authoritative selection</p><h2>{block.props.title ?? 'Configure options'}</h2></div><button className='approval-refresh' aria-label='Refresh' title='Refresh' type='button' onClick={() => void refresh().catch(context.reportError)}><ApprovalIcon name='refresh-cw' /></button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<form onSubmit={(event) => { event.preventDefault(); void submit().catch(context.reportError); }}><label>Catalog item<select required value={catalogRecordId} onChange={(event) => setCatalogRecordId(event.target.value)}><option value=''>Choose an item</option>{records.map((record) => <option key={String(record.id)} value={String(record.id)}>{String(record.name ?? record.id)}</option>)}</select></label><label>Option identifiers<input value={optionIds} onChange={(event) => setOptionIds(event.target.value)} placeholder='option-a, option-b' /></label><button className='generated-primary' type='submit'>Validate selection</button></form>{configured ? <pre className='generated-records'>{JSON.stringify(configured, null, 2)}</pre> : null}</section>;"
+      : "  return <section className='generated-card'><div className='generated-section-heading'><div><p>Server-authoritative selection</p><h2>{block.props.title ?? 'Configure options'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<form onSubmit={(event) => { event.preventDefault(); void submit().catch(context.reportError); }}><label>Catalog item<select required value={catalogRecordId} onChange={(event) => setCatalogRecordId(event.target.value)}><option value=''>Choose an item</option>{records.map((record) => <option key={String(record.id)} value={String(record.id)}>{String(record.name ?? record.id)}</option>)}</select></label><label>Option identifiers<input value={optionIds} onChange={(event) => setOptionIds(event.target.value)} placeholder='option-a, option-b' /></label><button className='generated-primary' type='submit'>Validate selection</button></form>{configured ? <pre className='generated-records'>{JSON.stringify(configured, null, 2)}</pre> : null}</section>;",
     "}",
     "",
     "function CartSummary({ context, checkout = false }: { readonly context: BlockContext; readonly checkout?: boolean }) {",
@@ -2894,14 +3273,18 @@ function renderPageRuntime(
     "  const refreshCart = async (activeCartId: string) => {",
     "    if (!definition.commerce.orderEntity) return;",
     "    const response = await fetch(\`/api/commerce/${definition.commerce.orderEntity}/${activeCartId}/items\`, { headers: requestHeaders(role) });",
-    "    if (!response.ok) throw new Error(await response.text());",
+    approval
+      ? "    if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));"
+      : "    if (!response.ok) throw new Error(await response.text());",
     "    setCartItems(await response.json() as readonly JsonRecord[]);",
     "  };",
     "  useEffect(() => {",
     "    const storedCartId = window.sessionStorage.getItem('factory.generated.cart-id');",
     "    if (!storedCartId || !definition.commerce.orderEntity) return;",
     "    setCartId(storedCartId);",
-    "    void fetch(`/api/commerce/${definition.commerce.orderEntity}/${storedCartId}/items`, { headers: requestHeaders(role) }).then(async (response) => { if (!response.ok) throw new Error(await response.text()); setCartItems(await response.json() as readonly JsonRecord[]); }).catch(reportError);",
+    approval
+      ? "    void fetch(`/api/commerce/${definition.commerce.orderEntity}/${storedCartId}/items`, { headers: requestHeaders(role) }).then(async (response) => { if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status)); setCartItems(await response.json() as readonly JsonRecord[]); }).catch(reportError);"
+      : "    void fetch(`/api/commerce/${definition.commerce.orderEntity}/${storedCartId}/items`, { headers: requestHeaders(role) }).then(async (response) => { if (!response.ok) throw new Error(await response.text()); setCartItems(await response.json() as readonly JsonRecord[]); }).catch(reportError);",
     "  }, [role]);",
     "  const addToCart = async (catalogEntity: string, catalogRecordId: string) => {",
     "    const orderEntity = definition.commerce.orderEntity;",
@@ -2909,19 +3292,25 @@ function renderPageRuntime(
     "    let activeCartId = cartId;",
     "    if (!activeCartId) {",
     "      const created = await fetch(\`/api/${orderEntity}\`, { method: 'POST', headers: requestHeaders(role), body: '{}' });",
-    "      if (!created.ok) throw new Error(await created.text());",
+    approval
+      ? "      if (!created.ok) throw new SafeUiError(safeResponseMessage(created.status));"
+      : "      if (!created.ok) throw new Error(await created.text());",
     "      const cart = await created.json() as JsonRecord;",
     "      activeCartId = String(cart.id);",
     "      setCartId(activeCartId);",
     "      window.sessionStorage.setItem('factory.generated.cart-id', activeCartId);",
     "    }",
     "    const response = await fetch(\`/api/commerce/${orderEntity}/${activeCartId}/items\`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify({ catalogEntity, catalogRecordId, quantity: 1 }) });",
-    "    if (!response.ok) throw new Error(await response.text());",
+    approval
+      ? "    if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));"
+      : "    if (!response.ok) throw new Error(await response.text());",
     "    await refreshCart(activeCartId);",
     "  };",
     "  const configureLine = async (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]): Promise<JsonRecord> => {",
     "    const response = await fetch('/api/commerce/configure-line', { method: 'POST', headers: requestHeaders(role), body: JSON.stringify({ catalogEntity, catalogRecordId, optionIds, quantity: 1 }) });",
-    "    if (!response.ok) throw new Error(await response.text());",
+    approval
+      ? "    if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status));"
+      : "    if (!response.ok) throw new Error(await response.text());",
     "    return await response.json() as JsonRecord;",
     "  };",
     "  const checkoutCart = async () => {",
@@ -2929,11 +3318,15 @@ function renderPageRuntime(
     "    const paymentEvent = definition.commerce.paymentEvent;",
     "    if (!orderEntity || !paymentEvent || !cartId || !canTriggerEvent(role, orderEntity, paymentEvent)) throw new Error('Checkout is not available for your selected role.');",
     "    const orders = await fetch(\`/api/${orderEntity}\`, { headers: requestHeaders(role) });",
-    "    if (!orders.ok) throw new Error(await orders.text());",
+    approval
+      ? "    if (!orders.ok) throw new SafeUiError(safeResponseMessage(orders.status));"
+      : "    if (!orders.ok) throw new Error(await orders.text());",
     "    let order = (await orders.json() as readonly JsonRecord[]).find((candidate) => String(candidate.id) === cartId);",
     "    if (!order) throw new Error('The checkout cart no longer exists.');",
     "    const transitions = definition.flow.flows.find((flow) => flow.entity === orderEntity)?.transitions ?? [];",
-    "    const trigger = async (event: string) => { const response = await fetch(\`/api/${orderEntity}/${cartId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(orderEntity, order!, event) }); if (!response.ok) throw new Error(await response.text()); order = await response.json() as JsonRecord; };",
+    approval
+      ? "    const trigger = async (event: string) => { const response = await fetch(\`/api/${orderEntity}/${cartId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(orderEntity, order!, event) }); if (!response.ok) throw new SafeUiError(safeResponseMessage(response.status)); order = await response.json() as JsonRecord; };"
+      : "    const trigger = async (event: string) => { const response = await fetch(\`/api/${orderEntity}/${cartId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(orderEntity, order!, event) }); if (!response.ok) throw new Error(await response.text()); order = await response.json() as JsonRecord; };",
     "    if (order.status === 'cart') { const submit = transitions.find((transition) => transition.from === 'cart' && transition.to === 'submitted'); if (!submit || !canTriggerEvent(role, orderEntity, submit.event)) throw new Error('The declared order flow cannot submit this cart.'); await trigger(submit.event); }",
     "    if (order.status === 'submitted') await trigger(paymentEvent);",
     "    if (order.status !== 'paid') throw new Error('The declared order flow did not reach a paid state.');",
@@ -2945,10 +3338,33 @@ function renderPageRuntime(
     "  const activePage = projection.pages.find((page) => page.route === requestedRoute);",
     "  if (!activePage) return <main className='generated-app' data-theme={definition.themeMode}><section className='generated-card'><p>Not found</p><h1>Declared route unavailable</h1><a href={projection.routeFallback.rootRoute ?? '/'}>Return to the application</a></section></main>;",
     "  const context: BlockContext = { role, formRouteByEntity, checkoutRoute, cartItems, cartId, reportError, addToCart, configureLine, checkoutCart };",
-    "  return <main className='generated-app' data-theme={definition.themeMode}><header className='generated-header'><div><p>Published Graph application</p><h1>{definition.applicationName}</h1></div><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></label></header><nav aria-label='Application routes'>{projection.navigation.map((item) => <a href={item.route} key={item.id}>{item.label}</a>)}</nav>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'>{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></main>;",
+    approval
+      ? renderApprovalWorkspaceShell()
+      : "  return <main className='generated-app' data-theme={definition.themeMode}><header className='generated-header'><div><p>Published Graph application</p><h1>{definition.applicationName}</h1></div><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></label></header><nav aria-label='Application routes'>{projection.navigation.map((item) => <a href={item.route} key={item.id}>{item.label}</a>)}</nav>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'>{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></main>;",
     "}",
     "",
   ].join("\n");
+  const presentedSource = recordIdentity
+    ? source
+        .replaceAll(
+          "formatValue(field, record[key])",
+          "safeApprovalValue(field, record[key])",
+        )
+        .replaceAll(
+          "formatValue(field, record[field.key])",
+          "safeApprovalValue(field, record[field.key])",
+        )
+        .replace(
+          "className={key === 'amount' ? 'approval-summary-amount' : 'approval-summary-support'}",
+          "className='approval-summary-support'",
+        )
+    : source;
+  return renderApprovalCorrectionPage(
+    presentedSource,
+    graph,
+    correctionEntity,
+    !!recordIdentity,
+  );
 }
 
 function renderWebProxyRoute(
@@ -2993,13 +3409,20 @@ function renderWebProxyRoute(
   ].join("\n");
 }
 
-function renderWebStyles(graph: ApplicationGraphV1): string {
+function renderWebStyles(
+  graph: ApplicationGraphV1,
+  profile: GeneratedPresentationProfile,
+  approvalEntity?: string,
+): string {
   // The generated application styles come entirely from the resolved
   // Experience Design System: every token group (colour, typography,
   // spacing, radius, elevation, motion) becomes a CSS variable, and the
   // legacy alias surface keeps the rendered components stable. Token edits
   // made in the Page Studio therefore survive Publish and compilation.
   const system = resolveExperienceDesignSystem(graph.experience);
+  const usesPrivateApprovalCobalt =
+    (profile === "approval-v1" || profile === "task-v1") &&
+    graph.experience.designSystem === undefined;
   const themeBlock = (mode: "light" | "dark"): string => {
     const tokenVars: string[] = [];
     for (const [group, tokens] of Object.entries(system.tokens)) {
@@ -3016,8 +3439,17 @@ function renderWebStyles(graph: ApplicationGraphV1): string {
     for (const [key, value] of Object.entries(colours)) {
       tokenVars.push(`--factory-colour-${key}: ${value};`);
     }
-    const aliases =
-      " --factory-bg: var(--factory-colour-background); --factory-surface-muted: var(--factory-colour-surface); --factory-muted: var(--factory-colour-text-muted); --factory-accent: var(--factory-colour-brand); --factory-accent-text: var(--factory-colour-background); --factory-surface: var(--factory-colour-surface); --factory-text: var(--factory-colour-text); --factory-border: var(--factory-colour-border); --factory-danger: var(--factory-colour-danger);";
+    const accent = usesPrivateApprovalCobalt
+      ? mode === "light"
+        ? "#155EEF"
+        : "#84ADFF"
+      : "var(--factory-colour-brand)";
+    const accentText = usesPrivateApprovalCobalt
+      ? mode === "light"
+        ? "#FFFFFF"
+        : "#102A56"
+      : "var(--factory-colour-background)";
+    const aliases = ` --factory-bg: var(--factory-colour-background); --factory-surface-muted: var(--factory-colour-surface); --factory-muted: var(--factory-colour-text-muted); --factory-accent: ${accent}; --factory-accent-text: ${accentText}; --factory-surface: var(--factory-colour-surface); --factory-text: var(--factory-colour-text); --factory-border: var(--factory-colour-border); --factory-danger: var(--factory-colour-danger);`;
     return tokenVars.join(" ") + aliases;
   };
   const lightTheme = themeBlock("light");
@@ -3037,6 +3469,30 @@ function renderWebStyles(graph: ApplicationGraphV1): string {
     ".generated-stats { display: grid; gap: var(--factory-spacing-space-2); align-items: baseline; grid-auto-flow: column; justify-content: start; } .generated-stats strong { font-size: var(--factory-typography-font-size-xl); } .generated-stats span { color: var(--factory-muted); }",
     ".generated-calendar { display: grid; gap: var(--factory-spacing-space-4); padding: 0; margin: 0; list-style: none; } .generated-calendar > li { display: grid; gap: var(--factory-spacing-space-2); } .generated-calendar > li > strong { color: var(--factory-muted); text-transform: uppercase; font-size: var(--factory-typography-font-size-sm); }",
     "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
+    ...(profile === "task-v1"
+      ? renderTaskWorkspaceStyles(
+          hasTaskCorrection(graph, graph.flow.flows[0]?.entity),
+        )
+      : []),
+    ...(profile === "approval-v1"
+      ? [
+          ...approvalWorkspaceStyles.map((style) =>
+            approvalEntity
+              ? style.replace(
+                  "--approval-workspace-version: 4",
+                  "--approval-workspace-version: 5",
+                )
+              : style,
+          ),
+          ...(approvalEntity
+            ? [
+                ".approval-v1 .approval-correction-controls { grid-column: 1 / -1; grid-row: 3; display: grid; gap: var(--factory-spacing-space-4); min-width: 0; } .approval-v1 .approval-correction-controls > .approval-actions, .approval-v1 .approval-correction-controls > .approval-return-reason { padding-inline-end: 6rem; } .approval-v1 .approval-correction-controls > .approval-actions:empty { display: none; } .approval-v1 .approval-correction-controls > .approval-actions button:not(:disabled), .approval-v1 .approval-correction-controls form button[type='submit']:not(:disabled) { background: var(--factory-accent); border-color: var(--factory-accent); color: var(--factory-accent-text); } .approval-v1 .approval-correction-controls form { display: grid; gap: 1rem; } .approval-v1 .approval-correction-controls fieldset { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap: 1rem; border: 0; min-width: 0; padding: 0; } .approval-v1 .approval-correction-controls details { grid-column: auto; grid-row: auto; justify-self: stretch; } .approval-v1 .approval-correction-controls details > summary { max-width: calc(100% - 6rem); } .approval-v1 .approval-correction-controls p { white-space: pre-wrap; overflow-wrap: anywhere; } @media (min-width:900px) { .approval-v1 .approval-record:has(.approval-record-media) > .approval-correction-controls { grid-column: 2 / -1; } }",
+              ]
+            : []),
+          approvalDecisionHistoryStyles,
+          approvalPresentationComponentStyles,
+        ]
+      : []),
     "",
   ].join("\n");
 }
@@ -3108,6 +3564,7 @@ function renderApiMain(
   usePackageLineConfigurationHandler: boolean,
   usePackageMoneyPricingHandler: boolean,
   identityPolicy: IdentityPolicyRuntimeContribution | undefined,
+  approvalEntity?: string,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const roleForEntityAction = (action: string): string =>
@@ -3167,7 +3624,7 @@ function renderApiMain(
         "  return typeof value === 'string' && value ? value : 'anonymous';",
         "}",
       ];
-  return [
+  const source = [
     'import { Body, Controller, Get, HttpException, HttpStatus, Module, Param, Post, Req } from "@nestjs/common";',
     'import { NestFactory } from "@nestjs/core";',
     'import { PrismaClient } from "@prisma/client";',
@@ -3262,6 +3719,7 @@ function renderApiMain(
     "void bootstrap();",
     "",
   ].join("\n");
+  return renderApprovalApi(source, graph, !!identityPolicy, approvalEntity);
 }
 
 function renderCapabilityLock(
@@ -3424,7 +3882,12 @@ export function generateApplicationBundle(
   const plan = buildCompilationPlan(input);
   const compilationInput = buildCompilationInput(input, options);
   const graph = compilationInput.graph;
+  const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
+  const taskEntity = selectTaskContract(graph, input.compositionLock);
   const rendererGraph = compilationInput.rendererGraph;
+  const presentationProfile = taskEntity
+    ? "task-v1"
+    : presentationProfileFor(graph);
   const {
     restaurantRuntimeEnabled,
     useGenericOrderOperationsPersistence,
@@ -3518,6 +3981,15 @@ export function generateApplicationBundle(
   );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
+    ...(presentationProfile === "approval-v1" ||
+    presentationProfile === "task-v1"
+      ? [
+          {
+            path: "THIRD_PARTY_NOTICES.md",
+            render: () => getCustomerIconAssets().notice,
+          },
+        ]
+      : []),
     {
       path: "package.json",
       render: () =>
@@ -3628,7 +4100,15 @@ export function generateApplicationBundle(
       render: () =>
         restaurantRuntimeEnabled
           ? renderRestaurantPageRuntime(rendererGraph)
-          : renderPageRuntime(graph, orderEntityKey, !!identityPolicy),
+          : taskEntity
+            ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
+            : renderPageRuntime(
+                graph,
+                orderEntityKey,
+                !!identityPolicy,
+                presentationProfile,
+                approvalEntity,
+              ),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -3654,11 +4134,34 @@ export function generateApplicationBundle(
     {
       path: "web/app/api/[...path]/route.ts",
       render: () =>
-        renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
+        approvalEntity
+          ? renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy)
+              .replace(
+                "headers: { 'content-type':",
+                "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
+              )
+              .replace(
+                "export const POST = proxy;",
+                "export const POST = proxy;\nexport const PATCH = proxy;",
+              )
+          : taskEntity
+            ? renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy)
+                .replace(
+                  "headers: { 'content-type':",
+                  "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
+                )
+                .replace(
+                  "export const POST = proxy;",
+                  hasTaskCorrection(graph, taskEntity)
+                    ? "export const POST = proxy;\nexport const PATCH = proxy;"
+                    : "export const POST = proxy;",
+                )
+            : renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
     },
     {
       path: "web/app/globals.css",
-      render: () => renderWebStyles(rendererGraph),
+      render: () =>
+        renderWebStyles(rendererGraph, presentationProfile, approvalEntity),
     },
     {
       path: "api/package.json",
@@ -3734,11 +4237,17 @@ export function generateApplicationBundle(
       path: "api/src/main.ts",
       render: () =>
         restaurantRuntime()?.main ??
-        renderApiMain(
-          graph,
-          usePackageLineConfigurationHandler,
-          usePackageMoneyPricingHandler,
-          identityPolicy,
+        renderTaskApi(
+          renderApiMain(
+            graph,
+            usePackageLineConfigurationHandler,
+            usePackageMoneyPricingHandler,
+            identityPolicy,
+            approvalEntity,
+          ),
+          !!identityPolicy,
+          taskEntity,
+          hasTaskCorrection(graph, taskEntity),
         ),
     },
     ...(restaurantRuntimeEnabled
@@ -3769,27 +4278,37 @@ export function generateApplicationBundle(
       path: "api/src/application-runtime.ts",
       render: () =>
         restaurantRuntime()?.applicationRuntimeContract ??
-        renderApplicationRuntime(
+        renderTaskMutationRuntime(
+          renderApplicationRuntime(
+            graph,
+            useResolvedContributions,
+            usePackageCartHandler,
+            usePackageLineConfigurationHandler,
+            usePackageMoneyPricingHandler,
+            catalogEntityKey,
+            orderEntityKey,
+            orderOperationsEntityKey,
+            useGenericOrderOperationsPersistence,
+            notificationOutbox,
+            approvalEntity,
+          ),
           graph,
-          useResolvedContributions,
-          usePackageCartHandler,
-          usePackageLineConfigurationHandler,
-          usePackageMoneyPricingHandler,
-          catalogEntityKey,
-          orderEntityKey,
-          orderOperationsEntityKey,
-          useGenericOrderOperationsPersistence,
-          notificationOutbox,
+          taskEntity,
         ),
     },
     {
       path: "api/src/prisma-record-store.ts",
       render: () =>
-        renderPrismaRecordStore(
+        renderTaskPrismaStore(
+          renderPrismaRecordStore(
+            graph,
+            restaurantRuntimeEnabled,
+            useGenericOrderOperationsPersistence,
+            notificationOutbox !== undefined,
+            approvalEntity,
+          ),
           graph,
-          restaurantRuntimeEnabled,
-          useGenericOrderOperationsPersistence,
-          notificationOutbox !== undefined,
+          taskEntity,
         ),
     },
     ...(notificationOutbox
@@ -3856,7 +4375,9 @@ export function generateApplicationBundle(
     {
       path: "api/test/journey.generated.test.ts",
       render: () =>
-        restaurantRuntime()?.generatedTests ?? renderJourneyTest(graph),
+        restaurantRuntime()?.generatedTests ??
+        renderApprovalJourney(graph, approvalEntity) ??
+        renderJourneyTest(graph),
     },
     ...(restaurantRuntimeEnabled
       ? [

@@ -41,6 +41,21 @@ behavior and must include provenance and tests.
 
 ## Proportionate gates and routine authority
 
+Every new or materially changed generated product must use the
+[consumer product acceptance checklist](acceptance/consumer-product-checklist.md).
+PM includes its applicable business, user-effort, visual, responsive, state,
+access and delivery criteria in the task brief before implementation. The task
+owner maps them to concrete cases; the existing reviewer evaluates evidence
+from the actual generated product, including visually inspected screenshots.
+Green compiler, functional or accessibility checks alone do not establish
+finished-product acceptance. Missing or failed applicable outcomes remain open;
+record narrower accepted scope and deferred work explicitly in the ledger.
+
+This applies across product families, not only Expense or Restaurant. Adapt the
+presentation and business checks to the user's job instead of cloning one
+family's layout. Use the existing review and retain valid unchanged evidence;
+this checklist adds no separate approval stage or new architecture authority.
+
 Use the full task-review, independent Terra QA, independent Sol release-review,
 PM-acceptance, and controller-delivery sequence for serialized or cross-package
 contracts, security or authority boundaries, and the final repository release.
@@ -66,6 +81,18 @@ controller authority only when work changes product scope, makes an
 irreversible architecture decision, needs external credentials or authority,
 performs cloud/deployment action, or leaves a load-bearing issue unresolved
 after the applicable high-cost repair cap.
+
+For ordinary in-scope corrections, reuse still-valid test and review evidence;
+rerun only checks affected by the correction or a concrete unresolved risk.
+Do not start another full audit, QA pass, release review, or PM amendment gate
+for a documentation, formatting, fixture, or mechanical fix. The active ledger
+records the ownership and correction together with the accepted task.
+
+Keep user-facing business acceptance separate from developer convenience
+checks. The consumer regression helper provides optional short feedback loops;
+its green result does not waive an existing full-suite failure, security check,
+integration requirement, or repository release gate. Full gates remain at their
+applicable contract and release boundaries, not after every ordinary edit.
 
 ## Task commits and pushes
 

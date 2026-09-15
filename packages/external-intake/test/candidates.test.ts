@@ -57,6 +57,7 @@ import {
 import { canonicalTreeDigest } from "../src/snapshot.js";
 import {
   claimCandidateCreation,
+  commitCandidateTransition,
   ExternalIntakeStore,
   type CandidateCreationClaimV1,
 } from "../src/store.js";
@@ -2319,6 +2320,209 @@ describe("Candidate registry", () => {
       receipts: before.receipts + 1,
     });
   });
+
+  it("reconciles a stale verified caller to the exact durable conformance winner", async () => {
+    const { root, store } = tempStore();
+    const creator = new CandidateRegistry(store, root);
+    const initial = await creator.create(await acceptedProposal(store));
+    const winner = new CandidateRegistry(new ExternalIntakeStore(root), root);
+    const result = evaluateCandidateConformance(
+      await winner.getConformanceBundle(initial.id, initial.version),
+    );
+    let committed = false;
+    let afterWinner: ReturnType<typeof lifecycleRecordCounts> | undefined;
+    class StaleVerifiedRegistry extends CandidateRegistry {
+      override async verifyIdentity(id: string, version: string) {
+        const verified = await super.verifyIdentity(id, version);
+        if (!committed) {
+          committed = true;
+          await winner.recordConformancePass(
+            initial.id,
+            initial.version,
+            result,
+          );
+          afterWinner = lifecycleRecordCounts(root);
+        }
+        return verified;
+      }
+    }
+    const stale = new StaleVerifiedRegistry(
+      new ExternalIntakeStore(root),
+      root,
+    );
+    const recovered = await stale.recordConformancePass(
+      initial.lookupId,
+      initial.version,
+      result,
+    );
+    expect(recovered).toEqual(winner.getRef(initial.id, initial.version));
+    expect(lifecycleRecordCounts(root)).toEqual(afterWinner);
+    expect(candidateReceiptSequences(root)).toEqual([1, 2]);
+    await expect(stale.verify(recovered)).resolves.toMatchObject({
+      valid: true,
+      issues: [],
+      candidate: { status: "conformance-passed" },
+    });
+  });
+
+  it("reconciles a stale verified caller when a winner commits after snapshot acquisition", async () => {
+    const { root, store } = tempStore();
+    const creator = new CandidateRegistry(store, root);
+    const initial = await creator.create(await acceptedProposal(store));
+    const { root: oracleRoot, store: oracleStore } = tempStore();
+    const oracle = new CandidateRegistry(oracleStore, oracleRoot);
+    const oracleInitial = await oracle.create(
+      await acceptedProposal(oracleStore),
+    );
+    expect(oracleInitial.digest).toBe(initial.digest);
+    const result = evaluateCandidateConformance(
+      await oracle.getConformanceBundle(
+        oracleInitial.id,
+        oracleInitial.version,
+      ),
+    );
+    const terminal = await oracle.recordConformancePass(
+      oracleInitial.id,
+      oracleInitial.version,
+      result,
+    );
+    const receipt = parseIntakeReceipt(
+      oracleStore.getRecord({
+        kind: "receipt",
+        digest: `sha256:${terminal.lookupId.slice("candidate-".length)}`,
+      }),
+    );
+    const candidate = oracle.get(terminal.id, terminal.version);
+    let committed = false;
+    let afterWinner: ReturnType<typeof lifecycleRecordCounts> | undefined;
+    class SnapshotRaceRegistry extends CandidateRegistry {
+      override async verifyIdentity(id: string, version: string) {
+        const verified = await super.verifyIdentity(id, version);
+        let reads = 0;
+        return {
+          ...verified,
+          get candidate() {
+            // The second read evaluates the snapshot digest after #entry has
+            // returned, modelling an external writer in that synchronous gap.
+            if (++reads === 2 && !committed) {
+              committed = true;
+              commitCandidateTransition(store, {
+                jobId: receipt.jobId,
+                expectedCreationReceipt: {
+                  kind: "receipt",
+                  digest: `sha256:${initial.lookupId.slice("candidate-".length)}`,
+                },
+                expectedCandidate: {
+                  kind: "candidate",
+                  digest: initial.digest,
+                },
+                candidate,
+                receipt,
+                evidenceBytes: bytes(canonicalJson(result)),
+              });
+              afterWinner = lifecycleRecordCounts(root);
+            }
+            return verified.candidate;
+          },
+        };
+      }
+    }
+    const stale = new SnapshotRaceRegistry(new ExternalIntakeStore(root), root);
+    const recovered = await stale.recordConformancePass(
+      initial.lookupId,
+      initial.version,
+      result,
+    );
+    expect(committed).toBe(true);
+    expect(recovered).toEqual(terminal);
+    expect(lifecycleRecordCounts(root)).toEqual(afterWinner);
+    expect(candidateReceiptSequences(root)).toEqual([1, 2]);
+    await expect(stale.verify(recovered)).resolves.toMatchObject({
+      valid: true,
+      issues: [],
+    });
+  });
+
+  it.each(["blocked", "rejected", "tampered", "conflicting-result"] as const)(
+    "keeps a stale verified caller closed for a %s durable winner",
+    async (outcome) => {
+      const { root, store } = tempStore();
+      const creator = new CandidateRegistry(store, root);
+      const initial = await creator.create(await acceptedProposal(store));
+      const winner = new CandidateRegistry(new ExternalIntakeStore(root), root);
+      const result = evaluateCandidateConformance(
+        await winner.getConformanceBundle(initial.id, initial.version),
+      );
+      let committed = false;
+      let afterWinner: ReturnType<typeof lifecycleRecordCounts> | undefined;
+      class StaleVerifiedRegistry extends CandidateRegistry {
+        override async verifyIdentity(id: string, version: string) {
+          const verified = await super.verifyIdentity(id, version);
+          if (!committed) {
+            committed = true;
+            if (outcome === "blocked")
+              await winner.recordBlocked(initial.id, initial.version);
+            else if (outcome === "rejected")
+              await winner.recordRejected(initial.id, initial.version);
+            else {
+              await winner.recordConformancePass(
+                initial.id,
+                initial.version,
+                result,
+              );
+              if (outcome === "tampered") {
+                const digest = winner.get(
+                  initial.id,
+                  initial.version,
+                ).conformanceResultDigest!;
+                writeFileSync(
+                  blobPath(root, "evidence", digest),
+                  "tampered-conformance-result",
+                );
+              }
+            }
+            afterWinner = lifecycleRecordCounts(root);
+          }
+          return verified;
+        }
+      }
+      const stale = new StaleVerifiedRegistry(
+        new ExternalIntakeStore(root),
+        root,
+      );
+      const submitted =
+        outcome === "conflicting-result"
+          ? {
+              ...result,
+              candidateDigest: digestBytes(bytes("forged-candidate")),
+            }
+          : result;
+      await expect(
+        stale.recordConformancePass(
+          initial.lookupId,
+          initial.version,
+          submitted,
+        ),
+      ).rejects.toThrow(
+        outcome === "tampered"
+          ? /Strict Candidate verification/iu
+          : outcome === "conflicting-result"
+            ? /current Candidate and artifacts/iu
+            : /append-only/iu,
+      );
+      expect(lifecycleRecordCounts(root)).toEqual(afterWinner);
+      // This helper enumerates candidate-ready receipts; denied terminals
+      // retain their separate blocked/rejected receipt status.
+      expect(candidateReceiptSequences(root)).toEqual(
+        outcome === "blocked" || outcome === "rejected" ? [1] : [1, 2],
+      );
+      if (outcome === "tampered") {
+        expect(() => stale.getRef(initial.id, initial.version)).toThrow(
+          /Strict Candidate verification/iu,
+        );
+      }
+    },
+  );
 
   it("converges overlapping fresh Candidate tests on one durable sequence-2 transition", async () => {
     const { root, store } = tempStore();

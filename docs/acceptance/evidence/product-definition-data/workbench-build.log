@@ -1,0 +1,38 @@
+
+> @factory/workbench@0.1.0 build C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\apps\workbench
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\15492\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles:
+   * C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\pnpm-lock.yaml
+   * C:\Users\15492\Develop\Archeform\pnpm-lock.yaml
+
+   ▲ Next.js 15.5.22
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 6.6s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/5) ...
+   Generating static pages (1/5)
+   Generating static pages (2/5)
+   Generating static pages (3/5)
+ ✓ Generating static pages (5/5)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                     336 kB         439 kB
+├ ○ /_not-found                            996 B         103 kB
+└ ƒ /api/requirements/interpret            122 B         103 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/307-8af370b35d25e94c.js         46 kB
+  ├ chunks/9063187f-c77a8c46ca185800.js  54.2 kB
+  └ other shared chunks (total)          2.22 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

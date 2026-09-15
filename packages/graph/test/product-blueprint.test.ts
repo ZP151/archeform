@@ -4,8 +4,24 @@ import { digestJson } from "../src/composition-shared.js";
 import { hashRequirementSpec } from "../src/requirement-spec.js";
 import {
   assertProductBlueprint,
+  blueprintActionSchema,
   hashProductBlueprint,
 } from "../src/product-blueprint.js";
+
+describe("canonical Task action vocabulary", () => {
+  it.each(["start", "complete", "reopen"])(
+    "accepts %s without an approval alias",
+    (action) => {
+      expect(blueprintActionSchema.safeParse(action).success).toBe(true);
+    },
+  );
+  it.each(["finish", "assign", "archive"])(
+    "keeps unknown Task verb %s invalid",
+    (action) => {
+      expect(blueprintActionSchema.safeParse(action).success).toBe(false);
+    },
+  );
+});
 
 /** A compact, schema-valid blueprint used as the mutation base. */
 function validBlueprint(): Record<string, unknown> {

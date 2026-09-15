@@ -59,6 +59,9 @@ export const blueprintActionVerbs = [
   "cancel",
   "audit",
   "manage",
+  "start",
+  "complete",
+  "reopen",
 ] as const;
 
 /** Approved business actions a blueprint actor may hold over an entity. */

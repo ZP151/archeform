@@ -144,7 +144,26 @@ describe("CompositionController", () => {
   ])(
     "maps $method $path to the composition review boundary",
     async (scenario) => {
-      scenario.handler.mockResolvedValueOnce(scenario.response);
+      const parameters = {
+        apiVersion: "factory.restaurant-menu-parameters/v1",
+        mode: "canonical-default",
+        currency: "USD",
+        items: [],
+      };
+      const publicReview = Object.freeze({
+        id: "review-1",
+        businessParameters: parameters,
+        businessParametersChecksum: "sha256:" + "1".repeat(64),
+      });
+      const storedReview = Object.freeze({
+        ...publicReview,
+        businessParametersProvided: true,
+      });
+      const storedResponse = Object.freeze({
+        ...scenario.response,
+        review: storedReview,
+      });
+      scenario.handler.mockResolvedValueOnce(storedResponse);
 
       const response = await fetch(`${baseUrl}${scenario.path}`, {
         method: scenario.method,
@@ -153,7 +172,11 @@ describe("CompositionController", () => {
       });
 
       expect(response.status).toBe(scenario.method === "POST" ? 201 : 200);
-      await expect(response.json()).resolves.toEqual(scenario.response);
+      await expect(response.json()).resolves.toEqual({
+        ...scenario.response,
+        review: publicReview,
+      });
+      expect(storedReview.businessParametersProvided).toBe(true);
       expect(scenario.handler).toHaveBeenCalledWith(...scenario.arguments);
     },
   );

@@ -1,3 +1,4 @@
+import { approvalLegacyFixtures } from "./fixtures/approval-legacy.js";
 import { describe, expect, it } from "vitest";
 
 import { FixtureRequirementInterpreter } from "@factory/adapters";
@@ -32,7 +33,11 @@ const bookingBrief =
  * that Graph's declared scenario — never from a product template.
  */
 async function composedGraphFor(brief: string): Promise<ApplicationGraphV1> {
-  const interpretation = await fixtureInterpreter.interpret({ brief });
+  if (brief === expenseBrief)
+    return structuredClone(
+      approvalLegacyFixtures.expense.input.graph,
+    ) as unknown as ApplicationGraphV1;
+  const { interpretation } = await fixtureInterpreter.interpret({ brief });
   const baseDraft = createBlankApplicationDraft({
     applicationId: interpretation.spec.requirementId,
     workspaceId: "local-workspace",

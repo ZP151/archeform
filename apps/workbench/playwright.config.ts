@@ -2,6 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Keep built workspace dependencies in their published ESM format.
+  build: { external: ["**/packages/*/dist/**"] },
   testMatch: "**/*.pw.ts",
   timeout: 30_000,
   retries: 0,

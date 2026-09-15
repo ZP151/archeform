@@ -1,0 +1,473 @@
+{
+  "date": "2026-09-12",
+  "baseCommit": "c12130bb62a95e0fb217389d1638937c16921a02",
+  "source": {
+    "packages/compiler/src/approval-visual-assets.ts": "2e5be87ea233c641dd92fcdbeb50ac46fe04bd1c4560c6bdf272e280da314519",
+    "packages/compiler/src/approval-presentation-components.ts": "df5a6050f3a8a7c5e86379467e3cf4fa19c3d13667c0a9cfedb265bd22755966",
+    "packages/compiler/src/approval-workspace-presentation.ts": "a9fb777f4d1be2d16d5efbf712c5db7499bcc454d1a0cb4688c32b5b21d91dd3",
+    "packages/compiler/src/index.ts": "b82799a6e7af83d6c8771794d39506306e3aff3f4a243f7f55af276f49d93895"
+  },
+  "workerSourceMatches": true,
+  "checks": {
+    "completeCompilerRegression": {
+      "passed": 675,
+      "note": "Complete pre-final-repair regression; unaffected evidence retained."
+    },
+    "finalAffectedCompilerRegression": {
+      "passed": 42
+    },
+    "packageBuild": true,
+    "packageLint": true,
+    "realRuntimeLanes": {
+      "passed": 2,
+      "total": 2,
+      "workers": 1,
+      "retries": 0,
+      "interpretation": "deterministic fixture",
+      "lifecycle": "real immutable publish/compile/verify/preview"
+    },
+    "previewCleanup": {
+      "expense": "existing exact-project zero-resource assertions passed",
+      "purchase": "stopped; zero resources"
+    }
+  },
+  "facts": [
+    {
+      "check": "FACTORY_APPROVAL_ASSET_FACTS",
+      "stylesheetLoaded": true,
+      "workspaceVersion": "4",
+      "iconsVisible": true,
+      "appDisplay": "grid",
+      "unresolvedTokens": [],
+      "bodyOverflow": false
+    },
+    {
+      "check": "FACTORY_APPROVAL_FIRST_VIEW",
+      "width": 390,
+      "firstActionBottom": 616
+    },
+    {
+      "check": "FACTORY_APPROVAL_FIRST_VIEW",
+      "width": 768,
+      "firstActionBottom": 616
+    },
+    {
+      "check": "FACTORY_APPROVAL_FIRST_VIEW",
+      "width": 1440,
+      "firstActionBottom": 478
+    },
+    {
+      "check": "FACTORY_HISTORY_EMPTY",
+      "entity": "expense",
+      "auditRequests": 1,
+      "unauthorizedUiAndApi": true
+    },
+    {
+      "check": "FACTORY_HISTORY_BUSINESS",
+      "entity": "expense",
+      "visibleDecisions": 2,
+      "reload": true,
+      "safeErrorRetry": true,
+      "lateRoleResponsesIgnored": true,
+      "unauthorizedUiAndApi": true,
+      "responsive": [390, 768, 1440]
+    },
+    {
+      "check": "FACTORY_APPROVAL_PRESENTATION",
+      "width": 390,
+      "overflow": false,
+      "violationIds": [],
+      "internalIdsCollapsed": true,
+      "keyboardDetails": true
+    },
+    {
+      "check": "FACTORY_APPROVAL_PRESENTATION",
+      "width": 768,
+      "overflow": false,
+      "violationIds": [],
+      "internalIdsCollapsed": true,
+      "keyboardDetails": true
+    },
+    {
+      "check": "FACTORY_APPROVAL_PRESENTATION",
+      "width": 1440,
+      "overflow": false,
+      "violationIds": [],
+      "internalIdsCollapsed": true,
+      "keyboardDetails": true
+    },
+    {
+      "check": "FACTORY_EXPRESSIVE_MATERIALS",
+      "localOnly": true,
+      "fallbackPreservesLayoutAndRecords": true,
+      "reloaded": true,
+      "darkWidths": [390, 768, 1440]
+    },
+    {
+      "check": "FACTORY_APPROVAL_BUSINESS",
+      "lane": "deterministic-interpretation-real-runtime",
+      "requests": 2,
+      "approved": 1,
+      "rejected": 1,
+      "crossRoleDenied": true,
+      "reloadRetained": true,
+      "questions": 0,
+      "technicalHandoffs": 0,
+      "interpretationCalls": 1,
+      "elapsedToReadyMs": 176212,
+      "elapsedToTaskMs": 200634,
+      "rawRecordPresentation": false,
+      "typedDateSubmission": true,
+      "intakeFacts": {
+        "schemaValid": true,
+        "productType": "unspecified",
+        "actorCount": 3,
+        "entityCount": 2,
+        "questionCount": 0,
+        "workflows": [
+          {
+            "requesterCount": 1,
+            "reviewerCount": 1,
+            "formPages": 1,
+            "queuePages": 1,
+            "listPages": 1,
+            "hasSubmit": true,
+            "hasApprove": true,
+            "hasReject": true
+          }
+        ]
+      }
+    },
+    {
+      "check": "FACTORY_PURCHASE_READY",
+      "compilationId": "cmty72nji006mnq4t98jrg7ih",
+      "elapsedToReadyMs": 172042
+    },
+    {
+      "check": "FACTORY_PURCHASE_FIRST_VIEW",
+      "width": 390,
+      "firstActionBottom": 616
+    },
+    {
+      "check": "FACTORY_PURCHASE_FIRST_VIEW",
+      "width": 768,
+      "firstActionBottom": 616
+    },
+    {
+      "check": "FACTORY_PURCHASE_FIRST_VIEW",
+      "width": 1440,
+      "firstActionBottom": 478
+    },
+    {
+      "check": "FACTORY_HISTORY_EMPTY",
+      "entity": "purchase-request",
+      "auditRequests": 1,
+      "unauthorizedUiAndApi": true
+    },
+    {
+      "check": "FACTORY_PURCHASE_LAYOUT",
+      "width": 390,
+      "overflow": false,
+      "roleTextFits": true,
+      "summariesFitRows": true
+    },
+    {
+      "check": "FACTORY_PURCHASE_PRESENTATION",
+      "width": 390,
+      "overflow": false,
+      "roleTextFits": true,
+      "summariesFitRows": true,
+      "violations": []
+    },
+    {
+      "check": "FACTORY_PURCHASE_LAYOUT",
+      "width": 768,
+      "overflow": false,
+      "roleTextFits": true,
+      "summariesFitRows": true
+    },
+    {
+      "check": "FACTORY_PURCHASE_PRESENTATION",
+      "width": 768,
+      "overflow": false,
+      "roleTextFits": true,
+      "summariesFitRows": true,
+      "violations": []
+    },
+    {
+      "check": "FACTORY_PURCHASE_LAYOUT",
+      "width": 1440,
+      "overflow": false,
+      "roleTextFits": true,
+      "summariesFitRows": true
+    },
+    {
+      "check": "FACTORY_PURCHASE_PRESENTATION",
+      "width": 1440,
+      "overflow": false,
+      "roleTextFits": true,
+      "summariesFitRows": true,
+      "violations": []
+    },
+    {
+      "check": "FACTORY_HISTORY_BUSINESS",
+      "entity": "purchase-request",
+      "visibleDecisions": 2,
+      "reload": true,
+      "safeErrorRetry": true,
+      "lateRoleResponsesIgnored": true,
+      "unauthorizedUiAndApi": true,
+      "responsive": [390, 768, 1440]
+    },
+    {
+      "check": "FACTORY_PURCHASE_BUSINESS",
+      "lane": "deterministic-selection-real-runtime",
+      "compilationId": "cmty72nji006mnq4t98jrg7ih",
+      "requests": 2,
+      "approved": 1,
+      "rejected": 1,
+      "crossRoleDenied": true,
+      "invalidTransitionDenied": true,
+      "procurementAuditApi": true,
+      "reloadRetained": true,
+      "sharedRecordFinding": true,
+      "knownRecordInputChanges": 2,
+      "clearActions": 1,
+      "filteredMutationFeedback": true,
+      "refreshPreservesFilters": true,
+      "roleChangeClearsFilters": true,
+      "questions": 0,
+      "technicalHandoffs": 0,
+      "interpretationCalls": 1,
+      "elapsedToReadyMs": 172042,
+      "elapsedToTaskMs": 205233
+    },
+    {
+      "check": "FACTORY_PURCHASE_CLEANUP",
+      "compilationId": "cmty72nji006mnq4t98jrg7ih",
+      "previewId": "preview-e80d51b9-f282-4855-8a6f-ff975d2c8167",
+      "project": "factory-preview-preview-e80d51b9-f282-4855-8a6f-ff975d2c8167",
+      "status": "stopped",
+      "resources": 0
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "before-390.png",
+      "kind": "prior-actual",
+      "width": 390,
+      "height": 1075,
+      "sha256": "a24f9aefa1f3ffbc7c2a9359da1fafaf33e3865ac2e4c945551263ee23d7bf93"
+    },
+    {
+      "path": "decision-history-1440.png",
+      "kind": "current-actual",
+      "width": 1440,
+      "height": 1379,
+      "sha256": "21aae3d484bee1e1e7b4e525f5feef8d4a7a0ccb972a96a5ec8e070db28d26f5"
+    },
+    {
+      "path": "decision-history-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1680,
+      "sha256": "816c50867188d21554296b4f32d810d51656a9b7cc3be2e78702bc406886f4f8"
+    },
+    {
+      "path": "decision-history-768.png",
+      "kind": "current-actual",
+      "width": 768,
+      "height": 1567,
+      "sha256": "96ee86311c5e5c42898ba977aa2baf31e3e5a916b4e913be2aceb66b5d6a56a8"
+    },
+    {
+      "path": "decision-history-closed-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1232,
+      "sha256": "e6e850dcaec9ebb8815fb00fc219bdbb41e8cf92151abcd5f177f2576fc8828c"
+    },
+    {
+      "path": "design-reference.png",
+      "kind": "concept",
+      "width": 853,
+      "height": 1844,
+      "sha256": "328e7f5d550692602697c506df0f7db0cc30c01c399cc5c1bcc93c55de259277"
+    },
+    {
+      "path": "media-fallback-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1170,
+      "sha256": "e52b09dd58488f282301b8c9556515bc64e35719dcdb2a3595d2a10b02a35ab3"
+    },
+    {
+      "path": "workspace-dark-1440.png",
+      "kind": "current-actual",
+      "width": 1440,
+      "height": 955,
+      "sha256": "b2947a64332a0aff629bff8e687974b1eeaef298c06f326d35a976d09ed23830"
+    },
+    {
+      "path": "workspace-dark-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1170,
+      "sha256": "57959d1802daccccb07faa6c97ab5a62339c6d9e710272f9d48ff025f0ca7e9a"
+    },
+    {
+      "path": "workspace-dark-768.png",
+      "kind": "current-actual",
+      "width": 768,
+      "height": 1147,
+      "sha256": "e7142a3714f0efe21987f2166fdb3d299b9a43042e14febf588c71ccf2bec7ce"
+    },
+    {
+      "path": "workspace-form-1440.png",
+      "kind": "current-actual",
+      "width": 1440,
+      "height": 900,
+      "sha256": "c95f8aea36cdcaeebce49fbaf7540a9302a4bf982a41ea039e513c339abb39eb"
+    },
+    {
+      "path": "workspace-form-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 915,
+      "sha256": "9729ea3640bb691055ba091d4e82a4c961ca55cc580fe214db08ba1bf1420d3e"
+    },
+    {
+      "path": "workspace-navigation-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1170,
+      "sha256": "25b8c33512f14a6cc50f142c03f9c9e06c2e5c1f02d8861dfa9984c86bd829ab"
+    },
+    {
+      "path": "workspace-no-match-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 900,
+      "sha256": "c7f9ae5350fcd09874df2e661b55728532de5840d38e720a63e1315b51e6bf2b"
+    },
+    {
+      "path": "workspace-results-1440.png",
+      "kind": "current-actual",
+      "width": 1440,
+      "height": 955,
+      "sha256": "07a208a6ae6e1415f3329f969146bbae3e095da0bae0c23059a1bd53fb99f8e9"
+    },
+    {
+      "path": "workspace-results-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1170,
+      "sha256": "18b1dea487ba08392785a3c3892ee919732f97015d32ab7b7ee2e421e91ebacf"
+    },
+    {
+      "path": "workspace-results-768.png",
+      "kind": "current-actual",
+      "width": 768,
+      "height": 1147,
+      "sha256": "ff5a173b9bc6ae1b8733de362cc597b70a5c75f65206ea1efae8804b8f4fed4f"
+    },
+    {
+      "path": "workspace-search-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 900,
+      "sha256": "1df7f5acce021c653924062b3dbeebd40555a59301785b52d1c5746c6b433fdd"
+    },
+    {
+      "path": "expense/d24-results-1440.png",
+      "kind": "current-actual",
+      "width": 1440,
+      "height": 955,
+      "sha256": "a322ff47b11480c49512a038c08fb77919c14c00d5d8af0803445877ae39befa"
+    },
+    {
+      "path": "expense/d24-results-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1147,
+      "sha256": "ddcd2de2ce3405741217d6f142b7c7fe5c1617fde87dd39a89804307ca2a48eb"
+    },
+    {
+      "path": "expense/d24-results-768.png",
+      "kind": "current-actual",
+      "width": 768,
+      "height": 1147,
+      "sha256": "7d05203ac34bf52dab28e1fb7db3476d74b3f4647a86d74807d97270bea333a3"
+    },
+    {
+      "path": "expense/decision-history-1440.png",
+      "kind": "current-actual",
+      "width": 1440,
+      "height": 1379,
+      "sha256": "221545466715b273fb007499027a009e0f5f722bcaffc3a8dd1d4fb881785e07"
+    },
+    {
+      "path": "expense/decision-history-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1633,
+      "sha256": "abe6034d374f6d5228c718992d840214a1c6b58a6d1b4c74701383ea13d06793"
+    },
+    {
+      "path": "expense/decision-history-768.png",
+      "kind": "current-actual",
+      "width": 768,
+      "height": 1567,
+      "sha256": "8db61c6c71ce9b4d9e8a97e07ae3cc6910cb9f73411272786e0dc2918ad99703"
+    },
+    {
+      "path": "expense/decision-history-closed-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1209,
+      "sha256": "0150646a4851bb70460304e4463fc8cedce9193a060c90608bcd2146cdef9a6a"
+    },
+    {
+      "path": "expense/media-fallback-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1147,
+      "sha256": "29f06b7402913265567777497346cd80617a9d0d695cb050139a8943334de00e"
+    },
+    {
+      "path": "expense/workspace-dark-1440.png",
+      "kind": "current-actual",
+      "width": 1440,
+      "height": 955,
+      "sha256": "173a609f4cb97db227cdab1ad06a7066f3e19898ccf0792f5a83dc44d6794238"
+    },
+    {
+      "path": "expense/workspace-dark-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 1147,
+      "sha256": "832a046a558e8be3828d5f214824c8d7c64cc1f005eb4314fb9be35a5d70faf6"
+    },
+    {
+      "path": "expense/workspace-dark-768.png",
+      "kind": "current-actual",
+      "width": 768,
+      "height": 1147,
+      "sha256": "0e19423b8781fbbdfe78603ff6028f89d400fa513a435e6167757a422b0a4a57"
+    },
+    {
+      "path": "expense/workspace-form-1440.png",
+      "kind": "current-actual",
+      "width": 1440,
+      "height": 900,
+      "sha256": "f919f1bb937fb97e2113847b9f60df12eade8c444373d62a4223a0ab4eaaf6b2"
+    },
+    {
+      "path": "expense/workspace-form-390.png",
+      "kind": "current-actual",
+      "width": 390,
+      "height": 900,
+      "sha256": "5fc23cfe25e0ce1cdcd084d1eff23b3b8ed9368ab33707baad518a71f7ae4bd7"
+    }
+  ]
+}

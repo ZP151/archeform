@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  isLoopbackPreviewUrl,
   useReleaseJourney,
   type ReleaseJourneyController,
   type ReleaseTarget,
@@ -182,6 +183,15 @@ describe("useReleaseJourney", () => {
   let root: Root;
   let onApproved: ReturnType<typeof vi.fn>;
 
+  it("accepts only credential-free exact loopback preview URLs", () => {
+    expect(isLoopbackPreviewUrl("http://127.0.0.1:3000")).toBe(true);
+    expect(isLoopbackPreviewUrl("https://localhost:3443")).toBe(true);
+    expect(isLoopbackPreviewUrl("http://[::1]:3000")).toBe(true);
+    expect(isLoopbackPreviewUrl("http://user:pass@127.0.0.1:3000")).toBe(false);
+    expect(isLoopbackPreviewUrl("http://127.0.0.1.evil.test:3000")).toBe(false);
+    expect(isLoopbackPreviewUrl("file:///tmp/app")).toBe(false);
+  });
+
   beforeEach(() => {
     (
       globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -200,8 +210,11 @@ describe("useReleaseJourney", () => {
     onApproved = vi.fn();
   });
 
-  afterEach(() => {
-    act(() => root.unmount());
+  afterEach(async () => {
+    await act(async () => {
+      root.unmount();
+      await vi.advanceTimersByTimeAsync(0);
+    });
     container.remove();
     vi.unstubAllGlobals();
     vi.useRealTimers();
@@ -210,17 +223,24 @@ describe("useReleaseJourney", () => {
 
   function mount(
     target: ReleaseTarget | null = TARGET,
-    overrides: { controlPlaneUrl?: string } = {},
+    overrides: { controlPlaneUrl?: string; strict?: boolean } = {},
   ) {
+    const harness = (
+      <Harness
+        controlPlaneUrl={
+          overrides.controlPlaneUrl ?? "http://control-plane.test"
+        }
+        target={target}
+        onApproved={(draft) => onApproved(draft)}
+      />
+    );
     act(() => {
       root.render(
-        <Harness
-          controlPlaneUrl={
-            overrides.controlPlaneUrl ?? "http://control-plane.test"
-          }
-          target={target}
-          onApproved={(draft) => onApproved(draft)}
-        />,
+        overrides.strict ? (
+          <React.StrictMode>{harness}</React.StrictMode>
+        ) : (
+          harness
+        ),
       );
     });
     const controller = globalThis.__release;
@@ -266,7 +286,7 @@ describe("useReleaseJourney", () => {
     await act(async () => {
       controller.publishRelease();
     });
-    expect(live().release?.phase).toBe("compiling");
+    expect(globalThis.__release?.release?.phase).toBe("compiling");
     expect(live().release?.publishedRevisionId).toBe("published-1");
 
     await act(async () => {
@@ -295,6 +315,31 @@ describe("useReleaseJourney", () => {
     expect(createRun?.init?.body).toBe(
       JSON.stringify({ verificationRunId: "verify-1" }),
     );
+  });
+
+  it("completes publish, compile, verify, and preview under StrictMode", async () => {
+    stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [succeededRun],
+      "POST /compilations/compilation-1/preview-runs": [previewStarting],
+      "GET /compilations/compilation-1/preview-runs/current": [previewReady],
+    });
+    const controller = mount(TARGET, { strict: true });
+    const live = (): ReleaseJourneyController =>
+      globalThis.__release as ReleaseJourneyController;
+
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => controller.verifyRelease());
+    await act(async () => controller.previewRelease());
+
+    expect(live().release?.phase).toBe("preview");
+    expect(live().release?.previewUrl).toBe("http://127.0.0.1:3000");
   });
 
   it("fails a compilation that remains pending at its elapsed deadline", async () => {
@@ -592,6 +637,273 @@ describe("useReleaseJourney", () => {
     expect(live().canReset).toBe(true);
   });
 
+  it("stops the exact preview run after readiness polling times out", async () => {
+    let stopCalls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        const method = init?.method ?? "GET";
+        const response = (body: unknown) =>
+          new Response(JSON.stringify(body), { status: 200 });
+        if (
+          method === "POST" &&
+          url.pathname.endsWith("/published-revisions")
+        ) {
+          return response(publishedRevision);
+        }
+        if (method === "POST" && url.pathname === "/compilations") {
+          return response(pendingCompilation);
+        }
+        if (
+          method === "GET" &&
+          url.pathname === "/compilations/compilation-1"
+        ) {
+          return response(succeededCompilation);
+        }
+        if (method === "POST" && url.pathname.endsWith("/verification-runs")) {
+          return response(pendingRun);
+        }
+        if (
+          method === "GET" &&
+          url.pathname === "/verification-runs/verify-1"
+        ) {
+          return response(succeededRun);
+        }
+        if (method === "POST" && url.pathname.endsWith("/preview-runs")) {
+          return response(previewStarting);
+        }
+        if (
+          method === "POST" &&
+          url.pathname === "/preview-runs/preview-1/stop"
+        ) {
+          stopCalls += 1;
+          return response(previewStopping);
+        }
+        if (
+          method === "GET" &&
+          url.pathname.endsWith("/preview-runs/current")
+        ) {
+          return response(stopCalls === 0 ? previewStarting : previewStopped);
+        }
+        return new Response(null, { status: 404 });
+      }),
+    );
+    const controller = mount();
+    const live = (): ReleaseJourneyController =>
+      globalThis.__release as ReleaseJourneyController;
+
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => controller.verifyRelease());
+    await act(async () => {
+      controller.previewRelease();
+      await vi.advanceTimersByTimeAsync(300_000);
+    });
+
+    expect(stopCalls).toBe(1);
+    expect(live().release).toMatchObject({
+      phase: "failed",
+      diagnosis: "preview.failed",
+    });
+    expect(live().canReset).toBe(true);
+  });
+
+  it("waits for a late preview start and exact teardown before restarting", async () => {
+    const transport = stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [succeededRun],
+      "POST /preview-runs/preview-1/stop": [previewStopping],
+      "GET /compilations/compilation-1/preview-runs/current": [previewStopped],
+    });
+    let resolveStart!: (response: Response) => void;
+    vi.stubGlobal("fetch", (url: string | URL, init?: RequestInit) => {
+      if (
+        init?.method === "POST" &&
+        new URL(String(url)).pathname ===
+          "/compilations/compilation-1/preview-runs"
+      ) {
+        return new Promise<Response>((resolve) => {
+          resolveStart = resolve;
+        });
+      }
+      return transport.fetcher(url, init);
+    });
+    const controller = mount();
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => controller.verifyRelease());
+    await act(async () => {
+      controller.previewRelease();
+      await vi.advanceTimersByTimeAsync(300_000);
+    });
+    await act(async () => {
+      void controller.resetRelease();
+    });
+    expect(globalThis.__release?.release?.phase).toBe("failed");
+    await act(async () => {
+      resolveStart(
+        new Response(JSON.stringify(previewStarting), { status: 200 }),
+      );
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(
+      transport.calls.filter(
+        (call) => call.path === "POST /preview-runs/preview-1/stop",
+      ),
+    ).toHaveLength(1);
+    expect(globalThis.__release?.release?.phase).toBe("starting-preview");
+  });
+
+  it("refuses a different current preview and stops only the run it started", async () => {
+    const transport = stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [succeededRun],
+      "POST /compilations/compilation-1/preview-runs": [previewStarting],
+      "GET /compilations/compilation-1/preview-runs/current": [
+        { ...previewReady, id: "unowned-preview" },
+        previewStopped,
+      ],
+      "POST /preview-runs/preview-1/stop": [previewStopping],
+    });
+    const controller = mount();
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => controller.verifyRelease());
+    await act(async () => controller.previewRelease());
+    expect(globalThis.__release?.release?.phase).toBe("failed");
+    expect(
+      transport.calls.filter(
+        (call) => call.path === "POST /preview-runs/preview-1/stop",
+      ),
+    ).toHaveLength(1);
+    expect(
+      transport.calls.some((call) => call.path.includes("unowned-preview")),
+    ).toBe(false);
+  });
+
+  it("does not overwrite a newer target after rejected-preview cleanup completes", async () => {
+    const transport = stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [succeededRun],
+      "POST /compilations/compilation-1/preview-runs": [previewStarting],
+      "GET /compilations/compilation-1/preview-runs/current": [
+        { ...previewReady, previewUrl: "https://outside.example.test" },
+        previewStopped,
+      ],
+    });
+    let resolveStop!: (response: Response) => void;
+    let stops = 0;
+    vi.stubGlobal("fetch", (url: string | URL, init?: RequestInit) => {
+      if (new URL(String(url)).pathname === "/preview-runs/preview-1/stop") {
+        stops += 1;
+        return new Promise<Response>((resolve) => {
+          resolveStop = resolve;
+        });
+      }
+      return transport.fetcher(url, init);
+    });
+    const controller = mount();
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => controller.verifyRelease());
+    await act(async () => controller.previewRelease());
+    mount({ applicationGraphId: "other", draftRevisionId: "other-draft" });
+    await act(async () => {
+      resolveStop(
+        new Response(JSON.stringify(previewStopping), { status: 200 }),
+      );
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(stops).toBe(1);
+    expect(globalThis.__release?.release).toMatchObject({
+      applicationGraphId: "other",
+      phase: "publishing",
+    });
+  });
+
+  it("keeps restart blocked when exact preview teardown remains unconfirmed", async () => {
+    const transport = stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [succeededRun],
+      "POST /compilations/compilation-1/preview-runs": [previewStarting],
+      "GET /compilations/compilation-1/preview-runs/current": [
+        previewReady,
+        { ...previewStopped, status: "failed" },
+        { ...previewStopped, status: "failed" },
+      ],
+      "POST /preview-runs/preview-1/stop": [previewStopping],
+    });
+    const controller = mount();
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => controller.verifyRelease());
+    await act(async () => controller.previewRelease());
+    await act(async () => controller.cleanupRelease());
+    await act(async () => {
+      void controller.resetRelease();
+    });
+    expect(globalThis.__release?.release).toMatchObject({
+      phase: "failed",
+      diagnosis: "cleanup.failed",
+    });
+    expect(globalThis.__release?.canPublish).toBe(false);
+    expect(
+      transport.calls.filter(
+        (call) => call.path === "POST /preview-runs/preview-1/stop",
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("refuses a non-loopback preview URL even after authoritative verification", async () => {
+    stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [succeededRun],
+      "POST /compilations/compilation-1/preview-runs": [previewStarting],
+      "GET /compilations/compilation-1/preview-runs/current": [
+        { ...previewReady, previewUrl: "https://example.test/app" },
+        previewStopped,
+      ],
+      "POST /preview-runs/preview-1/stop": [previewStopping],
+    });
+    const controller = mount();
+    const live = (): ReleaseJourneyController =>
+      globalThis.__release as ReleaseJourneyController;
+
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => controller.verifyRelease());
+    await act(async () => controller.previewRelease());
+
+    expect(live().release?.phase).toBe("failed");
+    expect(live().release?.diagnosis).toBe("runtime.preview_readiness_failed");
+  });
+
   it("fails closed when the worker reports the cleanup failed", async () => {
     // The worker reports its stop failed: the preview-run row flips to
     // failed while the journey is still awaiting the confirmation, so the
@@ -642,7 +954,7 @@ describe("useReleaseJourney", () => {
     expect(live().canReset).toBe(true);
   });
 
-  it("resets a failed release back to the publishing phase", async () => {
+  it("resumes failed verification from the existing immutable compilation", async () => {
     const failedRun = {
       ...succeededRun,
       status: "failed",
@@ -679,9 +991,140 @@ describe("useReleaseJourney", () => {
     await act(async () => {
       controller.resetRelease();
     });
-    expect(live().release?.phase).toBe("publishing");
+    expect(live().release?.phase).toBe("verifying");
+    expect(live().release?.publishedRevisionId).toBe("published-1");
+    expect(live().release?.compilationId).toBe("compilation-1");
     expect(live().release?.diagnosis).toBeUndefined();
     expect(live().release?.proposedDraftDiff).toBeUndefined();
+  });
+
+  it.each(["publish", "compile"] as const)(
+    "retains a late %s identity and resumes without a duplicate POST",
+    async (phase) => {
+      let settle: ((response: Response) => void) | undefined;
+      const pending = new Promise<Response>((resolve) => {
+        settle = resolve;
+      });
+      const calls: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const path = `${init?.method ?? "GET"} ${new URL(String(input)).pathname}`;
+          calls.push(path);
+          if (path.endsWith("/published-revisions")) {
+            return phase === "publish"
+              ? pending
+              : new Response(JSON.stringify(publishedRevision));
+          }
+          if (path === "POST /compilations") return pending;
+          if (path === "GET /compilations/compilation-1")
+            return new Response(JSON.stringify(succeededCompilation));
+          return new Response("{}", { status: 404 });
+        }),
+      );
+      const controller = mount();
+      await act(async () => controller.publishRelease());
+      if (phase === "compile")
+        await act(async () => controller.compileRelease());
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300_000);
+      });
+      expect(globalThis.__release?.release?.phase).toBe("failed");
+      await act(async () => {
+        void controller.resetRelease();
+      });
+      expect(globalThis.__release?.busy).toBe(true);
+      await act(async () => {
+        settle?.(
+          new Response(
+            JSON.stringify(
+              phase === "publish" ? publishedRevision : pendingCompilation,
+            ),
+          ),
+        );
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(globalThis.__release?.release?.phase).toBe("compiling");
+      expect(globalThis.__release?.release?.publishedRevisionId).toBe(
+        "published-1",
+      );
+      if (phase === "compile") {
+        expect(globalThis.__release?.release?.compilationId).toBe(
+          "compilation-1",
+        );
+        await act(async () => controller.compileRelease());
+        expect(globalThis.__release?.release?.phase).toBe("verifying");
+        expect(
+          calls.filter((path) => path === "POST /compilations"),
+        ).toHaveLength(1);
+      }
+      expect(
+        calls.filter((path) => path.endsWith("/published-revisions")),
+      ).toHaveLength(1);
+    },
+  );
+
+  it("retains a late verification identity across recovery", async () => {
+    let settle: ((response: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      settle = resolve;
+    });
+    const { fetcher, calls } = stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "GET /verification-runs/verify-1": [succeededRun],
+    });
+    const baseFetch = fetcher.getMockImplementation()!;
+    fetcher.mockImplementation(async (url, init) => {
+      if (
+        init?.method === "POST" &&
+        String(url).endsWith("/verification-runs")
+      ) {
+        calls.push({ path: "POST verification", init });
+        return pending;
+      }
+      return baseFetch(url, init);
+    });
+    const controller = mount();
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => controller.verifyRelease());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900_000);
+    });
+    expect(globalThis.__release?.release?.phase).toBe("failed");
+    await act(async () => {
+      void controller.resetRelease();
+    });
+    expect(globalThis.__release?.busy).toBe(true);
+    await act(async () => {
+      settle?.(new Response(JSON.stringify(pendingRun)));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => controller.verifyRelease());
+    expect(globalThis.__release?.release?.phase).toBe("starting-preview");
+    expect(globalThis.__release?.release?.verificationRunId).toBe("verify-1");
+    expect(
+      calls.filter((call) => call.path === "POST verification"),
+    ).toHaveLength(1);
+  });
+
+  it("offers start over after an unknown creation rejection without replaying it", async () => {
+    const { calls } = stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [503],
+    });
+    const controller = mount();
+    await act(async () => controller.publishRelease());
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await controller.resetRelease();
+    });
+    expect(outcome).toBe("start-over");
+    expect(calls).toHaveLength(1);
+    expect(globalThis.__release?.release?.phase).toBe("failed");
   });
 
   it("reseeds the release when the Draft revision changes", async () => {
@@ -709,5 +1152,83 @@ describe("useReleaseJourney", () => {
     expect(globalThis.__release?.release?.draftRevisionId).toBe(
       "draft-expense-approval-r2",
     );
+  });
+
+  it("discards a deferred publish response after the release target changes", async () => {
+    let resolvePublished: ((value: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolvePublished = resolve;
+          }),
+      ),
+    );
+    const controller = mount();
+    await act(async () => controller.publishRelease());
+    await act(async () => {
+      mount({
+        applicationGraphId: "restaurant-ordering",
+        draftRevisionId: "draft-restaurant-r2",
+      });
+      await Promise.resolve();
+    });
+    await act(async () => {
+      resolvePublished?.(
+        new Response(JSON.stringify(publishedRevision), { status: 200 }),
+      );
+      await Promise.resolve();
+    });
+
+    expect(globalThis.__release?.release?.applicationGraphId).toBe(
+      "restaurant-ordering",
+    );
+    expect(globalThis.__release?.release?.phase).toBe("publishing");
+  });
+
+  it("discards a deferred compilation response after the release target changes", async () => {
+    let resolveCompilation: ((value: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith("/published-revisions")) {
+          return Promise.resolve(
+            new Response(JSON.stringify(publishedRevision), { status: 200 }),
+          );
+        }
+        if (url.pathname === "/compilations") {
+          return new Promise<Response>((resolve) => {
+            resolveCompilation = resolve;
+          });
+        }
+        return Promise.resolve(new Response(null, { status: 404 }));
+      }),
+    );
+    const controller = mount();
+    await act(async () => controller.publishRelease());
+    expect(globalThis.__release?.release?.phase).toBe("compiling");
+
+    act(() => controller.compileRelease());
+    await act(async () => {
+      await Promise.resolve();
+      mount({
+        applicationGraphId: "restaurant-ordering",
+        draftRevisionId: "draft-restaurant-r2",
+      });
+    });
+    await act(async () => {
+      resolveCompilation?.(
+        new Response(JSON.stringify(pendingCompilation), { status: 200 }),
+      );
+      await Promise.resolve();
+    });
+
+    expect(globalThis.__release?.release).toMatchObject({
+      applicationGraphId: "restaurant-ordering",
+      draftRevisionId: "draft-restaurant-r2",
+      phase: "publishing",
+    });
   });
 });

@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-09-13T09:25:10.6654190Z",
+  "sampleKind": "prepared-local-authored-selection",
+  "attempts": 4,
+  "passingAttempts": 1,
+  "passingAttempt": 4,
+  "registeredDefinitions": 4,
+  "demonstratedRuntimeFamilies": 3,
+  "newDefinitionsThisSlice": 0,
+  "liveProviderCalls": 0,
+  "ordinaryUserSamples": 0,
+  "inRunManualRescues": 0,
+  "auditedRecords": 4,
+  "outcomes": {
+    "lane": "deterministic-selection-real-runtime",
+    "tasks": 4,
+    "lifecycle": ["start", "complete", "reopen", "complete"],
+    "viewerDenied": ["create", "update", "start", "complete", "reopen"],
+    "correctionVersions": [0, 1, 2, 3, 4, 5, 6, 7],
+    "correctionReplayAfterApiRestart": true,
+    "correctionChangedReplayDenied": true,
+    "invalidTransitionDenied": true,
+    "idempotentCreateReplay": true,
+    "staleTransitionDenied": true,
+    "reloadRetained": true,
+    "persistedMutationFacts": {
+      "auditCounts": [5, 2, 1, 8],
+      "receiptCounts": [5, 2, 1, 8],
+      "hashedKeyShape": true,
+      "rawKeyRetained": false
+    },
+    "interpretationCalls": 1,
+    "elapsedToReadyMs": 196950,
+    "elapsedToTaskMs": 224503
+  },
+  "nextSlice": "Data-based definition authoring and batch validation",
+  "nextScaleMetric": "Distinct definitions admitted without handwritten runtime or UI"
+}

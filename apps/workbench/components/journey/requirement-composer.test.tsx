@@ -4,7 +4,10 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { RequirementComposer } from "./requirement-composer";
+import {
+  RequirementComposer,
+  type RequirementComposerProps,
+} from "./requirement-composer";
 
 describe("RequirementComposer", () => {
   let container: HTMLDivElement;
@@ -139,5 +142,37 @@ describe("RequirementComposer", () => {
     expect(onApplyExample).toHaveBeenCalledWith(
       "Build an expense approval application.",
     );
+  });
+
+  it("offers the collapsed manual-review choice before the user describes a product", () => {
+    const onManualReviewChange = vi.fn();
+    const props = {
+      brief: "Build a restaurant ordering application.",
+      onBriefChange: vi.fn(),
+      busy: false,
+      error: null,
+      onInterpret: vi.fn(),
+      examplePrompts: [],
+      onApplyExample: vi.fn(),
+      manualReview: false,
+      onManualReviewChange,
+    } satisfies RequirementComposerProps & {
+      readonly manualReview: boolean;
+      readonly onManualReviewChange: (manual: boolean) => void;
+    };
+
+    act(() => {
+      root.render(<RequirementComposer {...props} />);
+    });
+
+    const advanced = container.querySelector("details");
+    expect(advanced?.open).toBe(false);
+    expect(advanced?.textContent).toContain("Advanced options");
+    const manual = container.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    expect(manual).not.toBeNull();
+    act(() => manual?.click());
+    expect(onManualReviewChange).toHaveBeenCalledWith(true);
   });
 });

@@ -141,9 +141,21 @@ function restaurantRuntimeCatalog(
     if (
       categories.length !== 1 ||
       categories[0]!.id !== "mains" ||
-      items.length !== 2 ||
-      items[0]!.id !== "margherita-pizza" ||
-      items[1]!.id !== "mushroom-risotto"
+      !(
+        (items.length === 2 &&
+          items[0]!.id === "margherita-pizza" &&
+          items[1]!.id === "mushroom-risotto") ||
+        (items.length >= 1 &&
+          items.length <= 100 &&
+          items.every(
+            (item, index) =>
+              item.id === `menu-item-${String(index + 1).padStart(3, "0")}`,
+          ) &&
+          !seedData.some(
+            ({ entity }) =>
+              entity === "menu-option-group" || entity === "menu-option",
+          ))
+      )
     ) {
       failInvalid();
     }
@@ -217,6 +229,8 @@ function restaurantRuntimeCatalog(
 
 function seedModule(plan: RestaurantProductPlanV1): string {
   const catalog = restaurantRuntimeCatalog(plan);
+  assertBoundedString(plan.application.name, 2, 80);
+  const applicationName = JSON.stringify(plan.application.name);
   return `export const restaurantSeed = Object.freeze({
   catalog: ${JSON.stringify(catalog)},
   cart: { id: "cart-customer-1", version: 1, items: [], total: 0 },
@@ -231,7 +245,7 @@ function seedModule(plan: RestaurantProductPlanV1): string {
     { id: "kitchen-1", subjectRef: "local-kitchen", displayName: "Kitchen", role: "kitchen", active: true },
     { id: "cashier-1", subjectRef: "local-cashier", displayName: "Cashier", role: "cashier", active: true }
   ],
-  settings: { version: 1, name: "Maison Aurelia", currency: "USD", taxRate: 0, serviceChargeRate: 0, timezone: "UTC", logoUrl: "", serviceOpen: true }
+  settings: { version: 1, name: ${applicationName}, currency: "USD", taxRate: 0, serviceChargeRate: 0, timezone: "UTC", logoUrl: "", serviceOpen: true }
 });
 `;
 }

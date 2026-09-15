@@ -1,0 +1,26 @@
+
+> @factory/adapters@0.1.0 test C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\packages\adapters
+> vitest run
+
+
+ RUN  v2.1.9 C:/Users/15492/Develop/Archeform/.worktrees/consumer-delivery/packages/adapters
+
+ ✓ test/browser-entry.test.ts (1 test) 6ms
+ ✓ test/authoring-contract.test.ts (2 tests) 9ms
+ ✓ test/provider-contract.test.ts (2 tests) 27ms
+ ✓ test/appwrite-provider.test.ts (2 tests) 39ms
+ ✓ test/medusa-provider.test.ts (2 tests) 41ms
+ ✓ test/openfga-provider.test.ts (2 tests) 43ms
+ ✓ test/ai-provider.test.ts (7 tests) 30ms
+ ✓ test/composition-planner.test.ts (14 tests) 244ms
+ ✓ test/graph-editor-adapters.test.ts (3 tests) 11ms
+ ✓ test/restaurant-menu-result.test.ts (12 tests) 133ms
+ ✓ test/requirement-interpreter.test.ts (149 tests) 733ms
+ ✓ test/product-definition-data.test.ts (27 tests) 4300ms
+   ✓ Product definition data > loads five immutable data entries and admits only the shipped catalogue 903ms
+   ✓ Definition semantic identity and built command > builds byte-identical shipped data and rejects unsafe CLI input without diagnostics 2752ms
+
+ Test Files  12 passed (12)
+      Tests  223 passed (223)
+   Start at  19:51:20
+   Duration  8.19s (transform 3.12s, setup 0ms, collect 24.12s, tests 5.62s, environment 4ms, prepare 4.66s)

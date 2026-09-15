@@ -1,0 +1,44 @@
+
+Running 1 test using 1 worker
+
+(node:51704) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:51704) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+FACTORY_APPROVAL_ASSET_FACTS {"stylesheetLoaded":true,"workspaceVersion":"5","iconsVisible":true,"appDisplay":"grid","unresolvedTokens":[],"bodyOverflow":false}
+  x  1 e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey (3.6m)
+
+
+  1) e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey
+
+    Error: [31mTimed out 5000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m
+
+    Locator: locator('.approval-record').first().locator('.approval-material img[data-approval-material]')
+    Expected: [32m1[39m
+    Received: [31m0[39m
+    Call log:
+    [2m  - expect.toHaveCount with timeout 5000ms[22m
+    [2m  - waiting for locator('.approval-record').first().locator('.approval-material img[data-approval-material]')[22m
+    [2m    9 × locator resolved to 0 elements[22m
+    [2m      - unexpected value "0"[22m
+
+
+       at approval-presentation.ts:256
+
+      254 |     await expect(
+      255 |       row.locator(".approval-material img[data-approval-material]"),
+    > 256 |     ).toHaveCount(1);
+          |       ^
+      257 |     const status = (
+      258 |       await row.locator(".approval-summary-status dd").innerText()
+      259 |     ).trim();
+        at verifyExpressiveMaterials (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\approval-presentation.ts:256:7)
+        at verifyWorkspaceComposition (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\approval-presentation.ts:98:3)
+        at capturePrimaryScreen (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\helpers\approval-definition-batch.ts:197:5)
+        at runApprovalDefinitionBatch (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\helpers\approval-definition-batch.ts:351:5)
+        at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\approval-definition-batch.spec.ts:15:3
+
+  1 failed
+    e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey

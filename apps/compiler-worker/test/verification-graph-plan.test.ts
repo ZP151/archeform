@@ -1,4 +1,15 @@
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { canonicalTeamTaskInterpretation } from "../../../packages/adapters/src/requirements/task-definition-selection.js";
+import {
+  composeProductDraft,
+  planProductAlternatives,
+} from "@factory/capabilities/node";
+import {
+  applyGraphDiffToDraft,
+  createBlankApplicationDraft,
+} from "@factory/graph";
 
 import { VerificationContractError } from "@factory/graph";
 
@@ -19,6 +30,185 @@ import {
 const identityPolicy = graphLock([{ key: "core.identity-policy" }]);
 
 describe("graph-derived verification plan", () => {
+  it("preserves the exact delivered Task verifier plan from baseline 5b65169e", () => {
+    const baseline = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../../packages/compiler/test/fixtures/task-correction-legacy-baseline.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ).entries[0].input;
+    const profile = deriveVerificationProfile(
+      baseline.graph,
+      baseline.compositionLock,
+    );
+    expect(
+      createHash("sha256").update(JSON.stringify(profile)).digest("hex"),
+    ).toBe("d7de60d2467edeb4d6ba92436df319553744ef86fc4fc079bc97f9c57a6cd71b");
+  });
+  it("derives the v2 correction chain with committed versions, stored replay and denial", () => {
+    const { spec, blueprint } = canonicalTeamTaskInterpretation();
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: "task-verifier",
+      workspaceId: "local",
+      name: "Task verifier",
+    });
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    const graph = applyGraphDiffToDraft(
+      baseDraft,
+      composeProductDraft({ plan: standard.plan, blueprint, baseDraft }).diff,
+    ).graph;
+    const selections = graph.integration.compositionSelections!;
+    delete graph.integration.compositionSelections;
+    const lock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    });
+    const profile = deriveVerificationProfile(graph, lock);
+    expect(profile.apiRegistry.find((a) => a.action === "task.update")).toEqual(
+      {
+        action: "task.update",
+        method: "PATCH",
+        route: "/api/task/{recordId}",
+        expectedStatus: 200,
+      },
+    );
+    const final = profile.journeys["task-recomplete"];
+    expect(final.chain!.map((step) => step.action)).toEqual([
+      "task.create",
+      "task.update",
+      "task.start-fresh",
+      "task.update",
+      "task.complete-fresh",
+      "task.update-completed-denied",
+      "task.reopen-fresh",
+    ]);
+    expect(
+      final
+        .chain!.slice(1)
+        .map((step) => JSON.parse(step.body!).expectedVersion),
+    ).toEqual([0, 1, 2, 3, 4, 4]);
+    expect(final.body).toBe('{"expectedVersion":5}');
+    expect(
+      new Set([
+        ...final.chain!.map((step) => step.idempotencyKeyOverride),
+        final.headers![0].value,
+      ]).size,
+    ).toBe(8);
+    for (const step of final.chain!.filter((step) =>
+      step.action.includes("update"),
+    ))
+      expect(Object.keys(JSON.parse(step.body!).values).sort()).toEqual([
+        "assignee",
+        "description",
+        "dueDate",
+        "priority",
+        "title",
+      ]);
+    expect(
+      profile.apiRegistry.find(
+        (a) => a.action === "task.update-completed-denied",
+      )!.expectedStatus,
+    ).toBe(403);
+    expect(profile.journeys["task-update"]).toMatchObject({
+      replayExpectation: "stored-success",
+      expectedVersion: 0,
+    });
+    expect(profile.journeys["task-denied-update"].sessionId).toBe(
+      "fixture-session-viewer",
+    );
+    expect(JSON.stringify(deriveVerificationProfile(graph, lock))).toBe(
+      JSON.stringify(profile),
+    );
+  });
+
+  it("derives protected Task requests and five distinct activation keys through recompletion", () => {
+    const { spec, blueprint } = canonicalTeamTaskInterpretation();
+    blueprint.actors[0].permissions[0].actions = [
+      "create",
+      "read",
+      "start",
+      "complete",
+      "reopen",
+    ];
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: "task-verifier",
+      workspaceId: "local",
+      name: "Task verifier",
+    });
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    const graph = applyGraphDiffToDraft(
+      baseDraft,
+      composeProductDraft({ plan: standard.plan, blueprint, baseDraft }).diff,
+    ).graph;
+    const selections = graph.integration.compositionSelections!;
+    delete graph.integration.compositionSelections;
+    const lock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    });
+    const profile = deriveVerificationProfile(graph, lock);
+    expect(profile.journeys["task-start"]).toMatchObject({
+      sessionId: "fixture-session-member",
+      replayExpectation: "stored-success",
+      body: '{"expectedVersion":0}',
+    });
+    expect(
+      Object.keys(JSON.parse(profile.journeys["task-create"].body!)),
+    ).toEqual(["values"]);
+    const final = profile.journeys["task-recomplete"];
+    expect(final).toBeDefined();
+    expect(final.body).toBe('{"expectedVersion":3}');
+    expect(final.chain!.map((step) => step.action)).toEqual([
+      "task.create",
+      "task.start-fresh",
+      "task.complete-fresh",
+      "task.reopen-fresh",
+    ]);
+    expect(
+      final
+        .chain!.slice(1)
+        .map((step) => JSON.parse(step.body!).expectedVersion),
+    ).toEqual([0, 1, 2]);
+    const keys = [
+      ...final.chain!.map((step) => step.idempotencyKeyOverride),
+      final.headers![0].value,
+    ];
+    expect(
+      keys.every(
+        (key) => typeof key === "string" && /^[a-z0-9-]{1,128}$/.test(key),
+      ),
+    ).toBe(true);
+    expect(new Set(keys).size).toBe(5);
+    expect(
+      profile.apiRegistry
+        .filter((a) => a.action.startsWith("task.") && a.method === "POST")
+        .every(
+          (a) => a.expectedStatus === (a.action === "task.create" ? 201 : 200),
+        ),
+    ).toBe(true);
+    expect(
+      profile.apiRegistry
+        .filter((a) => a.method !== "GET")
+        .every((a) => a.action.startsWith("task.")),
+    ).toBe(true);
+    expect(profile.journeys["task-denied-start"].headers).not.toEqual(
+      profile.journeys["task-start"].headers,
+    );
+    expect(JSON.stringify(deriveVerificationProfile(graph, lock))).toBe(
+      JSON.stringify(profile),
+    );
+  });
   it("derives the full plan for the Expense Approval graph", () => {
     const profile = deriveVerificationProfile(
       expenseApprovalGraph(),
@@ -644,4 +834,225 @@ describe("graph-derived verification plan", () => {
         )!.route,
     ).toBe("/api/appointment/sample-appointment/events/request");
   });
+});
+import { approvalLegacyFixtures } from "../../../packages/compiler/test/fixtures/approval-legacy.js";
+import { createCapabilityCompositionLock } from "@factory/capabilities";
+import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
+function correctionGraph(name: "expense" | "purchase") {
+  const graph = structuredClone(
+    approvalLegacyFixtures[name].input.graph,
+  ) as unknown as ApplicationGraphV1;
+  const flow = graph.flow.flows[0]!;
+  const requester = flow.transitions[0]!.roles![0]!;
+  flow.states = ["draft", "submitted", "approved", "returned"];
+  flow.events.push("update");
+  flow.transitions[2]!.to = "returned";
+  flow.transitions.push({
+    from: "returned",
+    event: "update",
+    to: "draft",
+    roles: [requester],
+    effects: [{ capability: "audit.record", operation: "record" }],
+  });
+  graph.policy.permissions.find(
+    (p) => p.resource === flow.entity && p.role === requester,
+  )!.actions = ["create", "read", "update", "submit"];
+  graph.domain.entities
+    .find((e) => e.key === flow.entity)!
+    .fields.find((f) => f.key === "status")!.values = [
+    "draft",
+    "submitted",
+    "approved",
+    "returned",
+  ];
+  return {
+    graph,
+    lock: createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections: graph.integration.compositionSelections!,
+    }),
+  };
+}
+describe("exact correction verification protocol", () => {
+  it.each(["expense", "purchase"] as const)(
+    "derives immutable published %s protocol from the separate lock",
+    (name) => {
+      const { graph } = correctionGraph(name);
+      const selections = graph.integration.compositionSelections!;
+      delete graph.integration.compositionSelections;
+      const lock = createCapabilityCompositionLock({
+        graphChecksum: hashApplicationGraph(graph),
+        selections,
+      });
+      const before = JSON.stringify({ graph, lock });
+      const profile = deriveVerificationProfile(graph, lock);
+      const entity = graph.flow.flows[0]!.entity;
+      expect(profile.journeys[entity + "-submit"]).toMatchObject({
+        replayExpectation: "stored-success",
+        body: '{"expectedVersion":0}',
+      });
+      expect(JSON.stringify({ graph, lock })).toBe(before);
+      for (const kind of ["missing-package", "binding", "checksum", "status"]) {
+        const changed = structuredClone(graph);
+        const packages = structuredClone(selections);
+        if (kind === "missing-package") packages.pop();
+        if (kind === "binding")
+          packages.find((s) => s.lock.key === "core.crud")!.bindings.entityKey =
+            { graphSymbol: "graph.domain." + changed.domain.entities[1]!.key };
+        if (kind === "status")
+          changed.domain.entities[0]!.fields.find(
+            (f) => f.key === "status",
+          )!.required = false;
+        const invalid = createCapabilityCompositionLock({
+          graphChecksum:
+            kind === "checksum"
+              ? "sha256:" + "0".repeat(64)
+              : hashApplicationGraph(changed),
+          selections: packages,
+        });
+        expect(
+          Object.values(
+            deriveVerificationProfile(changed, invalid).journeys,
+          ).some(
+            (j) =>
+              "replayExpectation" in j &&
+              j.replayExpectation === "stored-success",
+          ),
+        ).toBe(false);
+      }
+    },
+  );
+  it.each(["missing", "integer", "incomplete-enum", "optional"])(
+    "does not select incompatible stored status %s with a matching lock",
+    (kind) => {
+      const { graph } = correctionGraph("expense");
+      const entity = graph.domain.entities.find((e) => e.key === "expense")!;
+      const status = entity.fields.find((f) => f.key === "status")!;
+      if (kind === "missing") {
+        entity.fields = entity.fields.filter((f) => f.key !== "status");
+        entity.indexes = [];
+        for (const seed of graph.domain.seedData ?? [])
+          if (seed.entity === "expense") delete seed.values.status;
+      }
+      if (kind === "integer") {
+        Object.assign(status, { type: "integer" });
+        delete status.values;
+        for (const seed of graph.domain.seedData ?? [])
+          if (seed.entity === "expense") seed.values.status = 0;
+      }
+      if (kind === "incomplete-enum")
+        status.values = ["draft", "submitted", "approved"];
+      if (kind === "optional") status.required = false;
+      const lock = createCapabilityCompositionLock({
+        graphChecksum: hashApplicationGraph(graph),
+        selections: graph.integration.compositionSelections!,
+      });
+      const profile = deriveVerificationProfile(graph, lock);
+      expect(
+        Object.values(profile.journeys).some(
+          (j) =>
+            "replayExpectation" in j &&
+            j.replayExpectation === "stored-success",
+        ),
+      ).toBe(false);
+    },
+  );
+  it.each(["shape", "grant", "page", "binding", "lock", "checksum"])(
+    "leaves malformed %s outside correction protocol",
+    (kind) => {
+      const { graph, lock: originalLock } = correctionGraph("expense");
+      let lock = structuredClone(originalLock);
+      if (kind === "shape") graph.flow.flows[0]!.transitions.pop();
+      if (kind === "grant")
+        graph.policy.permissions.find(
+          (p) => p.resource === "expense" && p.actions.includes("submit"),
+        )!.actions = ["create", "read", "submit"];
+      if (kind === "page")
+        graph.page.pages
+          .flatMap((p) => p.blocks)
+          .find((b) => b.type === "queue")!.type = "list";
+      if (kind === "binding")
+        graph.integration.compositionSelections![0]!.bindings = {};
+      if (kind === "lock") lock.packages[0]!.lock.version = "9.9.9";
+      if (kind !== "lock" && kind !== "checksum")
+        lock = {
+          ...lock,
+          applicationGraphChecksum: hashApplicationGraph(graph),
+          packages: structuredClone(graph.integration.compositionSelections!),
+        };
+      if (kind === "checksum")
+        lock.applicationGraphChecksum = "sha256:" + "0".repeat(64);
+      const profile = deriveVerificationProfile(graph, lock);
+      expect(
+        Object.values(profile.journeys).some(
+          (j) =>
+            "replayExpectation" in j &&
+            j.replayExpectation === "stored-success",
+        ),
+      ).toBe(false);
+      expect(
+        JSON.parse(profile.journeys["expense-create"]!.body!),
+      ).not.toHaveProperty("values");
+    },
+  );
+  it.each(["expense", "purchase"] as const)(
+    "derives header keys, values and every versioned mutation for %s",
+    (name) => {
+      const { graph, lock } = correctionGraph(name);
+      const entity = graph.flow.flows[0]!.entity;
+      const profile = deriveVerificationProfile(graph, lock);
+      expect(
+        JSON.parse(profile.journeys[entity + "-create"]!.body!),
+      ).toHaveProperty("values");
+      expect(profile.journeys[entity + "-submit"]).toMatchObject({
+        replayExpectation: "stored-success",
+        body: '{"expectedVersion":0}',
+      });
+      expect(
+        profile.apiRegistry.find((a) => a.action === entity + ".approve"),
+      ).toMatchObject({ method: "POST", expectedStatus: 200 });
+      expect(
+        profile.apiRegistry.find((a) => a.action === entity + ".update"),
+      ).toMatchObject({
+        method: "PATCH",
+        route: "/api/" + entity + "/{recordId}",
+        expectedStatus: 200,
+      });
+      expect(JSON.parse(profile.journeys[entity + "-reject"]!.body!)).toEqual({
+        expectedVersion: 1,
+        reason: "Please correct this verification fixture.",
+      });
+      expect(
+        JSON.parse(profile.journeys[entity + "-update"]!.body!),
+      ).toMatchObject({ expectedVersion: 2, values: expect.any(Object) });
+      expect(
+        profile.journeys[entity + "-update"]!.chain!.map((step) =>
+          JSON.parse(step.body!),
+        ),
+      ).toEqual([
+        { values: expect.any(Object) },
+        { expectedVersion: 0 },
+        {
+          expectedVersion: 1,
+          reason: "Please correct this verification fixture.",
+        },
+      ]);
+      expect(JSON.parse(profile.journeys[entity + "-approve"]!.body!)).toEqual({
+        expectedVersion: 1,
+      });
+      expect(
+        profile.apiRegistry.find((a) => a.action === entity + ".create")!
+          .expectedStatus,
+      ).toBe(201);
+      for (const journey of Object.values(profile.journeys).filter(
+        (j) => j.action.startsWith(entity + ".") && j.body,
+      ))
+        expect(journey.headers).toEqual([
+          {
+            name: "x-factory-idempotency-key",
+            value: expect.stringMatching(/^verify-[a-f0-9]{40}$/),
+          },
+        ]);
+    },
+  );
 });

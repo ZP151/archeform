@@ -1,0 +1,39 @@
+{
+  "apiVersion": "factory.product-definition-validation-report/v1",
+  "attempted": 4,
+  "valid": 4,
+  "distinct": 4,
+  "admitted": 4,
+  "durationMs": 381,
+  "entries": [
+    {
+      "index": 0,
+      "definitionKey": "restaurant-ordering",
+      "verdict": "admitted",
+      "reasons": [],
+      "fingerprint": "sha256:0b92e6cf8dbd80ef7984be7d78a24d1fd3630e195b67173f4c979ee8ff4df192"
+    },
+    {
+      "index": 1,
+      "definitionKey": "expense-approval",
+      "verdict": "admitted",
+      "reasons": [],
+      "fingerprint": "sha256:34eac49c26f2fe5caa77836cea24c612d83e4f02b606a5d0435db4b95c74f57d"
+    },
+    {
+      "index": 2,
+      "definitionKey": "purchase-request-approval",
+      "verdict": "admitted",
+      "reasons": [],
+      "fingerprint": "sha256:a52df75ec9caad06cf0ea9287630811cbbe0f4339af6240206d7467324cf164f"
+    },
+    {
+      "index": 3,
+      "definitionKey": "team-task-tracking",
+      "verdict": "admitted",
+      "reasons": [],
+      "fingerprint": "sha256:d763a200a0730ad45e61d43ddd65fa7ae3086b8773b9ff5ff468a25c4f89fdf7"
+    }
+  ],
+  "reasonCounts": {}
+}

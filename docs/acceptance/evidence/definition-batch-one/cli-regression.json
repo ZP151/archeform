@@ -1,0 +1,164 @@
+{
+  "apiVersion": "factory.product-definition-command-evidence/v1",
+  "sourceDataSha256": "d789963f619e4d97dd42ba3da7fe84c64696f777c65a039b952ea6903707f45f",
+  "copiedBytes": 118806,
+  "passedCases": 16,
+  "cases": [
+    {
+      "name": "shipped-default",
+      "exit": 0,
+      "attempted": 5,
+      "valid": 5,
+      "distinct": 5,
+      "admitted": 5,
+      "reasonCounts": {}
+    },
+    {
+      "name": "shipped-repeat",
+      "exit": 0,
+      "attempted": 5,
+      "valid": 5,
+      "distinct": 5,
+      "admitted": 5,
+      "reasonCounts": {}
+    },
+    {
+      "name": "shipped-stdin",
+      "exit": 0,
+      "attempted": 5,
+      "valid": 5,
+      "distinct": 5,
+      "admitted": 5,
+      "reasonCounts": {}
+    },
+    {
+      "name": "malformed-json",
+      "exit": 1,
+      "attempted": 0,
+      "valid": 0,
+      "distinct": 0,
+      "admitted": 0,
+      "reasonCounts": {
+        "definition.invalid-json": 1
+      }
+    },
+    {
+      "name": "escaped-duplicate-member",
+      "exit": 1,
+      "attempted": 0,
+      "valid": 0,
+      "distinct": 0,
+      "admitted": 0,
+      "reasonCounts": {
+        "definition.invalid-json": 1
+      }
+    },
+    {
+      "name": "invalid-utf8",
+      "exit": 1,
+      "attempted": 0,
+      "valid": 0,
+      "distinct": 0,
+      "admitted": 0,
+      "reasonCounts": {
+        "definition.invalid-json": 1
+      }
+    },
+    {
+      "name": "oversized-stdin",
+      "exit": 1,
+      "attempted": 0,
+      "valid": 0,
+      "distinct": 0,
+      "admitted": 0,
+      "reasonCounts": {
+        "definition.batch-limit": 1
+      }
+    },
+    {
+      "name": "path-argument-rejected",
+      "exit": 2
+    },
+    {
+      "name": "extra-argument-rejected",
+      "exit": 2
+    },
+    {
+      "name": "unknown-executable-member",
+      "exit": 1,
+      "attempted": 5,
+      "valid": 4,
+      "distinct": 4,
+      "admitted": 4,
+      "reasonCounts": {
+        "definition.unknown-key": 1
+      }
+    },
+    {
+      "name": "duplicate-definition-key",
+      "exit": 1,
+      "attempted": 6,
+      "valid": 6,
+      "distinct": 4,
+      "admitted": 4,
+      "reasonCounts": {
+        "definition.duplicate-key": 2
+      }
+    },
+    {
+      "name": "missing-correction",
+      "exit": 1,
+      "attempted": 5,
+      "valid": 4,
+      "distinct": 4,
+      "admitted": 4,
+      "reasonCounts": {
+        "definition.missing-correction": 1
+      }
+    },
+    {
+      "name": "cosmetic-definition-duplicate",
+      "exit": 1,
+      "attempted": 6,
+      "valid": 6,
+      "distinct": 4,
+      "admitted": 4,
+      "reasonCounts": {
+        "definition.duplicate-semantics": 2
+      }
+    },
+    {
+      "name": "missing-failure",
+      "exit": 1,
+      "attempted": 5,
+      "valid": 4,
+      "distinct": 4,
+      "admitted": 4,
+      "reasonCounts": {
+        "definition.missing-failure": 1
+      }
+    },
+    {
+      "name": "unsupported-family",
+      "exit": 1,
+      "attempted": 5,
+      "valid": 4,
+      "distinct": 4,
+      "admitted": 4,
+      "reasonCounts": {
+        "definition.unknown-family": 1
+      }
+    },
+    {
+      "name": "batch-entry-limit",
+      "exit": 1,
+      "attempted": 0,
+      "valid": 0,
+      "distinct": 0,
+      "admitted": 0,
+      "reasonCounts": {
+        "definition.batch-limit": 1
+      }
+    }
+  ]
+}

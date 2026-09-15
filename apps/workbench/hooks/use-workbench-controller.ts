@@ -30,6 +30,7 @@ import {
   type WorkbenchDraft,
   type WorkbenchOpenedApplication,
   type WorkbenchPreviewRun,
+  type WorkbenchProductApplied,
   type WorkbenchPublishedRevision,
   type WorkbenchVerificationRun,
   type WorkbenchRevisionTimeline,
@@ -44,7 +45,10 @@ import {
   serializeGraphExchange,
 } from "../lib/graph-exchange";
 import { useProductJourney } from "../lib/product-journey/use-product-journey";
-import { useReleaseJourney } from "../lib/product-journey/use-release-journey";
+import {
+  useReleaseJourney,
+  type ReleaseTarget,
+} from "../lib/product-journey/use-release-journey";
 import {
   initialWorkbenchState,
   transitionWorkbench,
@@ -170,7 +174,9 @@ export type WorkbenchController = {
   readonly changePolicyModel: (policy: PolicyModel) => void;
   readonly changeFlowModel: (flow: FlowModel) => void;
   readonly proposeWithAi: (brief: string) => Promise<string>;
-  readonly applyComposedProduct: () => Promise<void>;
+  readonly applyComposedProduct: (options?: {
+    readonly resetJourney?: boolean;
+  }) => Promise<ReleaseTarget | null>;
 };
 
 type Props = {
@@ -179,6 +185,17 @@ type Props = {
 };
 
 const WORKBENCH_THEME_STORAGE_KEY = "factory.workbench.theme";
+
+/** The V3 instance must be the exact Draft created by this apply response. */
+export function matchesAppliedTemplateDraft(
+  applied: WorkbenchProductApplied,
+  instance: WorkbenchTemplateDraftInstance,
+): boolean {
+  return (
+    instance.draft.applicationGraphId === applied.applicationGraphId &&
+    instance.draft.revisionNumber === applied.revisionNumber
+  );
+}
 
 export function useWorkbenchController({
   initialGraph,
@@ -197,6 +214,11 @@ export function useWorkbenchController({
   }, []);
   const [graph, setGraph] = useState(initialGraph);
   const [remoteDraft, setRemoteDraft] = useState<WorkbenchDraft | null>(null);
+  // Only the freshly applied Restaurant V3 Draft may seed the consumer
+  // release controller. Existing, bootstrapped, and manually opened drafts
+  // continue through their normal manual target.
+  const [consumerReleaseTarget, setConsumerReleaseTarget] =
+    useState<ReleaseTarget | null>(null);
   const [publishedRevision, setPublishedRevision] =
     useState<WorkbenchPublishedRevision | null>(null);
   const [templatePublishedRevision, setTemplatePublishedRevision] = useState<{
@@ -254,6 +276,7 @@ export function useWorkbenchController({
   const [templateBusy, setTemplateBusy] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const bootstrapRequest = useRef(0);
+  const consumerReleaseRequest = useRef(0);
   const artifactRequestToken = useRef(0);
   const verificationRequestToken = useRef(0);
   const selectedArtifact =
@@ -261,6 +284,16 @@ export function useWorkbenchController({
     artifactSelection.compilationId === compilation?.id
       ? artifactSelection.artifact
       : null;
+
+  // Invalidate an in-flight composed-product apply before this controller
+  // unmounts. Its apply, open, and refresh continuations must not adopt a
+  // Draft after the user has left the Workbench.
+  useEffect(() => {
+    return () => {
+      ++bootstrapRequest.current;
+      ++consumerReleaseRequest.current;
+    };
+  }, []);
 
   useEffect(() => {
     artifactRequestToken.current += 1;
@@ -292,6 +325,8 @@ export function useWorkbenchController({
     [graph.flow],
   );
   const journey = useProductJourney(controlPlaneUrl);
+  const latestReviewId = useRef<string | null>(null);
+  latestReviewId.current = journey.state?.review?.id ?? null;
 
   const refreshApplications = useCallback(async (): Promise<void> => {
     const request = ++applicationsRequest.current;
@@ -330,6 +365,8 @@ export function useWorkbenchController({
   const adoptOpenedApplication = useCallback(
     (opened: WorkbenchOpenedApplication): void => {
       ++bootstrapRequest.current;
+      ++consumerReleaseRequest.current;
+      setConsumerReleaseTarget(null);
       setGraph(opened.draft.graph);
       setRemoteDraft(opened.draft);
       setPublishedRevision(opened.publishedRevision);
@@ -358,12 +395,13 @@ export function useWorkbenchController({
 
   const release = useReleaseJourney(
     controlPlaneUrl,
-    remoteDraft === null
-      ? null
-      : {
-          applicationGraphId: remoteDraft.applicationGraphId,
-          draftRevisionId: remoteDraft.draftRevisionId,
-        },
+    consumerReleaseTarget ??
+      (remoteDraft === null
+        ? null
+        : {
+            applicationGraphId: remoteDraft.applicationGraphId,
+            draftRevisionId: remoteDraft.draftRevisionId,
+          }),
     useCallback(
       (draft: WorkbenchDraft) => {
         // The approval created a new Draft revision of the same application
@@ -388,8 +426,24 @@ export function useWorkbenchController({
   );
 
   const bootstrapGraph = useCallback(
-    async (nextGraph: ApplicationGraphV1): Promise<void> => {
+    async (
+      nextGraph: ApplicationGraphV1,
+      consumerApply?: {
+        readonly request: number;
+        readonly reviewId: string | null;
+        readonly applied: WorkbenchProductApplied;
+      },
+    ): Promise<WorkbenchDraft | null> => {
       const request = ++bootstrapRequest.current;
+      if (consumerApply === undefined) ++consumerReleaseRequest.current;
+      const consumerRequest =
+        consumerApply?.request ?? consumerReleaseRequest.current;
+      const isCurrent = () =>
+        request === bootstrapRequest.current &&
+        consumerRequest === consumerReleaseRequest.current &&
+        (consumerApply === undefined ||
+          consumerApply.reviewId === latestReviewId.current);
+      setConsumerReleaseTarget(null);
       setGraph(nextGraph);
       setRemoteDraft(null);
       setPublishedRevision(null);
@@ -403,7 +457,19 @@ export function useWorkbenchController({
 
       try {
         const draft = await controlPlane.bootstrapLocalDraft(nextGraph);
-        if (request !== bootstrapRequest.current) return;
+        if (!isCurrent()) return null;
+        if (
+          consumerApply !== undefined &&
+          (draft.applicationGraphId !==
+            consumerApply.applied.applicationGraphId ||
+            draft.revisionNumber !== consumerApply.applied.revisionNumber)
+        ) {
+          setConnectionState("offline");
+          setOperationError(
+            "The composed product Draft no longer matches this request.",
+          );
+          return null;
+        }
         setRemoteDraft(draft);
         setGraph(draft.graph);
         dispatch({
@@ -411,10 +477,10 @@ export function useWorkbenchController({
           revision: `r.${draft.revisionNumber}`,
         });
         setConnectionState("ready");
+        return draft;
       } catch (error) {
-        if (request === bootstrapRequest.current) {
-          setConnectionState("offline");
-        }
+        if (!isCurrent()) return null;
+        setConnectionState("offline");
         throw error;
       }
     },
@@ -425,6 +491,7 @@ export function useWorkbenchController({
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const attemptBootstrap = async (retriesLeft: number): Promise<void> => {
+      const request = bootstrapRequest.current + 1;
       try {
         await bootstrapGraph(initialGraph);
       } catch {
@@ -432,8 +499,14 @@ export function useWorkbenchController({
         // instead of wedging the shell in "offline". The bootstrap is
         // idempotent (GET-first, create-on-404), so retries are safe, and a
         // newer request superseding this one resolves the loop naturally.
-        if (cancelled || retriesLeft <= 0) return;
+        if (
+          cancelled ||
+          request !== bootstrapRequest.current ||
+          retriesLeft <= 0
+        )
+          return;
         timer = setTimeout(() => {
+          if (cancelled || request !== bootstrapRequest.current) return;
           void attemptBootstrap(retriesLeft - 1);
         }, BOOTSTRAP_RETRY_DELAY_MS);
       }
@@ -875,14 +948,24 @@ export function useWorkbenchController({
 
   const importPublishedGraph = useCallback(
     (file: File) => {
+      const request = ++bootstrapRequest.current;
+      const consumerRequest = ++consumerReleaseRequest.current;
+      const isCurrent = () =>
+        request === bootstrapRequest.current &&
+        consumerRequest === consumerReleaseRequest.current;
+      setConsumerReleaseTarget(null);
+      // V1 consumer delivery also has a remote Draft fallback. Suspend it
+      // immediately so importing cannot keep advancing the replaced target.
+      if (consumerReleaseTarget !== null) setRemoteDraft(null);
       setOperationError(null);
       setExchangeStatus("Validating Graph exchange…");
       void file
         .text()
-        .then(parseGraphExchangeText)
-        .then((exchange) => controlPlane.importPublishedGraph(exchange))
-        .then((draft) => {
-          ++bootstrapRequest.current;
+        .then(async (text) => {
+          if (!isCurrent()) return;
+          const exchange = parseGraphExchangeText(text);
+          const draft = await controlPlane.importPublishedGraph(exchange);
+          if (!isCurrent()) return;
           setGraph(draft.graph);
           setRemoteDraft(draft);
           setPublishedRevision(null);
@@ -897,13 +980,14 @@ export function useWorkbenchController({
           setExchangeStatus(`Imported as Draft r.${draft.revisionNumber}.`);
         })
         .catch((error) => {
+          if (!isCurrent()) return;
           setExchangeStatus(null);
           setOperationError(
             error instanceof Error ? error.message : "Graph import failed.",
           );
         });
     },
-    [controlPlane],
+    [consumerReleaseTarget, controlPlane],
   );
 
   const changePageModel = useCallback((page: PageModel) => {
@@ -972,54 +1056,101 @@ export function useWorkbenchController({
    * product review bound it by key), so the bootstrap GET adopts the applied
    * revision as-is; the next Publish/Compile actions then operate on it.
    */
-  const applyComposedProduct = useCallback(async (): Promise<void> => {
-    const applied = await journey.applyProduct();
-    if (applied === null) return; // failed; the composer shows the bounded error
-    const apiVersion = (
-      applied.graph as unknown as { readonly apiVersion?: string }
-    ).apiVersion;
-    if (apiVersion === "factory.application-graph/v3") {
-      // A restaurant Describe product adopts the canonical V3 Graph, so it
-      // opens through the template-draft workspace (snapshot + surface
-      // previews) instead of the V1 studio bootstrap.
-      const applicationKey = applied.graph.metadata.id;
-      setTemplateBusy(true);
-      setTemplateError(null);
+  const applyComposedProduct = useCallback(
+    async (options?: {
+      readonly resetJourney?: boolean;
+    }): Promise<ReleaseTarget | null> => {
+      const request = ++consumerReleaseRequest.current;
+      const reviewId = latestReviewId.current;
+      const isCurrent = () =>
+        request === consumerReleaseRequest.current &&
+        reviewId === latestReviewId.current;
+      const applied = await journey.applyProduct();
+      if (applied === null) return null; // failed; the composer shows the bounded error
+      if (!isCurrent()) return null;
+      const apiVersion = (
+        applied.graph as unknown as { readonly apiVersion?: string }
+      ).apiVersion;
+      if (apiVersion === "factory.application-graph/v3") {
+        // A restaurant Describe product adopts the canonical V3 Graph, so it
+        // opens through the template-draft workspace (snapshot + surface
+        // previews) instead of the V1 studio bootstrap.
+        const applicationKey = applied.graph.metadata.id;
+        setTemplateBusy(true);
+        setTemplateError(null);
+        try {
+          const instance = await controlPlane.openTemplateDraft(applicationKey);
+          if (
+            request !== consumerReleaseRequest.current ||
+            !matchesAppliedTemplateDraft(applied, instance)
+          ) {
+            return null;
+          }
+          setTemplateDraft(instance);
+          const target = {
+            applicationGraphId: instance.draft.applicationGraphId,
+            draftRevisionId: instance.draft.draftRevisionId,
+          };
+          setConsumerReleaseTarget(target);
+          await refreshApplications();
+          if (request !== consumerReleaseRequest.current) return null;
+          if (options?.resetJourney !== false) journey.reset();
+          dispatch({ type: "open", surface: "home" });
+          return target;
+        } catch (error) {
+          if (request !== consumerReleaseRequest.current) return null;
+          setConnectionState("offline");
+          setOperationError(
+            error instanceof Error
+              ? error.message
+              : "The composed product could not be opened.",
+          );
+        } finally {
+          if (request === consumerReleaseRequest.current) {
+            setTemplateBusy(false);
+          }
+        }
+        return null;
+      }
       try {
-        const instance = await controlPlane.openTemplateDraft(applicationKey);
-        setTemplateDraft(instance);
+        const draft = await bootstrapGraph(applied.graph, {
+          request,
+          reviewId,
+          applied,
+        });
+        if (draft === null || !isCurrent()) return null;
         await refreshApplications();
-        journey.reset();
-        dispatch({ type: "open", surface: "home" });
+        if (!isCurrent()) return null;
+        const target = {
+          applicationGraphId: draft.applicationGraphId,
+          draftRevisionId: draft.draftRevisionId,
+        };
+        if (options?.resetJourney === false) setConsumerReleaseTarget(target);
+        if (options?.resetJourney !== false) journey.reset();
+        dispatch({
+          type: "open",
+          surface: options?.resetJourney === false ? "home" : "page",
+        });
+        return target;
       } catch (error) {
-        setConnectionState("offline");
+        if (request !== consumerReleaseRequest.current) return null;
         setOperationError(
           error instanceof Error
             ? error.message
             : "The composed product could not be opened.",
         );
-      } finally {
-        setTemplateBusy(false);
       }
-      return;
-    }
-    try {
-      await bootstrapGraph(applied.graph);
-    } catch (error) {
-      setOperationError(
-        error instanceof Error
-          ? error.message
-          : "The composed product could not be opened.",
-      );
-    }
-    await refreshApplications();
-    journey.reset();
-    dispatch({ type: "open", surface: "page" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journey, bootstrapGraph, refreshApplications, controlPlane]);
+      return null;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [journey, bootstrapGraph, refreshApplications, controlPlane],
+  );
 
   const openApplication = useCallback(
     (applicationKey: string) => {
+      ++bootstrapRequest.current;
+      ++consumerReleaseRequest.current;
+      setConsumerReleaseTarget(null);
       setOperationError(null);
       setConnectionState("connecting");
       const summary = applications.find(
@@ -1369,6 +1500,9 @@ export function useWorkbenchController({
     dispatch({ type: "toggle-library" });
   }, []);
   const commandFocus = useCallback(() => {
+    ++bootstrapRequest.current;
+    ++consumerReleaseRequest.current;
+    setConsumerReleaseTarget(null);
     setTemplateDraft(null);
     setTemplateError(null);
     dispatch({ type: "open", surface: "home" });

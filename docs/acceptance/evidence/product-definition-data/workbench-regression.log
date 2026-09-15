@@ -1,0 +1,12 @@
+
+ RUN  v2.1.9 C:/Users/15492/Develop/Archeform/.worktrees/consumer-delivery/apps/workbench
+
+ ✓ lib/product-journey/interpret-contract.test.ts (10 tests) 12ms
+ ✓ test/approval-intake-diagnostics.test.ts (4 tests) 20ms
+ ✓ app/api/requirements/interpret/route.test.ts (15 tests) 69ms
+ ✓ lib/product-journey/use-consumer-generation.test.tsx (35 tests) 664ms
+
+ Test Files  4 passed (4)
+      Tests  64 passed (64)
+   Start at  18:25:19
+   Duration  8.95s (transform 3.28s, setup 0ms, collect 20.02s, tests 765ms, environment 626ms, prepare 1.12s)

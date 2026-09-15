@@ -1450,13 +1450,32 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     version: string,
     result: unknown,
   ): Promise<StoredCandidateRefV1> {
-    const verification = await this.verifyIdentity(id, version);
+    let verification = await this.verifyIdentity(id, version);
     if (!verification.valid || verification.candidate === undefined) {
       throw new Error(
         "Strict Candidate verification must pass before a lifecycle transition.",
       );
     }
-    const entry = this.#entry(id, version);
+    // A concurrent process can publish the sole terminal winner after the
+    // first verification. Verify that reconciled snapshot before using it.
+    const reconciled = this.#entry(id, version, true);
+    if (
+      !reconciled.verified ||
+      canonicalRecordDigest(verification.candidate) !== reconciled.latest.digest
+    ) {
+      verification = await this.verify(reconciled.latest);
+      if (!verification.valid || verification.candidate === undefined) {
+        throw new Error(
+          "Strict Candidate verification must pass before a lifecycle transition.",
+        );
+      }
+    }
+    const entry = reconciled;
+    if (!entry.verified) {
+      throw new Error(
+        "Strict Candidate verification is required before access.",
+      );
+    }
     const current = verification.candidate;
     if (
       current.status !== "quarantined" &&

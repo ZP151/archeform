@@ -1,0 +1,589 @@
+ Image factory-task-correction-20260913-control-plane:latest Building
+ Image factory-task-correction-20260913-compiler-worker:latest Building
+ Image factory-task-correction-20260913-workbench:latest Building
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.99kB 0.0s done
+#1 DONE 0.0s
+
+#2 [workbench internal] load build definition from Dockerfile
+#2 transferring dockerfile: 814B 0.0s done
+#2 DONE 0.0s
+
+#3 [control-plane internal] load build definition from Dockerfile
+#3 transferring dockerfile: 1.07kB 0.0s done
+#3 DONE 0.0s
+
+#4 [compiler-worker internal] load build definition from Dockerfile
+#4 transferring dockerfile: 910B 0.0s done
+#4 DONE 0.1s
+
+#5 [control-plane internal] load metadata for docker.io/library/node:22-alpine
+#5 DONE 0.1s
+
+#6 [workbench internal] load .dockerignore
+#6 transferring context: 164B 0.0s done
+#6 DONE 0.0s
+
+#7 [control-plane build 1/7] FROM docker.io/library/node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+#7 resolve docker.io/library/node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 0.0s done
+#7 DONE 0.0s
+
+#8 [control-plane internal] load build context
+#8 transferring context: 3.31MB 0.6s done
+#8 DONE 0.6s
+
+#9 [workbench build 2/7] WORKDIR /workspace
+#9 CACHED
+
+#9 [control-plane build 2/7] WORKDIR /workspace
+#9 CACHED
+
+#10 [compiler-worker build 3/7] COPY . .
+#10 DONE 1.7s
+
+#11 [control-plane build 4/7] RUN npm config set fetch-retries 5 && npm config set fetch-retry-maxtimeout 120000 && npm install --global pnpm@9.0.0
+#11 4.784
+#11 4.784 added 1 package in 2s
+#11 4.784
+#11 4.784 1 package is looking for funding
+#11 4.785   run `npm fund` for details
+#11 DONE 4.9s
+
+#12 [workbench build 4/6] RUN npm config set fetch-retries 5 && npm config set fetch-retry-maxtimeout 120000 && npm install --global pnpm@9.0.0
+#12 4.779
+#12 4.779 added 1 package in 2s
+#12 4.779
+#12 4.779 1 package is looking for funding
+#12 4.779   run `npm fund` for details
+#12 DONE 4.9s
+
+#13 [compiler-worker build 5/7] RUN pnpm install --frozen-lockfile
+#13 0.940 Scope: all 18 workspace projects
+#13 1.057 Lockfile is up to date, resolution step is skipped
+#13 1.122 Progress: resolved 1, reused 0, downloaded 0, added 0
+#13 1.823 Packages: +616
+#13 1.823 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#13 2.124 Progress: resolved 616, reused 0, downloaded 0, added 0
+#13 2.768
+#13 2.768    ╭──────────────────────────────────────────────────────────────────╮
+#13 2.768    │                                                                  │
+#13 2.768    │                Update available! 9.0.0 → 12.4.1.                 │
+#13 2.768    │   Changelog: https://github.com/pnpm/pnpm/releases/tag/v12.4.1   │
+#13 2.768    │                Run "pnpm add -g pnpm" to update.                 │
+#13 2.768    │                                                                  │
+#13 2.768    │      Follow @pnpmjs for updates: https://twitter.com/pnpmjs      │
+#13 2.768    │                                                                  │
+#13 2.768    ╰──────────────────────────────────────────────────────────────────╯
+#13 2.768
+#13 3.129 Progress: resolved 616, reused 0, downloaded 43, added 42
+#13 4.130 Progress: resolved 616, reused 0, downloaded 78, added 78
+#13 5.131 Progress: resolved 616, reused 0, downloaded 134, added 134
+#13 6.134 Progress: resolved 616, reused 0, downloaded 212, added 210
+#13 7.135 Progress: resolved 616, reused 0, downloaded 251, added 252
+#13 8.135 Progress: resolved 616, reused 0, downloaded 339, added 340
+#13 9.136 Progress: resolved 616, reused 0, downloaded 406, added 407
+#13 ...
+
+#14 [workbench build 5/6] RUN pnpm install --frozen-lockfile
+#14 0.936 Scope: all 18 workspace projects
+#14 1.052 Lockfile is up to date, resolution step is skipped
+#14 1.114 Progress: resolved 1, reused 0, downloaded 0, added 0
+#14 1.754 Packages: +616
+#14 1.754 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#14 2.167 Progress: resolved 616, reused 0, downloaded 0, added 0
+#14 2.736
+#14 2.736    ╭──────────────────────────────────────────────────────────────────╮
+#14 2.736    │                                                                  │
+#14 2.736    │                Update available! 9.0.0 → 12.4.1.                 │
+#14 2.736    │   Changelog: https://github.com/pnpm/pnpm/releases/tag/v12.4.1   │
+#14 2.736    │                Run "pnpm add -g pnpm" to update.                 │
+#14 2.736    │                                                                  │
+#14 2.736    │      Follow @pnpmjs for updates: https://twitter.com/pnpmjs      │
+#14 2.736    │                                                                  │
+#14 2.736    ╰──────────────────────────────────────────────────────────────────╯
+#14 2.736
+#14 3.172 Progress: resolved 616, reused 0, downloaded 41, added 41
+#14 4.172 Progress: resolved 616, reused 0, downloaded 76, added 76
+#14 5.172 Progress: resolved 616, reused 0, downloaded 135, added 135
+#14 6.173 Progress: resolved 616, reused 0, downloaded 218, added 217
+#14 7.174 Progress: resolved 616, reused 0, downloaded 280, added 280
+#14 8.174 Progress: resolved 616, reused 0, downloaded 362, added 363
+#14 9.174 Progress: resolved 616, reused 0, downloaded 435, added 436
+#14 ...
+
+#13 [compiler-worker build 5/7] RUN pnpm install --frozen-lockfile
+#13 10.14 Progress: resolved 616, reused 0, downloaded 468, added 469
+#13 11.14 Progress: resolved 616, reused 0, downloaded 532, added 533
+#13 12.14 Progress: resolved 616, reused 0, downloaded 566, added 567
+#13 13.14 Progress: resolved 616, reused 0, downloaded 596, added 596
+#13 14.14 Progress: resolved 616, reused 0, downloaded 604, added 605
+#13 15.14 Progress: resolved 616, reused 0, downloaded 605, added 606
+#13 17.62 Progress: resolved 616, reused 0, downloaded 606, added 606
+#13 18.62 Progress: resolved 616, reused 0, downloaded 607, added 608
+#13 19.62 Progress: resolved 616, reused 0, downloaded 609, added 610
+#13 ...
+
+#14 [workbench build 5/6] RUN pnpm install --frozen-lockfile
+#14 10.17 Progress: resolved 616, reused 0, downloaded 496, added 497
+#14 11.18 Progress: resolved 616, reused 0, downloaded 551, added 551
+#14 12.18 Progress: resolved 616, reused 0, downloaded 580, added 580
+#14 13.18 Progress: resolved 616, reused 0, downloaded 603, added 604
+#14 14.18 Progress: resolved 616, reused 0, downloaded 606, added 607
+#14 15.53 Progress: resolved 616, reused 0, downloaded 607, added 607
+#14 16.53 Progress: resolved 616, reused 0, downloaded 607, added 608
+#14 17.53 Progress: resolved 616, reused 0, downloaded 608, added 609
+#14 18.53 Progress: resolved 616, reused 0, downloaded 609, added 610
+#14 ...
+
+#13 [compiler-worker build 5/7] RUN pnpm install --frozen-lockfile
+#13 20.62 Progress: resolved 616, reused 0, downloaded 610, added 611
+#13 21.62 Progress: resolved 616, reused 0, downloaded 611, added 612
+#13 24.09 Progress: resolved 616, reused 0, downloaded 612, added 612
+#13 25.09 Progress: resolved 616, reused 0, downloaded 612, added 613
+#13 29.12 Progress: resolved 616, reused 0, downloaded 613, added 613
+#13 30.12 Progress: resolved 616, reused 0, downloaded 613, added 614
+#13 ...
+
+#14 [workbench build 5/6] RUN pnpm install --frozen-lockfile
+#14 21.87 Progress: resolved 616, reused 0, downloaded 610, added 610
+#14 22.87 Progress: resolved 616, reused 0, downloaded 611, added 612
+#14 24.11 Progress: resolved 616, reused 0, downloaded 612, added 612
+#14 25.11 Progress: resolved 616, reused 0, downloaded 612, added 613
+#14 30.65 Progress: resolved 616, reused 0, downloaded 613, added 613
+#14 31.65 Progress: resolved 616, reused 0, downloaded 613, added 614
+#14 32.91 Progress: resolved 616, reused 0, downloaded 614, added 614
+#14 ...
+
+#13 [compiler-worker build 5/7] RUN pnpm install --frozen-lockfile
+#13 33.01 Progress: resolved 616, reused 0, downloaded 614, added 614
+#13 33.69 Progress: resolved 616, reused 0, downloaded 615, added 616, done
+#13 34.10 .../node_modules/@prisma/engines postinstall$ node scripts/postinstall.js
+#13 34.14 .../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+#13 34.16 .../esbuild@0.21.5/node_modules/esbuild postinstall$ node install.js
+#13 34.16 .../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+#13 34.20 .../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+#13 34.28 .../esbuild@0.21.5/node_modules/esbuild postinstall: Done
+#13 34.30 .../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+#13 34.36 .../node_modules/msgpackr-extract install: Done
+#13 34.37 .../sharp@0.34.5/node_modules/sharp install$ node install/check.js || npm run build
+#13 34.48 .../sharp@0.34.5/node_modules/sharp install: Done
+#13 34.51 .../node_modules/@nestjs/core postinstall:                            Thanks for installing nest
+#13 34.51 .../node_modules/@nestjs/core postinstall:                  Please consider donating to our open collective
+#13 34.51 .../node_modules/@nestjs/core postinstall:                         to help us maintain this package.
+#13 34.51 .../node_modules/@nestjs/core postinstall:
+#13 34.51 .../node_modules/@nestjs/core postinstall:                         Number of contributors: undefined
+#13 34.51 .../node_modules/@nestjs/core postinstall:                              Number of backers: 1218
+#13 34.55 .../node_modules/@nestjs/core postinstall:                              Annual budget: $127,156
+#13 34.55 .../node_modules/@nestjs/core postinstall:                              Current balance: $15,312
+#13 34.55 .../node_modules/@nestjs/core postinstall:
+#13 34.55 .../node_modules/@nestjs/core postinstall:              Become a partner: https://opencollective.com/nest/donate
+#13 34.55 .../node_modules/@nestjs/core postinstall:
+#13 34.57 .../node_modules/@nestjs/core postinstall: Done
+#13 36.58 .../node_modules/@prisma/engines postinstall: Done
+#13 36.72 .../node_modules/prisma preinstall$ node scripts/preinstall-entry.js
+#13 36.79 .../node_modules/prisma preinstall: Done
+#13 37.10 .../node_modules/@prisma/client postinstall$ node scripts/postinstall.js
+#13 39.65 .../node_modules/@prisma/client postinstall: prisma:warn We could not find your Prisma schema in the default locations (see: https://pris.ly/d/prisma-schema-location).
+#13 39.65 .../node_modules/@prisma/client postinstall: If you have a Prisma schema file in a custom path, you will need to run
+#13 39.65 .../node_modules/@prisma/client postinstall: `prisma generate --schema=./path/to/your/schema.prisma` to generate Prisma Client.
+#13 39.65 .../node_modules/@prisma/client postinstall: If you do not have a Prisma schema file yet, you can ignore this message.
+#13 39.67 .../node_modules/@prisma/client postinstall: Done
+#13 40.17
+#13 40.17 devDependencies:
+#13 40.17 + @axe-core/playwright 4.12.1
+#13 40.17 + @playwright/test 1.51.1
+#13 40.17 + @types/node 22.20.1
+#13 40.17 + prettier 3.9.6
+#13 40.17 + turbo 2.10.7
+#13 40.17 + typescript 5.9.3
+#13 40.17
+#13 40.23 Done in 39.8s
+#13 DONE 41.6s
+
+#15 [compiler-worker build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/compiler-worker build
+#15 ...
+
+#14 [workbench build 5/6] RUN pnpm install --frozen-lockfile
+#14 33.91 Progress: resolved 616, reused 0, downloaded 614, added 615
+#14 34.02 Progress: resolved 616, reused 0, downloaded 615, added 616, done
+#14 34.47 .../node_modules/@prisma/engines postinstall$ node scripts/postinstall.js
+#14 34.50 .../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+#14 34.52 .../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+#14 34.54 .../esbuild@0.21.5/node_modules/esbuild postinstall$ node install.js
+#14 34.57 .../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+#14 34.64 .../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+#14 34.66 .../esbuild@0.21.5/node_modules/esbuild postinstall: Done
+#14 34.73 .../sharp@0.34.5/node_modules/sharp install$ node install/check.js || npm run build
+#14 34.76 .../node_modules/msgpackr-extract install: Done
+#14 34.84 .../node_modules/@nestjs/core postinstall:                            Thanks for installing nest
+#14 34.84 .../node_modules/@nestjs/core postinstall:                  Please consider donating to our open collective
+#14 34.84 .../node_modules/@nestjs/core postinstall:                         to help us maintain this package.
+#14 34.84 .../node_modules/@nestjs/core postinstall:
+#14 34.84 .../node_modules/@nestjs/core postinstall:                         Number of contributors: undefined
+#14 34.84 .../node_modules/@nestjs/core postinstall:                              Number of backers: 1218
+#14 34.84 .../sharp@0.34.5/node_modules/sharp install: Done
+#14 34.86 .../node_modules/@nestjs/core postinstall:                              Annual budget: $127,156
+#14 34.86 .../node_modules/@nestjs/core postinstall:                              Current balance: $15,312
+#14 34.86 .../node_modules/@nestjs/core postinstall:
+#14 34.86 .../node_modules/@nestjs/core postinstall:              Become a partner: https://opencollective.com/nest/donate
+#14 34.86 .../node_modules/@nestjs/core postinstall:
+#14 34.89 .../node_modules/@nestjs/core postinstall: Done
+#14 37.57 .../node_modules/@prisma/engines postinstall: Done
+#14 37.69 .../node_modules/prisma preinstall$ node scripts/preinstall-entry.js
+#14 37.76 .../node_modules/prisma preinstall: Done
+#14 38.03 .../node_modules/@prisma/client postinstall$ node scripts/postinstall.js
+#14 40.48 .../node_modules/@prisma/client postinstall: prisma:warn We could not find your Prisma schema in the default locations (see: https://pris.ly/d/prisma-schema-location).
+#14 40.48 .../node_modules/@prisma/client postinstall: If you have a Prisma schema file in a custom path, you will need to run
+#14 40.48 .../node_modules/@prisma/client postinstall: `prisma generate --schema=./path/to/your/schema.prisma` to generate Prisma Client.
+#14 40.48 .../node_modules/@prisma/client postinstall: If you do not have a Prisma schema file yet, you can ignore this message.
+#14 40.50 .../node_modules/@prisma/client postinstall: Done
+#14 41.57
+#14 41.57 devDependencies:
+#14 41.57 + @axe-core/playwright 4.12.1
+#14 41.57 + @playwright/test 1.51.1
+#14 41.57 + @types/node 22.20.1
+#14 41.57 + prettier 3.9.6
+#14 41.57 + turbo 2.10.7
+#14 41.57 + typescript 5.9.3
+#14 41.57
+#14 41.63 Done in 41.1s
+#14 DONE 41.9s
+
+#16 [workbench build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/workbench-ui build && pnpm --filter @factory/adapters build && pnpm --filter @factory/workbench build
+#16 1.628
+#16 1.628 > @factory/graph@0.1.0 build /workspace/packages/graph
+#16 1.628 > tsc -p tsconfig.json
+#16 1.628
+#16 ...
+
+#17 [control-plane build 6/7] RUN pnpm --filter @factory/control-plane prisma:generate
+#17 1.961
+#17 1.961 > @factory/control-plane@0.1.0 prisma:generate /workspace/apps/control-plane
+#17 1.961 > prisma generate
+#17 1.961
+#17 3.378 Prisma schema loaded from prisma/schema.prisma
+#17 3.928
+#17 3.928 ✔ Generated Prisma Client (v6.19.3) to ./../../node_modules/.pnpm/@prisma+client@6.19.3_prisma@6.19.3_typescript@5.7.2__typescript@5.7.2/node_modules/@prisma/client in 251ms
+#17 3.928
+#17 3.928 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+#17 3.928
+#17 3.928 Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+#17 3.928
+#17 DONE 4.0s
+
+#18 [control-plane build 7/7] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/adapters build && pnpm --filter @factory/portfolio-public build && pnpm --filter @factory/control-plane build
+#18 1.223
+#18 1.223 > @factory/graph@0.1.0 build /workspace/packages/graph
+#18 1.223 > tsc -p tsconfig.json
+#18 1.223
+#18 ...
+
+#16 [workbench build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/workbench-ui build && pnpm --filter @factory/adapters build && pnpm --filter @factory/workbench build
+#16 8.213
+#16 8.213 > @factory/capabilities@0.1.0 build /workspace/packages/capabilities
+#16 8.213 > tsc -p tsconfig.json
+#16 8.213
+#16 ...
+
+#15 [compiler-worker build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/compiler-worker build
+#15 1.961
+#15 1.961 > @factory/graph@0.1.0 build /workspace/packages/graph
+#15 1.961 > tsc -p tsconfig.json
+#15 1.961
+#15 8.395
+#15 8.395 > @factory/capabilities@0.1.0 build /workspace/packages/capabilities
+#15 8.395 > tsc -p tsconfig.json
+#15 8.395
+#15 ...
+
+#18 [control-plane build 7/7] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/adapters build && pnpm --filter @factory/portfolio-public build && pnpm --filter @factory/control-plane build
+#18 7.594
+#18 7.594 > @factory/capabilities@0.1.0 build /workspace/packages/capabilities
+#18 7.594 > tsc -p tsconfig.json
+#18 7.594
+#18 13.01
+#18 13.01 > @factory/ui-primitives@0.1.0 build /workspace/packages/ui-primitives
+#18 13.01 > tsc -p tsconfig.json
+#18 13.01
+#18 ...
+
+#16 [workbench build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/workbench-ui build && pnpm --filter @factory/adapters build && pnpm --filter @factory/workbench build
+#16 13.78
+#16 13.78 > @factory/ui-primitives@0.1.0 build /workspace/packages/ui-primitives
+#16 13.78 > tsc -p tsconfig.json
+#16 13.78
+#16 15.82
+#16 15.82 > @factory/workbench-ui@0.1.0 build /workspace/packages/workbench-ui
+#16 15.82 > tsc -p tsconfig.json
+#16 15.82
+#16 17.55
+#16 17.55 > @factory/adapters@0.1.0 build /workspace/packages/adapters
+#16 17.55 > tsc -p tsconfig.json
+#16 17.55
+#16 ...
+
+#18 [control-plane build 7/7] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/adapters build && pnpm --filter @factory/portfolio-public build && pnpm --filter @factory/control-plane build
+#18 14.85
+#18 14.85 > @factory/ui-patterns@0.1.0 build /workspace/packages/ui-patterns
+#18 14.85 > tsc -p tsconfig.json
+#18 14.85
+#18 16.84
+#18 16.84 > @factory/generated-ui@0.1.0 build /workspace/packages/generated-ui
+#18 16.84 > tsc -p tsconfig.json
+#18 16.84
+#18 18.74
+#18 18.74 > @factory/screen-recipes@0.1.0 build /workspace/packages/screen-recipes
+#18 18.74 > tsc -p tsconfig.json
+#18 18.74
+#18 ...
+
+#15 [compiler-worker build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/compiler-worker build
+#15 14.02
+#15 14.02 > @factory/ui-primitives@0.1.0 build /workspace/packages/ui-primitives
+#15 14.02 > tsc -p tsconfig.json
+#15 14.02
+#15 16.09
+#15 16.09 > @factory/ui-patterns@0.1.0 build /workspace/packages/ui-patterns
+#15 16.09 > tsc -p tsconfig.json
+#15 16.09
+#15 17.91
+#15 17.91 > @factory/generated-ui@0.1.0 build /workspace/packages/generated-ui
+#15 17.91 > tsc -p tsconfig.json
+#15 17.91
+#15 19.89
+#15 19.89 > @factory/screen-recipes@0.1.0 build /workspace/packages/screen-recipes
+#15 19.89 > tsc -p tsconfig.json
+#15 19.89
+#15 21.96
+#15 21.96 > @factory/experience-recipes@0.1.0 build /workspace/packages/experience-recipes
+#15 21.96 > tsc -p tsconfig.json
+#15 21.96
+#15 23.64
+#15 23.64 > @factory/compiler@0.1.0 build /workspace/packages/compiler
+#15 23.64 > tsc -p tsconfig.json
+#15 23.64
+#15 ...
+
+#16 [workbench build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/workbench-ui build && pnpm --filter @factory/adapters build && pnpm --filter @factory/workbench build
+#16 22.24
+#16 22.24 > @factory/workbench@0.1.0 build /workspace/apps/workbench
+#16 22.24 > next build
+#16 22.24
+#16 23.34 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#16 23.35 This information is used to shape Next.js' roadmap and prioritize features.
+#16 23.35 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#16 23.35 https://nextjs.org/telemetry
+#16 23.35
+#16 23.49    ▲ Next.js 15.5.22
+#16 23.49
+#16 23.58    Creating an optimized production build ...
+#16 ...
+
+#15 [compiler-worker build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/compiler-worker build
+#15 27.81
+#15 27.81 > @factory/compiler-worker@0.1.0 build /workspace/apps/compiler-worker
+#15 27.81 > tsc -p tsconfig.json
+#15 27.81
+#15 DONE 30.9s
+
+#18 [control-plane build 7/7] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/adapters build && pnpm --filter @factory/portfolio-public build && pnpm --filter @factory/control-plane build
+#18 20.56
+#18 20.56 > @factory/experience-recipes@0.1.0 build /workspace/packages/experience-recipes
+#18 20.56 > tsc -p tsconfig.json
+#18 20.56
+#18 22.47
+#18 22.47 > @factory/compiler@0.1.0 build /workspace/packages/compiler
+#18 22.47 > tsc -p tsconfig.json
+#18 22.47
+#18 26.87
+#18 26.87 > @factory/adapters@0.1.0 build /workspace/packages/adapters
+#18 26.87 > tsc -p tsconfig.json
+#18 26.87
+#18 31.28
+#18 31.28 > @factory/portfolio-public@0.1.0 build /workspace/packages/portfolio-public
+#18 31.28 > tsc -p tsconfig.json
+#18 31.28
+#18 33.14
+#18 33.14 > @factory/control-plane@0.1.0 build /workspace/apps/control-plane
+#18 33.14 > tsc -p tsconfig.json
+#18 33.14
+#18 ...
+
+#19 [compiler-worker stage-1 3/5] COPY --from=build /workspace /workspace
+#19 ...
+
+#18 [control-plane build 7/7] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/ui-patterns build && pnpm --filter @factory/generated-ui build && pnpm --filter @factory/screen-recipes build && pnpm --filter @factory/experience-recipes build && pnpm --filter @factory/compiler build && pnpm --filter @factory/adapters build && pnpm --filter @factory/portfolio-public build && pnpm --filter @factory/control-plane build
+#18 DONE 41.0s
+
+#16 [workbench build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/workbench-ui build && pnpm --filter @factory/adapters build && pnpm --filter @factory/workbench build
+#16 ...
+
+#19 [compiler-worker stage-1 3/5] COPY --from=build /workspace /workspace
+#19 DONE 9.6s
+
+#20 [compiler-worker stage-1 4/5] RUN apk add --no-cache docker-cli docker-cli-compose
+#20 1.515 (1/3) Installing ca-certificates (20260611-r0)
+#20 1.548 (2/3) Installing docker-cli (29.5.3-r1)
+#20 2.155 (3/3) Installing docker-cli-compose (5.1.4-r1)
+#20 2.819 Executing busybox-1.37.0-r31.trigger
+#20 2.825 Executing ca-certificates-20260611-r0.trigger
+#20 2.876 OK: 72.9 MiB in 21 packages
+#20 DONE 3.5s
+
+#21 [control-plane stage-1 3/4] COPY --from=build /workspace /workspace
+#21 ...
+
+#22 [compiler-worker stage-1 5/5] RUN npm install --global pnpm@9.0.0
+#22 2.710
+#22 2.710 added 1 package in 2s
+#22 2.710
+#22 2.710 1 package is looking for funding
+#22 2.710   run `npm fund` for details
+#22 2.712 npm notice
+#22 2.712 npm notice New major version of npm available! 10.9.8 -> 12.0.2
+#22 2.712 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+#22 2.712 npm notice To update run: npm install -g npm@12.0.2
+#22 2.712 npm notice
+#22 DONE 3.5s
+
+#23 [compiler-worker] exporting to image
+#23 exporting layers
+#23 ...
+
+#21 [control-plane stage-1 3/4] COPY --from=build /workspace /workspace
+#21 DONE 7.8s
+
+#24 [control-plane stage-1 4/4] RUN npm install --global pnpm@9.0.0
+#24 3.368
+#24 3.368 added 1 package in 3s
+#24 3.368
+#24 3.368 1 package is looking for funding
+#24 3.368   run `npm fund` for details
+#24 3.369 npm notice
+#24 3.369 npm notice New major version of npm available! 10.9.8 -> 12.0.2
+#24 3.369 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+#24 3.369 npm notice To update run: npm install -g npm@12.0.2
+#24 3.369 npm notice
+#24 DONE 3.5s
+
+#16 [workbench build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/workbench-ui build && pnpm --filter @factory/adapters build && pnpm --filter @factory/workbench build
+#16 54.98  ✓ Compiled successfully in 28.0s
+#16 54.98    Linting and checking validity of types ...
+#16 ...
+
+#25 [control-plane] exporting to image
+#25 exporting layers
+#25 ...
+
+#16 [workbench build 6/6] RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/ui-primitives build && pnpm --filter @factory/workbench-ui build && pnpm --filter @factory/adapters build && pnpm --filter @factory/workbench build
+#16 66.88    Collecting page data ...
+#16 70.28    Generating static pages (0/5) ...
+#16 71.58    Generating static pages (1/5)
+#16 71.64    Generating static pages (2/5)
+#16 71.64    Generating static pages (3/5)
+#16 71.64  ✓ Generating static pages (5/5)
+#16 72.28    Finalizing page optimization ...
+#16 72.28    Collecting build traces ...
+#16 79.77
+#16 79.77 Route (app)                                 Size  First Load JS
+#16 79.77 ┌ ○ /                                     336 kB         439 kB
+#16 79.77 ├ ○ /_not-found                            996 B         103 kB
+#16 79.77 └ ƒ /api/requirements/interpret            122 B         103 kB
+#16 79.77 + First Load JS shared by all             102 kB
+#16 79.77   ├ chunks/307-8af370b35d25e94c.js         46 kB
+#16 79.77   ├ chunks/9063187f-c77a8c46ca185800.js  54.2 kB
+#16 79.77   └ other shared chunks (total)          2.18 kB
+#16 79.77
+#16 79.77
+#16 79.77 ○  (Static)   prerendered as static content
+#16 79.77 ƒ  (Dynamic)  server-rendered on demand
+#16 79.77
+#16 DONE 80.0s
+
+#25 [control-plane] exporting to image
+#25 ...
+
+#26 [workbench stage-1 3/4] COPY --from=build /workspace /workspace
+#26 DONE 7.5s
+
+#25 [control-plane] exporting to image
+#25 ...
+
+#27 [workbench stage-1 4/4] RUN npm install --global pnpm@9.0.0
+#27 2.506
+#27 2.506 added 1 package in 2s
+#27 2.506
+#27 2.506 1 package is looking for funding
+#27 2.506   run `npm fund` for details
+#27 2.508 npm notice
+#27 2.508 npm notice New major version of npm available! 10.9.8 -> 12.0.2
+#27 2.508 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+#27 2.508 npm notice To update run: npm install -g npm@12.0.2
+#27 2.508 npm notice
+#27 DONE 2.6s
+
+#25 [control-plane] exporting to image
+#25 ...
+
+#28 [workbench] exporting to image
+#28 exporting layers
+#28 ...
+
+#23 [compiler-worker] exporting to image
+#23 exporting layers 41.1s done
+#23 exporting manifest sha256:7ed56aea135ed972390ec0ef5b0473906d82364b87b2532189dcbb476039efd3 0.0s done
+#23 exporting config sha256:6c0da2a30971c505ab9b3cdcfc00776c29099b0d014b63af319936c0cf76ff4a 0.0s done
+#23 exporting attestation manifest sha256:09c91e869af3507354b8de18e5a415171f44e8ae3a5908aa2c690439e6568a9c 0.1s done
+#23 exporting manifest list sha256:f6abc8d0024e3db751783d6c80a1435438e0049ab13a6f439648a2a7dbd9fb73 0.0s done
+#23 naming to docker.io/library/factory-task-correction-20260913-compiler-worker:latest done
+#23 unpacking to docker.io/library/factory-task-correction-20260913-compiler-worker:latest
+#23 ...
+
+#25 [control-plane] exporting to image
+#25 exporting layers 42.1s done
+#25 exporting manifest sha256:900cca2d2671a1121fe111a6e2c6e3ce5923c4cd3494729fc0dda195d577fb8f 0.0s done
+#25 exporting config sha256:54d79a8324e2cf6f33bf8988e080ed68640df8559ea98f6632b2b0cf8f2b8fa8 0.0s done
+#25 exporting attestation manifest sha256:b3d6bfd14e68651097fd8ebfd675dbe147de1a222caa35a47de0b495f7d2bb88
+#25 exporting attestation manifest sha256:b3d6bfd14e68651097fd8ebfd675dbe147de1a222caa35a47de0b495f7d2bb88 0.1s done
+#25 exporting manifest list sha256:d8e71b3a2b6053d3e5f73d0c2c42a410c50bcdc1fe57707058d33342edb33403
+#25 exporting manifest list sha256:d8e71b3a2b6053d3e5f73d0c2c42a410c50bcdc1fe57707058d33342edb33403 0.0s done
+#25 naming to docker.io/library/factory-task-correction-20260913-control-plane:latest done
+#25 unpacking to docker.io/library/factory-task-correction-20260913-control-plane:latest
+#25 ...
+
+#23 [compiler-worker] exporting to image
+#23 unpacking to docker.io/library/factory-task-correction-20260913-compiler-worker:latest 13.7s done
+#23 DONE 55.0s
+
+#25 [control-plane] exporting to image
+#25 ...
+
+#29 [compiler-worker] resolving provenance for metadata file
+#29 DONE 0.0s
+
+#25 [control-plane] exporting to image
+#25 unpacking to docker.io/library/factory-task-correction-20260913-control-plane:latest 13.8s done
+#25 DONE 56.2s
+
+#28 [workbench] exporting to image
+#28 ...
+
+#30 [control-plane] resolving provenance for metadata file
+#30 DONE 0.0s
+
+#28 [workbench] exporting to image
+#28 exporting layers 42.8s done
+#28 exporting manifest sha256:c107b5d950a17bb0ddc57724b86e5b8358897e134964d3ac770daf91ab022420 0.0s done
+#28 exporting config sha256:db2519563719973ef0d18d16396ada4f15d08d7eec15065149a140048ff65812 0.0s done
+#28 exporting attestation manifest sha256:914e5be03d887245eac3e608a34fa33fc59e7eb69d716e2bd0d6505c72b8e9b7 0.0s done
+#28 exporting manifest list sha256:495cd2c64a9e032071414503e82cb1458385c43d0971de3c795e98102d809bdc 0.0s done
+#28 naming to docker.io/library/factory-task-correction-20260913-workbench:latest done
+#28 unpacking to docker.io/library/factory-task-correction-20260913-workbench:latest
+#28 unpacking to docker.io/library/factory-task-correction-20260913-workbench:latest 11.8s done
+#28 DONE 54.7s
+
+#31 [workbench] resolving provenance for metadata file
+#31 DONE 0.0s
+ Image factory-task-correction-20260913-compiler-worker:latest Built
+ Image factory-task-correction-20260913-workbench:latest Built
+ Image factory-task-correction-20260913-control-plane:latest Built

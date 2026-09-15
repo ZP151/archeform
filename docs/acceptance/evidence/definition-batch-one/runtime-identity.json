@@ -1,0 +1,67 @@
+{
+  "recordedAt": "2026-09-13T12:43:52.035Z",
+  "base": "327eb9086ff79f521e87e4db072120763b95b3e5",
+  "project": "factory-t9-definition-batch-20260913",
+  "images": [
+    {
+      "service": "control-plane",
+      "image": "sha256:7278c3c460cdd00ba68e14c201c3f6587d9ef37f892b0584490fccbaeb4cf193",
+      "sourceFilesMatched": 7,
+      "sourcePaths": [
+        "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+        "packages/adapters/src/requirements/product-definition-data.ts",
+        "packages/adapters/src/requirements/definition-family-registry.ts",
+        "packages/adapters/src/requirements/definition-selection-catalogue.ts",
+        "apps/compiler-worker/src/verifier/probes.ts",
+        "apps/compiler-worker/src/verifier/role-journey.ts",
+        "apps/workbench/lib/product-journey/use-consumer-generation.ts"
+      ]
+    },
+    {
+      "service": "compiler-worker",
+      "image": "sha256:2ee7393f9ae12b4b1edc8ecb1de6c279fd41ae0a67f1390bf143b8a881a20999",
+      "sourceFilesMatched": 11,
+      "sourcePaths": [
+        "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+        "packages/adapters/src/requirements/product-definition-data.ts",
+        "packages/adapters/src/requirements/definition-family-registry.ts",
+        "packages/adapters/src/requirements/definition-selection-catalogue.ts",
+        "packages/compiler/src/approval-mutation-contract.ts",
+        "packages/compiler/src/approval-workspace-presentation.ts",
+        "packages/compiler/src/index.ts",
+        "packages/compiler/src/approval-decision-history.ts",
+        "apps/compiler-worker/src/verifier/probes.ts",
+        "apps/compiler-worker/src/verifier/role-journey.ts",
+        "apps/workbench/lib/product-journey/use-consumer-generation.ts"
+      ]
+    },
+    {
+      "service": "workbench",
+      "image": "sha256:609109a8aeb022fc5c0d01c5628edf9e1567028748f61c5de31e9f01de996f73",
+      "sourceFilesMatched": 7,
+      "sourcePaths": [
+        "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+        "packages/adapters/src/requirements/product-definition-data.ts",
+        "packages/adapters/src/requirements/definition-family-registry.ts",
+        "packages/adapters/src/requirements/definition-selection-catalogue.ts",
+        "apps/compiler-worker/src/verifier/probes.ts",
+        "apps/compiler-worker/src/verifier/role-journey.ts",
+        "apps/workbench/lib/product-journey/use-consumer-generation.ts"
+      ]
+    }
+  ],
+  "files": {
+    "packages/adapters/src/requirements/definitions/product-definitions.v1.json": "d789963f619e4d97dd42ba3da7fe84c64696f777c65a039b952ea6903707f45f",
+    "packages/adapters/src/requirements/product-definition-data.ts": "56ec38929ef41e84e5bafdf1733c2d2fa99003809018e6b84aad3cfe6bc7e4f9",
+    "packages/adapters/src/requirements/definition-family-registry.ts": "eb709763773e9d91ca44fd88ad2f1749b8e6bc1a35ff8fd55354826439277f1e",
+    "packages/adapters/src/requirements/definition-selection-catalogue.ts": "5e101b1e05c7a34d1adee82e5ccaf497a55c0b007dc04fa967384183dc42f890",
+    "packages/compiler/src/approval-mutation-contract.ts": "155e47ea7fb3129ee59fa3e9a21102c8cdca08bc38484322e67b60b9e6364d06",
+    "packages/compiler/src/approval-workspace-presentation.ts": "210dca9f500c8ab0ffcc6fbfbad3add73c70f7657b38eb62e4107c52768e6f40",
+    "packages/compiler/src/index.ts": "726d4c35f78a3981011e2ab9277aa3f3f76724578b81cdd6b1dcca929981d573",
+    "packages/compiler/src/approval-decision-history.ts": "cd17c8684b6b8eca76efdae452a6d74a97d25032028b72fbf4d698ca6894de0a",
+    "apps/compiler-worker/src/verifier/probes.ts": "9480cf6d66f2808348d5d2a982aebf1af605a7cb1cee48207c048eef19b37374",
+    "apps/compiler-worker/src/verifier/role-journey.ts": "34f68695c293fa4df9292aba07cf48821119bf9a9ff9f8f7f91829df8c601a33",
+    "apps/workbench/lib/product-journey/use-consumer-generation.ts": "0915c7a54b00b2f0fa10fc412cd2f755693720543ba86769f6eaf040e1ea959e"
+  },
+  "providerKeyPresent": false
+}

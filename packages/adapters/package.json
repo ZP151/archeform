@@ -24,10 +24,11 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-product-definition-data.mjs",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "prettier --check src test"
+    "lint": "prettier --check src test",
+    "validate:definitions": "node dist/requirements/definition-batch-cli.js"
   },
   "dependencies": {
     "@factory/capabilities": "workspace:*",

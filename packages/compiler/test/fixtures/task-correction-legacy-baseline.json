@@ -1,0 +1,449 @@
+{
+  "baseline": "5b65169e56c834f2a466539ee81ec020e76541c3",
+  "entries": [
+    {
+      "kind": "published",
+      "input": {
+        "publishedRevisionId": "task-correction-legacy-published",
+        "graph": {
+          "apiVersion": "factory.application-graph/v1",
+          "metadata": {
+            "id": "task-correction-legacy-baseline",
+            "workspaceId": "local-workspace",
+            "name": "Compatibility Baseline"
+          },
+          "page": {
+            "pages": [
+              {
+                "id": "task-overview",
+                "route": "/task-overview",
+                "title": "Task overview",
+                "blocks": [
+                  {
+                    "id": "task-overview-stats",
+                    "type": "stats",
+                    "entity": "task"
+                  }
+                ]
+              },
+              {
+                "id": "task-list",
+                "route": "/task-list",
+                "title": "All tasks",
+                "blocks": [
+                  {
+                    "id": "task-list-list",
+                    "type": "list",
+                    "entity": "task"
+                  }
+                ]
+              },
+              {
+                "id": "task-form",
+                "route": "/task-form",
+                "title": "New task",
+                "blocks": [
+                  {
+                    "id": "task-form-form",
+                    "type": "form",
+                    "entity": "task"
+                  }
+                ]
+              },
+              {
+                "id": "task-detail",
+                "route": "/task-detail",
+                "title": "Task details",
+                "blocks": [
+                  {
+                    "id": "task-detail-detail",
+                    "type": "detail",
+                    "entity": "task"
+                  }
+                ]
+              },
+              {
+                "id": "task-queue",
+                "route": "/task-queue",
+                "title": "Task workflow",
+                "blocks": [
+                  {
+                    "id": "task-queue-queue",
+                    "type": "queue",
+                    "entity": "task"
+                  }
+                ]
+              }
+            ],
+            "navigation": [
+              {
+                "id": "nav-task-overview",
+                "label": "Task overview",
+                "pageId": "task-overview",
+                "icon": "layout-grid"
+              },
+              {
+                "id": "nav-task-list",
+                "label": "All tasks",
+                "pageId": "task-list",
+                "icon": "list"
+              },
+              {
+                "id": "nav-task-queue",
+                "label": "Task workflow",
+                "pageId": "task-queue",
+                "icon": "inbox"
+              }
+            ]
+          },
+          "domain": {
+            "entities": [
+              {
+                "key": "task",
+                "label": "Task",
+                "fields": [
+                  {
+                    "key": "title",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "key": "description",
+                    "type": "text",
+                    "required": false
+                  },
+                  {
+                    "key": "assignee",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "key": "dueDate",
+                    "type": "date",
+                    "required": true
+                  },
+                  {
+                    "key": "priority",
+                    "type": "enum",
+                    "required": true,
+                    "values": ["low", "medium", "high"]
+                  },
+                  {
+                    "key": "status",
+                    "type": "enum",
+                    "required": true,
+                    "values": ["not-started", "in-progress", "completed"]
+                  }
+                ],
+                "indexes": [
+                  {
+                    "fields": ["status"]
+                  }
+                ]
+              },
+              {
+                "key": "task-correction-legacy-baseline-principal",
+                "label": "Compatibility Baseline principal",
+                "fields": [
+                  {
+                    "key": "subjectRef",
+                    "type": "string",
+                    "required": true,
+                    "unique": true
+                  },
+                  {
+                    "key": "role",
+                    "type": "enum",
+                    "required": true,
+                    "values": ["member", "viewer"]
+                  },
+                  {
+                    "key": "active",
+                    "type": "boolean",
+                    "required": true
+                  }
+                ],
+                "indexes": [
+                  {
+                    "fields": ["active"]
+                  }
+                ]
+              },
+              {
+                "key": "task-correction-legacy-baseline-session",
+                "label": "Compatibility Baseline session",
+                "fields": [
+                  {
+                    "key": "subjectRef",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "key": "status",
+                    "type": "enum",
+                    "required": true,
+                    "values": ["active", "expired"]
+                  },
+                  {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": true
+                  }
+                ],
+                "indexes": [
+                  {
+                    "fields": ["subjectRef", "status"]
+                  }
+                ]
+              }
+            ],
+            "relations": [
+              {
+                "from": "task-correction-legacy-baseline-session",
+                "to": "task-correction-legacy-baseline-principal",
+                "kind": "many-to-one",
+                "field": "subjectRef"
+              }
+            ],
+            "seedData": [
+              {
+                "entity": "task",
+                "id": "sample-task",
+                "values": {
+                  "title": "Sample Title",
+                  "description": "Sample Description detail",
+                  "assignee": "Sample Assignee",
+                  "dueDate": "2026-08-01",
+                  "priority": "low",
+                  "status": "not-started"
+                }
+              }
+            ]
+          },
+          "policy": {
+            "roles": ["member", "viewer"],
+            "permissions": [
+              {
+                "role": "member",
+                "resource": "task",
+                "actions": ["create", "read", "start", "complete", "reopen"]
+              },
+              {
+                "role": "member",
+                "resource": "task-correction-legacy-baseline-principal",
+                "actions": ["read"]
+              },
+              {
+                "role": "member",
+                "resource": "task-correction-legacy-baseline-session",
+                "actions": ["create", "read", "update"]
+              },
+              {
+                "role": "viewer",
+                "resource": "task",
+                "actions": ["read"]
+              },
+              {
+                "role": "viewer",
+                "resource": "task-correction-legacy-baseline-principal",
+                "actions": ["read"]
+              },
+              {
+                "role": "viewer",
+                "resource": "task-correction-legacy-baseline-session",
+                "actions": ["read"]
+              }
+            ]
+          },
+          "flow": {
+            "flows": [
+              {
+                "id": "task-lifecycle",
+                "entity": "task",
+                "initialState": "not-started",
+                "states": ["not-started", "in-progress", "completed"],
+                "events": ["start", "complete", "reopen"],
+                "transitions": [
+                  {
+                    "from": "not-started",
+                    "event": "start",
+                    "to": "in-progress",
+                    "roles": ["member"]
+                  },
+                  {
+                    "from": "in-progress",
+                    "event": "complete",
+                    "to": "completed",
+                    "roles": ["member"]
+                  },
+                  {
+                    "from": "completed",
+                    "event": "reopen",
+                    "to": "in-progress",
+                    "roles": ["member"]
+                  }
+                ]
+              }
+            ]
+          },
+          "integration": {
+            "providers": [],
+            "capabilities": [
+              {
+                "key": "identity.context.resolve",
+                "providerId": "factory",
+                "operation": "resolve"
+              },
+              {
+                "key": "authorization.decision",
+                "providerId": "factory",
+                "operation": "decision"
+              }
+            ]
+          },
+          "experience": {
+            "theme": {
+              "mode": "light",
+              "tokens": {}
+            },
+            "locales": ["en"]
+          }
+        },
+        "compositionLock": {
+          "apiVersion": "factory.composition/v1",
+          "applicationGraphChecksum": "sha256:d5544290dc96136dbb54d6095ecf6e98f095c9db4b210d7abf5006e64f4edd76",
+          "packages": [
+            {
+              "lock": {
+                "key": "core.audit",
+                "version": "1.0.2",
+                "packageRoot": "packages/capabilities/assets/core.audit/1.0.2",
+                "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8",
+                "lifecycle": "golden"
+              },
+              "bindings": {
+                "actorRole": {
+                  "graphSymbol": "graph.policy.member"
+                }
+              }
+            },
+            {
+              "lock": {
+                "key": "core.crud",
+                "version": "1.0.1",
+                "packageRoot": "packages/capabilities/assets/core.crud/1.0.1",
+                "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1",
+                "lifecycle": "golden"
+              },
+              "bindings": {
+                "entityKey": {
+                  "graphSymbol": "graph.domain.task"
+                },
+                "routeKey": {
+                  "graphSymbol": "graph.page.task-list"
+                }
+              }
+            },
+            {
+              "lock": {
+                "key": "core.identity-policy",
+                "version": "1.0.0",
+                "packageRoot": "packages/capabilities/assets/core.identity-policy/1.0.0",
+                "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82",
+                "lifecycle": "golden"
+              },
+              "bindings": {
+                "authenticatedRole": {
+                  "graphSymbol": "graph.policy.viewer"
+                },
+                "defaultRole": {
+                  "graphSymbol": "graph.policy.member"
+                },
+                "principalEntity": {
+                  "graphSymbol": "graph.domain.task-correction-legacy-baseline-principal"
+                },
+                "sessionEntity": {
+                  "graphSymbol": "graph.domain.task-correction-legacy-baseline-session"
+                }
+              }
+            },
+            {
+              "lock": {
+                "key": "core.notification",
+                "version": "1.1.1",
+                "packageRoot": "packages/capabilities/assets/core.notification/1.1.1",
+                "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
+                "lifecycle": "golden"
+              },
+              "bindings": {
+                "recipientRole": {
+                  "graphSymbol": "graph.policy.member"
+                }
+              }
+            },
+            {
+              "lock": {
+                "key": "core.policy-declarations",
+                "version": "1.0.0",
+                "packageRoot": "packages/capabilities/assets/core.policy-declarations/1.0.0",
+                "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54",
+                "lifecycle": "golden"
+              },
+              "bindings": {}
+            },
+            {
+              "lock": {
+                "key": "core.workflow",
+                "version": "1.0.1",
+                "packageRoot": "packages/capabilities/assets/core.workflow/1.0.1",
+                "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884",
+                "lifecycle": "golden"
+              },
+              "bindings": {
+                "flowKey": {
+                  "graphSymbol": "graph.flow.task-lifecycle"
+                }
+              }
+            }
+          ],
+          "resolvedContributionDigests": [
+            "sha256:0249329a78a7fc15eaf285892df9e6bb21b3ae04808d73316eae1b320bb0197c",
+            "sha256:05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae",
+            "sha256:6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be",
+            "sha256:80ae0802501d2d97c3270f88251426a1cb53fa0cabcb8fddf8142975ba38f2d7",
+            "sha256:b8a6d2392a3f881f6f742e6e2fa1bb2ff30966b3cc345221f186ad9a685f9b90",
+            "sha256:be8d5b70bc8764671f7298d0ef31d74ba3d49f0be31870e715ebe74181c89afd",
+            "sha256:e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+          ],
+          "providedAndRequiredInterfaces": [
+            "provides:audit.event@v1",
+            "provides:authorization.decision@v1",
+            "provides:identity.principal-context@v1",
+            "provides:notification.outbox@v1",
+            "provides:policy.resource-action@v1",
+            "requires:audit.event@v1",
+            "requires:policy.resource-action@v1"
+          ],
+          "targetRuntimeInterfaceVersions": [
+            "api.service@factory.api-service/v1",
+            "database.schema@factory.prisma-schema/v1",
+            "policy.rule@factory.policy-rule/v1",
+            "test.fixture@factory.test-fixture/v1",
+            "web.route@factory.web-route/v1"
+          ],
+          "resolvedDependencyOrder": [
+            "core.audit",
+            "core.crud",
+            "core.notification",
+            "core.policy-declarations",
+            "core.identity-policy",
+            "core.workflow"
+          ],
+          "lockDigest": "sha256:a146f0f4bff0c60206f8343233029d037e0f656162a7efe594b1178b27cb91d7"
+        }
+      },
+      "sha256": "3d7ce570279b2caa501a3b458e6f4503ef13f1efa76b308640ad52da01bf4bac",
+      "fileCount": 63
+    }
+  ]
+}

@@ -1,0 +1,356 @@
+
+> @factory/compiler@0.1.0 test C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\packages\compiler
+> vitest run
+
+
+ RUN  v2.1.9 C:/Users/15492/Develop/Archeform/.worktrees/consumer-delivery/packages/compiler
+
+ ✓ test/database-target-parity.test.ts (60 tests) 6681ms
+   ✓ database target file/byte/digest parity > renders $profile database with exact legacy bytes and digests 461ms
+   ✓ database target file/byte/digest parity > renders $profile database with exact legacy bytes and digests 396ms
+   ✓ database target file/byte/digest parity > renders $profile database with exact legacy bytes and digests 319ms
+   ✓ database target file/byte/digest parity > produces the same database set from repeated renders 315ms
+   ✓ seed binds required foreign-key scalars to seeded target records > accepts a Restaurant menu-category positional fallback referenced by a menu item 408ms
+   ✓ seed binds required foreign-key scalars to seeded target records > keeps the specialized Restaurant error for a genuinely missing menu-category 347ms
+ ✓ test/compilation-plan.test.ts (55 tests) 27763ms
+   ✓ compilation target registry > plans one deterministic Restaurant bundle with transaction and projection artifacts 1769ms
+   ✓ compilation target registry > renders every changed base package from its historical template 1562ms
+   ✓ compilation target registry > runs a fully locked current Expense lifecycle through package handlers 1810ms
+   ✓ compilation target registry > replays a historical cart lock beside current executable packages 1535ms
+   ✓ compilation target registry > keeps current handler runtime alongside unchanged metadata packages 736ms
+   ✓ compilation target registry > does not select a migrated target contribution from compositionProfile 349ms
+   ✓ compilation target registry > preflights external providers before changing record state 740ms
+   ✓ compilation target registry > fails a declared external effect at the provider boundary before state changes 704ms
+   ✓ compilation target registry > preflights an external effect before Factory payment and inventory handlers 1552ms
+   ✓ compilation target registry > executes a seeded $profile cart and payment journey 1945ms
+   ✓ compilation target registry > does not duplicate relation scalar fields within emitted Restaurant command models 757ms
+   ✓ compilation target registry > emits a Factory-owned PageModel runtime and only declared Next routes 629ms
+   ✓ compilation target registry > uses the validated order flow for a catalog-only commerce PageModel 733ms
+   ✓ compilation target registry > emits the validated payment event for a checkout PageModel 736ms
+   ✓ compilation target registry > rejects a catalog-only commerce PageModel that 'is missing the exact Factory cart cap…' before returning files 765ms
+   ✓ compilation target registry > rejects a catalog-only commerce PageModel that 'does not declare the order DomainMode…' before returning files 632ms
+   ✓ compilation target registry > rejects a catalog-only commerce PageModel that 'does not declare an order FlowModel' before returning files 649ms
+   ✓ compilation target registry > rejects checkout before returning files when its order flow lacks simulated payment 805ms
+   ✓ compilation target registry > rejects a catalog-only commerce PageModel before returning files when its order flow lacks simulated payment 690ms
+   ✓ compilation target registry > rejects reserved generated Next routes before returning files 3401ms
+   ✓ compilation target registry > expects notification delivery and generic evidence in an Expense journey 330ms
+   ✓ compilation target registry > emits durable notification outbox persistence only for the verified v1 provider 335ms
+   ✓ compilation target registry > executes declared capability effects as durable evidence and fails closed for unknown effects 743ms
+   ✓ compilation target registry > compiles reusable catalog, cart, and inventory capability runtime assets 827ms
+   ✓ compiler-owned database storage namespace > isolates all seven compiler storage models from reachable Graph entity names 741ms
+   ✓ compiler-owned database storage namespace > keeps the closed Restaurant storage schema and runtime delegates unchanged 775ms
+ ✓ test/composition-page-runtime.test.ts (39 tests) 23829ms
+   ✓ composition page runtime round trip > the generated page runtime type-checks with the strict compiler > emits a strictly type-checkable runtime for Build an appointment booking application. Customers choose a service and an available time, staff confirm or reschedule appointments, and administrators manage services, schedules, and cancellations. 1789ms
+   ✓ composition page runtime round trip > the generated page runtime type-checks with the strict compiler > emits a strictly type-checkable runtime for Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions. 1842ms
+   ✓ composition page runtime round trip > the generated page runtime type-checks with the strict compiler > emits a strictly type-checkable runtime for purchase-request-approval 1902ms
+   ✓ Purchase approval summary > emits one labelled demo role control for an enhanced approval workspace 338ms
+   ✓ Purchase approval summary > promotes only declared item identity and a unique temporal fallback 939ms
+   ✓ definition bank byte preservation > keeps the ordered expressive Expense approval bundle deterministic 579ms
+   ✓ approval presentation compatibility > freezes ordered legacy bundles before the approval change 997ms
+   ✓ approval runtime behavior > binds record material to the selected entity and keeps unknown signatures neutral 1142ms
+   ✓ approval runtime behavior > uses cobalt only for absent design systems and preserves explicit light/dark palettes 690ms
+   ✓ approval runtime behavior > keeps material selection identical at compile and runtime for both field signatures 1076ms
+   ✓ approval runtime behavior > places one page-named hero on dashboard/list/queue and none on forms or details 1011ms
+   ✓ approval runtime behavior > keeps approval API and database bytes at the delivered pre-history baseline 549ms
+   ✓ approval runtime behavior > validates decision reads strictly and preserves only real ordered outcomes 501ms
+   ✓ approval runtime behavior > renders readable current record identity, safe details, actor and actual time 1021ms
+   ✓ approval runtime behavior > deduplicates history reads and clears privileged responses across role scopes 373ms
+   ✓ approval runtime behavior > exposes decision history only through the shared approval workspace 348ms
+   ✓ approval runtime behavior > emits icon-only Refresh controls with accessible names for both approval definitions 625ms
+   ✓ approval runtime behavior > filters only declared scalar values with the selected immutable workflow state 910ms
+   ✓ approval runtime behavior > ignores a delayed transition from an earlier role scope 490ms
+   ✓ approval runtime behavior > selects only exact, unambiguous declared summary fields and neutralizes ambiguous status tones 335ms
+   ✓ approval runtime behavior > emits the reusable expressive approval workspace with media and current-state progress 524ms
+   ✓ approval runtime behavior > derives exactly the four current approval states and rejects malformed flows 399ms
+   ✓ approval runtime behavior > selects only an unambiguous structural approval flow independent of naming or order 1247ms
+   ✓ approval runtime behavior > converts typed values and validates impossible dates before submission in both timezones 672ms
+   ✓ approval runtime behavior > renders native controls, declared values, and role-and-state valid actions 390ms
+   ✓ approval runtime behavior > renders one refresh icon and sentence-case labels 342ms
+   ✓ approval runtime behavior > embeds the seven fixed decorative assets and exact notice with deterministic safe output 1159ms
+ ✓ test/approval-correction-runtime.test.ts (31 tests) 30584ms
+   ✓ immutable approval correction dispatch > compiles immutable published purchase with its separate lock and preserves its hash 315ms
+   ✓ immutable approval correction dispatch > preserves every ordered baseline byte twice 1414ms
+   ✓ executed approval command transactions > executes same-record correction and reconstructs each replay with exact evidence 2089ms
+   ✓ executed approval command transactions > serializes same-key replay and different-key version conflicts 417ms
+   ✓ executed approval command transactions > rejects authority, malformed fields and replay mismatch without evidence 316ms
+   ✓ correction boundaries and emitted build > typechecks the generated correction UI and runtime 15087ms
+   ✓ correction boundaries and emitted build > uses authoritative conflict precedence and validates every return reason 324ms
+   ✓ correction boundaries and emitted build > rolls back mutations at record, evidence, outbox and receipt boundaries 348ms
+   ✓ executed correction presentation > keeps the first expense command within 650px with 44px targets 2580ms
+   ✓ executed correction presentation > keeps the first purchase command within 650px with 44px targets 1291ms
+   ✓ executed correction presentation > preserves edit command state through filtered unmount, pending and unknown retry 1579ms
+   ✓ executed correction presentation > preserves return command state through filtered unmount, pending and unknown retry 542ms
+   ✓ executed correction presentation > handles parent outcome 200 after unmount with current scope true 374ms
+   ✓ executed correction presentation > handles parent outcome 409 after unmount with current scope true 375ms
+   ✓ executed correction presentation > handles parent outcome 200 after unmount with current scope false 392ms
+   ✓ executed correction presentation > handles parent outcome 409 after unmount with current scope false 393ms
+   ✓ executed correction presentation > projects exact current status steps and escapes reasons 326ms
+   ✓ strict replay input and immutable reads > rejects unsafe keys and object descriptors before any writes 369ms
+   ✓ strict replay input and immutable reads > keeps committed receipt and evidence immutable and checks current authorization before replay 318ms
+   ✓ strict replay input and immutable reads > permits exactly one same-key differing-hash concurrent outcome 341ms
+ ✓ test/task-mutation-runtime.test.ts (49 tests) 15088ms
+   ✓ same-record Task correction > emits PATCH and a parent-owned correction editor only in v2 328ms
+   ✓ same-record Task correction > replaces five fields once with durable replay, races and authorization in memory 420ms
+   ✓ same-record Task correction > replaces five fields once with durable replay, races and authorization in prisma 312ms
+   ✓ same-record Task correction > rolls back in-memory correction at saveTaskReceipt 390ms
+   ✓ same-record Task correction > validates every correction value and hashes the incoming representation without normalization 342ms
+   ✓ same-record Task correction > rolls back correction at updateMany 308ms
+   ✓ same-record Task correction > rolls back correction at receipt 327ms
+   ✓ immutable Task compilation and commands > enforces authorization, strict requests, replay identity and conflict precedence without extra writes 325ms
+   ✓ immutable Task compilation and commands > serializes duplicate creates and allows exactly one transition at a version 347ms
+   ✓ immutable Task compilation and commands > hashes the exact validated body while ignoring object key order 387ms
+   ✓ immutable Task compilation and commands > denies every infrastructure mutation and retains authorized reads 307ms
+   ✓ immutable Task compilation and commands > rolls back after create and allows the same activation to recover 316ms
+   ✓ immutable Task compilation and commands > rolls back after saveTaskReceipt and allows the same activation to recover 338ms
+   ✓ immutable Task compilation and commands > executes Prisma receipts, reconstruction, conditional races and bounded serialization retry 368ms
+   ✓ immutable Task compilation and commands > rolls back Prisma create before commit and recovers without duplicate work 331ms
+   ✓ immutable Task compilation and commands > rolls back Prisma audit before commit and recovers without duplicate work 314ms
+   ✓ immutable Task compilation and commands > rolls back Prisma receipt before commit and recovers without duplicate work 303ms
+   ✓ immutable Task compilation and commands > typechecks the emitted v1 API, store and Task React tree under strict settings 2587ms
+   ✓ immutable Task compilation and commands > typechecks the emitted v2 API, store and Task React tree under strict settings 2864ms
+ ✓ test/notification-outbox-runtime.test.ts (18 tests) 13216ms
+   ✓ generated durable notification outbox runtime > emits a documented one-shot local fixture drain command 343ms
+   ✓ generated durable notification outbox runtime > rejects a Restaurant durable notification lock instead of omitting its outbox 372ms
+   ✓ generated durable notification outbox runtime > drains the generated 'expense-approval' worker with its locked role and template 800ms
+   ✓ generated durable notification outbox runtime > drains the generated 'simple-ecommerce' worker with its locked role and template 1472ms
+   ✓ generated durable notification outbox runtime > retries one fixture failure at a deterministic time and then delivers 774ms
+   ✓ generated durable notification outbox runtime > stops after three fixture failures and records terminal failure 755ms
+   ✓ generated durable notification outbox runtime > does not hand an already delivered entry to the transport again 744ms
+   ✓ generated durable notification outbox runtime > propagates acknowledgement failure without recording a transport retry 722ms
+   ✓ generated durable notification outbox runtime > enqueues one locked recipient intent without accepting client message content 683ms
+   ✓ generated durable notification outbox runtime > carries a validated 1.1.1 template identifier into the generated outbox 688ms
+   ✓ generated durable notification outbox runtime > replays a historical 1.1.0 notification lock with a null template 675ms
+   ✓ generated durable notification outbox runtime > rolls back both a domain mutation and notification enqueue when a transaction fails 760ms
+   ✓ generated durable notification outbox runtime > rolls back generated Prisma domain and outbox writes after post-enqueue failure 694ms
+   ✓ generated durable notification outbox runtime > hands a due entry to only one concurrent claimant 764ms
+   ✓ generated durable notification outbox runtime > lets the worker choose retryable or terminal failure state 767ms
+   ✓ generated durable notification outbox runtime > does not deliver a terminal failed entry 782ms
+   ✓ generated durable notification outbox runtime > preserves a concurrent successful transaction when another transaction rolls back 693ms
+   ✓ generated durable notification outbox runtime > preserves a direct mutation that races a failing transaction 728ms
+ ✓ test/restaurant-page-runtime.test.ts (40 tests) 25155ms
+   ✓ generated Restaurant Customer page runtime > projects the live line-add Prisma Decimal wire value before cart commit 930ms
+   ✓ generated Restaurant Customer page runtime > rejects an invalid line price before committing cart state 898ms
+   ✓ generated Restaurant Customer page runtime > rejects an invalid order total before committing cart state 789ms
+   ✓ generated Restaurant Customer page runtime > normalizes supported Customer Decimal wire value 12.5 784ms
+   ✓ generated Restaurant Customer page runtime > normalizes supported Customer Decimal wire value "12.50" 733ms
+   ✓ generated Restaurant Customer page runtime > normalizes supported Customer Decimal wire value {"undefined":"Decimal","value":"12.50"} 586ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value null 768ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value null 628ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value "" 813ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value "   " 685ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value "NaN" 619ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value "Infinity" 622ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value "0x10" 821ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value {"value":"12.50"} 672ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value {"undefined":"Decimal","value":"NaN"} 572ms
+   ✓ generated Restaurant Customer page runtime > rejects invalid Customer Decimal wire value {"undefined":"Decimal","value":"12.50","executable":"alert(1)"} 968ms
+   ✓ generated Restaurant Customer page runtime > emits profile-gated Customer pages over only the frozen typed API routes 594ms
+   ✓ generated Restaurant Customer page runtime > leaves generic profile page generation unchanged 539ms
+   ✓ generated Restaurant Customer page runtime > routes the generic simple-ecommerce proxy through its fixture session 582ms
+   ✓ generated Restaurant Customer page runtime > normalizes a Prisma JSON Decimal total from a Customer order projection 696ms
+   ✓ generated Restaurant Customer page runtime > normalizes Customer history and receipt Decimal projections 694ms
+   ✓ generated Restaurant Customer page runtime > rejects a nonfinite receipt Decimal before projection 660ms
+   ✓ generated Restaurant Customer page runtime > delegates receipt ownership to the token-bound API 567ms
+   ✓ generated Restaurant Customer page runtime > retains one logical submit command key across a lost response retry 616ms
+   ✓ generated Restaurant Customer page runtime > retains one logical payment command key across a lost response retry 625ms
+   ✓ generated Restaurant Customer page runtime > serializes concurrent same-slot preparation onto one logical command key 654ms
+   ✓ generated Restaurant Customer page runtime > keeps a stale command pending until a typed 409 is reconciled through status 707ms
+   ✓ generated Restaurant Customer page runtime > accepts only the bounded simulated payment methods 741ms
+   ✓ generated Restaurant Customer page runtime > wires every Customer mutation through the persisted logical command journal 701ms
+   ✓ generated Restaurant Customer page runtime > renders the bounded payment enum and sends the validated selection 595ms
+   ✓ generated Restaurant Customer page runtime > type-checks the generated Customer modules together under strict settings 3926ms
+ ✓ test/restaurant-v3-contract.test.ts (73 tests) 13517ms
+   ✓ Restaurant V3 compilation contract > admits only the exact Published V3 wrapper and produces frozen V3-native data 359ms
+   ✓ Restaurant V3 compilation contract > admits only the delivered r.6 value family and retains every admitted value in the plan 314ms
+   ✓ Restaurant V3 compilation contract > rejects r.6 plus unlisted another page title drift 306ms
+   ✓ Restaurant V3 compilation contract > rejects invalid strict catalog structure: duplicate entity/id 340ms
+   ✓ Restaurant V3 compilation contract > rejects invalid strict catalog structure: unresolved category 325ms
+   ✓ Restaurant V3 compilation contract > rejects wrong V3 hash with one redacted error 323ms
+   ✓ Restaurant V3 compilation contract > rejects wrong lock checksum with one redacted error 304ms
+   ✓ Restaurant V3 compilation contract > rejects validly rehashed authority drift 363ms
+ ✓ test/composition-compilation.test.ts (13 tests) 2439ms
+   ✓ immutable composition compilation > compiles complete immutable Restaurant and Ecommerce composition recipes 1461ms
+ ✓ test/restaurant-customer-runtime.test.ts (40 tests) 16583ms
+   ✓ generated Restaurant customer runtime > seeds settings from the published application name while preserving USD 1210ms
+   ✓ generated Restaurant customer runtime > migrates before health and serves catalog and dish detail 654ms
+   ✓ generated Restaurant customer runtime > owns cart totals and supports add, update, and delete 724ms
+   ✓ generated Restaurant customer runtime > exposes the expanded shared schema without changing customer authority 742ms
+   ✓ generated Restaurant customer runtime > checks out with simulated payment and exposes orders and profile updates 832ms
+   ✓ generated Restaurant customer runtime > denies roles, conflicts versions, and enforces idempotency payload identity 2073ms
+   ✓ generated Restaurant customer runtime > persists append-only audit and state across restart 713ms
+   ✓ generated Restaurant customer runtime > returns fixed errors for malformed and bounded bodies 716ms
+   ✓ generated Restaurant customer runtime > serves the admitted r.6 catalog identically to customer and merchant APIs 684ms
+   ✓ generated Restaurant customer runtime > rejects invalid runtime catalog data: controlled description 354ms
+   ✓ generated Restaurant customer runtime > rejects invalid runtime catalog data: boxed available 323ms
+   ✓ generated Restaurant customer runtime > fails closed when a Graph permission is removed 821ms
+   ✓ generated Restaurant customer runtime > enforces an added Graph permission for a new actor 821ms
+   ✓ generated Restaurant customer runtime > rejects an undeclared principal role 696ms
+ ✓ test/restaurant-customer-target.test.ts (13 tests) 11069ms
+   ✓ Restaurant customer bundle target > escapes the current settings name in the customer document, shell, and hero 846ms
+   ✓ Restaurant customer bundle target > renders local library icons with accessible text and retains the upstream license 761ms
+   ✓ Restaurant customer bundle target > marks exactly one native navigation destination for customer routes 786ms
+   ✓ Restaurant customer bundle target > renders the exact safe deterministic customer bundle 1426ms
+   ✓ Restaurant customer bundle target > declares local scripts, complete manifests, and no private generated imports 617ms
+   ✓ Restaurant customer bundle target > contains exactly eight routes, two dynamic routes, and five tabs without merchant closure 680ms
+   ✓ Restaurant customer bundle target > renders readable populated orders, refresh links, and safe values 744ms
+   ✓ Restaurant customer bundle target > renders empty orders and malformed currency in required readable fallback text 727ms
+   ✓ Restaurant customer bundle target > keeps one refresh control, rejects inherited statuses, and resolves encoded detail ids once 808ms
+   ✓ Restaurant customer bundle target > executes the generated customer journey tests 854ms
+   ✓ Restaurant customer bundle target > uses only admitted Graph record identities in the r.6 generated customer journey 984ms
+   ✓ Restaurant customer bundle target > starts from the package script entry and serves all eight customer routes 1054ms
+   ✓ Restaurant customer bundle target > rejects every invalid Task 1 input and dispatches the governed V3 product 782ms
+ ✓ test/restaurant-runtime.test.ts (20 tests) 15709ms
+   ✓ Restaurant transaction runtime compilation > emits a Prisma transaction command service without an in-memory Restaurant entry path 683ms
+   ✓ Restaurant transaction runtime compilation > persists the command, outbox, inventory, audit, and capability evidence contract 670ms
+   ✓ Restaurant transaction runtime compilation > emits every Restaurant route with mandatory idempotency and expected-version handling 828ms
+   ✓ Restaurant transaction runtime compilation > emits the complete typed Customer read API without raw table identifiers 647ms
+   ✓ Restaurant transaction runtime compilation > emits executable Customer read and whole-order-note regression coverage 711ms
+   ✓ Restaurant transaction runtime compilation > requires the complete active location chain for token-bound Customer reads 798ms
+   ✓ Restaurant transaction runtime compilation > projects receipt modifiers through a bounded allowlisted DTO 680ms
+   ✓ Restaurant transaction runtime compilation > creates the authoritative cart when a table session resolves 903ms
+   ✓ Restaurant transaction runtime compilation > requires Compose to forward the environment-only local bootstrap input 1617ms
+   ✓ Restaurant transaction runtime compilation > emits atomic stock reservation and narrowly scoped payment idempotency 678ms
+   ✓ Restaurant transaction runtime compilation > uses compiled policy enforcement and captures validated cancellation input 892ms
+   ✓ Restaurant transaction runtime compilation > emits typed HTTP 409 conflicts with authoritative safe order state 828ms
+   ✓ Restaurant transaction runtime compilation > derives capability evidence and generated behavior tests from the accepted FlowModel 591ms
+   ✓ Restaurant transaction runtime compilation > derives non-Flow command evidence from accepted Restaurant asset operations 534ms
+   ✓ Restaurant transaction runtime compilation > validates opaque table tokens and binds customer commands to their session scope 752ms
+   ✓ Restaurant transaction runtime compilation > renders hostile Published application names as inert text 692ms
+   ✓ Restaurant transaction runtime compilation > generates workflow, policy, documentation, and adversarial command tests from the validated profile 921ms
+   ✓ Restaurant transaction runtime compilation > is deterministic and marks the temporary web shell as Task 4-owned 1676ms
+   ✓ Restaurant transaction runtime compilation > leaves the generic Ecommerce runtime renderer unchanged 534ms
+ ✓ test/restaurant-v3-surface-projection.test.ts (22 tests) 4637ms
+   ✓ Restaurant V3 surface projection > projects a valid customer same-set permutation in Graph order 476ms
+   ✓ Restaurant V3 surface projection > projects a valid merchant same-set permutation in Graph order 331ms
+   ✓ Restaurant V3 surface projection > rejects merchant invented navigation 329ms
+   ✓ Restaurant V3 surface projection > rejects merchant reordered navigation 312ms
+   ✓ Restaurant V3 surface projection > deep-freezes the deterministic projection 467ms
+ ✓ test/page-runtime-projection.test.ts (43 tests) 985ms
+ ✓ test/generic-approval-identity.test.ts (12 tests) 4836ms
+   ✓ generic Approval record identity > shows the same business title and enum summary in compiled cards and history, with long text only in Details 1147ms
+   ✓ generic Approval record identity > keeps the safe fallback for 0 required short-string title candidates 503ms
+   ✓ generic Approval record identity > keeps the safe fallback for 2 required short-string title candidates 439ms
+   ✓ generic Approval record identity > selects at most two of 0 enums in declaration order after renaming fields and labels 380ms
+   ✓ generic Approval record identity > selects at most two of 1 enums in declaration order after renaming fields and labels 380ms
+   ✓ generic Approval record identity > selects at most two of 3 enums in declaration order after renaming fields and labels 520ms
+   ✓ generic Approval record identity > does not infer currency presentation from a generic enum field key 543ms
+   ✓ generic Approval record identity > uses safe values and the entity/record fallback when a history match is missing 514ms
+ ✓ test/profile-compilation.test.ts (23 tests) 11629ms
+   ✓ profile compilation > compiles an audit-backed Expense Graph deterministically 619ms
+   ✓ profile compilation > compiles the $profile notification outcome journey with a local worker 609ms
+   ✓ profile compilation > generates a reservation-first payment journey with package-owned Commerce effects for $profile 602ms
+   ✓ profile compilation > delegates shared cart commands to the locked Commerce cart package 630ms
+   ✓ profile compilation > compiles $profile through its locked generic Catalog and Order handlers 510ms
+   ✓ profile compilation > compiles $profile through its locked generic Catalog and Order handlers 399ms
+   ✓ profile compilation > compiles $profile through its locked generic Catalog and Order handlers 503ms
+   ✓ profile compilation > selects the authoritative Restaurant command runtime only for the Restaurant Profile 1000ms
+   ✓ profile compilation > compiles $profile as an independent published application 657ms
+   ✓ profile compilation > compiles $profile as an independent published application 743ms
+   ✓ profile compilation > compiles $profile as an independent published application 552ms
+   ✓ profile compilation > compiles $profile as an independent published application 437ms
+   ✓ profile compilation > emits the declared 'simple-ecommerce' PageModel routes and block types 876ms
+   ✓ profile compilation > emits the declared 'retail-counter' PageModel routes and block types 535ms
+   ✓ profile compilation > emits the declared 'grocery-pickup' PageModel routes and block types 442ms
+   ✓ profile compilation > keeps Restaurant page interpretation behind the Task 4 projection boundary 698ms
+ ✓ test/restaurant-merchant-runtime.test.ts (11 tests) 7314ms
+   ✓ Restaurant Merchant runtime compilation > emits only frozen Merchant routes and server-authoritative page actions 930ms
+   ✓ Restaurant Merchant runtime compilation > sorts and restricts the server kitchen projection 632ms
+   ✓ Restaurant Merchant runtime compilation > compiles truthful manager inventory adjustments and cancellation confirmation 709ms
+   ✓ Restaurant Merchant runtime compilation > uses authoritative resource versions for every Merchant resource mutation 678ms
+   ✓ Restaurant Merchant runtime compilation > emits executable Merchant service regressions instead of source-only guarantees 637ms
+   ✓ Restaurant Merchant runtime compilation > emits an isolated deterministic Merchant browser fixture 707ms
+   ✓ Restaurant Merchant runtime compilation > projects a safe Merchant receipt and server-computed dashboard 743ms
+   ✓ Restaurant Merchant runtime compilation > publishes transport-neutral events only after committed outbox reads 830ms
+   ✓ Restaurant generated journey rendering > renders journey expectations from the composed Graph, not the canonical asset 797ms
+   ✓ Restaurant seed reference integrity > fails closed when a seeded menu item references an unseeded category 641ms
+ ✓ test/restaurant-merchant-v3-runtime.test.ts (6 tests) 2696ms
+   ✓ generated Restaurant merchant runtime > shares customer orders, kitchen progress, catalog, and settings across trusted role startups 604ms
+   ✓ generated Restaurant merchant runtime > enforces exact roles, nonspoofable principals, read-only users, conflicts, receipts, and audit 444ms
+   ✓ generated Restaurant merchant runtime > pins manager, kitchen, cashier, and table transition action boundaries 470ms
+   ✓ generated Restaurant merchant runtime > denies non-manager order-priority mutation 378ms
+   ✓ generated Restaurant merchant runtime > denies fields whose exact Graph binding or client authority is absent 391ms
+   ✓ generated Restaurant merchant runtime > shares the r.6 Graph catalog and merchant mutation through one persisted state 409ms
+ ✓ test/restaurant-product-v3-target.test.ts (9 tests) 9537ms
+   ✓ Restaurant product V3 target > uses the Graph-derived name and preserves USD in the dual-surface runtime seed 1054ms
+   ✓ Restaurant product V3 target > assembles one deterministic dual-surface bundle with shared runtime and trusted starts 1356ms
+   ✓ Restaurant product V3 target > registers fixed kitchen and cashier services only in the acceptance profile 578ms
+   ✓ Restaurant product V3 target > rejects an untrusted explicit startup role before the generated server listens 926ms
+   ✓ Restaurant product V3 target > executes generated customer, merchant, and cross-surface journeys with single supplied item false 1226ms
+   ✓ Restaurant product V3 target > executes generated customer, merchant, and cross-surface journeys with single supplied item true 1256ms
+   ✓ Restaurant product V3 target > contains only static local generated imports and both exact route trees 608ms
+   ✓ Restaurant product V3 target > reuses readable customer order rendering in dual-surface generated customer bundle 732ms
+   ✓ Restaurant product V3 target > executes one r.6 bundle whose customer and merchant share the Graph-derived catalog state 1801ms
+ ✓ test/order-operations-runtime.test.ts (9 tests) 9320ms
+   ✓ Order Operations runtime compilation > emits type-safe mutable capability work lists and aligns specialised receipt contracts 1272ms
+   ✓ Order Operations runtime compilation > emits the locked shared order-operations handler for a commerce Profile 619ms
+   ✓ Order Operations runtime compilation > delegates catalog reads only to the locked Catalog handler 746ms
+   ✓ Order Operations runtime compilation > delegates order creation and transitions only to the locked Order handler 782ms
+   ✓ Order Operations runtime compilation > applies a refund through the locked order-operations handler 1577ms
+   ✓ Order Operations runtime compilation > compiles a persistent receipt contract instead of storing order operations in a runtime Map 720ms
+   ✓ Order Operations runtime compilation > maps persistent receipt columns back into the runtime payment contract 718ms
+   ✓ Order Operations runtime compilation > retains a processed operation receipt when an application runtime is recreated 1374ms
+   ✓ Order Operations runtime compilation > executes catalog, cart, and versioned order operations through package handlers 1511ms
+ ✓ test/application-graph-version-dispatch.test.ts (12 tests) 954ms
+   ✓ Application Graph compiler version dispatch > dispatches only the exact governed Restaurant V3 product 698ms
+ ✓ test/restaurant-v3-preview.test.ts (18 tests) 3188ms
+   ✓ Restaurant V3 Draft preview > renders merchant desktop with exact production projector parity 419ms
+   ✓ Restaurant V3 Draft preview > rejects a stale resolver graph and V1/V2 resolver values 416ms
+ ✓ test/restaurant-merchant-v3-target.test.ts (3 tests) 901ms
+   ✓ Restaurant merchant V3 contributor > loads exact data and delegates payloads without role or authority fields 327ms
+ ✓ test/documentation-target-parity.test.ts (11 tests) 1528ms
+   ✓ documentation target file/byte/digest parity > produces the same documentation set from repeated renders 315ms
+ ✓ test/factory-record-identity.test.ts (4 tests) 548ms
+   ✓ Factory-owned generated record identity > rejects a client id at the public create boundary and excludes id from generated forms 319ms
+ ✓ test/target-plugin.test.ts (23 tests) 6ms
+ ✓ test/policy-target-parity.test.ts (13 tests) 1709ms
+   ✓ policy target file/byte/digest parity > renders $profile policy with exact legacy bytes and digests 350ms
+   ✓ policy target file/byte/digest parity > produces the same policy set from repeated renders 361ms
+ ✓ test/target-registry.test.ts (15 tests) 7ms
+ ✓ test/commerce-transaction-runtime.test.ts (3 tests) 3577ms
+   ✓ generic Commerce transaction runtime > reserves stock on submission and compensates it on a merchant cancellation 1522ms
+   ✓ generic Commerce transaction runtime > shares the reservation lifecycle with retail-counter 1017ms
+   ✓ generic Commerce transaction runtime > shares the reservation lifecycle with grocery-pickup 1037ms
+ ✓ test/role-journey-runtime.test.ts (4 tests) 1233ms
+   ✓ generated role journeys from Graph-declared scenarios > denies an event fired by a role outside the declared transition roles 395ms
+   ✓ generated role journeys from Graph-declared scenarios > keeps the two products' generated journeys materially different 393ms
+ ✓ test/restaurant-menu-binding.test.ts (18 tests) 4854ms
+   ✓ supplied Restaurant menu compilation > admits 1 items and generates exact minor prices 578ms
+   ✓ supplied Restaurant menu compilation > admits 3 items and generates exact minor prices 373ms
+   ✓ supplied Restaurant menu compilation > admits 100 items and generates exact minor prices 502ms
+   ✓ supplied Restaurant menu compilation > rejects 101 corruption 387ms
+   ✓ supplied Restaurant menu compilation > rejects mirror corruption 336ms
+   ✓ supplied Restaurant menu compilation > rejects unrelated corruption 318ms
+ ✓ test/money-pricing-runtime.test.ts (4 tests) 4035ms
+   ✓ Money pricing runtime compilation > emits an Ecommerce API quote endpoint without accepting a client price 643ms
+   ✓ Money pricing runtime compilation > merges the locked price snapshot persistence into the generated Prisma targets 523ms
+   ✓ Money pricing runtime compilation > derives an Ecommerce quote from locked Catalog records instead of client prices 1455ms
+   ✓ Money pricing runtime compilation > rejects a quote that targets a Catalog entity outside the published binding 1413ms
+ ✓ test/source-overlay-apply.test.ts (8 tests) 6ms
+ ✓ test/approval-visual-assets.test.ts (3 tests) 8ms
+ ✓ test/task-compatibility.test.ts (1 test) 2945ms
+   ✓ Task introduction compatibility with delivered non-Task products > preserves canonical definitions and complete ordered generated bundles from d28f1fed 2945ms
+ ✓ test/definition-data-authoring.test.ts (1 test) 607ms
+   ✓ configuration-only definition authoring > carries a reviewed Approval field variation into immutable generated schema and UI without catalogue admission 607ms
+ ✓ test/line-configuration-runtime.test.ts (2 tests) 2844ms
+   ✓ Line configuration runtime compilation > rejects a configured line outside the catalog entity bound by the published package 1509ms
+   ✓ Line configuration runtime compilation > derives option labels and prices from available published records 1334ms
+ ✓ test/source-manifest.test.ts (6 tests) 8ms
+ ✓ test/source-export-zip.test.ts (2 tests) 3ms
+ ✓ test/generated-files.test.ts (17 tests) 5ms
+ ✓ test/restaurant-customer-icons.test.ts (5 tests) 33ms
+ ✓ test/identity-policy-runtime.test.ts (3 tests) 1242ms
+   ✓ identity policy runtime compilation > emits single-argument role resolution for an identity-less retail-counter composition 561ms
+   ✓ identity policy runtime compilation > emits single-argument role resolution for an identity-less grocery-pickup composition 452ms
+ ✓ test/source-export-git.test.ts (4 tests) 9ms
+ ✓ test/source-diff.test.ts (5 tests) 7ms
+ ✓ test/mutation-write-protection.test.ts (1 test) 16ms
+ ✓ test/index-exports.test.ts (2 tests) 2ms
+ ✓ test/task-correction-compatibility.test.ts (1 test) 389ms
+   ✓ Task correction compatibility with delivered immutable Task apps > preserves the complete ordered Published Task bundle captured at 5b65169e 389ms
+ ✓ test/definition-data-compatibility.test.ts (1 test) 1039ms
+   ✓ Product definition data compatibility > preserves all four delivered definitions and complete Published bundles from f8cdfe81 1039ms
+
+ Test Files  48 passed (48)
+      Tests  776 passed (776)
+   Start at  20:18:51
+   Duration  308.39s (transform 9.33s, setup 0ms, collect 23.19s, tests 284.29s, environment 0ms, prepare 167ms)

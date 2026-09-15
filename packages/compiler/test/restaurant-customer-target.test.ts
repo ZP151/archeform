@@ -62,7 +62,86 @@ function compile(input = canonicalInput()) {
   return generateRestaurantCustomerApplicationBundle(input);
 }
 
+async function loadGeneratedCustomerApp(input = canonicalInput()) {
+  const root = await mkdtemp(join(tmpdir(), "archeform-customer-app-"));
+  roots.push(root);
+  const bundle = compile(input);
+  const files = Object.fromEntries(
+    bundle.files.map(({ path, content }) => [path, content]),
+  );
+  for (const file of bundle.files) {
+    const path = join(root, file.path);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, file.content, "utf8");
+  }
+  const app = await import(
+    `${pathToFileURL(join(root, "src/customer/app.mjs")).href}?v=${Date.now()}`
+  );
+  return { root, files, app };
+}
+
 describe("Restaurant customer bundle target", () => {
+  it("escapes the current settings name in the customer document, shell, and hero", async () => {
+    const { app } = await loadGeneratedCustomerApp();
+    const name = 'Saffron & Sons <script>alert("name")</script>';
+    const html = app.renderCustomerPage("/", {
+      settings: { name, currency: "USD" },
+      catalog: [],
+      cart: { version: 1, items: [] },
+      profile: { version: 1, marketingOptIn: false },
+      orders: [],
+    });
+    const escaped =
+      "Saffron &amp; Sons &lt;script&gt;alert(&quot;name&quot;)&lt;/script&gt;";
+    expect(html).toContain(`<title>${escaped}</title>`);
+    expect(html).toContain(escaped);
+    expect(html).not.toContain(name);
+  });
+
+  it("renders local library icons with accessible text and retains the upstream license", async () => {
+    const { app, files } = await loadGeneratedCustomerApp();
+    const state = { catalog: [], orders: [], cart: { items: [] }, profile: {} };
+    const empty = app.renderCustomerPage("/orders", state);
+    expect(empty).toContain('class="lucide lucide-house"');
+    expect(empty).toContain('class="lucide lucide-receipt-text"');
+    expect(empty).toContain('aria-label="Refresh status"');
+    expect(empty).not.toContain("data-lucide=");
+    expect(files["THIRD_PARTY_NOTICES.md"]).toContain("lucide-static 0.468.0");
+    expect(files["THIRD_PARTY_NOTICES.md"]).toContain("ISC License");
+    expect(files["src/customer/app.mjs"]).not.toMatch(/from ["']lucide/);
+    for (const [status, icon] of [
+      ["preparing", "chef-hat"],
+      ["ready", "circle-check"],
+      ["cancelled", "circle-x"],
+      ["toString", "circle-help"],
+    ]) {
+      const html = app.renderCustomerPage("/orders", {
+        ...state,
+        orders: [{ id: "1", items: [], status }],
+      });
+      expect(html).toContain(`class="lucide lucide-${icon}"`);
+    }
+  });
+
+  it("marks exactly one native navigation destination for customer routes", async () => {
+    const { app } = await loadGeneratedCustomerApp();
+    const state = { catalog: [], orders: [], cart: { items: [] }, profile: {} };
+    for (const [path, destination] of [
+      ["/", "/"],
+      ["/menu", "/menu"],
+      ["/menu/missing", "/menu"],
+      ["/cart", "/cart"],
+      ["/checkout", "/cart"],
+      ["/orders", "/orders"],
+      ["/orders/missing", "/orders"],
+      ["/profile", "/profile"],
+    ]) {
+      const html = app.renderCustomerPage(path, state);
+      expect(html.match(/aria-current="page"/g), path).toHaveLength(1);
+      expect(html, path).toContain(`href="${destination}" aria-current="page"`);
+    }
+  });
+
   it("renders the exact safe deterministic customer bundle", () => {
     const first = compile();
     const second = compile();
@@ -75,6 +154,7 @@ describe("Restaurant customer bundle target", () => {
     expect(first.files.map(({ path }) => path)).toEqual([
       "package.json",
       "README.md",
+      "THIRD_PARTY_NOTICES.md",
       "graph/manifest.json",
       "src/server.mjs",
       "src/runtime/state.mjs",
@@ -163,6 +243,130 @@ describe("Restaurant customer bundle target", () => {
       false,
     );
     expect(app).not.toMatch(/restaurant-merchant|\/merchant/);
+  });
+
+  it("renders readable populated orders, refresh links, and safe values", async () => {
+    const { app } = await loadGeneratedCustomerApp();
+    const state = {
+      settings: { currency: "USD" },
+      catalog: [],
+      cart: { version: 1, items: [] },
+      profile: { version: 1, marketingOptIn: false },
+      orders: [
+        {
+          id: "order-14",
+          items: [
+            { id: "line-1", name: "Margherita pizza", quantity: 2 },
+            { id: "line-2", name: "<script>alert(1)</script>", quantity: 1 },
+          ],
+          total: 1400,
+          paymentStatus: "simulated-paid",
+          status: "preparing",
+        },
+        {
+          id: "order/special id",
+          items: [{ id: "line-3", name: "Cappuccino", quantity: 3 }],
+          total: 2500,
+          paymentStatus: "card",
+          status: "mystery-state",
+        },
+      ],
+    };
+    const list = app.renderCustomerPage("/orders", state);
+    expect(list).not.toContain("No orders yet");
+    expect(list).toContain("Items");
+    expect(list).toContain("Payment");
+    expect(list).toContain("Total");
+    expect(list).toContain("Fulfilment");
+    expect(list).toContain("Paid (simulated)");
+    expect(list).toContain("Preparing");
+    expect(list).toContain("Status unavailable");
+    expect(list).not.toContain("mystery-state");
+    expect(list).toContain('href="/orders/order-14"');
+    expect(list).toContain('href="/orders/order%2Fspecial%20id"');
+    expect(list).toContain('href="/orders"');
+    expect(list).toContain("× 2");
+    expect(list).not.toContain("<script>");
+    const orderLinks = [...list.matchAll(/href="\/orders\/([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+    expect(new Set(orderLinks).size).toBe(2);
+    const orderIds = state.orders.map((value) => encodeURIComponent(value.id));
+    expect(orderLinks.filter((value) => orderIds.includes(value)).length).toBe(
+      2,
+    );
+
+    const detail = app.renderCustomerPage("/orders/order-14", state);
+    expect(detail).toContain("Order order-14");
+    expect(detail).toContain("USD 14.00");
+    expect(detail).not.toContain("Order confirmed");
+    expect(detail).toContain("Preparing");
+    expect(detail).toContain('href="/orders/order-14"');
+    expect(detail).toContain("Paid (simulated)");
+    expect(detail).not.toContain("Order detail");
+  });
+
+  it("renders empty orders and malformed currency in required readable fallback text", async () => {
+    const { app } = await loadGeneratedCustomerApp();
+    const empty = app.renderCustomerPage("/orders", {
+      settings: {},
+      catalog: [],
+      cart: { version: 1, items: [] },
+      profile: { version: 1, marketingOptIn: false },
+      orders: [],
+    });
+    expect(empty).toContain("No orders yet");
+
+    const malformed = app.renderCustomerPage("/orders/order-0001", {
+      settings: { currency: "US" },
+      catalog: [],
+      cart: { version: 1, items: [] },
+      profile: { version: 1, marketingOptIn: false },
+      orders: [
+        {
+          id: "order-0001",
+          items: [{ name: "Latte", quantity: 1 }],
+          total: 1200,
+          paymentStatus: "simulated-paid",
+          status: "ready",
+        },
+      ],
+    });
+    expect(malformed).toContain("Currency unavailable");
+    expect(malformed).toContain("Ready");
+  });
+
+  it("keeps one refresh control, rejects inherited statuses, and resolves encoded detail ids once", async () => {
+    const { app } = await loadGeneratedCustomerApp();
+    const order = {
+      id: "order/special id",
+      items: [{ name: "Pizza", quantity: 1 }],
+      total: 1400,
+      paymentStatus: "simulated-paid",
+      status: "toString",
+    };
+    const state = {
+      settings: { currency: "ZZZ" },
+      catalog: [],
+      cart: { items: [], version: 1 },
+      profile: {},
+      orders: [order, { ...order, id: "second-order", status: "constructor" }],
+    };
+    const list = app.renderCustomerPage("/orders", state);
+    expect(list.match(/aria-label="Refresh status"/g)).toHaveLength(1);
+    expect(list.match(/Status unavailable/g)).toHaveLength(2);
+    expect(list).not.toContain("function");
+    expect(list).toContain("ZZZ 14.00");
+    const route = "/orders/" + encodeURIComponent(order.id);
+    const detail = app.renderCustomerPage(route, state);
+    expect(detail).toContain('href="' + route + '"');
+    expect(detail).not.toContain("%252F");
+    expect(detail).toContain("Pizza");
+    const empty = app.renderCustomerPage("/orders", { ...state, orders: [] });
+    expect(empty.match(/aria-label="Refresh status"/g)).toHaveLength(1);
+    const missing = app.renderCustomerPage("/orders/missing", state);
+    expect(missing).toContain("Order unavailable");
+    expect(missing).not.toContain("Order Unknown");
   });
 
   it("executes the generated customer journey tests", async () => {

@@ -141,28 +141,31 @@ model VerificationRun {
 /// checksum. Raw model responses, prompts, and provider transport material
 /// never enter this table.
 model CompositionReview {
-  id                  String           @id @default(cuid())
-  applicationGraphId  String
-  draftRevisionId     String
-  requirement         Json
-  requirementChecksum String
-  blueprint           Json?
-  productAlternatives Json?
-  draftBaseChecksum   String
-  plan                Json?
-  planChecksum        String?
-  planId              String?
-  clarification       Json?
-  safeSummary         Json?
-  diff                Json?
-  diffChecksum        String?
-  decision            Json?
-  decisionId          String?          @unique
-  status              String
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
-  applicationGraph    ApplicationGraph @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
-  draftRevision       DraftRevision    @relation(fields: [draftRevisionId, applicationGraphId], references: [id, applicationGraphId], onDelete: Restrict)
+  id                         String           @id @default(cuid())
+  applicationGraphId         String
+  draftRevisionId            String
+  requirement                Json
+  requirementChecksum        String
+  blueprint                  Json?
+  businessParameters         Json?
+  businessParametersChecksum String?
+  businessParametersProvided Boolean?
+  productAlternatives        Json?
+  draftBaseChecksum          String
+  plan                       Json?
+  planChecksum               String?
+  planId                     String?
+  clarification              Json?
+  safeSummary                Json?
+  diff                       Json?
+  diffChecksum               String?
+  decision                   Json?
+  decisionId                 String?          @unique
+  status                     String
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+  applicationGraph           ApplicationGraph @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
+  draftRevision              DraftRevision    @relation(fields: [draftRevisionId, applicationGraphId], references: [id, applicationGraphId], onDelete: Restrict)
 
   @@index([applicationGraphId])
 }

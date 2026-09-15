@@ -213,6 +213,116 @@ describe("WorkbenchHome", () => {
     expect(onStartTemplate).toHaveBeenCalledWith("restaurant-dual-surface");
   });
 
+  it("shows supported Restaurant delivery progress and only a verified local app link", () => {
+    const journey = {
+      ...briefJourney(),
+      consumer: {
+        family: "restaurant-ordering",
+        manualReview: false,
+        setManualReview: vi.fn(),
+        active: true,
+        status: "Your local Restaurant app is ready.",
+        readyUrl: "http://127.0.0.1:34123",
+        retry: vi.fn(),
+      },
+    } as WorkbenchHomeJourneyProps;
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={journey}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain(
+      "Your local Restaurant app is ready.",
+    );
+    expect(container.textContent).toContain(
+      "standard Restaurant configuration",
+    );
+    expect(container.textContent).toContain("local demo");
+    expect(
+      container.querySelector<HTMLAnchorElement>(
+        'a[href="http://127.0.0.1:34123"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("presents approval delivery as a local demo with selectable roles", () => {
+    act(() =>
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            consumer: {
+              family: "approval",
+              manualReview: false,
+              setManualReview: vi.fn(),
+              active: true,
+              status: "Your local Approval app is ready.",
+              readyUrl: "http://127.0.0.1:34123",
+              retry: vi.fn(),
+            },
+          })}
+        />,
+      ),
+    );
+    const delivery = container.querySelector(
+      '[aria-label="Approval delivery"]',
+    );
+    expect(delivery).not.toBeNull();
+    expect(delivery?.textContent).toContain("local demo");
+    expect(delivery?.textContent).toContain("Select a demo role");
+    expect(delivery?.textContent).toContain("declared role permissions");
+    expect(delivery?.textContent).not.toMatch(
+      /Restaurant|private|hosted|authenticated|tenant/i,
+    );
+    expect(
+      delivery?.querySelector('a[href="http://127.0.0.1:34123"]'),
+    ).not.toBeNull();
+  });
+
+  it("shows Task delivery as a bounded shared board with display-only assignment", () => {
+    act(() =>
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            consumer: {
+              family: "task",
+              manualReview: false,
+              setManualReview: vi.fn(),
+              active: true,
+              status: "Your local Task app is ready.",
+              readyUrl: "http://127.0.0.1:34123",
+              retry: vi.fn(),
+            },
+          })}
+        />,
+      ),
+    );
+    const delivery = container.querySelector('[aria-label="Task delivery"]');
+    expect(delivery?.querySelector("h2")?.textContent).toBe("Your Task app");
+    expect(delivery?.textContent).toMatch(/shared board/);
+    expect(delivery?.textContent).toMatch(/display text only/);
+    expect(delivery?.textContent).toMatch(/Viewer/);
+    expect(delivery?.textContent).toMatch(
+      /all five fields in Not started and In progress/,
+    );
+    expect(delivery?.textContent).toMatch(/reopened before correction/);
+    expect(delivery?.textContent).not.toMatch(/Restaurant|approval workflow/);
+  });
+
   it("communicates curated-template loading, empty, and bounded retry states", () => {
     const onRetryTemplates = vi.fn();
     const render = (
@@ -372,10 +482,12 @@ describe("WorkbenchHome", () => {
   });
 
   it("does not refocus the brief after the journey returns from clarification and planning", async () => {
-    const interpretation = await new FixtureRequirementInterpreter().interpret({
-      brief: vagueBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: vagueBrief,
+        answers: {},
+      })
+    ).interpretation;
     const render = (journey: WorkbenchHomeJourneyProps, loading = false) => {
       act(() => {
         root.render(
@@ -467,10 +579,12 @@ describe("WorkbenchHome", () => {
   });
 
   it("replaces the composer with clarification questions when the journey asks them", async () => {
-    const interpretation = await new FixtureRequirementInterpreter().interpret({
-      brief: vagueBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: vagueBrief,
+        answers: {},
+      })
+    ).interpretation;
     act(() => {
       root.render(
         <WorkbenchHome
@@ -501,10 +615,12 @@ describe("WorkbenchHome", () => {
   });
 
   it("shows the deterministic plan alternatives for comparison", async () => {
-    const interpretation = await new FixtureRequirementInterpreter().interpret({
-      brief: expenseBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: expenseBrief,
+        answers: {},
+      })
+    ).interpretation;
     act(() => {
       root.render(
         <WorkbenchHome
@@ -581,10 +697,12 @@ describe("WorkbenchHome", () => {
   });
 
   it("exposes an accepted requirement outcome independently from later planning", async () => {
-    const interpretation = await new FixtureRequirementInterpreter().interpret({
-      brief: expenseBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: expenseBrief,
+        answers: {},
+      })
+    ).interpretation;
     act(() => {
       root.render(
         <WorkbenchHome

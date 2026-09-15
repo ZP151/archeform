@@ -1,8 +1,10 @@
+import { isDeepStrictEqual } from "node:util";
 import { createHash } from "node:crypto";
 
 import type { PublishedGraphInput } from "@factory/compiler";
 import {
   VerificationContractError,
+  hashApplicationGraph,
   type ApplicationGraphV1,
 } from "@factory/graph";
 
@@ -450,10 +452,47 @@ export function deriveVerificationProfile(
     );
   }
 
+  let correctionEntity: string | undefined;
+  try {
+    if (
+      lock.applicationGraphChecksum === hashApplicationGraph(graph) &&
+      (graph.integration.compositionSelections === undefined ||
+        canonicalProtocol(
+          [...lock.packages].sort((a, b) =>
+            a.lock.key.localeCompare(b.lock.key),
+          ),
+        ) ===
+          canonicalProtocol(
+            [...(graph.integration.compositionSelections ?? [])].sort((a, b) =>
+              a.lock.key.localeCompare(b.lock.key),
+            ),
+          ))
+    )
+      correctionEntity = approvalProtocolEntity(graph, lock.packages);
+  } catch {
+    /* Unsupported profiles retain their existing protocol. */
+  }
+  let taskEntity: string | undefined;
+  try {
+    taskEntity = taskProtocolEntity(graph, lock);
+  } catch {
+    /* Compilation rejects malformed Task candidates before verification. */
+  }
   const sessionBound = isSessionBound(lock);
   const orderEntityKey = orderEntityKeyOf(lock);
   const permissions = graph.policy.permissions;
-  const flows = graph.flow.flows;
+  const flows = graph.flow.flows.map((flow) =>
+    flow.entity === taskEntity
+      ? {
+          ...flow,
+          transitions: [...flow.transitions].sort(
+            (a, b) =>
+              ["start", "complete", "reopen"].indexOf(a.event) -
+              ["start", "complete", "reopen"].indexOf(b.event),
+          ),
+        }
+      : flow,
+  );
   const stepPlan: VerificationStepPlanEntry[] = [
     { stepId: "migration", kind: "migration" },
     { stepId: "health", kind: "health" },
@@ -511,7 +550,11 @@ export function deriveVerificationProfile(
       route: `/api/${entityKey}`,
       expectedStatus: 200,
     });
-    if (createRole !== undefined && !createUnbindable) {
+    if (
+      createRole !== undefined &&
+      !createUnbindable &&
+      (!taskEntity || entityKey === taskEntity)
+    ) {
       const journeyId = `${entityKey}-create`;
       journeyIdPattern(journeyId);
       addStep({ stepId: journeyId, kind: "role-journey" });
@@ -695,6 +738,296 @@ export function deriveVerificationProfile(
     }
   }
 
+  if (correctionEntity) {
+    const entity = graph.domain.entities.find(
+      (e) => e.key === correctionEntity,
+    )!;
+    const values = JSON.parse(
+      createBodyFor(graph, entity, true, false) ?? "{}",
+    ) as Record<string, unknown>;
+    const operation = (action: string) =>
+      action.slice(correctionEntity!.length + 1).replace(/-fresh$/, "");
+    const bodyFor = (action: string, version: number, body?: string) => {
+      const op = operation(action);
+      return op === "create"
+        ? JSON.stringify({ values: JSON.parse(body ?? JSON.stringify(values)) })
+        : op === "update"
+          ? JSON.stringify({ expectedVersion: version, values })
+          : op === "reject"
+            ? JSON.stringify({
+                expectedVersion: version,
+                reason: "Please correct this verification fixture.",
+              })
+            : JSON.stringify({ expectedVersion: version });
+    };
+    for (let index = 0; index < apiRegistry.length; index++) {
+      const action = apiRegistry[index]!;
+      if (
+        !action.action.startsWith(correctionEntity + ".") ||
+        action.method === "GET"
+      )
+        continue;
+      const op = operation(action.action);
+      apiRegistry[index] = {
+        ...action,
+        method: op === "update" ? "PATCH" : "POST",
+        route:
+          op === "update"
+            ? action.route.replace("/events/update", "")
+            : action.route,
+        expectedStatus: op === "create" ? 201 : 200,
+      };
+    }
+    for (const [id, journey] of Object.entries(journeys)) {
+      if (
+        !journey.action.startsWith(correctionEntity + ".") ||
+        apiRegistry.find((a) => a.action === journey.action)?.method === "GET"
+      )
+        continue;
+      const key =
+        "verify-" + createHash("sha256").update(id).digest("hex").slice(0, 40);
+      journeys[id] = {
+        ...journey,
+        headers: [{ name: "x-factory-idempotency-key", value: key }],
+        body: bodyFor(
+          journey.action,
+          journey.chain ? journey.chain.length - 1 : 0,
+          journey.body,
+        ),
+        ...(journey.chain
+          ? {
+              chain: journey.chain.map((step, index) => ({
+                ...step,
+                body: bodyFor(step.action, Math.max(0, index - 1), step.body),
+              })),
+            }
+          : {}),
+        ...("idempotencyKey" in journey
+          ? {
+              idempotencyKey: key,
+              replayExpectation: "stored-success" as const,
+            }
+          : {}),
+      };
+    }
+  }
+  if (taskEntity) {
+    const task = graph.domain.entities.find(
+      (entity) => entity.key === taskEntity,
+    )!;
+    const member = graph.policy.permissions.find(
+      (p) => p.resource === taskEntity && p.actions.includes("create"),
+    )!.role;
+    const createValues = createBodyFor(graph, task, true, false) ?? "{}";
+    const op = (action: string) =>
+      action.slice(taskEntity!.length + 1).replace(/-fresh$/, "");
+    const commandKey = (id: string) =>
+      "verify-" + createHash("sha256").update(id).digest("hex").slice(0, 40);
+    const bodyFor = (action: string, version: number, body?: string) =>
+      op(action) === "create"
+        ? JSON.stringify({ values: JSON.parse(body ?? createValues) })
+        : JSON.stringify({ expectedVersion: version });
+    const finalId = taskEntity + "-recomplete";
+    for (const event of ["start", "complete", "reopen"])
+      if (
+        !apiRegistry.some(
+          (a) => a.action === taskEntity + "." + event + "-fresh",
+        )
+      )
+        apiRegistry.push({
+          action: taskEntity + "." + event + "-fresh",
+          method: "POST",
+          route: "/api/" + taskEntity + "/{recordId}/events/" + event,
+          expectedStatus: 200,
+        });
+    addStep({ stepId: finalId, kind: "role-journey" });
+    journeys[finalId] = journeyFor(
+      graph,
+      lock,
+      finalId,
+      taskEntity + ".complete-fresh",
+      member,
+      {
+        chain: [
+          {
+            action: taskEntity + ".create",
+            sessionId: "fixture-session-" + member,
+            body: createValues,
+          },
+          ...["start", "complete", "reopen"].map((event) => ({
+            action: taskEntity + "." + event + "-fresh",
+            sessionId: "fixture-session-" + member,
+          })),
+        ],
+      },
+    );
+    for (let index = 0; index < apiRegistry.length; index++) {
+      const action = apiRegistry[index]!;
+      if (
+        action.action.startsWith(taskEntity + ".") &&
+        action.method === "POST"
+      )
+        apiRegistry[index] = {
+          ...action,
+          expectedStatus: op(action.action) === "create" ? 201 : 200,
+        };
+    }
+    for (const [id, journey] of Object.entries(journeys)) {
+      if (
+        !journey.action.startsWith(taskEntity + ".") ||
+        apiRegistry.find((a) => a.action === journey.action)?.method === "GET"
+      )
+        continue;
+      const key = commandKey(id);
+      journeys[id] = {
+        ...journey,
+        headers: [{ name: "x-factory-idempotency-key", value: key }],
+        body: bodyFor(
+          journey.action,
+          journey.chain ? journey.chain.length - 1 : 0,
+          journey.body,
+        ),
+        ...(journey.chain
+          ? {
+              chain: journey.chain.map((step, index) => ({
+                ...step,
+                body: bodyFor(step.action, Math.max(0, index - 1), step.body),
+                idempotencyKeyOverride: commandKey(id + "-step-" + index),
+              })),
+            }
+          : {}),
+        ...("idempotencyKey" in journey
+          ? {
+              idempotencyKey: key,
+              replayExpectation: "stored-success" as const,
+            }
+          : {}),
+      };
+    }
+  }
+  if (
+    taskEntity &&
+    graph.policy.permissions.some(
+      (p) => p.resource === taskEntity && p.actions.includes("update"),
+    )
+  ) {
+    const entity = graph.domain.entities.find((e) => e.key === taskEntity)!;
+    const member = graph.policy.permissions.find(
+      (p) => p.resource === taskEntity && p.actions.includes("update"),
+    )!.role;
+    const viewer = graph.policy.permissions.find(
+      (p) => p.resource === taskEntity && exactSet(p.actions, ["read"]),
+    )!.role;
+    const values = {
+      ...JSON.parse(createBodyFor(graph, entity, true, false) ?? "{}"),
+      description: "Verification task description",
+    };
+    const corrected = {
+      ...values,
+      title: "Corrected verification task",
+      assignee: "Verification collaborator",
+      dueDate: "2026-10-01T00:00:00.000Z",
+      priority: "high",
+    };
+    const key = (id: string) =>
+      "verify-" + createHash("sha256").update(id).digest("hex").slice(0, 40);
+    const headers = (id: string) => [
+      { name: "x-factory-idempotency-key", value: key(id) },
+    ];
+    const updateAction = taskEntity + ".update",
+      deniedAction = taskEntity + ".update-completed-denied";
+    apiRegistry.push(
+      {
+        action: updateAction,
+        method: "PATCH",
+        route: "/api/" + taskEntity + "/{recordId}",
+        expectedStatus: 200,
+      },
+      {
+        action: deniedAction,
+        method: "PATCH",
+        route: "/api/" + taskEntity + "/{recordId}",
+        expectedStatus: 403,
+      },
+    );
+    const createStep = (id: string): ChainJourneyStep => ({
+      action: taskEntity + ".create",
+      sessionId: "fixture-session-" + member,
+      body: JSON.stringify({ values }),
+      idempotencyKeyOverride: key(id + "-create"),
+    });
+    const updateId = taskEntity + "-update";
+    addStep({ stepId: updateId, kind: "idempotency" });
+    journeys[updateId] = {
+      ...journeyFor(graph, lock, updateId, updateAction, member, {
+        headers: headers(updateId),
+        body: JSON.stringify({ expectedVersion: 0, values: corrected }),
+        chain: [createStep(updateId)],
+      }),
+      idempotencyKey: key(updateId),
+      expectedVersion: 0,
+      replayExpectation: "stored-success",
+    };
+    const deniedId = taskEntity + "-denied-update";
+    addStep({ stepId: deniedId, kind: "authorization-denial" });
+    journeys[deniedId] = journeyFor(
+      graph,
+      lock,
+      deniedId,
+      updateAction,
+      viewer,
+      {
+        headers: headers(deniedId),
+        body: JSON.stringify({ expectedVersion: 0, values: corrected }),
+        chain: [createStep(deniedId)],
+      },
+    );
+    const finalId = taskEntity + "-recomplete";
+    const actions = [
+      updateAction,
+      taskEntity + ".start-fresh",
+      updateAction,
+      taskEntity + ".complete-fresh",
+      deniedAction,
+      taskEntity + ".reopen-fresh",
+    ];
+    const versions = [0, 1, 2, 3, 4, 4];
+    journeys[finalId] = journeyFor(
+      graph,
+      lock,
+      finalId,
+      taskEntity + ".complete-fresh",
+      member,
+      {
+        headers: headers(finalId),
+        body: JSON.stringify({ expectedVersion: 5 }),
+        chain: [
+          createStep(finalId),
+          ...actions.map((action, index) => ({
+            action,
+            sessionId: "fixture-session-" + member,
+            idempotencyKeyOverride: key(finalId + "-correction-step-" + index),
+            body: JSON.stringify({
+              expectedVersion: versions[index],
+              ...(action === updateAction || action === deniedAction
+                ? {
+                    values:
+                      index === 0
+                        ? corrected
+                        : {
+                            ...corrected,
+                            title: "Active verification correction",
+                            description: "Verified active correction",
+                            priority: "low",
+                          },
+                  }
+                : {}),
+            }),
+          })),
+        ],
+      },
+    );
+  }
   if (stepPlan.length > maximumStepPlanLength) {
     throw new VerificationContractError(
       "The derived verification step plan exceeds the bounded plan length.",
@@ -719,4 +1052,566 @@ export function deriveVerificationProfile(
     journeys: Object.freeze(journeys),
     apiRegistry: Object.freeze(apiRegistry),
   };
+}
+
+// Worker-local consumer predicate mirrors the accepted compiler-private protocol.
+const equalSet = (actual: readonly string[], expected: readonly string[]) =>
+  actual.length === expected.length &&
+  new Set(actual).size === actual.length &&
+  expected.every((x) => actual.includes(x));
+const locks = {
+  "core.crud": [
+    "1.0.1",
+    "8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1",
+  ],
+  "core.workflow": [
+    "1.0.1",
+    "16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884",
+  ],
+  "core.identity-policy": [
+    "1.0.0",
+    "a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82",
+  ],
+  "core.policy-declarations": [
+    "1.0.0",
+    "56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54",
+  ],
+  "core.audit": [
+    "1.0.2",
+    "fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8",
+  ],
+  "core.notification": [
+    "1.1.1",
+    "207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
+  ],
+} as const;
+function approvalProtocolEntity(
+  graph: ApplicationGraphV1,
+  selections: CompositionLock["packages"] = graph.integration
+    .compositionSelections ?? [],
+): string | undefined {
+  const candidate = graph.flow.flows.some(
+    (f) =>
+      (f.states.includes("returned") ||
+        f.transitions.some(
+          (t) => t.event === "update" && t.from === "returned",
+        )) &&
+      f.transitions.some((t) => t.event === "approve" || t.event === "reject"),
+  );
+  if (!candidate) return undefined;
+  const deny = (): never => {
+    throw new Error("Approval correction shape is not supported.");
+  };
+  if (graph.flow.flows.length !== 1) return deny();
+  const flow = graph.flow.flows[0]!;
+  if (
+    flow.initialState !== "draft" ||
+    !equalSet(flow.states, ["draft", "submitted", "approved", "returned"]) ||
+    !equalSet(flow.events, ["submit", "approve", "reject", "update"]) ||
+    flow.transitions.length !== 4
+  )
+    return deny();
+  const submit = flow.transitions.find((t) => t.event === "submit");
+  const approve = flow.transitions.find((t) => t.event === "approve");
+  const requester = submit?.roles?.[0],
+    reviewer = approve?.roles?.[0];
+  const grants = graph.policy.permissions.filter(
+    (p) => p.resource === flow.entity,
+  );
+  const auditor = grants.find((p) => p.actions.includes("audit"))?.role;
+  if (
+    !requester ||
+    !reviewer ||
+    !auditor ||
+    new Set([requester, reviewer, auditor]).size !== 3 ||
+    !equalSet(graph.policy.roles, [requester, reviewer, auditor]) ||
+    grants.length !== 3
+  )
+    return deny();
+  for (const [role, actions] of [
+    [requester, ["create", "read", "update", "submit"]],
+    [reviewer, ["read", "approve", "reject"]],
+    [auditor, ["read", "audit"]],
+  ] as const)
+    if (!grants.some((p) => p.role === role && equalSet(p.actions, actions)))
+      return deny();
+  for (const [event, from, to, role] of [
+    ["submit", "draft", "submitted", requester],
+    ["approve", "submitted", "approved", reviewer],
+    ["reject", "submitted", "returned", reviewer],
+    ["update", "returned", "draft", requester],
+  ]) {
+    const transition = flow.transitions.find((t) => t.event === event);
+    const expected =
+      event === "approve" || event === "reject"
+        ? ["audit.record:record", "notification.send:send"]
+        : ["audit.record:record"];
+    if (
+      !transition ||
+      transition.from !== from ||
+      transition.to !== to ||
+      !equalSet(transition.roles ?? [], [role!]) ||
+      !equalSet(
+        (transition.effects ?? []).map((e) => e.capability + ":" + e.operation),
+        expected,
+      )
+    )
+      return deny();
+  }
+  const blocks = graph.page.pages.flatMap((p) =>
+    p.blocks.map((b) => ({ page: p, block: b })),
+  );
+  for (const type of ["form", "list", "queue", "detail"])
+    if (
+      blocks.filter(
+        ({ block }) => block.entity === flow.entity && block.type === type,
+      ).length !== 1
+    )
+      return deny();
+  if (
+    selections.length !== 6 ||
+    !equalSet(
+      selections.map((s) => s.lock.key),
+      Object.keys(locks),
+    )
+  )
+    return deny();
+  const byKey = new Map(selections.map((s) => [s.lock.key, s]));
+  for (const [key, [version, digest]] of Object.entries(locks)) {
+    const lock = byKey.get(key)!.lock;
+    if (
+      lock.version !== version ||
+      lock.manifestDigest !== "sha256:" + digest ||
+      lock.packageRoot !== `packages/capabilities/assets/${key}/${version}` ||
+      lock.lifecycle !== "golden"
+    )
+      return deny();
+  }
+  const bindings = (key: string, expected: Record<string, string>) => {
+    const b = byKey.get(key)!.bindings;
+    return (
+      equalSet(Object.keys(b), Object.keys(expected)) &&
+      Object.entries(expected).every(
+        ([k, v]) => JSON.stringify(b[k]) === JSON.stringify({ graphSymbol: v }),
+      )
+    );
+  };
+  const listPage = blocks.find(
+    ({ block }) => block.entity === flow.entity && block.type === "list",
+  )!.page;
+  if (
+    !bindings("core.crud", {
+      entityKey: "graph.domain." + flow.entity,
+      routeKey: "graph.page." + listPage.id,
+    }) ||
+    !bindings("core.workflow", { flowKey: "graph.flow." + flow.id }) ||
+    !bindings("core.audit", { actorRole: "graph.policy." + reviewer }) ||
+    !bindings("core.notification", {
+      recipientRole: "graph.policy." + requester,
+    }) ||
+    !bindings("core.policy-declarations", {})
+  )
+    return deny();
+  const identity = byKey.get("core.identity-policy")!.bindings as Record<
+    string,
+    { graphSymbol?: string }
+  >;
+  if (
+    !equalSet(Object.keys(identity), [
+      "principalEntity",
+      "sessionEntity",
+      "defaultRole",
+      "authenticatedRole",
+    ]) ||
+    identity.defaultRole?.graphSymbol !== "graph.policy." + requester ||
+    identity.authenticatedRole?.graphSymbol !== "graph.policy." + reviewer ||
+    !graph.domain.entities.some(
+      (e) => "graph.domain." + e.key === identity.principalEntity?.graphSymbol,
+    ) ||
+    !graph.domain.entities.some(
+      (e) => "graph.domain." + e.key === identity.sessionEntity?.graphSymbol,
+    )
+  )
+    return deny();
+  const principal = identity.principalEntity!.graphSymbol!.slice(
+      "graph.domain.".length,
+    ),
+    session = identity.sessionEntity!.graphSymbol!.slice(
+      "graph.domain.".length,
+    );
+  const secondary = graph.domain.entities.filter(
+    (e) => ![flow.entity, principal, session].includes(e.key),
+  );
+  if (
+    secondary.length !== 1 ||
+    new Set([flow.entity, principal, session]).size !== 3 ||
+    graph.domain.entities.length !== 4
+  )
+    return deny();
+  const permissionPairs = graph.policy.permissions.flatMap((p) =>
+    p.actions.map((a) => p.role + ":" + p.resource + ":" + a),
+  );
+  const expectedPairs = [
+    ...grants.flatMap((p) =>
+      p.actions.map((a) => p.role + ":" + flow.entity + ":" + a),
+    ),
+    requester + ":" + secondary[0]!.key + ":read",
+    requester + ":" + secondary[0]!.key + ":update",
+    ...[requester, reviewer, auditor].flatMap((role) => [
+      role + ":" + principal + ":read",
+      role + ":" + session + ":read",
+    ]),
+    requester + ":" + session + ":create",
+    requester + ":" + session + ":update",
+  ];
+  if (!equalSet(permissionPairs, expectedPairs)) return deny();
+  if (
+    graph.page.pages.length !== 7 ||
+    blocks.length !== 7 ||
+    blocks.filter(({ block }) => block.entity === flow.entity).length !== 5 ||
+    blocks.filter(
+      ({ block }) => block.type === "stats" && block.entity === flow.entity,
+    ).length !== 1 ||
+    blocks.filter(({ block }) => block.type === "settings" && !block.entity)
+      .length !== 1 ||
+    blocks.filter(
+      ({ block }) =>
+        block.type === "list" && block.entity === secondary[0]!.key,
+    ).length !== 1
+  )
+    return deny();
+  if (
+    graph.integration.providers.length !== 0 ||
+    !equalSet(
+      graph.integration.capabilities.map(
+        (c) => c.key + ":" + c.operation + ":" + c.providerId,
+      ),
+      [
+        "audit.record:record:factory",
+        "notification.send:send:factory",
+        "identity.context.resolve:resolve:factory",
+        "authorization.decision:decision:factory",
+      ],
+    )
+  )
+    return deny();
+  const entity = graph.domain.entities.filter((e) => e.key === flow.entity);
+  if (
+    entity.length !== 1 ||
+    entity[0]!.fields.some((f) =>
+      ["id", "version", "createdAt", "updatedAt"].includes(f.key),
+    )
+  )
+    return deny();
+  const status = entity[0]!.fields.find((field) => field.key === "status");
+  if (
+    !status ||
+    status.type !== "enum" ||
+    status.required !== true ||
+    !equalSet(status.values ?? [], [
+      "draft",
+      "submitted",
+      "approved",
+      "returned",
+    ])
+  )
+    return deny();
+  return flow.entity;
+}
+
+function canonicalProtocol(value: unknown): string {
+  if (Array.isArray(value))
+    return "[" + value.map(canonicalProtocol).join(",") + "]";
+  if (value && typeof value === "object")
+    return (
+      "{" +
+      Object.keys(value)
+        .sort()
+        .map(
+          (k) =>
+            JSON.stringify(k) +
+            ":" +
+            canonicalProtocol((value as Record<string, unknown>)[k]),
+        )
+        .join(",") +
+      "}"
+    );
+  return JSON.stringify(value);
+}
+
+// Worker-private mirror of the frozen Task protocol; no public compiler API.
+const exactSet = (actual: readonly string[], expected: readonly string[]) =>
+  actual.length === expected.length &&
+  new Set(actual).size === actual.length &&
+  expected.every((value) => actual.includes(value));
+const taskLocks = {
+  "core.crud": "1.0.1",
+  "core.workflow": "1.0.1",
+  "core.identity-policy": "1.0.0",
+  "core.policy-declarations": "1.0.0",
+  "core.audit": "1.0.2",
+  "core.notification": "1.1.1",
+} as const;
+const businessFields = [
+  ["title", "string", true],
+  ["description", "text", false],
+  ["assignee", "string", true],
+  ["dueDate", "date", true],
+  ["priority", "enum", true],
+] as const;
+function hasTaskFields(
+  entity: ApplicationGraphV1["domain"]["entities"][number],
+): boolean {
+  const fields = entity.fields.filter((f) => f.key !== "status");
+  return (
+    fields.length === 5 &&
+    businessFields.every(([key, type, required]) =>
+      fields.some(
+        (f) =>
+          f.key === key &&
+          f.type === type &&
+          f.required === required &&
+          (key === "priority"
+            ? exactSet(f.values ?? [], ["low", "medium", "high"])
+            : f.values === undefined),
+      ),
+    )
+  );
+}
+
+/** One lock-bound selection result activates both Task presentation and mutation. */
+function taskProtocolEntity(
+  graph: ApplicationGraphV1,
+  compositionLock?: CompositionLock,
+): string | undefined {
+  const selections =
+    compositionLock?.packages ?? graph.integration.compositionSelections ?? [];
+  const taskCandidate =
+    selections.filter((s) => s.lock.key in taskLocks).length >= 5 &&
+    graph.page.pages.length >= 4 &&
+    graph.flow.flows.some(
+      (flow) =>
+        exactSet(flow.events, ["start", "complete", "reopen"]) &&
+        graph.domain.entities.some(
+          (entity) =>
+            entity.key === flow.entity &&
+            entity.fields.filter((field) =>
+              businessFields.some(([key]) => key === field.key),
+            ).length >= 3,
+        ) &&
+        (selections.some(
+          (s) =>
+            s.lock.key === "core.workflow" &&
+            isDeepStrictEqual(s.bindings.flowKey, {
+              graphSymbol: "graph.flow." + flow.id,
+            }),
+        ) ||
+          selections.some(
+            (s) =>
+              s.lock.key === "core.crud" &&
+              isDeepStrictEqual(s.bindings.entityKey, {
+                graphSymbol: "graph.domain." + flow.entity,
+              }),
+          )),
+    );
+  const rejectCandidate = (): undefined => {
+    if (taskCandidate) throw new Error("Task contract shape is not supported.");
+    return undefined;
+  };
+  const locked =
+    selections.length === 6 &&
+    exactSet(
+      selections.map((s) => s.lock.key),
+      Object.keys(taskLocks),
+    ) &&
+    selections.every(
+      (s) => taskLocks[s.lock.key as keyof typeof taskLocks] === s.lock.version,
+    );
+  if (!locked) return rejectCandidate();
+  const byKey = new Map(selections.map((s) => [s.lock.key, s]));
+  const binding = (key: string, expected: Record<string, string>) => {
+    const actual = byKey.get(key)?.bindings ?? {};
+    return (
+      exactSet(Object.keys(actual), Object.keys(expected)) &&
+      Object.entries(expected).every(([k, v]) =>
+        isDeepStrictEqual(actual[k], { graphSymbol: v }),
+      )
+    );
+  };
+  const signatures = graph.domain.entities.filter(hasTaskFields);
+  const candidate = signatures.some((entity) =>
+    graph.flow.flows.some(
+      (flow) =>
+        flow.entity === entity.key &&
+        flow.events.some((e) => ["start", "complete", "reopen"].includes(e)) &&
+        binding("core.crud", {
+          entityKey: "graph.domain." + entity.key,
+          routeKey:
+            "graph.page." +
+            graph.page.pages.find((p) =>
+              p.blocks.some(
+                (b) => b.entity === entity.key && b.type === "list",
+              ),
+            )?.id,
+        }) &&
+        binding("core.workflow", { flowKey: "graph.flow." + flow.id }) &&
+        binding("core.identity-policy", {
+          principalEntity: "graph.domain." + graph.metadata.id + "-principal",
+          sessionEntity: "graph.domain." + graph.metadata.id + "-session",
+          defaultRole: "graph.policy." + graph.policy.roles[0],
+          authenticatedRole: "graph.policy." + graph.policy.roles[1],
+        }) &&
+        binding("core.audit", {
+          actorRole: "graph.policy." + graph.policy.roles[0],
+        }) &&
+        binding("core.notification", {
+          recipientRole: "graph.policy." + graph.policy.roles[0],
+        }) &&
+        binding("core.policy-declarations", {}),
+    ),
+  );
+  if (!candidate) return rejectCandidate();
+  const deny = (): never => {
+    throw new Error("Task contract shape is not supported.");
+  };
+  if (
+    compositionLock &&
+    (compositionLock.applicationGraphChecksum !== hashApplicationGraph(graph) ||
+      (graph.integration.compositionSelections !== undefined &&
+        !isDeepStrictEqual(
+          [...selections].sort((a, b) => a.lock.key.localeCompare(b.lock.key)),
+          [...graph.integration.compositionSelections].sort((a, b) =>
+            a.lock.key.localeCompare(b.lock.key),
+          ),
+        )))
+  )
+    return deny();
+  if (
+    signatures.length !== 1 ||
+    graph.flow.flows.length !== 1 ||
+    graph.policy.roles.length !== 2 ||
+    graph.domain.entities.length !== 3
+  )
+    return deny();
+  const entity = signatures[0]!,
+    flow = graph.flow.flows[0]!;
+  if (
+    flow.entity !== entity.key ||
+    flow.initialState !== "not-started" ||
+    !exactSet(flow.states, ["not-started", "in-progress", "completed"]) ||
+    !exactSet(flow.events, ["start", "complete", "reopen"]) ||
+    flow.transitions.length !== 3 ||
+    entity.fields.length !== 6
+  )
+    return deny();
+  const status = entity.fields.find((f) => f.key === "status");
+  if (
+    !status ||
+    status.type !== "enum" ||
+    status.required !== true ||
+    !exactSet(status.values ?? [], ["not-started", "in-progress", "completed"])
+  )
+    return deny();
+  const grants = graph.policy.permissions.filter(
+    (p) => p.resource === entity.key,
+  );
+  const member = grants.find(
+    (p) =>
+      exactSet(p.actions, ["create", "read", "start", "complete", "reopen"]) ||
+      exactSet(p.actions, [
+        "create",
+        "read",
+        "update",
+        "start",
+        "complete",
+        "reopen",
+      ]),
+  )?.role;
+  const viewer = grants.find((p) => exactSet(p.actions, ["read"]))?.role;
+  if (
+    !member ||
+    !viewer ||
+    member === viewer ||
+    grants.length !== 2 ||
+    !exactSet(graph.policy.roles, [member, viewer])
+  )
+    return deny();
+  for (const [event, from, to] of [
+    ["start", "not-started", "in-progress"],
+    ["complete", "in-progress", "completed"],
+    ["reopen", "completed", "in-progress"],
+  ]) {
+    const transition = flow.transitions.find((t) => t.event === event);
+    if (
+      !transition ||
+      transition.from !== from ||
+      transition.to !== to ||
+      !exactSet(transition.roles ?? [], [member]) ||
+      !exactSet(
+        (transition.effects ?? []).map((e) => e.capability + ":" + e.operation),
+        [],
+      )
+    )
+      return deny();
+  }
+  const blocks = graph.page.pages.flatMap((page) =>
+    page.blocks.map((block) => ({ page, block })),
+  );
+  if (
+    graph.page.pages.length !== 5 ||
+    blocks.length !== 5 ||
+    blocks.some(({ block }) => block.entity !== entity.key) ||
+    !exactSet(
+      blocks.map(({ block }) => block.type),
+      ["stats", "list", "form", "detail", "queue"],
+    )
+  )
+    return deny();
+  const list = blocks.find(({ block }) => block.type === "list")!.page;
+  const first = graph.policy.roles[0]!,
+    second = graph.policy.roles[1]!;
+  const principal = graph.metadata.id + "-principal",
+    session = graph.metadata.id + "-session";
+  if (
+    !exactSet(
+      graph.domain.entities.map((e) => e.key),
+      [entity.key, principal, session],
+    ) ||
+    !binding("core.crud", {
+      entityKey: "graph.domain." + entity.key,
+      routeKey: "graph.page." + list.id,
+    }) ||
+    !binding("core.workflow", { flowKey: "graph.flow." + flow.id }) ||
+    !binding("core.identity-policy", {
+      principalEntity: "graph.domain." + principal,
+      sessionEntity: "graph.domain." + session,
+      defaultRole: "graph.policy." + first,
+      authenticatedRole: "graph.policy." + second,
+    }) ||
+    !binding("core.audit", { actorRole: "graph.policy." + first }) ||
+    !binding("core.notification", { recipientRole: "graph.policy." + first }) ||
+    !binding("core.policy-declarations", {})
+  )
+    return deny();
+  const expectedPermissions = [
+    ...grants.flatMap((p) =>
+      p.actions.map((a) => p.role + ":" + entity.key + ":" + a),
+    ),
+    ...graph.policy.roles.flatMap((role) => [
+      role + ":" + principal + ":read",
+      role + ":" + session + ":read",
+    ]),
+    first + ":" + session + ":create",
+    first + ":" + session + ":update",
+  ];
+  if (
+    !exactSet(
+      graph.policy.permissions.flatMap((p) =>
+        p.actions.map((a) => p.role + ":" + p.resource + ":" + a),
+      ),
+      expectedPermissions,
+    )
+  )
+    return deny();
+  return entity.key;
 }

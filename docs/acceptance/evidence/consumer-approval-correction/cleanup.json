@@ -1,0 +1,86 @@
+{
+  "checkedAt": "2026-09-12T16:14:50.281Z",
+  "method": "Exact Compose project labels, including stopped containers; no unrelated resources changed",
+  "finalPreviewRuns": [
+    {
+      "compilationId": "cmtyks337008lrv4t9w73i256",
+      "previewRunId": "preview-db414e1e-a322-4b79-9bd8-ebfce706a7c6",
+      "persistedStatus": "stopped",
+      "confirmedBy": "Independent QA before Factory shutdown"
+    },
+    {
+      "compilationId": "cmtykx67f00aorv4tz904zjyo",
+      "previewRunId": "preview-23766852-2594-4fde-af8b-a53b59c81753",
+      "persistedStatus": "stopped",
+      "confirmedBy": "Independent QA before Factory shutdown"
+    }
+  ],
+  "resources": [
+    {
+      "project": "factory-t9-correction-20260912",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-db414e1e-a322-4b79-9bd8-ebfce706a7c6",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-23766852-2594-4fde-af8b-a53b59c81753",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-f00a9781-e3e4-4232-ba7d-10897ee9a901",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-af7f12e0-5b0c-4365-86d9-3bf011b7866f",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-f10fe055-79bf-452a-9be6-1d67119706a4",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-657825b5-b909-47c1-ad5b-19870bc2eb5b",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-86c8d1cf-316e-4b51-99bd-ab62f2eeb8ec",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-7f2415b4-110e-495d-8435-ae7172ddfb6e",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-c539cf07-9bba-4c66-aec4-6509f3477cfc",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    },
+    {
+      "project": "factory-preview-preview-bc109711-7adb-4fa6-b434-ce1e9a047ed5",
+      "container": 0,
+      "network": 0,
+      "volume": 0
+    }
+  ]
+}

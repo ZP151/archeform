@@ -1,0 +1,22 @@
+{
+  "recordedAt": "2026-09-13T08:31:16.505Z",
+  "base": "5b65169e56c834f2a466539ee81ec020e76541c3",
+  "purpose": "First production freeze; package tests may still change before final acceptance.",
+  "files": {
+    "apps/compiler-worker/src/verifier/verification-graph-plan.ts": "8746e98ca2db1eb684a74cc1b1d1fdad3c569c91a57aa489e8f92c8e063e2ac0",
+    "apps/compiler-worker/test/verification-graph-plan.test.ts": "7ea6732f913ee92894dd075faab0366520b5fd80e49b0e6182833f69c47d4529",
+    "apps/workbench/components/workbench-home.test.tsx": "4b61af1cddcbdf5965c609361ebcbc3ee16ad173952c0c8ad799cedecd2c36fe",
+    "apps/workbench/components/workbench-home.tsx": "387e8fa84e2b3903edab574a1b0d74b56918848f9caf279ef3892a0a5adc9b61",
+    "apps/workbench/lib/product-journey/consumer-family.ts": "d9b4a6f30cf089e2476ae7b0088d401a816cc189fc332b93f784bee64bc1bca4",
+    "apps/workbench/lib/product-journey/use-consumer-generation.test.tsx": "fa3c34f1e964bc62b8777eb2694995a0c1250f924bf2439083af72e729c40c58",
+    "packages/adapters/src/requirements/task-definition-selection.ts": "dad32621b152ff357dbe2fb8aa75e731b929b0ee4d7d5d04319b7dba4f532084",
+    "packages/adapters/test/requirement-interpreter.test.ts": "4fd508badf1b0c3881d0722359ddf2080eab32fcc7cd08f15943ce325a528cc3",
+    "packages/capabilities/test/product-composer.test.ts": "338dbd2e7594708dd45264891bb32e5e038575bea2c6a85b2cf670b85307d112",
+    "packages/compiler/src/index.ts": "d8c29035fda25b870bb06c1d4a8a252f6052b666e30e7a7f251add3b84b958bb",
+    "packages/compiler/src/task-mutation-contract.ts": "54c1088533095f95c7d17ed2875d3ad0ce42c2fa8c1ac7f4c16e967a9eb3b307",
+    "packages/compiler/src/task-workspace-presentation.ts": "799efb4fb18f91c008cec92718b5253c89913e8c018dd8d9039ae01a1bf3f1cf",
+    "packages/compiler/test/fixtures/task-correction-legacy-baseline.json": "3a9e90bbb7a654f6b1ba6586dedeb737d6fd94fce555de39348707f2da8e91f5",
+    "packages/compiler/test/task-correction-compatibility.test.ts": "8542509985b44b1a29fc16d9e4a516a78f597ad3def987fbf165d57b776ad5a5",
+    "packages/compiler/test/task-mutation-runtime.test.ts": "5e1bb25a98c6be64ad4297e1a79a0c1c79c1f0d0a2a0a67ad4bdf89d9ec984bd"
+  }
+}

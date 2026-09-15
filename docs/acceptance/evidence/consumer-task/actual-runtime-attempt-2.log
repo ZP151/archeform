@@ -1,0 +1,11 @@
+
+Running 1 test using 1 worker
+
+(node:35848) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:35848) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_TASK_BUSINESS {"lane":"deterministic-selection-real-runtime","tasks":2,"lifecycle":["start","complete","reopen","complete"],"viewerDenied":["create","start","complete","reopen"],"invalidTransitionDenied":true,"idempotentCreateReplay":true,"staleTransitionDenied":true,"reloadRetained":true,"persistedMutationFacts":{"auditCounts":[5,2,1],"receiptCounts":[5,2,1],"hashedKeyShape":true,"rawKeyRetained":false},"interpretationCalls":1,"elapsedToReadyMs":177738,"elapsedToTaskMs":192917}
+  ok 1 e2e\consumer-task.spec.ts:630:5 › D2.5 deterministic Task selection publishes a safe shared board (3.4m)
+
+  1 passed (3.5m)

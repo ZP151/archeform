@@ -1,8 +1,8 @@
 import {
-  assertRequirementInterpretation,
+  assertRequirementInterpretationResult,
   RequirementInterpreterError,
   type ClarificationAnswerContextV1,
-  type RequirementInterpretationV1,
+  type RequirementInterpretationResultV1,
 } from "@factory/adapters";
 
 import {
@@ -27,7 +27,7 @@ export interface InterpretPayload {
   readonly brief: string;
   readonly answers: Readonly<Record<string, string>>;
   readonly clarificationContext?: readonly ClarificationAnswerContextV1[];
-  readonly priorInterpretation?: RequirementInterpretationV1;
+  readonly priorInterpretation?: RequirementInterpretationResultV1;
 }
 
 const CLARIFICATION_CATEGORIES = new Set([
@@ -77,22 +77,11 @@ export function parseInterpretPayload(value: unknown): InterpretPayload | null {
     if (key.length === 0) return null;
     validated[key] = answer;
   }
-  let validatedPrior: RequirementInterpretationV1 | undefined;
+  let validatedPrior: RequirementInterpretationResultV1 | undefined;
   if (priorInterpretation !== undefined) {
-    if (!isPlainRecord(priorInterpretation)) return null;
-    if (
-      Object.keys(priorInterpretation).some(
-        (key) => !["spec", "blueprint", "clarifications"].includes(key),
-      ) ||
-      !Array.isArray(priorInterpretation.clarifications)
-    )
-      return null;
     try {
-      validatedPrior = assertRequirementInterpretation({
-        spec: priorInterpretation.spec,
-        blueprint: priorInterpretation.blueprint,
-        clarifications: priorInterpretation.clarifications,
-      });
+      validatedPrior =
+        assertRequirementInterpretationResult(priorInterpretation);
     } catch {
       return null;
     }

@@ -51,7 +51,8 @@ async function interpretationFor(
   brief: string,
   answers: Readonly<Record<string, string>> = {},
 ): Promise<RequirementInterpretationV1> {
-  return fixtureInterpreter.interpret({ brief, answers });
+  return (await fixtureInterpreter.interpret({ brief, answers }))
+    .interpretation;
 }
 
 function withOpenQuestion(
@@ -161,9 +162,24 @@ function stubTransport(overrides: {
   routes.push({
     matches: (url) => url.endsWith("/api/requirements/interpret"),
     respond: async (init) => {
-      if (overrides.interpret !== undefined) return overrides.interpret(init);
+      if (overrides.interpret !== undefined) {
+        const result = await overrides.interpret(init);
+        return result &&
+          typeof result === "object" &&
+          "interpretation" in result
+          ? {
+              apiVersion: "factory.requirement-interpretation-result/v1",
+              businessParameters: null,
+              ...result,
+            }
+          : result;
+      }
       const { brief, answers } = interpretBody(init);
-      return { interpretation: await interpretationFor(brief, answers) };
+      return {
+        apiVersion: "factory.requirement-interpretation-result/v1",
+        businessParameters: null,
+        interpretation: await interpretationFor(brief, answers),
+      };
     },
     status: overrides.interpretRejection?.status,
     failureBody: overrides.interpretRejection?.body,
@@ -206,7 +222,7 @@ function stubTransport(overrides: {
       if (interpretation === null || interpretation === undefined) {
         return { alternatives: [] };
       }
-      return { alternatives: alternativesFor(interpretation) };
+      return { alternatives: alternativesFor(interpretation.interpretation) };
     },
   });
   routes.push({
@@ -321,12 +337,17 @@ describe("useProductJourney", () => {
       controller().state.stage,
       controller().state.error ?? "no journey error",
     ).toBe("planning");
-    expect(controller().state.interpretation?.spec.requirementId).toBe(
-      "expense-approval-requirement",
-    );
     expect(
-      controller().state.interpretation?.blueprint.requirementChecksum,
-    ).toBe(hashRequirementSpec(controller().state.interpretation!.spec));
+      controller().state.interpretation?.interpretation.spec.requirementId,
+    ).toBe("expense-approval-requirement");
+    expect(
+      controller().state.interpretation?.interpretation.blueprint
+        .requirementChecksum,
+    ).toBe(
+      hashRequirementSpec(
+        controller().state.interpretation!.interpretation.spec,
+      ),
+    );
     expect(controller().busy).toBe(false);
   });
 
@@ -413,7 +434,11 @@ describe("useProductJourney", () => {
         }),
       ]),
     );
-    expect(interpretBodies[1].priorInterpretation).toEqual(first);
+    expect(interpretBodies[1].priorInterpretation).toEqual({
+      apiVersion: "factory.requirement-interpretation-result/v1",
+      interpretation: first,
+      businessParameters: null,
+    });
   });
 
   it("uses a declared safe default for noncritical ambiguity at the two-cycle bound", async () => {

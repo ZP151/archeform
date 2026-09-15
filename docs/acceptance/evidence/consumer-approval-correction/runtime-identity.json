@@ -1,0 +1,71 @@
+{
+  "recordedAt": "2026-09-12T15:44:34.945Z",
+  "base": "92f21089beeb184a236a1512cb4c1866f158e903",
+  "project": "factory-t9-correction-20260912",
+  "images": [
+    {
+      "service": "compiler-worker",
+      "image": "sha256:79f2c1201b55792d9ff094907bf9e3b8a611f70bc3643036844b271a7807af1c",
+      "sourceFilesMatched": 11,
+      "sources": {
+        "apps/compiler-worker/src/verifier/probes.ts": "e3fcd97d6b86ceee8e786cc8edcbd1298f7c83d2539091c5980ad28d7f36d0d9",
+        "apps/compiler-worker/src/verifier/role-journey.ts": "784cf622a6e548fafd22dfe6011a7d2596e155f33cc80b79e0c46d0ee1d84f9e",
+        "apps/compiler-worker/src/verifier/verification-environment.ts": "63f9c248c1dfe0367d6b921f08267f42b01c4571c29fbf204359e8eeba12dfbb",
+        "apps/compiler-worker/src/verifier/verification-graph-plan.ts": "f9ad9d69d719b36b5cdc364ab74399c64292101e7fad09dc4bba02e92357f5b4",
+        "packages/compiler/src/approval-decision-history.ts": "2d0668557182c2e9ebef8fd44da235701facc3abbcc8b46229e9269d19c602d1",
+        "packages/compiler/src/approval-presentation-components.ts": "30fb07dfd0b5add46c549529c3ac2a066d6cf011ea6b74aad6a3c50b78f5c031",
+        "packages/compiler/src/approval-visual-assets.ts": "34f0085f7bb9339b72ae3b23678c7715307cd7fe4db98c7cb1c3548726f0d991",
+        "packages/compiler/src/approval-workspace-presentation.ts": "db5bb0c753f2a3e0b1667f6868a56849f201fe3fbedf0f127a323f635e1b1725",
+        "packages/compiler/src/index.ts": "42a87b685943fadb86b745978f9667b5252901b3fafb84ed8f81c0d21bca4ddc",
+        "packages/compiler/src/targets/database/target.ts": "688ee494c07190d012790f40bc6239428bd4d3887eb02a75bd6731636f73a955",
+        "packages/compiler/src/approval-mutation-contract.ts": "e0887dee854c59c3fff2521a50cbe61b89fd47a26db4c4f167b7b90114bcaab4"
+      }
+    },
+    {
+      "service": "control-plane",
+      "image": "sha256:c85f0ab84022ccef1432cfa6ae624fc10d868f218c83be52e29c210aaa158342",
+      "sourceFilesMatched": 10,
+      "sources": {
+        "packages/adapters/src/requirements/approval-definition-selection.ts": "38893e071880b1de004c26c37db489af5f519303824686ef601eeb03a2e4344a",
+        "packages/adapters/src/requirements/approval-definition-template.ts": "fbb8bc45f6d616fd1cf8c238ff275bd22100a952c179f0889196681a485c6d37",
+        "packages/adapters/src/requirements/purchase-request-definition-selection.ts": "92d3bfc907c248ecbeec86b4f985c406a71c5869e80baa6335b108980770fa90",
+        "packages/compiler/src/approval-decision-history.ts": "2d0668557182c2e9ebef8fd44da235701facc3abbcc8b46229e9269d19c602d1",
+        "packages/compiler/src/approval-presentation-components.ts": "30fb07dfd0b5add46c549529c3ac2a066d6cf011ea6b74aad6a3c50b78f5c031",
+        "packages/compiler/src/approval-visual-assets.ts": "34f0085f7bb9339b72ae3b23678c7715307cd7fe4db98c7cb1c3548726f0d991",
+        "packages/compiler/src/approval-workspace-presentation.ts": "db5bb0c753f2a3e0b1667f6868a56849f201fe3fbedf0f127a323f635e1b1725",
+        "packages/compiler/src/index.ts": "42a87b685943fadb86b745978f9667b5252901b3fafb84ed8f81c0d21bca4ddc",
+        "packages/compiler/src/targets/database/target.ts": "688ee494c07190d012790f40bc6239428bd4d3887eb02a75bd6731636f73a955",
+        "packages/compiler/src/approval-mutation-contract.ts": "e0887dee854c59c3fff2521a50cbe61b89fd47a26db4c4f167b7b90114bcaab4"
+      }
+    },
+    {
+      "service": "workbench",
+      "image": "sha256:e243fcd2808322c30d342715c4781fb910ab39e1a2b1902f58ddbefe8a5d7cac",
+      "sourceFilesMatched": 3,
+      "sources": {
+        "packages/adapters/src/requirements/approval-definition-selection.ts": "38893e071880b1de004c26c37db489af5f519303824686ef601eeb03a2e4344a",
+        "packages/adapters/src/requirements/approval-definition-template.ts": "fbb8bc45f6d616fd1cf8c238ff275bd22100a952c179f0889196681a485c6d37",
+        "packages/adapters/src/requirements/purchase-request-definition-selection.ts": "92d3bfc907c248ecbeec86b4f985c406a71c5869e80baa6335b108980770fa90"
+      }
+    }
+  ],
+  "sources": {
+    "apps/compiler-worker/src/verifier/probes.ts": "e3fcd97d6b86ceee8e786cc8edcbd1298f7c83d2539091c5980ad28d7f36d0d9",
+    "apps/compiler-worker/src/verifier/role-journey.ts": "784cf622a6e548fafd22dfe6011a7d2596e155f33cc80b79e0c46d0ee1d84f9e",
+    "apps/compiler-worker/src/verifier/verification-environment.ts": "63f9c248c1dfe0367d6b921f08267f42b01c4571c29fbf204359e8eeba12dfbb",
+    "apps/compiler-worker/src/verifier/verification-graph-plan.ts": "f9ad9d69d719b36b5cdc364ab74399c64292101e7fad09dc4bba02e92357f5b4",
+    "packages/adapters/src/requirements/approval-definition-selection.ts": "38893e071880b1de004c26c37db489af5f519303824686ef601eeb03a2e4344a",
+    "packages/adapters/src/requirements/approval-definition-template.ts": "fbb8bc45f6d616fd1cf8c238ff275bd22100a952c179f0889196681a485c6d37",
+    "packages/adapters/src/requirements/purchase-request-definition-selection.ts": "92d3bfc907c248ecbeec86b4f985c406a71c5869e80baa6335b108980770fa90",
+    "packages/compiler/src/approval-decision-history.ts": "2d0668557182c2e9ebef8fd44da235701facc3abbcc8b46229e9269d19c602d1",
+    "packages/compiler/src/approval-presentation-components.ts": "30fb07dfd0b5add46c549529c3ac2a066d6cf011ea6b74aad6a3c50b78f5c031",
+    "packages/compiler/src/approval-visual-assets.ts": "34f0085f7bb9339b72ae3b23678c7715307cd7fe4db98c7cb1c3548726f0d991",
+    "packages/compiler/src/approval-workspace-presentation.ts": "db5bb0c753f2a3e0b1667f6868a56849f201fe3fbedf0f127a323f635e1b1725",
+    "packages/compiler/src/index.ts": "42a87b685943fadb86b745978f9667b5252901b3fafb84ed8f81c0d21bca4ddc",
+    "packages/compiler/src/targets/database/target.ts": "688ee494c07190d012790f40bc6239428bd4d3887eb02a75bd6731636f73a955",
+    "packages/compiler/src/approval-mutation-contract.ts": "e0887dee854c59c3fff2521a50cbe61b89fd47a26db4c4f167b7b90114bcaab4"
+  },
+  "providerInvocation": false,
+  "interpretation": "authored fixture",
+  "runtime": "actual local PostgreSQL and generated HTTP/browser"
+}

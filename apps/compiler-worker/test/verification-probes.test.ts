@@ -1,3 +1,8 @@
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { posix } from "node:path";
+import { transpileModule, ModuleKind } from "typescript";
+import { generateApplicationBundle } from "@factory/compiler";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -26,6 +31,10 @@ import {
   type RoleJourneyFixture,
 } from "../src/verifier/role-journey.js";
 import { resolveVerificationProfile } from "../src/verifier/verification-profiles.js";
+import { deriveVerificationProfile } from "../src/verifier/verification-graph-plan.js";
+import { approvalLegacyFixtures } from "../../../packages/compiler/test/fixtures/approval-legacy.js";
+import { createCapabilityCompositionLock } from "@factory/capabilities";
+import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 import {
   acceptanceCompilation,
   acceptanceProfileKey,
@@ -315,6 +324,90 @@ describe("runRoleJourneyProbe", () => {
 });
 
 describe("chain journeys", () => {
+  it("overrides only a declared chain idempotency key and preserves session headers and default inheritance", async () => {
+    const request = capturingRequest(),
+      { context } = probeContext({ kind: "role-journey", request });
+    const journey: RoleJourneyFixture = {
+      journeyId: "key-chain",
+      action: "expense.approve",
+      sessionId: "fixture-session-manager",
+      headers: [{ name: "x-factory-idempotency-key", value: "parent-key" }],
+      chain: [
+        {
+          action: "expense.create",
+          sessionId: "fixture-session-employee",
+          body: "{}",
+          idempotencyKeyOverride: "create-key",
+        } as never,
+        {
+          action: "expense.submit-fresh",
+          sessionId: "fixture-session-employee",
+        },
+      ],
+    };
+    const result = await runRoleJourneyProbe(context, journey, chainRegistry);
+    expect(result.status).toBe("passed");
+    expect(
+      request.mock.calls.map(
+        (call) =>
+          (call[3] as { headers: { name: string; value: string }[] }).headers,
+      ),
+    ).toEqual([
+      [
+        { name: "x-factory-idempotency-key", value: "create-key" },
+        {
+          name: "x-factory-fixture-session",
+          value: "fixture-session-employee",
+        },
+      ],
+      [
+        { name: "x-factory-idempotency-key", value: "parent-key" },
+        {
+          name: "x-factory-fixture-session",
+          value: "fixture-session-employee",
+        },
+      ],
+      [
+        { name: "x-factory-idempotency-key", value: "parent-key" },
+        { name: "x-factory-fixture-session", value: "fixture-session-manager" },
+      ],
+    ]);
+    expect(JSON.stringify(result)).not.toMatch(/parent-key|create-key/);
+  });
+  it("rejects malformed or undeclared chain key overrides before any request", async () => {
+    for (const [key, headers] of [
+      ["bad key", [{ name: "x-factory-idempotency-key", value: "parent" }]],
+      [
+        "x".repeat(129),
+        [{ name: "x-factory-idempotency-key", value: "parent" }],
+      ],
+      ["", []],
+      ["valid", []],
+    ] as const) {
+      const request = capturingRequest(),
+        { context } = probeContext({ kind: "role-journey", request });
+      await expect(
+        runRoleJourneyProbe(
+          context,
+          {
+            journeyId: "key-chain",
+            action: "expense.approve",
+            sessionId: "fixture-session-manager",
+            ...(headers.length ? { headers } : {}),
+            chain: [
+              {
+                action: "expense.create",
+                body: "{}",
+                idempotencyKeyOverride: key,
+              } as never,
+            ],
+          },
+          chainRegistry,
+        ),
+      ).rejects.toBeInstanceOf(VerificationContractError);
+      expect(request).not.toHaveBeenCalled();
+    }
+  });
   // Mirrors the graph-derived registry for a branching flow: the create is a
   // static route, the path step is a `-fresh` template action, and the chained
   // final transition is a natural-name template action.
@@ -1132,4 +1225,382 @@ describe("expense-approval acceptance profile", () => {
       expect(body).toHaveProperty(field);
     }
   });
+});
+
+describe("stored-success idempotency probe", () => {
+  it.each(["expense", "purchase"] as const)(
+    "preserves session authority and command keys through published %s create, replay and chains",
+    async (name) => {
+      const graph = structuredClone(
+        approvalLegacyFixtures[name].input.graph,
+      ) as unknown as ApplicationGraphV1;
+      const flow = graph.flow.flows[0]!;
+      const requester = flow.transitions[0]!.roles![0]!;
+      flow.states = ["draft", "submitted", "approved", "returned"];
+      flow.events.push("update");
+      flow.transitions[2]!.to = "returned";
+      flow.transitions.push({
+        from: "returned",
+        event: "update",
+        to: "draft",
+        roles: [requester],
+        effects: [{ capability: "audit.record", operation: "record" }],
+      });
+      graph.policy.permissions.find(
+        (p) => p.resource === flow.entity && p.role === requester,
+      )!.actions = ["create", "read", "update", "submit"];
+      graph.domain.entities
+        .find((e) => e.key === flow.entity)!
+        .fields.find((f) => f.key === "status")!.values = flow.states;
+      const selections = graph.integration.compositionSelections!;
+      delete graph.integration.compositionSelections;
+      const profile = deriveVerificationProfile(
+        graph,
+        createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(graph),
+          selections,
+        }),
+      );
+      for (const suffix of [
+        "create",
+        "submit",
+        "approve",
+        "reject",
+        "update",
+      ]) {
+        const journey = profile.journeys[flow.entity + "-" + suffix]!;
+        const seen: any[] = [];
+        const request = vi.fn(
+          async (method: string, path: string, _port: string, options: any) => {
+            seen.push(options);
+            const hasSession = options.headers.some(
+              (h: any) => h.name === "x-factory-fixture-session",
+            );
+            const hasKey = options.headers.some(
+              (h: any) => h.name === "x-factory-idempotency-key",
+            );
+            const status =
+              !hasSession || !hasKey
+                ? 400
+                : method === "POST" && path === "/api/" + flow.entity
+                  ? 201
+                  : 200;
+            return {
+              ...boundedRequest(status),
+              recordId: "fixture-created-record",
+            };
+          },
+        );
+        const { context } = probeContext({
+          kind: suffix === "submit" ? "idempotency" : "role-journey",
+          request,
+        });
+        const result =
+          suffix === "submit"
+            ? await runIdempotencyProbe(
+                context,
+                journey as IdempotencyJourneyFixture,
+                profile.apiRegistry,
+              )
+            : await runRoleJourneyProbe(context, journey, profile.apiRegistry);
+        expect(result.status).toBe("passed");
+        expect(seen.length).toBe(
+          suffix === "submit" ? 2 : 1 + (journey.chain?.length ?? 0),
+        );
+        for (const options of seen) {
+          expect(options.headers).toContainEqual({
+            name: "x-factory-idempotency-key",
+            value: journey.headers![0]!.value,
+          });
+          expect(
+            options.headers.filter(
+              (h: any) => h.name === "x-factory-fixture-session",
+            ),
+          ).toHaveLength(1);
+          expect(
+            options.headers.some((h: any) => h.name === "x-factory-role"),
+          ).toBe(false);
+        }
+        if (suffix === "submit") expect(seen[1]).toEqual(seen[0]);
+        expect(JSON.stringify(result)).not.toContain(
+          journey.headers![0]!.value,
+        );
+        expect(JSON.stringify(result)).not.toContain("fixture-created-record");
+      }
+    },
+  );
+  it("rejects declared attempts to replace resolved session authority before any request", async () => {
+    const { context, request } = probeContext({ kind: "role-journey" });
+    await expect(
+      runRoleJourneyProbe(
+        context,
+        {
+          journeyId: "session-conflict",
+          action: "expense.create",
+          sessionId: "fixture-session-employee",
+          headers: [
+            {
+              name: "x-factory-fixture-session",
+              value: "fixture-session-manager",
+            },
+          ],
+        },
+        expenseApprovalApiRegistry,
+      ),
+    ).rejects.toThrow(VerificationContractError);
+    expect(request).not.toHaveBeenCalled();
+  });
+  it("replays one exact header command and matches safe identity without retaining contents", async () => {
+    const request = vi.fn(async () => ({
+      ...boundedRequest(200),
+      recordId: "fixture-record",
+      body: "HOSTILE-RESPONSE",
+    }));
+    const { context } = probeContext({ kind: "idempotency", request });
+    const journey = {
+      journeyId: "correction-submit",
+      action: "expense.submit",
+      principal: "employee",
+      idempotencyKey: "verify-correction",
+      expectedVersion: 0,
+      replayExpectation: "stored-success",
+      headers: [
+        { name: "x-factory-idempotency-key", value: "verify-correction" },
+      ],
+      body: '{"expectedVersion":0}',
+    } as IdempotencyJourneyFixture;
+    const result = await runIdempotencyProbe(context, journey, [
+      {
+        action: "expense.submit",
+        method: "POST",
+        route: "/api/expense/fixture-record/events/submit",
+        expectedStatus: 200,
+      },
+    ]);
+    expect(result.status).toBe("passed");
+    expect(request.mock.calls[0]).toEqual(request.mock.calls[1]);
+    expect(JSON.stringify(result)).not.toMatch(
+      /fixture-record|verify-correction|HOSTILE-RESPONSE|expectedVersion/,
+    );
+  });
+});
+
+describe("generated Task correction through bounded probes", () => {
+  function fixture(failCreate = false) {
+    const input = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../../packages/compiler/test/fixtures/task-correction-legacy-baseline.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ).entries[0].input;
+    input.graph.policy.permissions.find(
+      (p: any) => p.resource === "task" && p.actions.includes("create"),
+    ).actions = ["create", "read", "update", "start", "complete", "reopen"];
+    input.compositionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(input.graph),
+      selections: input.compositionLock.packages,
+    });
+    const profile = deriveVerificationProfile(
+        input.graph,
+        input.compositionLock,
+      ),
+      files = generateApplicationBundle(input).files;
+    const cache = new Map<string, any>(),
+      runtimeRequire = createRequire(
+        new URL("../../../packages/compiler/package.json", import.meta.url),
+      );
+    const load = (path: string): any => {
+      if (cache.has(path)) return cache.get(path);
+      const file = files.find((f) => f.path === path)!;
+      const exports: any = {};
+      cache.set(path, exports);
+      new Function(
+        "require",
+        "exports",
+        transpileModule(file.content, {
+          compilerOptions: { module: ModuleKind.CommonJS, target: 99 },
+        }).outputText,
+      )(
+        (name: string) =>
+          name.startsWith(".")
+            ? load(
+                posix.normalize(
+                  posix.join(posix.dirname(path), name.replace(/\.js$/, ".ts")),
+                ),
+              )
+            : runtimeRequire(name),
+        exports,
+      );
+      return exports;
+    };
+    const { ApplicationRuntime, InMemoryRecordStore } = load(
+        "api/src/application-runtime.ts",
+      ),
+      store = new InMemoryRecordStore();
+    const calls: {
+      method: string;
+      path: string;
+      key: string;
+      body: string;
+      status: number;
+    }[] = [];
+    const env = new VerificationEnvironment({
+      artifactRoot: "generated",
+      previewRunId: "preview-task-probe",
+      rootDirectory: "task-probe",
+      composeProjectName: "factory-preview-task-probe",
+      artifacts: [
+        { path: "docker-compose.yml", digest: "sha256:deadbeef", sizeBytes: 5 },
+        { path: "api/package.json", digest: "sha256:deadbeef", sizeBytes: 5 },
+      ],
+      operationTimeoutMs: 1000,
+      startPreviewRun: vi.fn(async () => ({
+        webPort: 3000,
+        apiPort: 3001,
+        previewUrl: "http://127.0.0.1:3000",
+      })),
+      stopPreviewRun: vi.fn(async () => undefined),
+      fetch: vi.fn(async (url, init) => {
+        const path = new URL(String(url)).pathname,
+          parts = path.split("/"),
+          method = String(init?.method),
+          headers = new Headers(init?.headers),
+          session = headers.get("x-factory-fixture-session") ?? "",
+          role = session.replace("fixture-session-", ""),
+          body = String(init?.body),
+          key = headers.get("x-factory-idempotency-key") ?? "",
+          operation =
+            method === "PATCH"
+              ? "update"
+              : parts[4] === "events"
+                ? parts[5]
+                : "create";
+        const call = { method, path, key, body, status: 0 };
+        calls.push(call);
+        if (failCreate && operation === "create") {
+          call.status = 503;
+          return new Response("{}", { status: 503 });
+        }
+        try {
+          const result = await new ApplicationRuntime(store).taskCommand(
+            role,
+            session,
+            parts[2],
+            parts[3],
+            operation,
+            key,
+            JSON.parse(body),
+          );
+          call.status = result.status;
+          return new Response(JSON.stringify(result.body), {
+            status: result.status,
+          });
+        } catch (error) {
+          const rejected = error as { status: number; body: unknown };
+          call.status = rejected.status;
+          return new Response(JSON.stringify(rejected.body), {
+            status: rejected.status,
+          });
+        }
+      }),
+    });
+    return { profile, store, calls, env };
+  }
+  it("stops idempotency before PATCH and replay when its declared create fails", async () => {
+    const { profile, store, calls, env } = fixture(true);
+    await env.boot();
+    const journey = profile.journeys[
+      "task-update"
+    ] as IdempotencyJourneyFixture;
+    const result = await runIdempotencyProbe(
+      {
+        entry: { stepId: "task-update", kind: "idempotency" },
+        environment: env,
+        signal: new AbortController().signal,
+      },
+      journey,
+      profile.apiRegistry,
+    );
+    expect(result).toMatchObject({
+      status: "failed",
+      failureCode: "role-journey.chain_unexpected",
+      httpStatus: 503,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("POST");
+    expect(await store.listAudit()).toHaveLength(0);
+    await env.cleanup();
+  });
+  it.each(["recomplete", "update", "denied-update"])(
+    "executes the generated %s fixture through request bounds and real Task commands",
+    async (suffix) => {
+      const { profile, store, calls, env } = fixture();
+      await env.boot();
+      const id = "task-" + suffix,
+        journey = profile.journeys[id],
+        entry = profile.stepPlan.find((step) => step.stepId === id)!;
+      const context = {
+        entry,
+        environment: env,
+        signal: new AbortController().signal,
+      };
+      const result =
+        suffix === "update"
+          ? await runIdempotencyProbe(
+              context,
+              journey as IdempotencyJourneyFixture,
+              profile.apiRegistry,
+            )
+          : suffix === "denied-update"
+            ? await runAuthorizationDenialProbe(
+                context,
+                journey,
+                profile.apiRegistry,
+              )
+            : await runRoleJourneyProbe(context, journey, profile.apiRegistry);
+      expect(result.status).toBe("passed");
+      expect(calls.every((call) => !call.path.includes("{"))).toBe(true);
+      expect(
+        calls.filter(
+          (call) => call.method === "POST" && call.path === "/api/task",
+        ),
+      ).toHaveLength(1);
+      const audits = await store.listAudit();
+      if (suffix === "recomplete") {
+        expect(calls.map((call) => call.status)).toEqual([
+          201, 200, 200, 200, 200, 403, 200, 200,
+        ]);
+        expect(audits).toHaveLength(7);
+        expect(
+          audits.filter((row: any) => row.action === "update"),
+        ).toHaveLength(2);
+        expect(
+          (await store.list("task")).find(
+            (row: any) => row.id !== "sample-task",
+          ),
+        ).toMatchObject({ status: "completed", version: 6 });
+      } else if (suffix === "update") {
+        expect(calls.map((call) => call.status)).toEqual([201, 200, 200]);
+        expect(calls[1]).toEqual(calls[2]);
+        expect(calls[0].key).not.toBe(calls[1].key);
+        expect(audits).toHaveLength(2);
+        expect(
+          (await store.list("task")).find(
+            (row: any) => row.id !== "sample-task",
+          ),
+        ).toMatchObject({ status: "not-started", version: 1 });
+      } else {
+        expect(calls.map((call) => call.status)).toEqual([201, 403]);
+        expect(audits).toHaveLength(1);
+      }
+      expect(JSON.stringify(result)).not.toContain(calls[0].key);
+      expect(JSON.stringify(result)).not.toContain(
+        "Corrected verification task",
+      );
+      await env.cleanup();
+    },
+  );
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   FixtureRequirementInterpreter,
-  type RequirementInterpretationV1,
+  type RequirementInterpretationResultV1,
 } from "@factory/adapters";
 import { planProductAlternatives } from "@factory/capabilities/node";
 import {
@@ -32,7 +32,7 @@ const vagueBrief =
 async function interpretedBrief(
   brief: string,
   answers: Readonly<Record<string, string>> = {},
-): Promise<RequirementInterpretationV1> {
+): Promise<RequirementInterpretationResultV1> {
   return fixtureInterpreter.interpret({ brief, answers });
 }
 
@@ -43,11 +43,11 @@ function stateWith(
 }
 
 /** The deterministic blank Draft the control plane creates for this spec. */
-function blankDraftFor(interpretation: RequirementInterpretationV1) {
+function blankDraftFor(interpretation: RequirementInterpretationResultV1) {
   return createBlankApplicationDraft({
-    applicationId: interpretation.spec.requirementId,
+    applicationId: interpretation.interpretation.spec.requirementId,
     workspaceId: "local-workspace",
-    name: interpretation.spec.requirementId,
+    name: interpretation.interpretation.spec.requirementId,
   });
 }
 
@@ -188,9 +188,10 @@ describe("Product journey model", () => {
       type: "review-created",
       review: {
         id: "review-expense",
-        applicationGraphId: interpretation.spec.requirementId,
+        applicationGraphId: interpretation.interpretation.spec.requirementId,
         status: "planning",
-        requirementChecksum: interpretation.blueprint.requirementChecksum,
+        requirementChecksum:
+          interpretation.interpretation.blueprint.requirementChecksum,
         draftBaseChecksum: hashApplicationGraph(
           blankDraftFor(interpretation).graph,
         ),
@@ -198,15 +199,15 @@ describe("Product journey model", () => {
     });
     expect(state.stage).toBe("planning");
     expect(state.review?.requirementChecksum).toBe(
-      interpretation.blueprint.requirementChecksum,
+      interpretation.interpretation.blueprint.requirementChecksum,
     );
   });
 
   it("stores the deterministic plan alternatives for comparison", async () => {
     const interpretation = await interpretedBrief(expenseBrief);
     const alternatives = planProductAlternatives({
-      requirement: interpretation.spec,
-      blueprint: interpretation.blueprint,
+      requirement: interpretation.interpretation.spec,
+      blueprint: interpretation.interpretation.blueprint,
       baseDraft: blankDraftFor(interpretation),
     });
     let state = stateWith({
@@ -214,9 +215,10 @@ describe("Product journey model", () => {
       interpretation,
       review: {
         id: "review-expense",
-        applicationGraphId: interpretation.spec.requirementId,
+        applicationGraphId: interpretation.interpretation.spec.requirementId,
         status: "planned",
-        requirementChecksum: interpretation.blueprint.requirementChecksum,
+        requirementChecksum:
+          interpretation.interpretation.blueprint.requirementChecksum,
         draftBaseChecksum: "sha256:blank",
       },
     });
@@ -233,7 +235,7 @@ describe("Product journey model", () => {
         planAlternativeSummary(alternative.plan),
       ) ?? [];
     expect(summaries[0].planId).toBe(
-      `${interpretation.spec.requirementId}-standard`,
+      `${interpretation.interpretation.spec.requirementId}-standard`,
     );
     expect(summaries[0].capabilityLocks.length).toBeGreaterThan(
       summaries[1].capabilityLocks.length,
@@ -244,13 +246,13 @@ describe("Product journey model", () => {
   it("compares alternatives by bounded summary without raw plan material", async () => {
     const interpretation = await interpretedBrief(expenseBrief);
     const alternatives = planProductAlternatives({
-      requirement: interpretation.spec,
-      blueprint: interpretation.blueprint,
+      requirement: interpretation.interpretation.spec,
+      blueprint: interpretation.interpretation.blueprint,
       baseDraft: blankDraftFor(interpretation),
     });
     const summary = planAlternativeSummary(alternatives[0].plan);
     expect(summary).toEqual({
-      planId: `${interpretation.spec.requirementId}-standard`,
+      planId: `${interpretation.interpretation.spec.requirementId}-standard`,
       capabilityLocks: expect.any(Array),
       operations: expect.any(Number),
       complexity: expect.any(String),
@@ -262,8 +264,8 @@ describe("Product journey model", () => {
   it("accepts one alternative and records the approved Diff checksum", async () => {
     const interpretation = await interpretedBrief(expenseBrief);
     const alternatives = planProductAlternatives({
-      requirement: interpretation.spec,
-      blueprint: interpretation.blueprint,
+      requirement: interpretation.interpretation.spec,
+      blueprint: interpretation.interpretation.blueprint,
       baseDraft: blankDraftFor(interpretation),
     });
     let state = stateWith({
@@ -271,9 +273,10 @@ describe("Product journey model", () => {
       interpretation,
       review: {
         id: "review-expense",
-        applicationGraphId: interpretation.spec.requirementId,
+        applicationGraphId: interpretation.interpretation.spec.requirementId,
         status: "planned",
-        requirementChecksum: interpretation.blueprint.requirementChecksum,
+        requirementChecksum:
+          interpretation.interpretation.blueprint.requirementChecksum,
         draftBaseChecksum: "sha256:blank",
       },
       alternatives,
@@ -414,8 +417,8 @@ describe("Product journey model", () => {
       interpretation,
     });
     const input = createRequirementInput(state);
-    expect(input.requirement).toBe(interpretation.spec);
-    expect(input.blueprint).toBe(interpretation.blueprint);
+    expect(input.requirement).toBe(interpretation.interpretation.spec);
+    expect(input.blueprint).toBe(interpretation.interpretation.blueprint);
     expect(input.blueprint.requirementChecksum).toBe(
       hashRequirementSpec(input.requirement),
     );

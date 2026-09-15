@@ -1,0 +1,229 @@
+{
+  "date": "2026-09-15",
+  "baseCommit": "1c8b20a655b24d556df6f3c8719874107639cf7d",
+  "meaning": "Formatting reconciliation only. Historical digests retain their original commit scope; no outcome or stored digest field is replaced.",
+  "paths": [
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-correction/acceptance.compose.yml",
+      "beforeGitSha256": "258fc68b787066443e5b614574d2555c5175d9cf57bee68c363509a3a079e588",
+      "afterGitSha256": "258fc68b787066443e5b614574d2555c5175d9cf57bee68c363509a3a079e588",
+      "afterWorkingSha256": "258fc68b787066443e5b614574d2555c5175d9cf57bee68c363509a3a079e588",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-correction/expense/correction-journey.json",
+      "beforeGitSha256": "b4af728083e4b29b6308f333e78ad88968d653773778c050cc06b9778b82ea75",
+      "afterGitSha256": "ee262bd42b7ab6e8b8efea1bf3c34c6846912095628e8342e13e3ff800012d62",
+      "afterWorkingSha256": "ee262bd42b7ab6e8b8efea1bf3c34c6846912095628e8342e13e3ff800012d62",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-correction/implementation-report.md",
+      "beforeGitSha256": "b3e6749172a69c202908d941e1ba511582c3a19775d1fda59a237fde0a389212",
+      "afterGitSha256": "0dd236d735c58f6b11f1016e2e2a90933ddcf0c44cd66862ef745c23b771b0f5",
+      "afterWorkingSha256": "0dd236d735c58f6b11f1016e2e2a90933ddcf0c44cd66862ef745c23b771b0f5",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-correction/purchase/correction-journey.json",
+      "beforeGitSha256": "2db006ddb4e21a362fa0472847025cfc3073330d3bc08fef348cdec3a25ec84a",
+      "afterGitSha256": "93074798c3b65de49e1ee7b3463983909339b6c321e6514be6fca051fe957f31",
+      "afterWorkingSha256": "93074798c3b65de49e1ee7b3463983909339b6c321e6514be6fca051fe957f31",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-approval-correction/qa-report.md",
+      "beforeGitSha256": "f2a4e2d27412fc68f60482b8dfec11aa09fd8c428518df0b5aa5ba033e05d088",
+      "afterGitSha256": "2d50b2a5a52c1ee50a80b142efa3b05f76e83d9f898ccc907596307ca9fbf6ca",
+      "afterWorkingSha256": "2d50b2a5a52c1ee50a80b142efa3b05f76e83d9f898ccc907596307ca9fbf6ca",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/acceptance-source-identity-attempt-3.json",
+      "beforeGitSha256": "8ce55500c2e28fe237aa9159fa35fd5f6922ff58aa310a92bdbd698f2ca3db30",
+      "afterGitSha256": "8ce55500c2e28fe237aa9159fa35fd5f6922ff58aa310a92bdbd698f2ca3db30",
+      "afterWorkingSha256": "8ce55500c2e28fe237aa9159fa35fd5f6922ff58aa310a92bdbd698f2ca3db30",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/acceptance-source-identity.json",
+      "beforeGitSha256": "7d136e8d94b97c5ca6b067361c07f93690e939567dfb231b6f760ee26480db87",
+      "afterGitSha256": "7d136e8d94b97c5ca6b067361c07f93690e939567dfb231b6f760ee26480db87",
+      "afterWorkingSha256": "7d136e8d94b97c5ca6b067361c07f93690e939567dfb231b6f760ee26480db87",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/cleanup.json",
+      "beforeGitSha256": "3df5b422a7ff6a51c964c02c78d8ac23a494420ca82117943d97114f5a89a0cc",
+      "afterGitSha256": "3df5b422a7ff6a51c964c02c78d8ac23a494420ca82117943d97114f5a89a0cc",
+      "afterWorkingSha256": "3df5b422a7ff6a51c964c02c78d8ac23a494420ca82117943d97114f5a89a0cc",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/collect-runtime-facts.mjs",
+      "beforeGitSha256": "3c6b530d84eed72018a78fb3823cdf928585a00f6e0ef6df5e2507a49a6749f8",
+      "afterGitSha256": "9d4d07c6f3591f729f1b565578dcc9d8e37b90f44ace2433bfd99ffffc300fc1",
+      "afterWorkingSha256": "9d4d07c6f3591f729f1b565578dcc9d8e37b90f44ace2433bfd99ffffc300fc1",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/delivery-receipt.json",
+      "beforeGitSha256": "27889e34e686060b29ac35f2fbdf57337bd45fa976cc524a8a155d0ada8da492",
+      "afterGitSha256": "27889e34e686060b29ac35f2fbdf57337bd45fa976cc524a8a155d0ada8da492",
+      "afterWorkingSha256": "27889e34e686060b29ac35f2fbdf57337bd45fa976cc524a8a155d0ada8da492",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/implementation-report.md",
+      "beforeGitSha256": "ae0e454021eda23c6d62e3d6115ea503864a13fddac9d86f1bc0686482b6dedb",
+      "afterGitSha256": "ae0e454021eda23c6d62e3d6115ea503864a13fddac9d86f1bc0686482b6dedb",
+      "afterWorkingSha256": "ae0e454021eda23c6d62e3d6115ea503864a13fddac9d86f1bc0686482b6dedb",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/product-scorecard.json",
+      "beforeGitSha256": "8692f5f7a9cc463c4b67ae641c74aa9d3d31fdc57d4a3ade37b659beae7d44e8",
+      "afterGitSha256": "02b8581f74a32971432641fb28f79d9b9eabef6c00ede57182d66b99d13b5102",
+      "afterWorkingSha256": "02b8581f74a32971432641fb28f79d9b9eabef6c00ede57182d66b99d13b5102",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/release-review.md",
+      "beforeGitSha256": "c3288c23b633b4e8be187a7a1ca123a7a13290c4f0b4b216c43a23f241ff9e0a",
+      "afterGitSha256": "c3288c23b633b4e8be187a7a1ca123a7a13290c4f0b4b216c43a23f241ff9e0a",
+      "afterWorkingSha256": "c3288c23b633b4e8be187a7a1ca123a7a13290c4f0b4b216c43a23f241ff9e0a",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/screenshot-inventory.json",
+      "beforeGitSha256": "93b9d953ea1128bd221cca5b54f2b4db7b042bb81845790e5277982aac9bfe22",
+      "afterGitSha256": "93b9d953ea1128bd221cca5b54f2b4db7b042bb81845790e5277982aac9bfe22",
+      "afterWorkingSha256": "93b9d953ea1128bd221cca5b54f2b4db7b042bb81845790e5277982aac9bfe22",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/source-identity-attempt-3.json",
+      "beforeGitSha256": "6c6b2d4a8b9e91482ccc61988a531abdc9db13650838dc9f02d929df4270fec9",
+      "afterGitSha256": "6c6b2d4a8b9e91482ccc61988a531abdc9db13650838dc9f02d929df4270fec9",
+      "afterWorkingSha256": "6c6b2d4a8b9e91482ccc61988a531abdc9db13650838dc9f02d929df4270fec9",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/source-identity.json",
+      "beforeGitSha256": "6c6b2d4a8b9e91482ccc61988a531abdc9db13650838dc9f02d929df4270fec9",
+      "afterGitSha256": "6c6b2d4a8b9e91482ccc61988a531abdc9db13650838dc9f02d929df4270fec9",
+      "afterWorkingSha256": "6c6b2d4a8b9e91482ccc61988a531abdc9db13650838dc9f02d929df4270fec9",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/task-review-repair.md",
+      "beforeGitSha256": "7a466c164327c7621973d8fb800a34590c4515c41ca35ab62df3d2e7e76bf576",
+      "afterGitSha256": "7a466c164327c7621973d8fb800a34590c4515c41ca35ab62df3d2e7e76bf576",
+      "afterWorkingSha256": "7a466c164327c7621973d8fb800a34590c4515c41ca35ab62df3d2e7e76bf576",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/verification-attempt-2.json",
+      "beforeGitSha256": "4816626a96e41bef2f0d925990601a31abade228ba2d6f93eb9b5356c01c7a29",
+      "afterGitSha256": "4816626a96e41bef2f0d925990601a31abade228ba2d6f93eb9b5356c01c7a29",
+      "afterWorkingSha256": "4816626a96e41bef2f0d925990601a31abade228ba2d6f93eb9b5356c01c7a29",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/verification-attempt-3.json",
+      "beforeGitSha256": "91bf4fe8c4e7b060cc7e0b62f138deb6942938fba1ce9e541a032d59f4bcf4dd",
+      "afterGitSha256": "91bf4fe8c4e7b060cc7e0b62f138deb6942938fba1ce9e541a032d59f4bcf4dd",
+      "afterWorkingSha256": "91bf4fe8c4e7b060cc7e0b62f138deb6942938fba1ce9e541a032d59f4bcf4dd",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task-correction/verify-runtime-identity.mjs",
+      "beforeGitSha256": "43962bf1dfad40504ac39b40491f9b5f866208b014a213f7ce84c2e110cb3849",
+      "afterGitSha256": "ee441d17863075a3eeaa43a2f573917f5b4cb9efd1af40bf323ba3e8557e3dbf",
+      "afterWorkingSha256": "ee441d17863075a3eeaa43a2f573917f5b4cb9efd1af40bf323ba3e8557e3dbf",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task/delivery.json",
+      "beforeGitSha256": "16baeec430fcfe8182ff96ea3797f83a6386d0ceb62dcdb70105f0bb437c8879",
+      "afterGitSha256": "16baeec430fcfe8182ff96ea3797f83a6386d0ceb62dcdb70105f0bb437c8879",
+      "afterWorkingSha256": "16baeec430fcfe8182ff96ea3797f83a6386d0ceb62dcdb70105f0bb437c8879",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task/implementation-report.md",
+      "beforeGitSha256": "8f8e45c062d59ba09ac2eb538d63304fd70f610e58173183cc65bb1dbdbcb194",
+      "afterGitSha256": "8f8e45c062d59ba09ac2eb538d63304fd70f610e58173183cc65bb1dbdbcb194",
+      "afterWorkingSha256": "8f8e45c062d59ba09ac2eb538d63304fd70f610e58173183cc65bb1dbdbcb194",
+      "gitContentChanged": false
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task/qa-report.md",
+      "beforeGitSha256": "d5ab3d2f9905be83d34dadca48b9556d865e1b420473bd3a0e164821f755f65f",
+      "afterGitSha256": "0e800910b735a6dff872436fdf5979c6b76a181ee5371e48caa19a16ee9d6991",
+      "afterWorkingSha256": "0e800910b735a6dff872436fdf5979c6b76a181ee5371e48caa19a16ee9d6991",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/consumer-task/task-review.md",
+      "beforeGitSha256": "9a78198d8a0d7e2637d298d5caf2d2abc2bbd7f95d277b7579c451dd28b89e9a",
+      "afterGitSha256": "060ce33c5540c8f5633db2b5535003ccf88f2d2e4f9c71c2eb2d3c00bb0d07ba",
+      "afterWorkingSha256": "060ce33c5540c8f5633db2b5535003ccf88f2d2e4f9c71c2eb2d3c00bb0d07ba",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/definition-batch-one/attempt4/correction-journey.json",
+      "beforeGitSha256": "1d797f3bba3a3da48ce39784db2b2f94651b084a103c993851256cb3253161af",
+      "afterGitSha256": "3ef78feb663b883437cff178003b0c3adea6a22360b29f9653f3b62af64073ec",
+      "afterWorkingSha256": "3ef78feb663b883437cff178003b0c3adea6a22360b29f9653f3b62af64073ec",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/acceptance/evidence/definition-batch-one/publication-review/correction-journey.json",
+      "beforeGitSha256": "acd6e89c80ecf5e3e17f7fe8520c542a400fffe51969a3e3a21ba938960dfe1b",
+      "afterGitSha256": "4dc197d2d84a490b2f3f473334823fabbd3b639974dbf4906e15df2c23da6e3a",
+      "afterWorkingSha256": "4dc197d2d84a490b2f3f473334823fabbd3b639974dbf4906e15df2c23da6e3a",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/adr/adr-0044-restaurant-business-parameter-binding.md",
+      "beforeGitSha256": "7b8cd99ef4b3d86566a0a01e45491947e3d297190747f7b34ac8fc61132f60ee",
+      "afterGitSha256": "2afc77e7e43d8a48a55f354bc6d3e2325cd8cc5f7ccf3d054e3ac850e0dadcd3",
+      "afterWorkingSha256": "2afc77e7e43d8a48a55f354bc6d3e2325cd8cc5f7ccf3d054e3ac850e0dadcd3",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/adr/adr-0048-approval-consumer-orchestration.md",
+      "beforeGitSha256": "dab46a99706a22d24c10f3c1403ae867a801780f4133d61e24f1994332a4d38b",
+      "afterGitSha256": "3dc6472d2a5fbea3b87bc5870b46e6009da20c345327783d2888294bb76b71e2",
+      "afterWorkingSha256": "3dc6472d2a5fbea3b87bc5870b46e6009da20c345327783d2888294bb76b71e2",
+      "gitContentChanged": true
+    },
+    {
+      "path": "docs/adr/adr-0062-approval-correction-presentation-integration.md",
+      "beforeGitSha256": "088cef645a80a34d05fe027cec3e15914ba2735bdd682778c7de41e96a5b8201",
+      "afterGitSha256": "7ceff2471855189c818ebe58d4b067c51be09348cb60aa5ae3520acc1d15564a",
+      "afterWorkingSha256": "7ceff2471855189c818ebe58d4b067c51be09348cb60aa5ae3520acc1d15564a",
+      "gitContentChanged": true
+    }
+  ],
+  "validation": {
+    "jsonParsedEquivalence": "15/15 pass",
+    "scriptSyntaxTreeEquivalence": "2/2 pass; node kinds and literal values equal, source text/trivia excluded",
+    "markdownAndYaml": "Formatting-only diff reviewed; original ADR decisions preserved"
+  },
+  "restaurantScreenshots": [
+    {
+      "source": "acceptance-artifacts/d1.8/orders-1440.png",
+      "path": "docs/images/restaurant-orders-desktop.png",
+      "sha256": "3dce7ddfbbe155770314a7450f8ba3f441bb004fd266eea2234e8ed477d65b63",
+      "originalBytesEqual": true
+    },
+    {
+      "source": "acceptance-artifacts/d1.8/orders-390.png",
+      "path": "docs/images/restaurant-orders-mobile.png",
+      "sha256": "334784c94dd647557b03538598dd59c49cf773afc7b91d70b8317818e7963c9d",
+      "originalBytesEqual": true
+    }
+  ]
+}

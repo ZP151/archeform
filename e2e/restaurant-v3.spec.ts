@@ -1,6 +1,15 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { observeInterpretation } from "./helpers/interpretation-diagnostics";
+
+let finishDiagnostics: (() => Promise<void>) | undefined;
+test.beforeEach(({ page }) => {
+  finishDiagnostics = observeInterpretation(page);
+});
+test.afterEach(async () => {
+  await finishDiagnostics?.();
+});
 
 /**
  * Task 9C — Restaurant V3 acceptance: one environment-only real-model run.
@@ -40,9 +49,9 @@ const PLAN_OBSERVER_TIMEOUT_MS = 1_800_000;
 const COMPILATION_TIMEOUT_MS = 315_000;
 const VERIFICATION_TIMEOUT_MS = 910_000;
 
-// The real-model plan step is non-deterministic, so a failed interpretation
-// or plan is retried (each retry is a fresh real-model run).
-test.describe.configure({ mode: "serial", retries: 2 });
+// Record each real-provider result explicitly; a failed acceptance is not
+// silently replaced by another paid model attempt.
+test.describe.configure({ mode: "serial", retries: 0 });
 
 function dockerOutput(args: readonly string[]): string {
   return execFileSync("docker", [...args], {
@@ -128,6 +137,13 @@ test("Restaurant Describe yields a V3 Draft, edits, publishes, compiles, verifie
 }) => {
   test.setTimeout(1_800_000);
   await page.goto("/");
+
+  // Preserve this existing builder/lifecycle acceptance in its explicit manual
+  // path; the default Restaurant flow now owns the automatic delivery path.
+  await page.getByText("Advanced options", { exact: true }).click();
+  await page
+    .getByLabel("Review the Restaurant plan and delivery steps myself")
+    .check();
 
   // Describe: the interpreter routes a restaurant brief to the V3 composer.
   await page.getByLabel("Requirement brief").fill(restaurantBrief);

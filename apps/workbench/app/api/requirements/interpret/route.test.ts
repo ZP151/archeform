@@ -358,7 +358,7 @@ describe("Requirement interpret route", () => {
         priorInterpretation: {
           ...priorInterpretation,
           blueprint: {
-            ...priorInterpretation.blueprint,
+            ...priorInterpretation.interpretation.blueprint,
             requirementChecksum: `sha256:${"0".repeat(64)}`,
           },
         },

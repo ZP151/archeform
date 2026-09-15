@@ -1,0 +1,34 @@
+
+Running 1 test using 1 worker
+
+(node:51704) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:51704) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_TASK_FAILURE {"stage":"describe","compilationId":"cmtzkqusn000dnj4twfsml6lh","interpretationCalls":1,"lifecycle":["publish","compile","verify"],"elapsedMs":302968}
+  x  1 e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board (5.1m)
+
+
+  1) e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 300000ms exceeded while waiting on the predicate
+
+      780 |     await expect(delivery).toBeVisible({ timeout: 60_000 });
+      781 |     const openApp = delivery.getByRole("link", { name: "Open local app" });
+    > 782 |     await expect
+          |     ^
+      783 |       .poll(async () => await openApp.isVisible(), { timeout: 300_000 })
+      784 |       .toBe(true);
+      785 |     const elapsedToReadyMs = Date.now() - startedAt;
+        at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\consumer-task.spec.ts:782:5
+
+  Slow test file: e2e\consumer-task.spec.ts (5.1m)
+  Consider running tests from slow files in parallel, see https://playwright.dev/docs/test-parallel.
+  1 failed
+    e2e\consumer-task.spec.ts:704:5 › D2.5 deterministic Task selection publishes a safe shared board

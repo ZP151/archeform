@@ -1,0 +1,373 @@
+{
+  "verificationRunId": "verify-aeab0a41-39ec-4414-932c-6f4d2b62f87a",
+  "status": "succeeded",
+  "evidence": {
+    "steps": [
+      {
+        "kind": "migration",
+        "status": "passed",
+        "stepId": "migration",
+        "summary": "Database schema is applied and up to date.",
+        "durationMs": 1557
+      },
+      {
+        "kind": "health",
+        "status": "passed",
+        "stepId": "health",
+        "summary": "Health endpoint returned 200.",
+        "durationMs": 43,
+        "httpStatus": 200
+      },
+      {
+        "kind": "role-journey",
+        "action": "task.create",
+        "status": "passed",
+        "stepId": "task-create",
+        "summary": "Role journey completed as declared.",
+        "durationMs": 69,
+        "httpStatus": 201
+      },
+      {
+        "kind": "role-journey",
+        "action": "task.read",
+        "status": "passed",
+        "stepId": "task-read",
+        "summary": "Role journey completed as declared.",
+        "durationMs": 5,
+        "httpStatus": 200
+      },
+      {
+        "kind": "idempotency",
+        "action": "task.start",
+        "status": "passed",
+        "stepId": "task-start",
+        "summary": "The repeated command reproduced its stored success.",
+        "durationMs": 20,
+        "httpStatus": 200
+      },
+      {
+        "kind": "role-journey",
+        "action": "task.complete",
+        "status": "passed",
+        "stepId": "task-complete",
+        "summary": "Role journey completed as declared.",
+        "durationMs": 10,
+        "httpStatus": 200
+      },
+      {
+        "kind": "role-journey",
+        "action": "task.reopen",
+        "status": "passed",
+        "stepId": "task-reopen",
+        "summary": "Role journey completed as declared.",
+        "durationMs": 10,
+        "httpStatus": 200
+      },
+      {
+        "kind": "authorization-denial",
+        "action": "task.start",
+        "status": "passed",
+        "stepId": "task-denied-start",
+        "summary": "Authorization denied the principal as declared.",
+        "durationMs": 3,
+        "httpStatus": 403
+      },
+      {
+        "kind": "role-journey",
+        "action": "task.complete-fresh",
+        "status": "passed",
+        "stepId": "task-recomplete",
+        "summary": "Role journey completed as declared.",
+        "durationMs": 9,
+        "httpStatus": 200
+      },
+      {
+        "kind": "idempotency",
+        "action": "task.update",
+        "status": "passed",
+        "stepId": "task-update",
+        "summary": "The repeated command reproduced its stored success.",
+        "durationMs": 21,
+        "httpStatus": 200
+      },
+      {
+        "kind": "authorization-denial",
+        "action": "task.update",
+        "status": "passed",
+        "stepId": "task-denied-update",
+        "summary": "Authorization denied the principal as declared.",
+        "durationMs": 3,
+        "httpStatus": 403
+      },
+      {
+        "kind": "cleanup",
+        "status": "passed",
+        "stepId": "cleanup",
+        "summary": "Stopped the preview and removed its resources.",
+        "durationMs": 11535
+      }
+    ],
+    "cleanup": {
+      "summary": "Stopped the preview and removed its resources.",
+      "succeeded": true
+    },
+    "apiVersion": "factory.verification-evidence/v1",
+    "completedAt": "2026-09-13T09:13:30.89Z",
+    "artifactDigests": [
+      {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "digest": "sha256:8dac8d5c476c101d05d4a2b2b9350ae29685271fa2a8641f9210b9189789013b"
+      },
+      {
+        "path": "package.json",
+        "digest": "sha256:01b81220a284bc6d4046cd490e6a16659ec6c91c951e26f6c2945f13102f5d62"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "digest": "sha256:f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+      },
+      {
+        "path": "capability-lock.json",
+        "digest": "sha256:15f37392e1e0773cde978132c40a59cc3f5209cbc98aa4b400a474b176d78d02"
+      },
+      {
+        "path": "composition-lock.json",
+        "digest": "sha256:8af5ad24d451b2ebaaf77790284bef0b23b19a6c1df2c17ab507f241b5f3780b"
+      },
+      {
+        "path": "capability-template-lock.json",
+        "digest": "sha256:e9f0b1d3604b5c0dbbdd6ea1b1cdade410b2516776ad3d6ff267e5b2ccc1d779"
+      },
+      {
+        "path": "simulator/index.html",
+        "digest": "sha256:3a38c5f5008adeed74517a9709a3af0e7c24924fb2932e6e63dd4d7516b78fb1"
+      },
+      {
+        "path": "web/package.json",
+        "digest": "sha256:c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+      },
+      {
+        "path": "web/tsconfig.json",
+        "digest": "sha256:2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+      },
+      {
+        "path": "web/next-env.d.ts",
+        "digest": "sha256:bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+      },
+      {
+        "path": "web/app/layout.tsx",
+        "digest": "sha256:814ec9439902b216cb0aeb5e95b712a0924a6a5cd1c0d2595bcad4be1762005b"
+      },
+      {
+        "path": "web/app/page-runtime.tsx",
+        "digest": "sha256:95a9df84eda28e27798456d09c48a68bafeabf00549f6388d522d35f8e4316e3"
+      },
+      {
+        "path": "web/app/page.tsx",
+        "digest": "sha256:25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+      },
+      {
+        "path": "web/app/[...path]/page.tsx",
+        "digest": "sha256:511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+      },
+      {
+        "path": "web/app/favicon.ico/route.ts",
+        "digest": "sha256:3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+      },
+      {
+        "path": "web/app/api/[...path]/route.ts",
+        "digest": "sha256:73a62385c825071371d17a450554e2554d36fca9c457309d8a8047c33bcae9c8"
+      },
+      {
+        "path": "web/app/globals.css",
+        "digest": "sha256:a3e44e9b3d122940aeae8ac11515f6a91239bc79c2f791dfc4ccb2a2d8a00f98"
+      },
+      {
+        "path": "api/package.json",
+        "digest": "sha256:f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+      },
+      {
+        "path": "api/tsconfig.json",
+        "digest": "sha256:ba06ca0caffb054b4c1128d1a43e9ba8d40d97993b41e6fe621dd4cfc19b1f70"
+      },
+      {
+        "path": "api/Dockerfile",
+        "digest": "sha256:620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+      },
+      {
+        "path": "api/.dockerignore",
+        "digest": "sha256:51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+      },
+      {
+        "path": "api/src/main.ts",
+        "digest": "sha256:c6e6912c5ae9281cb3fd363ec9b4a3dfa4b6dc01c0ed8285ffc383380d1d8658"
+      },
+      {
+        "path": "api/src/capabilities/contract.ts",
+        "digest": "sha256:b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+      },
+      {
+        "path": "api/src/capabilities/core.audit.ts",
+        "digest": "sha256:06ad35d49d0539c1ff6961cdf9709c66e67d9f1a878877cabb5fdb67a9d3b4f2"
+      },
+      {
+        "path": "api/src/capabilities/core.crud.ts",
+        "digest": "sha256:7fae9e098e8f879d43124fae8c6d0b9e488321215465b0823e9317a6f8c1040b"
+      },
+      {
+        "path": "api/src/capabilities/core.identity-policy.ts",
+        "digest": "sha256:a8271f71f923a696328e6773b515eb6db5199fff1452697526af3c5155c67773"
+      },
+      {
+        "path": "api/src/capabilities/core.notification.ts",
+        "digest": "sha256:51434b4dd03bf8a4aee58aedf7990d19dd5cff32175e7995d893d598805e2c1f"
+      },
+      {
+        "path": "api/src/capabilities/core.policy-declarations.ts",
+        "digest": "sha256:aca13a57e9cb45e22a553ab9a65bdce9390945535238d4d7d2bdda05d1041a87"
+      },
+      {
+        "path": "api/src/capabilities/core.workflow.ts",
+        "digest": "sha256:7ac8033c5ac7aaee3742b2364a1176fe6e7b91a16e39120b9fc99b739afa4996"
+      },
+      {
+        "path": "database/prisma/fragments/task.prisma",
+        "digest": "sha256:3ec77e3bea2380cefcb158f957bf62126fff89f0f8e09322886a739db0ae2e4a"
+      },
+      {
+        "path": "web/src/app/task-list/page.tsx",
+        "digest": "sha256:896122f648ca0d8b7158795593d42110fa067adaec3e7fd56d6f55a0ec956c2d"
+      },
+      {
+        "path": "api/policy/fragments/resource-action.conf",
+        "digest": "sha256:05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+      },
+      {
+        "path": "api/policy/fragments/identity-policy.conf",
+        "digest": "sha256:e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+      },
+      {
+        "path": "api/src/services/identity-policy-local.service.ts",
+        "digest": "sha256:08c0fff12f7bf110868fa25ccedfdf773133ff31befa181ef030f0b2681ca574"
+      },
+      {
+        "path": "api/test/fixtures/identity-policy.json",
+        "digest": "sha256:6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+      },
+      {
+        "path": "api/src/capabilities/registry.ts",
+        "digest": "sha256:3eb1e2e47663b179f6fc54bf9182afd4aa295c54e51ba60e1186afe8b3f0dd05"
+      },
+      {
+        "path": "api/src/application-runtime.ts",
+        "digest": "sha256:19a1dda10caabc964c3cee6a2976e68d847b3c14ee44e47f0f04406d4be75df4"
+      },
+      {
+        "path": "api/src/prisma-record-store.ts",
+        "digest": "sha256:57eb6fb3f547fc2ac0520e8c8537d6fb5bf88bad3b292100020c79d9fdb609db"
+      },
+      {
+        "path": "api/src/notification-outbox-worker.ts",
+        "digest": "sha256:02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+      },
+      {
+        "path": "api/src/notification-outbox-drain.ts",
+        "digest": "sha256:439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+      },
+      {
+        "path": "api/README.md",
+        "digest": "sha256:c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+      },
+      {
+        "path": "api/policy/model.conf",
+        "digest": "sha256:10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+      },
+      {
+        "path": "api/policy/policy.csv",
+        "digest": "sha256:6e8b4e543e67316d69c2b6ee45a2436032b5109f2274624623f64b7e4ae1fb82"
+      },
+      {
+        "path": "api/src/policy.ts",
+        "digest": "sha256:f7dbd53879d05ebd745aec7f6c90d1e5f450e9660d4a33bdd29ed1f3ee4cd13d"
+      },
+      {
+        "path": "database/prisma/schema.prisma",
+        "digest": "sha256:cca684080b1ad58788fe0f54b572eaeaf3769185d1fd8f79c95e69a2edc042e9"
+      },
+      {
+        "path": "api/prisma/schema.prisma",
+        "digest": "sha256:cca684080b1ad58788fe0f54b572eaeaf3769185d1fd8f79c95e69a2edc042e9"
+      },
+      {
+        "path": "database/prisma/migrations/0001_initial/migration.sql",
+        "digest": "sha256:dfd820ad4f6a157d957b11e3c9d173852d548786c78597f8a6e1083ea4c57bbb"
+      },
+      {
+        "path": "database/prisma/seed.ts",
+        "digest": "sha256:e97ea8650ece1898040e408fa8814f72106efde68fbcf1d07861b581f85f350a"
+      },
+      {
+        "path": "database/package.json",
+        "digest": "sha256:e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+      },
+      {
+        "path": "database/Dockerfile",
+        "digest": "sha256:3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+      },
+      {
+        "path": "database/.dockerignore",
+        "digest": "sha256:1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+      },
+      {
+        "path": "api/src/flows/definitions.ts",
+        "digest": "sha256:ed8d641fdd9779a5ca7fcac045bf8bbbce3afb6f296874ff9af9898f09c487af"
+      },
+      {
+        "path": "api/src/flows/machines.ts",
+        "digest": "sha256:86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+      },
+      {
+        "path": "api/test/journey.generated.test.ts",
+        "digest": "sha256:508ac1f86667c450f552d29ada460a26d64f9801367feff84e45528f8ac98985"
+      },
+      {
+        "path": "tests/journeys.generated.md",
+        "digest": "sha256:702dd7b8ce51b866cee27239bb08f01a89ba629061863a5bbff123a1f2991187"
+      },
+      {
+        "path": "docs/api-reference.md",
+        "digest": "sha256:1be6a71fa8e077a5ae971fba0f4bf502ff2aa8cfd79f7d8b2f3aa6a377309daf"
+      },
+      {
+        "path": "docs/entity-relationship.md",
+        "digest": "sha256:c1030c055ad12d4b9f1260b0162e67d9c90f3fadfade1ec2f8a0055cd9985b9e"
+      },
+      {
+        "path": "docs/permission-matrix.md",
+        "digest": "sha256:c283f9e8e3594858973b490418d04563cf72755049030dc56653980b743a9914"
+      },
+      {
+        "path": "docs/application.md",
+        "digest": "sha256:3e3dc20da90995d74ef8114a630013fb9d73d9b568a8e5340bc8e863508f8cfd"
+      },
+      {
+        "path": "web/Dockerfile",
+        "digest": "sha256:98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+      },
+      {
+        "path": "web/.dockerignore",
+        "digest": "sha256:b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+      },
+      {
+        "path": "docker-compose.yml",
+        "digest": "sha256:04146d94437ea02c99cddf95e0ffb8d877134e743d3d83963e2c25f0e6fc0cc0"
+      },
+      {
+        "path": "README.md",
+        "digest": "sha256:6cfb5a0d3dcefbfb35ef9961adf05db68f5599d0ff9ef8015fd040e18fc5e7e1"
+      }
+    ],
+    "compilationDigest": "sha256:abc50ffba561dc0f99a7bc49e0155966b9341f69d65f4dd0c30812a3520cae77",
+    "verificationRunId": "verify-aeab0a41-39ec-4414-932c-6f4d2b62f87a"
+  }
+}

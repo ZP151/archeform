@@ -2,256 +2,264 @@
 
 # Archeform · 元象
 
-**The source form of software.**
+**Turn a business need into a working application.**
 
-Build full-stack applications from requirements, visual editing, or AI — with
-a versioned Application Graph as the source of truth.
+An open-source Application Graph platform for generating applications with
+coherent screens, data, permissions, workflows, and verifiable behavior.
 
-[Architecture](docs/architecture/application-graph-platform.md) ·
-[Roadmap](docs/roadmap.md) ·
-[Project status](docs/project-status.md)
+[Try locally](#try-locally) · [Applications](#supported-applications) ·
+[Architecture](#how-it-works) · [Production roadmap](#path-to-production) ·
+[Contribute](#contributing)
 
 </div>
 
-## What is Archeform?
+Archeform is being built for people who need software to get a job done:
+collect requests, review submissions, coordinate tasks, or take orders.
+Describe the outcome, answer necessary business questions, and use the result.
+The platform's job is to assemble and verify the application; understanding
+frameworks, schemas, and compilation should not be a prerequisite for users.
 
-Archeform is a graph-first verified application factory. It turns application
-intent into a structured, versioned **Application Graph** that defines the
-application's pages, domain model, policies, workflows, integrations, and
-experience.
+**Status: local Alpha.** Five reviewed product definitions across three runtime
+families have bounded local acceptance evidence.
+Managed hosting, production identity, and ordinary-user success at scale remain
+open work. See [delivery status](docs/project-status.md) for evidence and limitations.
 
-The graph is the product definition. Generated code is a compiled artifact.
+## See the result
 
-```text
-Requirement / visual editor / AI proposal
-                    ↓
-           Application Graph
-                    ↓
-        Draft → Publish → immutable Published Graph
-                    ↓
-              Compilation
-                    ↓
-   Simulator · Web · API · Database · Policy · Tests · Docs
-                    ↓
-        Independent generated-app verification
-```
+![Previously generated Saffron and Sage Restaurant app showing customer navigation, an order ready for collection, and simulated payment](docs/images/restaurant-orders-desktop.png)
+
+The Restaurant app from the earlier D1.8 local acceptance run: a customer has
+placed an order and can follow its fulfilment status. This is an actual
+generated application with sample data and simulated payment.
+[Read the Restaurant delivery evidence](docs/superpowers/ledgers/2026-09-07-consumer-generation-delivery.md).
+
+<details>
+<summary>View the same Restaurant app on mobile</summary>
+
+![Mobile Restaurant app with order status and customer navigation](docs/images/restaurant-orders-mobile.png)
+
+</details>
+
+## Supported applications
+
+These are reviewed business definitions with executable local journeys.
+Support is bounded by each definition's declared fields, roles, and rules.
+
+| Application               | Demonstrated local journey                                                                  | Evidence                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Restaurant Ordering       | Customer menu, cart, checkout, orders, and merchant workflow; simulated payment             | [Restaurant acceptance](docs/acceptance/post-v0.1-local-restaurant-readiness.md) |
+| Expense Approval          | Submit, review, return with a reason, revise the same request, and resubmit                 | [Approval correction](docs/acceptance/approval-correction.md)                    |
+| Purchase Request Approval | Purchase requests with retained decisions, correction, and safe retries                     | [Approval correction](docs/acceptance/approval-correction.md)                    |
+| Team Task Tracking        | Create, start, complete, reopen, and correct a task; handle stale writes and denied actions | [Task correction](docs/acceptance/task-correction.md)                            |
+| Publication Review        | Submit an article for editorial review; distinguish submissions and retain history          | [Definition batch](docs/acceptance/definition-batch-one.md)                      |
+
+The current families are Ordering, Approval, and Team Task. A catalogue entry,
+a visual variant, and an independently verified business application are
+different measures. Appointment scheduling, inventory, real payments, and
+hundreds of definitions remain future scope.
 
 ## Why Archeform?
 
-Most application builders treat generated source code as the final state.
-Archeform keeps the durable meaning of an application in a structured Graph;
-editors, AI models, compiler targets, frameworks, and runtime providers work
-around that Graph through constrained adapters.
+- **Complete business journeys.** Screens connect to persistent data, role
+  checks, and workflow transitions. Acceptance exercises the actual generated
+  app, including correction and failure paths.
+- **A durable application definition.** The versioned Application Graph retains
+  pages, domain semantics, policies, and workflows. Generated source is a
+  compilation artifact; the Graph remains the source of truth.
+- **Reusable product knowledge.** Reviewed definitions compose established
+  business families, UI recipes, and licensed materials. Supported definitions
+  reuse execution and presentation without a separate handwritten app.
+- **Controlled change.** Drafts are reviewable. Publish creates an immutable
+  revision, and compilation consumes that revision only. Historical artifacts
+  stay traceable while new revisions evolve.
+- **Verification beyond compilation.** Local acceptance covers runtime startup,
+  persistence, business journeys, authorization denial, interrupted actions,
+  responsive behavior, and cleanup within the tested scope.
 
-This makes application generation:
+The Workbench provides creation, preview, and advanced inspection. Visual
+editors and AI providers are adapters around the Graph. Advanced editing and
+inspection remain available; the product goal is a short path to a useful result.
 
-- **Versioned** — intent evolves through explicit Graph revisions.
-- **Reviewable** — changes can be inspected before publication.
-- **Deterministic** — immutable Published Graphs are the only compilation input.
-- **Multi-target** — one Graph can produce UI, API, database, policy, tests,
-  and documentation.
-- **Verifiable** — generated applications are exercised independently of the
-  editor that created them.
+## Try locally
 
-## How it works
+The supported trial is a **local developer/evaluator setup**, with an automated
+Restaurant journey. A hosted signup experience is still planned.
 
-### 1. Compose
+### Prerequisites
 
-Start from a business requirement, a visual editing session, or a constrained
-AI proposal. The result is represented as a mutable Draft Graph.
+- Git and Node.js `>=22.11.0 <23`; `.node-version` selects `22.11.0`.
+- pnpm `9.0.0`, as pinned in `package.json`.
+- A running Docker engine with Docker Compose `>=2.24.4` for runtime acceptance.
+  The worker uses host networking and Docker socket access; the environment
+  must support the repository's local profile.
 
-### 2. Review and publish
-
-Draft changes remain reviewable and mutable. Publishing validates the selected
-revision and creates an immutable Published Graph.
-
-### 3. Compile
-
-Compilers consume only the immutable Published Graph and produce deterministic
-application artifacts. Current targets and outputs include:
-
-- Next.js web applications
-- NestJS REST APIs
-- Prisma / PostgreSQL schemas and migrations
-- Authorization policies
-- Application workflows
-- Tests and API documentation
-- ERDs and permission matrices
-- Browser role simulators
-
-### 4. Verify
-
-Compilation success is not treated as proof that an application works. The
-verification direction is:
-
-```text
-Compile
-  ↓
-Isolated boot → migration → health → API
-  ↓
-Role journeys → authorization denial → idempotency → cleanup
-  ↓
-Safe diagnosis and a reviewable Draft Diff
-```
-
-Verification must preserve the lifecycle boundary: it may propose a new Draft
-change, but it does not patch generated source, runtime state, Published
-Graphs, or completed Compilations.
-
-## Workbench
-
-Archeform includes a visual Workbench for inspecting and composing Application
-Graphs. Visual editing and graph visualization are replaceable adapters; the
-Application Graph remains the persisted business model and source of truth.
-
-## Starter profiles
-
-The repository currently exercises several independent starter application
-profiles:
-
-| Profile             | Example domain         |
-| ------------------- | ---------------------- |
-| Expense Approval    | Approval workflow      |
-| Restaurant Ordering | Hospitality commerce   |
-| Simple Ecommerce    | Online commerce        |
-| Retail Counter      | Point-of-sale workflow |
-| Grocery Pickup      | Pickup fulfilment      |
-
-Profiles share platform capabilities while keeping their own Graphs, compiled
-artifacts, and acceptance evidence.
-
-## Quick start
-
-### Requirements
-
-- Node.js `>=22.11.0 <23`
-- pnpm `>=9`
-- Docker with Docker Compose `>=2.24.4` for local infrastructure and isolated
-  acceptance flows
-
-### Install
+### Install and configure
 
 ```powershell
 git clone https://github.com/ZP151/archeform.git
 cd archeform
 corepack enable
 corepack prepare pnpm@9.0.0 --activate
-pnpm run doctor:toolchain
 pnpm install --frozen-lockfile
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+These commands use PowerShell. On a POSIX shell, replace the final line with
+`test -f .env || cp .env.example .env`.
+
+Set unique local values for `FACTORY_REDIS_PASSWORD` and
+`FACTORY_INTERNAL_WORKER_TOKEN` in the ignored `.env` file. Keep credentials
+there; do not paste them into issues, screenshots, or committed files.
+
+Template acceptance requires no AI API key. Free-text model interpretation
+requires the configured provider credential; provider-free fixture tests do
+not establish real-model accuracy. Keep sensitive business data out of trial inputs.
+
+### Run the supported acceptance journey
+
+```powershell
 pnpm run doctor
+pnpm build
 pnpm accept:local
 ```
 
-The repository-root `.env` is used for local configuration. The supported local
-acceptance creates an isolated Restaurant application, edits a Draft, publishes
-an immutable revision, compiles and verifies it, exercises the generated
-customer and merchant journeys, checks accessibility, and removes its local
-resources. It does not require fixture mode or an OpenAI API key.
+The runner starts a run-owned local stack, opens the shipped Restaurant
+template, edits a Draft, publishes and compiles it, verifies the generated app,
+exercises ordering, checks accessibility, and tears down its own previews,
+containers, networks, and volumes. Its bounded summary reports step outcomes;
+a passing run requires zero accessibility violations and zero remaining owned resources.
 
-Leave `OPENAI_API_KEY` blank unless you are separately running a guarded
-real-model acceptance. Credentials, prompts, and model responses are not
-persisted as product data.
+Read the [local acceptance guide](docs/acceptance/post-v0.1-local-restaurant-readiness.md)
+for the exact scope and recorded supported-environment result. This README
+update does not claim a new runtime acceptance run.
 
-### Run the Workbench
+For interactive development, `pnpm dev` starts workspace development processes
+and assumes the required infrastructure and configuration are available.
+`pnpm compose:up` builds and starts the full local Compose stack, including the
+Workbench on port `5174` by default. Its published ports and privileged worker
+are developer infrastructure, not an approved production deployment profile.
+`pnpm compose:down` **deletes the stack's volumes**, including local data.
+Use the run-owned acceptance flow above for a disposable trial.
 
-```powershell
-pnpm dev
+## How it works
+
+The intended user experience is:
+
+```text
+Describe a need → Clarify business details if necessary → Use the application
 ```
 
-### Start local infrastructure
+Internally, the platform preserves explicit boundaries:
 
-```powershell
-pnpm compose:up
+```text
+Requirement + reviewed product definition
+                    ↓
+       Validated proposal → Draft Graph
+                    ↓ Publish
+         Immutable Published Revision
+                    ↓ Compile
+          Immutable Compilation
+                    ↓
+       Isolated verification → Local Preview
 ```
 
-Stop and remove local Compose resources with:
+Compilers never consume mutable Drafts. Verification can diagnose a failure and
+propose a reviewable Draft change; it does not patch immutable Published
+revisions or completed Compilations. Product Publish, Git integration,
+repository release, and cloud deployment are separate operations.
+
+The current stack uses TypeScript, Next.js/React, NestJS, Prisma/PostgreSQL,
+and BullMQ/Redis. See the [architecture](docs/architecture/application-graph-platform.md)
+and [technology decisions](docs/tech-governance.md) for supported contracts.
+
+| Area                    | Responsibility                                                  |
+| ----------------------- | --------------------------------------------------------------- |
+| `apps/workbench`        | Creation, visual editing, preview, and inspection               |
+| `apps/control-plane`    | Graph API, revision lifecycle, and orchestration                |
+| `apps/compiler-worker`  | Compilation, verification, and local preview work               |
+| `packages/graph`        | Versioned Graph schemas and semantic validation                 |
+| `packages/adapters`     | Reviewed definitions, AI interpretation, and external adapters  |
+| `packages/compiler`     | Deterministic targets and generated-project templates           |
+| `packages/capabilities` | Reusable business semantics and composition                     |
+| UI and recipe packages  | Shared primitives, patterns, screens, experiences, and products |
+
+Stable `@factory/*` package names and `factory.application-graph/*` identifiers
+remain part of the implementation. The public product name is Archeform.
+
+## Path to production
+
+The direction is a responsive application that an ordinary user can create and
+share with minimal effort. Production readiness requires evidence across these
+outcomes; an updated README does not establish it.
+
+| Area                   | Established locally                                                        | Required next evidence                                                                                                              |
+| ---------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Business correctness   | Five accepted definitions and three runtime families                       | Broader rules and edge cases; resolve long application-ID database naming before scale                                              |
+| Reuse and coverage     | Strict data catalogue, batch validation, shared execution and presentation | Distinct accepted jobs across 30 definitions before 100+; numeric rules, calculated totals, scheduling, and other missing semantics |
+| Ease of use            | Bounded automated generation and authored local journeys                   | Real-model selection and ordinary-user sessions measuring success, questions, time to useful action, and manual intervention        |
+| Identity and security  | Tested demo roles, state denial, and bounded runtime controls              | Production identity, tenant isolation, key management, audit retention, rate limits, and incident response                          |
+| Hosting and operations | Local verification and Preview with cleanup evidence                       | Approved hosting and runner isolation, durable delivery, stable URLs, recovery, and operating ownership                             |
+| Release reliability    | Profile-specific acceptance and immutable output checks                    | Passing integration gates on each merged commit; traceable fixes for baseline failures                                              |
+
+The [scale roadmap](docs/superpowers/plans/2026-09-13-product-definition-scale.md)
+prioritizes useful semantic coverage and ordinary-user effort over template
+counts. The [threat model](docs/threat-model.md) blocks external multi-tenant
+production use while identity and operational risks remain unresolved.
+Hosting and security changes follow [technology governance](docs/tech-governance.md).
+
+## Development and verification
 
 ```powershell
-pnpm compose:down
-```
+# Short provider-free tooling checks
+node scripts/regression.mjs smoke
 
-## Development checks
+# Selected product suites, with prerequisite builds
+node scripts/regression.mjs product
 
-Run the main repository checks with:
-
-```powershell
-pnpm test
-pnpm typecheck
-pnpm lint
-pnpm build
-```
-
-Run browser end-to-end tests with:
-
-```powershell
-pnpm test:e2e
-```
-
-Formatting and provenance checks are also available:
-
-```powershell
+# Repository checks
+pnpm --filter @factory/control-plane prisma:generate
 pnpm format:check
+pnpm typecheck
+pnpm test
+pnpm build
 pnpm verify:third-party
 pnpm verify:source-studies
 ```
 
-## Architecture
+These commands describe available checks, not a claim that the branch passes
+all of them. Selected product tests exclude some packages and do not replace
+full repository checks or browser acceptance.
+See [regression scope](docs/testing/consumer-regression.md).
+`pnpm test:e2e` requires the relevant browser/runtime configuration and fixtures;
+use the acceptance guide for the supported end-to-end trial.
 
-Archeform follows a Graph-first lifecycle:
+## Contributing
 
-```text
-Mutable Draft
-     ↓
-Validated Published Graph
-     ↓
-Immutable Compilation
-     ↓
-Generated application
-     ↓
-Independent verification
-```
+Start with a concrete user job and its missing behavior. Reuse an approved
+capability or UI recipe, add focused behavior tests, and record applicable
+runtime evidence. Definitions need distinct business semantics, declared
+limitations, and executable journeys.
 
-Editors, AI providers, compiler targets, frameworks, and runtime providers are
-adapters around this lifecycle rather than alternative sources of truth.
+- [Author a reviewed definition](docs/product-definition-authoring.md).
+- [Check generated-product acceptance](docs/acceptance/consumer-product-checklist.md).
+- Follow [repository rules](AGENTS.md), [technology governance](docs/tech-governance.md),
+  and [delivery policy](docs/delivery-policy.md).
+- [Report a reproducible issue](https://github.com/ZP151/archeform/issues) with
+  the commit, environment, expected result, and safe reproduction steps.
+  Exclude credentials, private business data, and raw model input/output.
 
-Read the full [Application Graph Platform architecture](docs/architecture/application-graph-platform.md)
-for the contracts and boundaries behind this model.
+## Related projects
 
-## Project status
-
-Archeform is under active development. The current product focus is a bounded,
-evidence-backed path from business requirement to runnable local preview:
-
-```text
-Discuss → RequirementSpec → Plan → Graph Diff → Draft
-       → Simulate → Publish → Compile → Verify → Preview
-```
-
-The current work is not a production-readiness claim. Starter applications
-are local generated prototypes, and acceptance evidence is scoped to the
-specific profile and verification path that produced it.
-
-See the [delivery roadmap](docs/roadmap.md) and [evidence-backed project status](docs/project-status.md)
-for the current goals, gates, and known boundaries.
-
-## Repository principles
-
-- Graph > generated source
-- Published revision > mutable runtime state
-- Explicit capability > profile-specific behavior
-- Verification > compilation success
-- Adapters > framework ownership
-
-Before changing architecture, review [AGENTS.md](AGENTS.md),
-[CLAUDE.md](CLAUDE.md), and the linked architecture and roadmap documents.
+[Appsmith](https://github.com/appsmithorg/appsmith),
+[ToolJet](https://github.com/ToolJet/ToolJet),
+[Dyad](https://github.com/dyad-sh/dyad), and
+[Amplication](https://github.com/amplication/amplication) are useful references
+for application-building workflows and developer onboarding. This README
+borrows organizational lessons from their public documentation; it makes no
+compatibility or endorsement claim.
+[Reference notes](docs/research/2026-09-15-readme-and-main-assessment.md).
 
 ## License
 
-Archeform is released under the [MIT License](LICENSE).
-
-<div align="center">
-
-**Application intent → Graph → Verified software**
-
-</div>
+[MIT](LICENSE). Third-party packages and admitted assets retain their own
+licenses and notices; see [third-party notices](THIRD_PARTY_NOTICES.md).

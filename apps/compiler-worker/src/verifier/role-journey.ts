@@ -73,6 +73,8 @@ export type RoleJourneyFixture = {
  * employee creates and submits, the manager approves).
  */
 export type ChainJourneyStep = {
+  /** Replaces only the already-declared parent command key for this activation. */
+  readonly idempotencyKeyOverride?: string;
   /** Must resolve in the profile registry; unknown actions fail closed. */
   readonly action: string;
   /** Optional declared body for this prologue request. */
@@ -84,6 +86,8 @@ export type ChainJourneyStep = {
 };
 
 export type IdempotencyJourneyFixture = RoleJourneyFixture & {
+  /** Exact correction protocol replays the persisted successful response. */
+  readonly replayExpectation?: "stored-success";
   /** The declared idempotency key for the repeated request. */
   readonly idempotencyKey: string;
   /** The declared expected version for the transition. */
@@ -490,6 +494,18 @@ function validateChainPrologue(
       );
     }
     if (
+      step.idempotencyKeyOverride !== undefined &&
+      (typeof step.idempotencyKeyOverride !== "string" ||
+        !idempotencyKeyPattern.test(step.idempotencyKeyOverride) ||
+        journey.headers?.filter(
+          (header) => header.name === "x-factory-idempotency-key",
+        ).length !== 1)
+    ) {
+      throw new VerificationContractError(
+        "Chain command keys require a declared parent command header.",
+      );
+    }
+    if (
       step.body !== undefined &&
       (typeof step.body !== "string" || step.body.length === 0)
     ) {
@@ -555,6 +571,13 @@ export function validateIdempotencyJourney(
   registry: readonly RegisteredApiAction[],
 ): RegisteredApiAction {
   const action = validateRoleJourney(journey, registry);
+  if (
+    journey.replayExpectation !== undefined &&
+    journey.replayExpectation !== "stored-success"
+  )
+    throw new VerificationContractError(
+      "Unsupported idempotency replay expectation.",
+    );
   if (
     typeof journey.idempotencyKey !== "string" ||
     !idempotencyKeyPattern.test(journey.idempotencyKey) ||

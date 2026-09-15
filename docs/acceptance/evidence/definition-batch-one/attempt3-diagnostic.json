@@ -1,0 +1,14 @@
+{
+  "compilationId": "cmtzsj07g002so255rh7nvji4",
+  "verificationRunId": "verify-0e02b8a6-2e93-4abe-9aff-c296d0f3b71d",
+  "status": "failed",
+  "failureCode": "preview_compose_up_failed",
+  "reproduction": "Build only, same immutable generated artifacts, exact project factory-t9-definition-batch-diagnostic",
+  "prismaCode": "P1012",
+  "validationErrorCount": 4,
+  "cause": "Long application identifier makes generated Principal and Session primary-key and index names truncate to identical PostgreSQL names",
+  "verificationCleanupSucceeded": true,
+  "testRepair": "A shorter batch- prefix with one full random UUID per logical run",
+  "productionRepair": null,
+  "followUp": "Deterministic bounded database identifier naming or fail-early validation before broad definition scaling"
+}

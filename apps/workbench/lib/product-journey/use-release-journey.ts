@@ -41,6 +41,24 @@ export interface ReleaseTarget {
   readonly draftRevisionId: string;
 }
 
+interface ReleaseCheckpoint {
+  state: ReleaseState;
+  pendingMutation?: Promise<void>;
+  verificationRequestId?: string;
+}
+
+interface OwnedPreviewRun {
+  readonly id: string;
+  readonly compilationId: string;
+  readonly targetKey: string;
+}
+
+interface PendingPreviewStart {
+  readonly compilationId: string;
+  readonly targetKey: string;
+  readonly result: Promise<OwnedPreviewRun>;
+}
+
 export interface ReleaseJourneyController {
   readonly release: ReleaseState | null;
   readonly busy: boolean;
@@ -59,7 +77,7 @@ export interface ReleaseJourneyController {
   previewRelease: () => void;
   cleanupRelease: () => void;
   approveDraftDiff: () => void;
-  resetRelease: () => void;
+  resetRelease: () => Promise<"resumed" | "start-over">;
 }
 
 const POLL_INTERVAL_MS = 1_500;
@@ -131,6 +149,23 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function isLoopbackPreviewUrl(value: string | null): value is string {
+  if (value === null) return false;
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      url.username.length === 0 &&
+      url.password.length === 0 &&
+      (url.hostname === "127.0.0.1" ||
+        url.hostname === "localhost" ||
+        url.hostname === "[::1]")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Bounds a remote release phase and invalidates its late continuation. Fetch
  * does not currently accept a signal through ControlPlaneClient, so the
@@ -175,66 +210,260 @@ export function useReleaseJourney(
   const busyRef = useRef(false);
   const aliveRef = useRef(true);
   const seededTargetRef = useRef<string | null>(null);
+  const targetGenerationRef = useRef(0);
+  const busyRunRef = useRef<string | null>(null);
+  const ownedPreviewRef = useRef<OwnedPreviewRun | null>(null);
+  const pendingPreviewRef = useRef<PendingPreviewStart | null>(null);
+  const previewCleanupRef = useRef<Promise<boolean> | null>(null);
+  // Keep immutable identities even when their HTTP response arrives after a
+  // UI deadline or navigation. A retry resumes this exact session target.
+  const checkpointsRef = useRef(new Map<string, ReleaseCheckpoint>());
+  const checkpointFor = useCallback((releaseTarget: ReleaseTarget) => {
+    const key = `${releaseTarget.applicationGraphId}@${releaseTarget.draftRevisionId}`;
+    let checkpoint = checkpointsRef.current.get(key);
+    if (checkpoint === undefined) {
+      checkpoint = { state: beginRelease(releaseTarget) };
+      checkpointsRef.current.set(key, checkpoint);
+    }
+    return checkpoint;
+  }, []);
 
   useEffect(() => {
     releaseRef.current = release;
   }, [release]);
 
   useEffect(() => {
+    aliveRef.current = true;
     return () => {
       aliveRef.current = false;
+      targetGenerationRef.current += 1;
+      busyRunRef.current = null;
+      busyRef.current = false;
     };
   }, []);
 
-  // A new release target re-seeds the release state machine; clearing the
-  // target empties the surface.
+  const isCurrentRun = useCallback(
+    (targetKey: string, generation: number): boolean =>
+      aliveRef.current &&
+      seededTargetRef.current === targetKey &&
+      targetGenerationRef.current === generation,
+    [],
+  );
+
+  const stopOwnedPreview = useCallback(
+    async (owned: OwnedPreviewRun): Promise<boolean> => {
+      if (ownedPreviewRef.current?.id !== owned.id) return true;
+      if (previewCleanupRef.current !== null) {
+        return previewCleanupRef.current;
+      }
+      const stopping = withReleasePhaseDeadline(async (isActive) => {
+        await controlPlane.stopPreviewRun(owned.id);
+        while (isActive()) {
+          const latest = await controlPlane.getCurrentPreviewRun(
+            owned.compilationId,
+          );
+          if (latest?.id === owned.id && latest.status === "stopped") return;
+          if (
+            latest === null ||
+            latest.id !== owned.id ||
+            latest.status === "failed"
+          ) {
+            throw new Error("Preview cleanup could not be confirmed.");
+          }
+          await sleep(POLL_INTERVAL_MS);
+        }
+      })
+        .then(() => {
+          if (ownedPreviewRef.current?.id === owned.id) {
+            ownedPreviewRef.current = null;
+          }
+          return true;
+        })
+        .catch(() => false)
+        .finally(() => {
+          previewCleanupRef.current = null;
+        });
+      previewCleanupRef.current = stopping;
+      return stopping;
+    },
+    [controlPlane],
+  );
+
+  // A timed-out POST is still an outstanding resource obligation. Keep its
+  // eventual identity and stop it before a replacement lifecycle can begin.
+  const stopPreviewResources = useCallback(async (): Promise<boolean> => {
+    const pending = pendingPreviewRef.current;
+    if (pending !== null) {
+      try {
+        await withReleasePhaseDeadline(async () => {
+          await pending.result;
+        });
+      } catch (error) {
+        if (error instanceof ReleasePhaseTimeoutError) return false;
+        // A lost response may still have created the compilation's run. The
+        // existing current-run endpoint provides the reconciliation identity.
+        let reconciled: OwnedPreviewRun | null = null;
+        try {
+          await withReleasePhaseDeadline(async (isActive) => {
+            const current = await controlPlane.getCurrentPreviewRun(
+              pending.compilationId,
+            );
+            if (
+              isActive() &&
+              current?.compilationId === pending.compilationId
+            ) {
+              reconciled = {
+                id: current.id,
+                compilationId: pending.compilationId,
+                targetKey: pending.targetKey,
+              };
+            }
+          });
+        } catch {
+          return false;
+        }
+        if (reconciled === null) return false;
+        ownedPreviewRef.current = reconciled;
+        if (pendingPreviewRef.current === pending)
+          pendingPreviewRef.current = null;
+      }
+    }
+    const owned = ownedPreviewRef.current;
+    return owned === null || (await stopOwnedPreview(owned));
+  }, [controlPlane, stopOwnedPreview]);
+
+  // A new target must not publish while a preview started for an earlier
+  // target still owns local runtime resources.  The stop endpoint targets the
+  // stored run id; its confirmation is read from that run's compilation.
   useEffect(() => {
     const key =
       target === null
         ? null
         : `${target.applicationGraphId}@${target.draftRevisionId}`;
     if (key === seededTargetRef.current) return;
+    const needsCleanup =
+      ownedPreviewRef.current !== null || pendingPreviewRef.current !== null;
     seededTargetRef.current = key;
+    targetGenerationRef.current += 1;
+    const generation = targetGenerationRef.current;
+    busyRunRef.current = null;
     setApprovalError(null);
-    setRelease(target === null ? null : beginRelease(target));
-  }, [target]);
-
-  const run = useCallback(async (work: () => Promise<void>): Promise<void> => {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
-    try {
-      await work();
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
+    setRelease(target === null ? null : checkpointFor(target).state);
+    if (needsCleanup) {
+      busyRef.current = true;
+      setBusy(true);
+      void stopPreviewResources().then((stopped) => {
+        if (
+          !aliveRef.current ||
+          seededTargetRef.current !== key ||
+          targetGenerationRef.current !== generation
+        )
+          return;
+        busyRef.current = false;
+        setBusy(false);
+        if (stopped) return;
+        const next = target === null ? null : checkpointFor(target).state;
+        setRelease(
+          next === null ? null : releaseFailed(next, "cleanup.failed"),
+        );
+      });
+      return;
     }
-  }, []);
+    busyRef.current = false;
+    setBusy(false);
+  }, [target, stopPreviewResources, checkpointFor]);
 
-  const fail = useCallback((fallback: string, error: unknown): void => {
-    const current = releaseRef.current;
-    if (current === null) return;
-    setRelease(releaseFailed(current, safeCodeOf(error, fallback)));
-  }, []);
+  useEffect(() => {
+    return () => {
+      if (
+        ownedPreviewRef.current !== null ||
+        pendingPreviewRef.current !== null
+      ) {
+        void stopPreviewResources();
+      }
+    };
+  }, [stopPreviewResources]);
+
+  const run = useCallback(
+    async (input: {
+      readonly key: string;
+      readonly generation: number;
+      readonly work: (isCurrent: () => boolean) => Promise<void>;
+    }): Promise<void> => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      const runKey = `${input.key}#${input.generation}`;
+      busyRunRef.current = runKey;
+      setBusy(true);
+      try {
+        await input.work(() => isCurrentRun(input.key, input.generation));
+      } finally {
+        if (busyRunRef.current === runKey) {
+          busyRunRef.current = null;
+          busyRef.current = false;
+          if (isCurrentRun(input.key, input.generation)) setBusy(false);
+        }
+      }
+    },
+    [isCurrentRun],
+  );
+
+  const fail = useCallback(
+    (input: {
+      readonly key: string;
+      readonly generation: number;
+      readonly state: ReleaseState;
+      readonly fallback: string;
+      readonly error: unknown;
+    }): void => {
+      if (!isCurrentRun(input.key, input.generation)) return;
+      setRelease(
+        releaseFailed(input.state, safeCodeOf(input.error, input.fallback)),
+      );
+    },
+    [isCurrentRun],
+  );
 
   const publishRelease = useCallback((): void => {
     if (busyRef.current || target === null) return;
     const current = releaseRef.current;
     if (current === null || current.phase !== "publishing") return;
-    void run(async () => {
-      try {
-        const published = await controlPlane.publishDraft(
-          target.applicationGraphId,
-          target.draftRevisionId,
-        );
-        const latest = releaseRef.current;
-        if (latest === null) return;
-        setRelease(publishingSucceeded(latest, published.id));
-      } catch (error) {
-        fail("release.failed", error);
-      }
+    const key = `${target.applicationGraphId}@${target.draftRevisionId}`;
+    const generation = targetGenerationRef.current;
+    void run({
+      key,
+      generation,
+      work: async (isCurrent) => {
+        try {
+          await withReleasePhaseDeadline(async (isActive) => {
+            const checkpoint = checkpointFor(target);
+            if (checkpoint.pendingMutation === undefined) {
+              checkpoint.pendingMutation = controlPlane
+                .publishDraft(target.applicationGraphId, target.draftRevisionId)
+                .then((published) => {
+                  checkpoint.state = publishingSucceeded(current, published.id);
+                  checkpoint.pendingMutation = undefined;
+                });
+            }
+            await checkpoint.pendingMutation;
+            if (!isActive() || !isCurrent()) return;
+            setRelease(checkpoint.state);
+          });
+        } catch (error) {
+          fail({
+            key,
+            generation,
+            state: current,
+            fallback:
+              error instanceof ReleasePhaseTimeoutError
+                ? "release.failed"
+                : "release.failed",
+            error,
+          });
+        }
+      },
     });
-  }, [target, controlPlane, run, fail]);
+  }, [target, controlPlane, run, fail, checkpointFor]);
 
   const compileRelease = useCallback((): void => {
     if (busyRef.current) return;
@@ -247,45 +476,73 @@ export function useReleaseJourney(
     ) {
       return;
     }
-    void run(async () => {
-      try {
-        await withReleasePhaseDeadline(async (isActive) => {
-          const queued =
-            await controlPlane.createCompilation(publishedRevisionId);
-          if (!isActive()) return;
-          const started = releaseRef.current;
-          if (started === null) return;
-          // The started state is held locally: the model binds the terminal
-          // transition to the compilation identifier it started, and the ref
-          // has not committed the started state until this action's render.
-          const startedState = compilationStarted(started, queued.id);
-          setRelease(startedState);
-          while (aliveRef.current && isActive()) {
-            const latest = await controlPlane.getCompilation(queued.id);
-            if (!isActive()) return;
-            if (!isPendingCompilation(latest.result.status)) {
-              if (latest.result.status === "succeeded") {
-                setRelease(compilationSucceeded(startedState, queued.id));
-              } else if (latest.result.status === "failed") {
-                setRelease(
-                  releaseFailed(startedState, latest.result.failureCode),
-                );
+    const key = `${current.applicationGraphId}@${current.draftRevisionId}`;
+    const generation = targetGenerationRef.current;
+    void run({
+      key,
+      generation,
+      work: async (isCurrent) => {
+        try {
+          await withReleasePhaseDeadline(async (isActive) => {
+            const checkpoint = checkpointFor(current);
+            if (checkpoint.state.compilationId === undefined) {
+              if (checkpoint.pendingMutation === undefined) {
+                checkpoint.pendingMutation = controlPlane
+                  .createCompilation(publishedRevisionId)
+                  .then((queued) => {
+                    checkpoint.state = compilationStarted(current, queued.id);
+                    checkpoint.pendingMutation = undefined;
+                  });
               }
-              return;
+              await checkpoint.pendingMutation;
             }
-            await sleep(POLL_INTERVAL_MS);
-          }
-        });
-      } catch (error) {
-        fail(
-          error instanceof ReleasePhaseTimeoutError
-            ? "compilation.timeout"
-            : "compilation.failed",
-          error,
-        );
-      }
+            if (!isActive() || !isCurrent()) return;
+            const startedState = checkpoint.state;
+            const compilationId = startedState.compilationId;
+            if (compilationId === undefined)
+              throw new Error("Compilation identity is missing.");
+            setRelease(startedState);
+            while (isCurrent() && isActive()) {
+              const latest = await controlPlane.getCompilation(compilationId);
+              if (!isActive() || !isCurrent()) return;
+              if (!isPendingCompilation(latest.result.status)) {
+                if (latest.result.status === "succeeded") {
+                  checkpoint.state = compilationSucceeded(
+                    startedState,
+                    compilationId,
+                  );
+                  setRelease(checkpoint.state);
+                } else if (latest.result.status === "failed") {
+                  // A terminal failed job may be explicitly replaced, while
+                  // its immutable Published revision remains reusable.
+                  checkpoint.state = publishingSucceeded(
+                    beginRelease(current),
+                    publishedRevisionId,
+                  );
+                  setRelease(
+                    releaseFailed(startedState, latest.result.failureCode),
+                  );
+                }
+                return;
+              }
+              await sleep(POLL_INTERVAL_MS);
+            }
+          });
+        } catch (error) {
+          fail({
+            key,
+            generation,
+            state: current,
+            fallback:
+              error instanceof ReleasePhaseTimeoutError
+                ? "compilation.timeout"
+                : "compilation.failed",
+            error,
+          });
+        }
+      },
     });
-  }, [controlPlane, run, fail]);
+  }, [controlPlane, run, fail, checkpointFor]);
 
   const verifyRelease = useCallback((): void => {
     if (busyRef.current) return;
@@ -298,73 +555,110 @@ export function useReleaseJourney(
     ) {
       return;
     }
-    void run(async () => {
-      try {
-        await withReleasePhaseDeadline(async (isActive) => {
-          // No profile key: the worker derives the verification plan from the
-          // Published Graph, so any composed product verifies identically.
-          const queued = await controlPlane.createVerificationRun(
-            compilationId,
-            `verify-${crypto.randomUUID()}`,
-          );
-          if (!isActive()) return;
-          const started = releaseRef.current;
-          if (started === null) return;
-          // The started state is held locally for the same reason as the
-          // compilation: the terminal transition must see the verification run
-          // identifier the model bound, which the ref cannot show until this
-          // action's render commits.
-          const startedState = verificationStarted(
-            started,
-            queued.verificationRunId,
-          );
-          setRelease(startedState);
-          while (aliveRef.current && isActive()) {
-            const latest = await controlPlane.getVerificationRun(
-              queued.verificationRunId,
-            );
-            if (!isActive()) return;
-            if (latest.status === "succeeded") {
-              const steps = evidenceStepsOf(latest);
-              if (steps.length === 0) {
-                // A "succeeded" run that reports no steps cannot be summarized
-                // honestly; fail closed instead of fabricating counts.
+    const key = `${current.applicationGraphId}@${current.draftRevisionId}`;
+    const generation = targetGenerationRef.current;
+    void run({
+      key,
+      generation,
+      work: async (isCurrent) => {
+        try {
+          await withReleasePhaseDeadline(async (isActive) => {
+            // No profile key: the worker derives the verification plan from the
+            // Published Graph, so any composed product verifies identically.
+            const checkpoint = checkpointFor(current);
+            if (checkpoint.state.verificationRunId === undefined) {
+              checkpoint.verificationRequestId ??= `verify-${crypto.randomUUID()}`;
+              if (checkpoint.pendingMutation === undefined) {
+                checkpoint.pendingMutation = controlPlane
+                  .createVerificationRun(
+                    compilationId,
+                    checkpoint.verificationRequestId,
+                  )
+                  .then((queued) => {
+                    checkpoint.state = verificationStarted(
+                      current,
+                      queued.verificationRunId,
+                    );
+                    checkpoint.pendingMutation = undefined;
+                  });
+              }
+              await checkpoint.pendingMutation;
+            }
+            if (!isActive() || !isCurrent()) return;
+            const startedState = checkpoint.state;
+            const verificationRunId = startedState.verificationRunId;
+            if (verificationRunId === undefined)
+              throw new Error("Verification identity is missing.");
+            setRelease(startedState);
+            while (isCurrent() && isActive()) {
+              const latest =
+                await controlPlane.getVerificationRun(verificationRunId);
+              if (!isActive() || !isCurrent()) return;
+              if (latest.status === "succeeded") {
+                const steps = evidenceStepsOf(latest);
+                if (steps.length === 0) {
+                  checkpoint.state = {
+                    ...current,
+                    verificationRunId: undefined,
+                  };
+                  checkpoint.verificationRequestId = undefined;
+                  // A "succeeded" run that reports no steps cannot be summarized
+                  // honestly; fail closed instead of fabricating counts.
+                  setRelease(
+                    releaseFailed(
+                      startedState,
+                      "verification.evidence_missing",
+                    ),
+                  );
+                  return;
+                }
+                checkpoint.state = verificationSucceeded(startedState, steps);
+                setRelease(checkpoint.state);
+                return;
+              }
+              if (latest.status === "failed" || latest.status === "cancelled") {
+                checkpoint.state = {
+                  ...current,
+                  verificationRunId: undefined,
+                };
+                checkpoint.verificationRequestId = undefined;
                 setRelease(
-                  releaseFailed(startedState, "verification.evidence_missing"),
+                  releaseFailed(
+                    startedState,
+                    latest.status === "cancelled"
+                      ? "verification.cancelled"
+                      : diagnosisCodeOf(latest),
+                    draftDiffOf(latest),
+                  ),
                 );
                 return;
               }
-              setRelease(verificationSucceeded(startedState, steps));
-              return;
+              await sleep(POLL_INTERVAL_MS);
             }
-            if (latest.status === "failed" || latest.status === "cancelled") {
-              setRelease(
-                releaseFailed(
-                  startedState,
-                  latest.status === "cancelled"
-                    ? "verification.cancelled"
-                    : diagnosisCodeOf(latest),
-                  draftDiffOf(latest),
-                ),
-              );
-              return;
-            }
-            await sleep(POLL_INTERVAL_MS);
-          }
-        }, VERIFICATION_PHASE_TIMEOUT_MS);
-      } catch (error) {
-        fail(
-          error instanceof ReleasePhaseTimeoutError
-            ? "verification.timeout"
-            : "verification.failed",
-          error,
-        );
-      }
+          }, VERIFICATION_PHASE_TIMEOUT_MS);
+        } catch (error) {
+          fail({
+            key,
+            generation,
+            state: current,
+            fallback:
+              error instanceof ReleasePhaseTimeoutError
+                ? "verification.timeout"
+                : "verification.failed",
+            error,
+          });
+        }
+      },
     });
-  }, [controlPlane, run, fail]);
+  }, [controlPlane, run, fail, checkpointFor]);
 
   const previewRelease = useCallback((): void => {
-    if (busyRef.current) return;
+    if (
+      busyRef.current ||
+      ownedPreviewRef.current !== null ||
+      pendingPreviewRef.current !== null
+    )
+      return;
     const current = releaseRef.current;
     const compilationId = current?.compilationId;
     if (
@@ -374,34 +668,127 @@ export function useReleaseJourney(
     ) {
       return;
     }
-    void run(async () => {
-      try {
-        const started = await controlPlane.startPreviewRun(compilationId);
-        while (aliveRef.current) {
-          const latest = await controlPlane.getCurrentPreviewRun(compilationId);
-          if (latest?.status === "ready" && latest.previewUrl !== null) {
-            const at = releaseRef.current;
-            if (at === null) return;
-            setRelease(previewStarted(at, latest.id, latest.previewUrl));
+    const key = `${current.applicationGraphId}@${current.draftRevisionId}`;
+    const generation = targetGenerationRef.current;
+    void run({
+      key,
+      generation,
+      work: async (isCurrent) => {
+        let owned: OwnedPreviewRun | null = null;
+        try {
+          await withReleasePhaseDeadline(async (isActive) => {
+            const pending: PendingPreviewStart = {
+              compilationId,
+              targetKey: key,
+              result: controlPlane
+                .startPreviewRun(compilationId)
+                .then((started) => {
+                  const acquired = {
+                    id: started.id,
+                    compilationId,
+                    targetKey: key,
+                  };
+                  ownedPreviewRef.current = acquired;
+                  if (pendingPreviewRef.current === pending)
+                    pendingPreviewRef.current = null;
+                  return acquired;
+                }),
+            };
+            pendingPreviewRef.current = pending;
+            owned = await pending.result;
+            if (!isActive() || !isCurrent()) {
+              await stopOwnedPreview(owned);
+              return;
+            }
+            while (isCurrent() && isActive()) {
+              const latest =
+                await controlPlane.getCurrentPreviewRun(compilationId);
+              if (!isActive() || !isCurrent()) return;
+              if (
+                latest?.id !== owned.id ||
+                latest.compilationId !== compilationId
+              ) {
+                const stopped = await stopOwnedPreview(owned);
+                if (isCurrent() && isActive())
+                  setRelease(
+                    releaseFailed(
+                      current,
+                      stopped
+                        ? "runtime.preview_readiness_failed"
+                        : "cleanup.failed",
+                    ),
+                  );
+                return;
+              }
+              if (latest.status === "ready" && latest.previewUrl !== null) {
+                if (!isLoopbackPreviewUrl(latest.previewUrl)) {
+                  const stopped = await stopOwnedPreview(owned);
+                  if (isCurrent() && isActive())
+                    setRelease(
+                      releaseFailed(
+                        current,
+                        stopped
+                          ? "runtime.preview_readiness_failed"
+                          : "cleanup.failed",
+                      ),
+                    );
+                  return;
+                }
+                setRelease(
+                  previewStarted(current, latest.id, latest.previewUrl),
+                );
+                return;
+              }
+              if (
+                latest?.status === "failed" ||
+                latest?.status === "stopped" ||
+                latest === null
+              ) {
+                const stopped = await stopOwnedPreview(owned);
+                if (isCurrent() && isActive())
+                  setRelease(
+                    releaseFailed(
+                      current,
+                      stopped ? "preview.failed" : "cleanup.failed",
+                    ),
+                  );
+                return;
+              }
+              await sleep(POLL_INTERVAL_MS);
+            }
+          });
+          if (owned !== null && !isCurrent()) {
+            await stopOwnedPreview(owned);
+          }
+        } catch (error) {
+          // Do not wait a second phase deadline for an unresolved POST here.
+          // Its continuation retains ownership; explicit retry first awaits
+          // cleanup through stopPreviewResources.
+          const stopped =
+            owned === null
+              ? pendingPreviewRef.current === null
+              : await stopOwnedPreview(owned);
+          if (!stopped) {
+            fail({
+              key,
+              generation,
+              state: current,
+              fallback: "cleanup.failed",
+              error,
+            });
             return;
           }
-          if (
-            latest?.status === "failed" ||
-            latest?.status === "stopped" ||
-            latest === null
-          ) {
-            const at = releaseRef.current;
-            if (at === null) return;
-            setRelease(releaseFailed(at, "preview.failed"));
-            return;
-          }
-          await sleep(POLL_INTERVAL_MS);
+          fail({
+            key,
+            generation,
+            state: current,
+            fallback: "preview.failed",
+            error,
+          });
         }
-      } catch (error) {
-        fail("preview.failed", error);
-      }
+      },
     });
-  }, [controlPlane, run, fail]);
+  }, [controlPlane, run, fail, stopOwnedPreview]);
 
   const cleanupRelease = useCallback((): void => {
     if (busyRef.current) return;
@@ -416,34 +803,36 @@ export function useReleaseJourney(
     ) {
       return;
     }
-    void run(async () => {
-      try {
-        // The stop endpoint only enqueues the worker action; the preview-run
-        // row reaches "stopped" only after the worker confirms the compose
-        // project and its artifact directory are gone. The cleaned-up phase
-        // must never be shown before that confirmation.
-        await controlPlane.stopPreviewRun(previewRunId);
-        while (aliveRef.current) {
-          const latest = await controlPlane.getCurrentPreviewRun(compilationId);
-          if (latest?.status === "stopped") {
-            const at = releaseRef.current;
-            if (at === null) return;
-            setRelease(previewStopped(at));
-            return;
-          }
-          if (latest?.status === "failed" || latest === null) {
-            const at = releaseRef.current;
-            if (at === null) return;
-            setRelease(releaseFailed(at, "cleanup.failed"));
-            return;
-          }
-          await sleep(POLL_INTERVAL_MS);
+    const key = `${current.applicationGraphId}@${current.draftRevisionId}`;
+    const generation = targetGenerationRef.current;
+    void run({
+      key,
+      generation,
+      work: async (isCurrent) => {
+        try {
+          const stopped = await stopOwnedPreview({
+            id: previewRunId,
+            compilationId,
+            targetKey: key,
+          });
+          if (!isCurrent()) return;
+          setRelease(
+            stopped
+              ? previewStopped(current)
+              : releaseFailed(current, "cleanup.failed"),
+          );
+        } catch (error) {
+          fail({
+            key,
+            generation,
+            state: current,
+            fallback: "cleanup.failed",
+            error,
+          });
         }
-      } catch (error) {
-        fail("cleanup.failed", error);
-      }
+      },
     });
-  }, [controlPlane, run, fail]);
+  }, [run, fail, stopOwnedPreview]);
 
   const approveDraftDiff = useCallback((): void => {
     if (busyRef.current) return;
@@ -458,25 +847,73 @@ export function useReleaseJourney(
     ) {
       return;
     }
-    void run(async () => {
-      try {
-        const approved = await controlPlane.approveVerificationDraftDiff(
-          verificationRunId,
-          proposedDraftDiff,
-        );
-        setApprovalError(null);
-        onApproved(approved.draft);
-      } catch (error) {
-        setApprovalError(safeCodeOf(error, "approval.failed"));
-      }
+    const key = `${current.applicationGraphId}@${current.draftRevisionId}`;
+    const generation = targetGenerationRef.current;
+    void run({
+      key,
+      generation,
+      work: async (isCurrent) => {
+        try {
+          const approved = await controlPlane.approveVerificationDraftDiff(
+            verificationRunId,
+            proposedDraftDiff,
+          );
+          if (!isCurrent()) return;
+          setApprovalError(null);
+          onApproved(approved.draft);
+        } catch (error) {
+          if (!isCurrent()) return;
+          setApprovalError(safeCodeOf(error, "approval.failed"));
+        }
+      },
     });
   }, [controlPlane, run, onApproved]);
 
-  const resetRelease = useCallback((): void => {
-    if (target === null) return;
-    setApprovalError(null);
-    setRelease(beginRelease(target));
-  }, [target]);
+  const resetRelease = useCallback(async (): Promise<
+    "resumed" | "start-over"
+  > => {
+    if (target === null || busyRef.current) return "resumed";
+    let outcome: "resumed" | "start-over" = "resumed";
+    const key = `${target.applicationGraphId}@${target.draftRevisionId}`;
+    targetGenerationRef.current += 1;
+    const generation = targetGenerationRef.current;
+    busyRunRef.current = null;
+    await run({
+      key,
+      generation,
+      work: async (isCurrent) => {
+        const stopped = await stopPreviewResources();
+        if (!isCurrent()) return;
+        setApprovalError(null);
+        const checkpoint = checkpointFor(target);
+        if (!stopped) {
+          setRelease(releaseFailed(checkpoint.state, "cleanup.failed"));
+          return;
+        }
+        try {
+          await withReleasePhaseDeadline(async () => {
+            await checkpoint.pendingMutation;
+          });
+          if (isCurrent()) setRelease(checkpoint.state);
+        } catch (error) {
+          if (!(error instanceof ReleasePhaseTimeoutError)) {
+            if (checkpoint.verificationRequestId !== undefined) {
+              // This endpoint is idempotent by the retained request ID.
+              checkpoint.pendingMutation = undefined;
+              if (isCurrent()) setRelease(checkpoint.state);
+              return;
+            }
+            outcome = "start-over";
+          }
+          // An unresolved or rejected creation response is not permission to
+          // issue another mutation against an identity that may already exist.
+          if (isCurrent())
+            setRelease(releaseFailed(checkpoint.state, "release.failed"));
+        }
+      },
+    });
+    return outcome;
+  }, [run, stopPreviewResources, target, checkpointFor]);
 
   return {
     release,

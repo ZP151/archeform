@@ -2,9 +2,13 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
-import { createCapabilityCompositionLock } from "@factory/capabilities";
+import {
+  bindRestaurantMenuParameters,
+  createCapabilityCompositionLock,
+} from "@factory/capabilities";
 import { hashApplicationGraphV3 } from "@factory/graph";
 
 import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
@@ -56,17 +60,59 @@ function restaurantV6Input() {
   return input;
 }
 
+function namedRestaurantInput() {
+  const input = canonicalInput();
+  const graph = input.publishedGraph.graph;
+  graph.metadata.name = "Saffron Table";
+  input.publishedGraph.graphHash = hashApplicationGraphV3(graph);
+  input.compositionLock = createCapabilityCompositionLock({
+    graphChecksum: input.publishedGraph.graphHash,
+    selections: graph.integration.compositionSelections ?? [],
+  });
+  return input;
+}
+
 function compile(input = canonicalInput()) {
   return generateRestaurantProductApplicationBundle(input);
 }
 
+async function loadGeneratedProductApp(input = canonicalInput()) {
+  const root = await mkdtemp(join(tmpdir(), "archeform-product-app-"));
+  roots.push(root);
+  const bundle = compile(input);
+  for (const file of bundle.files) {
+    const path = join(root, file.path);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, file.content, "utf8");
+  }
+  const app = await import(
+    `${pathToFileURL(join(root, "src/customer/app.mjs")).href}?v=${Date.now()}`
+  );
+  return { root, app };
+}
+
 describe("Restaurant product V3 target", () => {
+  it("uses the Graph-derived name and preserves USD in the dual-surface runtime seed", async () => {
+    const { root, app } = await loadGeneratedProductApp(namedRestaurantInput());
+    const seed = await import(
+      `${pathToFileURL(join(root, "src/runtime/seed.mjs")).href}?v=${Date.now()}`
+    );
+    expect(seed.restaurantSeed.settings).toMatchObject({
+      name: "Saffron Table",
+      currency: "USD",
+    });
+    const customer = app.renderCustomerPage("/", seed.restaurantSeed);
+    expect(customer).toContain("<title>Saffron Table</title>");
+    expect(customer).toContain("Saffron Table");
+  });
+
   it("assembles one deterministic dual-surface bundle with shared runtime and trusted starts", () => {
     const first = compile();
     const second = compile();
     expect(first.files.map(({ path }) => path)).toEqual([
       "package.json",
       "README.md",
+      "THIRD_PARTY_NOTICES.md",
       "graph/manifest.json",
       "src/server.mjs",
       "src/runtime/state.mjs",
@@ -167,28 +213,51 @@ describe("Restaurant product V3 target", () => {
     expect(result.stderr).toContain("trusted startup role");
   });
 
-  it("executes generated customer, merchant, and cross-surface journeys", async () => {
-    const bundle = compile();
-    const root = await mkdtemp(join(tmpdir(), "archeform-product-target-"));
-    roots.push(root);
-    for (const file of bundle.files) {
-      const path = join(root, file.path);
-      await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, file.content, "utf8");
-    }
-    const result = spawnSync(
-      process.execPath,
-      [
-        "--test",
-        join(root, "test/customer-journey.test.mjs"),
-        join(root, "test/merchant-journey.test.mjs"),
-        join(root, "test/shared-state.test.mjs"),
-      ],
-      { encoding: "utf8", timeout: 30_000 },
-    );
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toMatch(/pass 4/);
-  });
+  it.each([false, true])(
+    "executes generated customer, merchant, and cross-surface journeys with single supplied item %s",
+    async (single) => {
+      const input = canonicalInput();
+      if (single) {
+        input.publishedGraph.graph = bindRestaurantMenuParameters(
+          input.publishedGraph.graph,
+          {
+            apiVersion: "factory.restaurant-menu-parameters/v1",
+            mode: "provided",
+            currency: "USD",
+            items: [{ name: "Soup", description: null, priceMinor: 1234 }],
+          },
+        );
+        input.publishedGraph.graphHash = hashApplicationGraphV3(
+          input.publishedGraph.graph,
+        );
+        input.compositionLock = createCapabilityCompositionLock({
+          graphChecksum: input.publishedGraph.graphHash,
+          selections:
+            input.publishedGraph.graph.integration.compositionSelections ?? [],
+        });
+      }
+      const bundle = compile(input);
+      const root = await mkdtemp(join(tmpdir(), "archeform-product-target-"));
+      roots.push(root);
+      for (const file of bundle.files) {
+        const path = join(root, file.path);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, file.content, "utf8");
+      }
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--test",
+          join(root, "test/customer-journey.test.mjs"),
+          join(root, "test/merchant-journey.test.mjs"),
+          join(root, "test/shared-state.test.mjs"),
+        ],
+        { encoding: "utf8", timeout: 30_000 },
+      );
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toMatch(/pass 4/);
+    },
+  );
 
   it("contains only static local generated imports and both exact route trees", () => {
     const files = Object.fromEntries(
@@ -205,6 +274,34 @@ describe("Restaurant product V3 target", () => {
     );
     expect(files["src/customer/app.mjs"]).not.toContain("merchantRoutes");
     expect(files["src/merchant/app.mjs"]).not.toContain("customerRoutes");
+  });
+
+  it("reuses readable customer order rendering in dual-surface generated customer bundle", async () => {
+    const { app } = await loadGeneratedProductApp();
+    const state = {
+      settings: { currency: "SGD" },
+      catalog: [],
+      cart: { version: 1, items: [] },
+      profile: { version: 1, marketingOptIn: false },
+      orders: [
+        {
+          id: "order-14",
+          items: [{ id: "line-1", name: "Margherita pizza", quantity: 2 }],
+          total: 1400,
+          paymentStatus: "simulated-paid",
+          status: "served",
+        },
+      ],
+    };
+    const list = app.renderCustomerPage("/orders", state);
+    const detail = app.renderCustomerPage("/orders/order-14", state);
+    expect(list).toContain("Items");
+    expect(list).toContain("Payment");
+    expect(list).toContain("Total");
+    expect(list).toContain("Fulfilment");
+    expect(list).toContain("SGD 14.00");
+    expect(detail).toContain("Served");
+    expect(detail).toContain("Paid (simulated)");
   });
 
   it("executes one r.6 bundle whose customer and merchant share the Graph-derived catalog state", async () => {

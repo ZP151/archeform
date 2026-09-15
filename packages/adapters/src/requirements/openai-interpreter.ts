@@ -1,3 +1,9 @@
+import {
+  definitionSelectionSchema,
+  definitionSelectionJsonSchemas,
+  definitionSelectionInstructions,
+  projectDefinitionSelection,
+} from "./definition-selection-catalogue.js";
 import OpenAI from "openai";
 import { z } from "zod";
 
@@ -13,6 +19,7 @@ import {
   parseStrict,
   safeBusinessTextSchema,
 } from "@factory/graph";
+import { hashRestaurantMenuParameters } from "@factory/capabilities";
 
 import {
   type OpenAIResponseTransport,
@@ -21,6 +28,8 @@ import {
 import {
   RequirementInterpreterError,
   assertRequirementInterpretation,
+  assertRequirementInterpretationResult,
+  type RequirementInterpretationResultV1,
   clarificationQuestionsMatch,
   deriveClarifications,
   type ClarificationAnswerContextV1,
@@ -165,7 +174,7 @@ const modelFieldSchema = z
     options: optionalText(
       z.array(safeBusinessTextSchema.max(160)).min(2).max(50),
     ),
-    referenceTo: optionalText(identifierSchema),
+    referenceTo: optionalText(graphKeySchema),
   })
   .strict();
 
@@ -195,7 +204,7 @@ const modelActorSchema = z
       .array(
         z
           .object({
-            entityKey: identifierSchema,
+            entityKey: graphKeySchema,
             actions: z.array(blueprintActionSchema).min(1).max(12),
           })
           .strict(),
@@ -210,7 +219,7 @@ const modelPageIntentSchema = z
     key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     intent: pageIntentSchema,
-    entityKey: optionalText(identifierSchema),
+    entityKey: optionalText(graphKeySchema),
   })
   .strict();
 
@@ -227,10 +236,10 @@ const modelStateSchema = z
 const modelTransitionSchema = z
   .object({
     key: z.enum(blueprintActionVerbs),
-    from: identifierSchema,
-    to: identifierSchema,
+    from: graphKeySchema,
+    to: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
-    actorKey: identifierSchema,
+    actorKey: graphKeySchema,
   })
   .strict();
 
@@ -238,7 +247,7 @@ const modelWorkflowSchema = z
   .object({
     key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
-    entityKey: identifierSchema,
+    entityKey: graphKeySchema,
     states: z.array(modelStateSchema).min(2).max(20),
     transitions: z.array(modelTransitionSchema).min(1).max(40),
   })
@@ -252,7 +261,7 @@ const modelJourneySchema = z
       .array(
         z
           .object({
-            actorKey: identifierSchema,
+            actorKey: graphKeySchema,
             action: safeBusinessTextSchema.max(500),
           })
           .strict(),
@@ -289,6 +298,43 @@ const modelInterpretationSchema = z
 
 type ModelInterpretation = z.infer<typeof modelInterpretationSchema>;
 
+const providerInterpretationResultSchema = z
+  .object({
+    resultKind: z.enum(["definition-selection", "generated-blueprint"]),
+    definitionSelection: definitionSelectionSchema.nullable(),
+    generatedInterpretation: modelInterpretationSchema.nullable(),
+  })
+  .strict()
+  .superRefine((result, context) => {
+    if (
+      result.resultKind === "definition-selection" &&
+      (result.definitionSelection === null ||
+        result.generatedInterpretation !== null)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Definition selections must be exclusive.",
+      });
+    }
+    if (
+      result.resultKind === "generated-blueprint" &&
+      (result.generatedInterpretation === null ||
+        result.definitionSelection !== null ||
+        result.generatedInterpretation?.spec.productType ===
+          "restaurant-ordering")
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Generated interpretations must be exclusive and non-Restaurant.",
+      });
+    }
+  });
+
+type ProviderInterpretationResult = z.infer<
+  typeof providerInterpretationResultSchema
+>;
+
 /**
  * Same grammar as graphKeySchema: the provider-side lock for keys that become
  * graph-symbol segments verbatim (`graph.flow.<key>`, `graph.domain.<key>`,
@@ -309,6 +355,11 @@ const graphKeyJsonPattern = "^[a-z][a-z0-9-]*$";
 const graphFieldKeyJsonPattern =
   "^([a-hj-z][a-zA-Z0-9_]*|i|i[a-ce-zA-Z0-9_][a-zA-Z0-9_]*|id[a-zA-Z0-9_]+)$";
 
+/**
+ * A deliberately narrow, transient projection of the supported Restaurant
+ * definition. It gives the provider product defaults without granting it
+ * implementation, integration, or runtime authority.
+ */
 function namedItemJsonSchema(): Record<string, unknown> {
   return {
     type: "object",
@@ -368,7 +419,7 @@ function fieldJsonSchema(): Record<string, unknown> {
       },
       referenceTo: {
         anyOf: [
-          { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+          { type: "string", pattern: graphKeyJsonPattern },
           { type: "null" },
         ],
       },
@@ -529,7 +580,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
                   properties: {
                     entityKey: {
                       type: "string",
-                      pattern: "^[a-z][a-zA-Z0-9-]*$",
+                      pattern: graphKeyJsonPattern,
                     },
                     actions: {
                       type: "array",
@@ -550,6 +601,9 @@ const interpretationJsonSchema: Record<string, unknown> = {
                           "cancel",
                           "audit",
                           "manage",
+                          "start",
+                          "complete",
+                          "reopen",
                         ],
                       },
                     },
@@ -605,7 +659,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
               },
               entityKey: {
                 anyOf: [
-                  { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+                  { type: "string", pattern: graphKeyJsonPattern },
                   { type: "null" },
                 ],
               },
@@ -623,7 +677,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
             properties: {
               key: { type: "string", pattern: graphKeyJsonPattern },
               label: { type: "string", minLength: 1, maxLength: 160 },
-              entityKey: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+              entityKey: { type: "string", pattern: graphKeyJsonPattern },
               states: {
                 type: "array",
                 minItems: 2,
@@ -666,14 +720,17 @@ const interpretationJsonSchema: Record<string, unknown> = {
                         "cancel",
                         "audit",
                         "manage",
+                        "start",
+                        "complete",
+                        "reopen",
                       ],
                     },
-                    from: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
-                    to: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+                    from: { type: "string", pattern: graphKeyJsonPattern },
+                    to: { type: "string", pattern: graphKeyJsonPattern },
                     label: { type: "string", minLength: 1, maxLength: 160 },
                     actorKey: {
                       type: "string",
-                      pattern: "^[a-z][a-zA-Z0-9-]*$",
+                      pattern: graphKeyJsonPattern,
                     },
                   },
                 },
@@ -703,7 +760,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
                   properties: {
                     actorKey: {
                       type: "string",
-                      pattern: "^[a-z][a-zA-Z0-9-]*$",
+                      pattern: graphKeyJsonPattern,
                     },
                     action: { type: "string", minLength: 1, maxLength: 500 },
                   },
@@ -717,29 +774,49 @@ const interpretationJsonSchema: Record<string, unknown> = {
   },
 };
 
+const providerInterpretationResultJsonSchema: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["resultKind", "definitionSelection", "generatedInterpretation"],
+  properties: {
+    resultKind: {
+      type: "string",
+      enum: ["definition-selection", "generated-blueprint"],
+    },
+    definitionSelection: {
+      anyOf: [...definitionSelectionJsonSchemas, { type: "null" }],
+    },
+    generatedInterpretation: {
+      anyOf: [interpretationJsonSchema, { type: "null" }],
+    },
+  },
+};
+
 const interpretationInstructions = [
   "You are the Factory Pilot requirement interpreter adapter.",
   "Return only a JSON object matching the provided schema.",
-  "Interpret the brief into a factory.requirement-spec/v1 requirement and a factory.product-blueprint/v1 product blueprint.",
-  "Set the requirement's productType to 'restaurant-ordering' when the brief describes a restaurant, dining, or food-ordering product (guests order dishes; staff manage the menu, kitchen, tables, and service). Leave productType absent for every other product.",
-  "The blueprint proposes business semantics only: actors with entity permissions, entities with typed fields, page intents from the approved enum, workflows with states and transitions, and acceptance journeys.",
+  "For a generated-blueprint result, interpret the brief into a factory.requirement-spec/v1 requirement and a factory.product-blueprint/v1 product blueprint.",
+  "Registered products return definition-selection. Use supported-default only when every explicit requirement fits the selected supported default and no material question remains; use needs-clarification for every genuinely independent material difference, access, privacy, business-rule, data or compliance, external integration, or live payment decision, preserving every material question. Products outside the registered supported definitions return generated-blueprint.",
+  ...definitionSelectionInstructions,
+  "A generated blueprint proposes business semantics only: actors with entity permissions, entities with typed fields, page intents from the approved enum, workflows with states and transitions, and acceptance journeys.",
   "Never propose routes, URLs, paths, capability or package selections, source, code, providers, or credentials.",
   "Business text must not contain URLs, absolute or Windows paths, traversal segments, or prototype-key material.",
   "Do not invent actors, entities, workflows, or acceptance scenarios the brief does not imply.",
-  "If the brief is ambiguous, leave an open question in the spec instead of guessing.",
+  "If the brief is ambiguous, leave an open question in the spec instead of guessing unless an applicable supported definition resolves the omitted detail.",
   "Consolidate every material clarification into the first response; never ask one question at a time.",
-  "When clarification answers are supplied, treat them as authoritative business input, apply them to the complete spec and blueprint, and mark the corresponding open questions answered.",
-  "clarificationContext contains the original category, question, and user answer for each opaque answer key; use that semantic context and do not ask for the same decision again.",
-  "When priorInterpretation is supplied, treat it as the validated baseline: revise only semantics affected by the supplied answers, preserve stable identifiers and unaffected actors, entities, fields, workflows, pages, and journeys, and return the complete revised interpretation.",
-  "Do not repeat, rephrase, or progressively reveal additional questions after answers are supplied. Leave only a genuinely new safety-critical ambiguity open; use conventional product defaults for any remaining noncritical detail.",
+  "For generated-blueprint results, when clarification answers are supplied, treat them as authoritative business input, apply them to the complete spec and blueprint, and mark the corresponding open questions answered.",
+  "For generated-blueprint results, clarificationContext contains the original category, question, and user answer for each opaque answer key; use that semantic context and do not ask for the same decision again.",
+  "For generated-blueprint results, when priorInterpretation is supplied, treat it as the validated baseline: revise only semantics affected by the supplied answers, preserve stable identifiers and unaffected actors, entities, fields, workflows, pages, and journeys, and return the complete revised interpretation. For registered-definition follow-ups, reevaluate definition fit and retain needs-clarification for every still-material question or new material difference, even when it resembles an answered question.",
+  "For generated-blueprint results, do not repeat, rephrase, or progressively reveal additional questions after answers are supplied. Leave only a genuinely new safety-critical ambiguity open; use conventional product defaults for any remaining noncritical detail.",
   "Classify every open question using its narrow Factory category. Use experience.visual-style only for optional aesthetic direction; authorization, visibility, role, business-rule, data, and integration questions are never optional visual preferences.",
   "Every workflow must be internally consistent with the actors and permissions: each transition's from and to must be states declared in the same workflow, the transition's actor must be a declared actor, and that actor's permissions must grant the transition's event as an action on the workflow's entity.",
-  "Transition events and permission grants may only use the bounded action vocabulary: create, read, update, delete, submit, approve, reject, confirm, reschedule, cancel, audit, manage — never invent a verb outside this vocabulary.",
+  "Transition events and permission grants may only use the bounded action vocabulary: create, read, update, delete, submit, approve, reject, confirm, reschedule, cancel, audit, manage, start, complete, reopen — never invent a verb outside this vocabulary.",
   "Every enum-typed field must include its options as a list of at least two distinct business values; every reference-typed field must name an entity declared in the same blueprint.",
   "Never duplicate any key: actors, entities, fields, workflows, states, transitions, page intents, and journeys must each be unique.",
   "Keys that become graph symbols — the requirementId and every actor, entity, workflow, page-intent, and workflow-state key — must be lowercase kebab-case: lowercase letters, digits, and hyphens only, starting with a lowercase letter. Never use camelCase for these keys (for example expense-approval, not expenseApproval).",
   "Entity field keys use the opposite grammar: lowercase-first camelCase with letters, digits, and underscores only, and never a hyphen — for example submittedBy, never submitted-by. Do not apply the kebab-case rule to field keys.",
   "Identity is Factory-owned. Never declare an entity field with the exact key id; the runtime supplies record identity outside blueprint fields.",
+  "Blueprint references must exactly reuse the matching declared entity, actor, or workflow-state key; never introduce a different spelling.",
   "Journey steps may only reference declared actors.",
   "The composed runtime rejects inconsistent flows, so never declare a transition, state, journey step, or actor that you do not fully grant.",
   "If a repair note is included, adjust the proposal to satisfy it exactly and return a complete, valid interpretation.",
@@ -754,9 +831,25 @@ type OpenAIRequirementClient = {
         readonly timeout: 180_000;
         readonly maxRetries: 0;
       },
-    ): Promise<{ readonly output_text: string }>;
+    ): Promise<{
+      readonly status?: unknown;
+      readonly error?: unknown;
+      readonly output?: readonly {
+        readonly content?: readonly { readonly type?: unknown }[];
+      }[];
+      readonly output_text: string;
+    }>;
   };
 };
+
+const REQUIREMENT_MAX_OUTPUT_TOKENS = 25_000;
+
+/** Metadata failures are terminal; completed invalid text alone is repairable. */
+class TerminalRequirementResponseError extends RequirementInterpreterError {
+  public constructor() {
+    super("Requirement interpretation output was invalid.", "output_invalid");
+  }
+}
 
 export class OpenAIRequirementResponsesApiTransport implements OpenAIResponseTransport {
   private readonly createClient: (apiKey: string) => OpenAIRequirementClient;
@@ -789,6 +882,7 @@ export class OpenAIRequirementResponsesApiTransport implements OpenAIResponseTra
         instructions: request.instructions,
         input: request.input,
         store: request.store,
+        max_output_tokens: REQUIREMENT_MAX_OUTPUT_TOKENS,
         text: {
           format: {
             type: "json_schema",
@@ -804,6 +898,15 @@ export class OpenAIRequirementResponsesApiTransport implements OpenAIResponseTra
         maxRetries: request.maxRetries,
       },
     );
+    if (
+      response.status !== "completed" ||
+      response.error !== null ||
+      response.output?.some((item) =>
+        item.content?.some((content) => content.type === "refusal"),
+      )
+    ) {
+      throw new TerminalRequirementResponseError();
+    }
     return { outputText: response.output_text };
   }
 }
@@ -848,7 +951,12 @@ function composeAbortSignals(signals: readonly AbortSignal[]): {
 }
 
 async function withAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
-  if (signal.aborted) throw new InterpretationAbort();
+  if (signal.aborted) {
+    // The SDK may abort synchronously while starting an already-created promise.
+    // Observe its eventual rejection without delaying cancellation precedence.
+    void work.catch(() => undefined);
+    throw new InterpretationAbort();
+  }
   let listener: (() => void) | undefined;
   try {
     return await Promise.race([
@@ -944,9 +1052,9 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
     readonly brief: string;
     readonly answers: Readonly<Record<string, string>>;
     readonly clarificationContext?: readonly ClarificationAnswerContextV1[];
-    readonly priorInterpretation?: RequirementInterpretationV1;
+    readonly priorInterpretation?: RequirementInterpretationResultV1;
     readonly signal?: AbortSignal;
-  }): Promise<RequirementInterpretationV1> {
+  }): Promise<RequirementInterpretationResultV1> {
     if (typeof input.brief !== "string" || input.brief.trim().length === 0) {
       throw new RequirementInterpreterError(
         "The requirement brief must be non-empty prose text.",
@@ -964,7 +1072,7 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
     const priorInterpretation =
       input.priorInterpretation === undefined
         ? undefined
-        : assertRequirementInterpretation(input.priorInterpretation);
+        : assertRequirementInterpretationResult(input.priorInterpretation);
 
     // One invocation owns a hard total deadline. Each semantic call also owns
     // a round deadline; provider/network failures never enter the repair loop.
@@ -1009,7 +1117,7 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
               }),
               store: false,
               strictJson: true,
-              jsonSchema: interpretationJsonSchema,
+              jsonSchema: providerInterpretationResultJsonSchema,
               signal: combined.signal,
               timeout: PROVIDER_ROUND_TIMEOUT_MS,
               maxRetries: 0,
@@ -1021,6 +1129,7 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           if (combined.signal.aborted || isProviderTimeout(error)) {
             throw timeoutFailure();
           }
+          if (error instanceof TerminalRequirementResponseError) throw error;
           throw providerFailure(error);
         } finally {
           clearTimeout(roundTimer);
@@ -1031,18 +1140,68 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           throw timeoutFailure();
         }
 
-        let candidate: ModelInterpretation;
+        let providerResult: ProviderInterpretationResult;
         try {
           const parsed = JSON.parse(outputText) as unknown;
-          candidate = parseStrict(modelInterpretationSchema, parsed);
+          providerResult = parseStrict(
+            providerInterpretationResultSchema,
+            parsed,
+          );
         } catch {
           if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
           repairNote = FIXED_REPAIR_INSTRUCTION;
           continue;
         }
 
+        if (priorInterpretation?.businessParameters != null) {
+          const next = providerResult.definitionSelection?.businessParameters;
+          if (
+            next == null ||
+            hashRestaurantMenuParameters(next) !==
+              hashRestaurantMenuParameters(
+                priorInterpretation.businessParameters,
+              )
+          ) {
+            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+            repairNote = FIXED_REPAIR_INSTRUCTION;
+            continue;
+          }
+        }
+
+        if (providerResult.resultKind === "definition-selection") {
+          let interpretation: RequirementInterpretationV1;
+          try {
+            const selection = providerResult.definitionSelection!;
+            interpretation = projectDefinitionSelection(selection);
+          } catch {
+            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+            repairNote = FIXED_REPAIR_INSTRUCTION;
+            continue;
+          }
+          if (
+            (input.clarificationContext?.length ?? 0) > 0 &&
+            interpretation.clarifications.length > 0
+          ) {
+            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+            repairNote = FIXED_REPAIR_INSTRUCTION;
+            continue;
+          }
+          try {
+            return assertRequirementInterpretationResult({
+              apiVersion: "factory.requirement-interpretation-result/v1",
+              interpretation,
+              businessParameters:
+                providerResult.definitionSelection!.businessParameters,
+            });
+          } catch {
+            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+            repairNote = FIXED_REPAIR_INSTRUCTION;
+            continue;
+          }
+        }
+
         const spec = reconcileClarificationAnswers(
-          candidate.spec,
+          providerResult.generatedInterpretation!.spec,
           input.answers,
           input.clarificationContext ?? [],
         );
@@ -1056,14 +1215,18 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           continue;
         }
         const blueprint = {
-          ...candidate.blueprint,
+          ...providerResult.generatedInterpretation!.blueprint,
           requirementChecksum: hashRequirementSpec(spec),
         };
         try {
-          return assertRequirementInterpretation({
-            spec,
-            blueprint,
-            clarifications,
+          return assertRequirementInterpretationResult({
+            apiVersion: "factory.requirement-interpretation-result/v1",
+            businessParameters: null,
+            interpretation: assertRequirementInterpretation({
+              spec,
+              blueprint,
+              clarifications,
+            }),
           });
         } catch {
           if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();

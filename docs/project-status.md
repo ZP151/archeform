@@ -1,6 +1,571 @@
 # Archeform delivery status
 
-Updated: 2026-09-03
+Updated: 2026-09-13
+
+## Current: five reviewed definitions; representative batch accepted
+
+Publication Review is the fifth registered definition, composed from data and
+the existing Approval correction family. Six candidate briefs were assessed;
+the other five retain unsupported numeric, interval or identity requirements.
+The actual first run exposed blank card identity despite correctly loaded UI.
+Accepted ADR-0066 adds one shared title/enum projection for generic cards and
+decision history; no per-product renderer, dependency or visual asset was added.
+
+The complete compiler suite passes 776 tests and all original-four bundles remain
+byte-identical. Adapters pass 223 tests and the built CLI passes 16 cases.
+Final actual attempt 5 passes in 4.3 minutes; the app became ready in 191,368 ms.
+Two authored submissions are visibly distinct in cards/history and complete the
+correction/approval journey. Responsive, dark and image-failure checks pass;
+all ten exact runtime projects are clean. Independent review passes with in-scope
+P0/P1/P2 0/0/0, and the controller accepts the bounded local delivery.
+Earlier failed attempts are retained: inherited photo policy, reused test ID,
+long-ID database constraint collision and open-history density-test setup.
+The shorter unique test ID fixes isolation; arbitrary long application IDs
+remain a platform limitation.
+See the [batch acceptance record](acceptance/definition-batch-one.md).
+
+Next: address bounded database identifier naming before broad scale, then add
+shared numeric rules and admit Training Funding. Equipment still needs total
+calculation; dates, entitlement and real identity remain later capabilities.
+Track distinct accepted jobs and ordinary-user effort separately from catalogue
+or material counts. Real-model selection, ordinary-user effort and hosted
+operations remain unproven. The [scale roadmap](superpowers/plans/2026-09-13-product-definition-scale.md)
+records the next bounded steps and proportionate regression requirements.
+
+## Delivered: definition data foundation accepted
+
+The core goal from `f8cdfe81` is accepted: all four reviewed definitions now
+come from strict data plus three fixed family implementations, with a
+provider-free batch validator. A configuration-only Approval field variation
+reaches generated database/UI output without handwritten runtime or UI changes.
+Candidate validation uses bounded stdin and cannot register runtime entries.
+See the [acceptance record](acceptance/product-definition-data.md) and
+[authoring guide](product-definition-authoring.md).
+
+All four canonical definitions, supported/clarification projections, schemas,
+guidance and complete Published outputs retain their pre-change hashes.
+Final compiler authoring/compatibility tests pass 4/4; independent QA passes
+174 data/interpreter tests and 16 built CLI cases. Workbench production build
+and 64 affected consumer tests pass after fixing its actual JSON-loader
+integration defect. Task review, Terra QA and Sol release review pass 0/0/0.
+Shipped counts are 4/4/4/4; one local validation run took 381 ms.
+
+Coverage remains four definitions and three demonstrated local runtime families,
+with zero new product admissions. The next core delivery is the six-candidate
+representative batch in the [scale roadmap](superpowers/plans/2026-09-13-product-definition-scale.md):
+measure configuration-only additions, semantic duplicates and capability gaps
+before expanding to 30. Real-model selection, ordinary-user effort and hosted
+operations remain unproven.
+
+## Delivered: Task correction accepted
+
+The accepted core iteration starts from delivered `5b65169e` and implements
+same-task correction through the [bounded implementation plan](superpowers/plans/2026-09-13-task-correction.md).
+ADR-0064 has received independent standing acceptance, with P0/P1/P2 `0/0/0`,
+and implementation plus focused independent review have passed. The old
+Published Task's 63-file bundle and existing non-Task bundles remain unchanged.
+Actual correction attempt 4 passed the generated PostgreSQL/API/browser lane
+in 4.0 minutes, with the app ready in 196,950 ms. Same-task editing, conflict
+review, completed-state denial, Reopen and exact retry after API restart pass;
+audit/receipt counts match `[5,2,1,8]`. The verifier fixture/chain repair and the
+incorrect reopened-state test assertion are closed, with earlier failures
+preserved. All seven exact runtime projects are clean. Independent Terra QA and
+Sol final release review pass with no open P0/P1/P2 findings; root accepts the
+bounded slice. Twenty-four final actual screenshots were inspected. See the
+[correction acceptance record](acceptance/task-correction.md).
+
+Team Task Tracking is implemented from delivered `d28f1fed`. Actual attempt 2
+passed one generated PostgreSQL/API/browser lane in 3.5 minutes, with the local
+app ready in 177,738 ms. Create/start/complete/reopen/complete, finding, persisted
+reload, Viewer/state denial, safe restart/replay and conflicting writes pass.
+Audit and receipt counts match exactly. The first attempt's pre-Publish identity
+failure is retained with its focused correction. Sixteen actual screenshots and
+exact three-project cleanup support the [acceptance record](acceptance/team-task.md).
+Task review, independent Terra QA and independent Sol release review passed
+with no open P0/P1/P2 findings. The controller accepted the bounded slice.
+
+Three prior canonical definitions and ten complete ordered bundles remain
+byte-identical. Coverage is now four definitions and three
+demonstrated local runtime families. Same-task field correction now closes the
+next basic Task journey gap; broader task-management maturity remains unproven.
+The next delivery is data-based definition authoring and batch validation,
+starting with the four delivered definitions as exact round-trip fixtures.
+
+The [scale plan](superpowers/plans/2026-09-13-product-definition-scale.md)
+connects each next slice to ordinary-user effort reduction and separates
+fixture, real-model and ordinary-user evidence. Hundred/thousand-definition
+coverage, real identity and public hosted usability are targets, not delivered
+capabilities.
+
+## Current: founder-approved UI and approval correction delivery
+
+The founder explicitly approved the UI delivered at `92f21089` and authorized
+the next important business iteration under a long goal. That visual result is
+now the baseline. The active [correction plan](superpowers/plans/2026-09-12-approval-correction.md)
+implements accepted ADR-0060: edit an existing draft, return with a reason,
+revise/resubmit the same record, retain decision history, and safely retry
+interrupted or conflicting mutations. Both actual generated Expense/Purchase
+business lanes now pass, including same-record resubmission, API restart/replay,
+concurrent-write conflicts and retained reasons/history. All 48 new state images
+have visual review coverage. Task review, independent QA and final slice review
+are clean; the controller has accepted the slice for delivery. See the
+[acceptance results](acceptance/approval-correction.md). The next bounded business
+expansion is Task create/start/complete/reopen, inheriting this approved baseline.
+
+The iteration reuses the approved workspace/media and one shared correction
+contract for Expense and Purchase. It adds no package, provider or template
+count. The required API/data review applies once to the complete business slice.
+Earlier status entries below describe historical evidence and decisions.
+
+## Historical delivery: combined expressive UI and reusable assembly
+
+The founder rejected the latest visual result, selected a combination of three
+design concepts, and requested implementation plus reusable component/material
+and assembly improvements. The [active plan](superpowers/plans/2026-09-12-expressive-approval.md)
+combines stronger cobalt hierarchy, original photographic category materials and
+clear state progress. The [combined concept](acceptance/evidence/consumer-expressive-approval/design-reference.png)
+is a reference only. The shared workspace 2.0.0, presentation components 1.0.0 and
+two-material registry 1.0.0 are implemented. Both actual Expense/Purchase runtime
+lanes pass, and all 29 actual screenshots were visually inspected. Final affected
+compiler tests pass 42/42, with build/lint and unchanged-server/non-approval
+checks passing. See [acceptance and actual screens](acceptance/approval-expressive-presentation.md).
+Internal visual reviews do not constitute founder approval.
+
+This presentation iteration precedes the accepted ADR-0060 correction/recovery
+milestone, which remains unimplemented. Definition/family counts stay three/two.
+The generator now inherits versioned deterministic visual assets and fallbacks;
+neither a longer model prompt nor a larger unverified template count is counted
+as delivery. No backend or model instruction change was needed for this slice.
+
+All subsequent product types now inherit the
+[shared consumer acceptance matrix](acceptance/consumer-product-checklist.md)
+through delivery policy and the active roadmap. Each task must cover applicable
+business, effort, interaction-state, visual, responsive/accessibility, access and
+delivery outcomes. Actual generated screenshots require visual inspection;
+technical test success alone is insufficient. This uses the existing review,
+preserves valid regression evidence and introduces no additional audit stage.
+Adopting this requirement is not evidence that untested product families pass it.
+
+## Historical priority: expressive UI and a complete approval journey
+
+The founder rejected the 2d153239 visual result on September 12. Its internal
+visual acceptance is withdrawn; historical functional results retain their
+source-specific scope. A new refinement strengthens useful color and makes
+Refresh an accessible icon-only action. Mechanical checks cannot overrule the
+founder's direction.
+
+The [September 12 correction](acceptance/evidence/consumer-approval-emphasis/README.md)
+now passes both actual Expense/Purchase lanes (2/2), focused compiler tests
+(29/29), package checks and light/dark presentation checks. Full accent navigation,
+semantic statuses and icon-only Refresh are implemented. All 13 actual images were
+inspected and exact local runtime cleanup is complete. The single independent
+review is clean (P0/P1/P2 0/0/0); no founder visual approval or mature-product claim
+is inferred.
+
+The next product milestone is [approval correction and decision closure](superpowers/plans/2026-09-12-approval-decision-closure.md): visible decision history, draft correction and return/revision/resubmission, and recovery after uncertain writes. Generated APIs still lack governed record update; rejected requests are terminal; mutation retries are not idempotent. The prior invisible-audit gap is now addressed by slice A below. These remaining gaps are product behavior, not styling issues.
+
+Slice A [decision history](acceptance/approval-decision-history.md) is implemented
+under accepted ADR-0059 and passes 34 focused tests. Both actual generated Expense
+and Purchase lanes pass (2/2, 6.9 minutes), with visible outcomes after reload,
+safe error/retry and role-race isolation. All 21 actual images were inspected,
+exact cleanup is complete, and one independent ordinary review is clean
+(P0/P1/P2 0/0/0). Root accepts this bounded local capability, delivered at
+`4b02872b056c41c2888b007d2d67193bee1ff433`. Slice B
+has accepted ADR-0060 for governed draft correction, persisted return reasons and
+same-record resubmission. Its initial separation from replay/concurrency controls
+failed the existing threat-model requirement. The revised proposal combines B
+with the necessary C recovery controls in one delivery boundary. The final exact
+decision passes standing review (0/0/0), and root owns the next long-running goal.
+Its production implementation has not started; no correction/recovery outcome is
+counted yet.
+
+B3 Task implementation is held. Its dispatched agent failed before writing code
+because the selected runtime used exhausted Spark quota. No Task production code
+was delivered; the previous "active implementation" report overstated dispatch.
+Keep **three registered definitions / two demonstrated runtime families**, with
+no mature closed-loop product count inferred from those numbers. Root owns the
+correction; the ledger records implementation/decision boundaries and evidence.
+
+## Historical functional repair: visual acceptance withdrawn
+
+The founder rejected B2's visual result; that historical visual acceptance stays
+withdrawn. The [shared repair](acceptance/approval-workspace-repair.md) now replaces
+the approval template's old layout with a coherent desktop sidebar, compact
+mobile navigation, neutral aligned record summaries and typed forms. Expense and
+Purchase consume the same private recipe. The reproduced old UI had loaded CSS
+and icons: template composition and incomplete acceptance criteria caused the
+observed poor result. New checks actively detect disabled CSS or hidden icons.
+
+Both actual immutable-runtime lanes pass (2/2): creation, submission, approval,
+rejection, persistence, role/state denials and finding/recovery. Ready times are
+185207 ms (Expense) and 177833 ms (Purchase); first phone actions end at 550 and
+573 px. All 13 actual images were visually inspected at 390/768/1440 and relevant
+form/navigation/search/no-match states. Compiler 665/665, runtime 28/28, final
+accessibility/digest correction 2/2 and emitted Chromium keyboard checks pass.
+One combined independent ordinary-iteration review reports P0/P1/P2 0/0/0;
+exact Factory/three-Preview cleanup is complete. Actual-runtime versus final
+accessible-name-only source identities are explicit in the acceptance record.
+
+See the [new phone result](acceptance/evidence/consumer-approval-workspace/workspace-results-390.png)
+and [desktop result](acceptance/evidence/consumer-approval-workspace/workspace-results-1440.png).
+This is local internal acceptance, not founder or ordinary-user visual approval.
+No definition/family is added: delivered counts stay **three / two**. Next is the
+Task-family experiment under standing-accepted ADR-0057, beginning with strict semantic
+contract parity and shared assembly. Its implementation is held under the [B3 plan](superpowers/plans/2026-09-11-canonical-team-task-family.md); no production code was written or counted. The September 12 priority above supersedes its immediate scheduling.
+
+## Functionally verified, visual repair required: B2 reusable record finding
+
+The [B2 plan](superpowers/plans/2026-09-11-reusable-record-finding.md) selects
+the next shared product capability: finding and processing records using search,
+workflow status and clear recovery in existing Expense and Purchase apps. The
+goal is fewer steps to a useful business outcome. B2 now reuses existing cards,
+controls and icons for declared-field search, workflow status, counts, one-action
+clear and no-match recovery. Filtered decisions keep visible outcome feedback;
+old-role callbacks cannot refresh a new view or release a newer operation lock.
+No dependency or public registry asset was added.
+
+Full compiler tests pass **665/665** across 39 files; focused runtime **28/28**,
+types/build/lint and real Purchase E2E **1/1** pass. The prepared local fixture
+reached ready in **177061 ms**, completed business/recovery in **187601 ms**, and
+required zero questions, technical handoffs or in-run rescue. Search plus status
+finds the known record in two inputs; one clear restores the list. These are
+deterministic local results, not real-model or ordinary-user measurements.
+All three roles at 390/768/1440 and phone search/no-match pass layout/axe;
+six actual images were inspected. Scoped independent findings are P0/P1/P2
+**0/0/0**, with exact Factory/two-Preview cleanup. The first failed label-text
+test locator and its precise correction remain separate in the
+[acceptance record](acceptance/reusable-record-finding.md). See the
+[phone search result](acceptance/evidence/consumer-record-finding/b2-search-390.png).
+
+Keep three canonical definitions and two runtime families as the delivered
+baseline. Next prioritize a complete Task family using shared record handling,
+then Appointment after availability/conflict semantics, Inventory after stock
+invariants, and Content/Directory with useful reviewed media. Progress toward
+30/100/hundreds-thousands definitions through demonstrated family reuse and
+bounded retrieval. Real identity/access/hosting and real-model/ordinary-user
+validation remain explicit maturity gaps alongside supply growth.
+
+## Accepted delivery: B1 reusable definition and material supply
+
+The founder now prioritizes multi-type assembly. The
+[B1 plan](superpowers/plans/2026-09-10-reusable-definition-bank.md) integrates a
+private definition bank into the current provider interpretation path and uses
+Purchase Request approval to prove expansion without a separate application
+renderer. B1 is accepted locally: Restaurant, Expense and Purchase now use one
+private registered selection bank; Expense and Purchase share the same approval
+definition factory. The model selects reviewed semantics; the compiler produces
+runtime source. There are **three canonical selection definitions and two
+consumer runtime families**, not three separate renderer families or a thousand
+delivered applications.
+
+The actual Purchase lane passes create/submit/approve/reject, procurement audit
+API, role/state denials, exact values after reload, and loading/error/empty
+recovery. Ready was **155561 ms**, completion **163345 ms**, with zero questions,
+technical handoffs or in-run rescue. This uses a deterministic selection fixture
+with real immutable delivery/runtime; it does not measure model classification
+or ordinary-user usability. All three roles at 390/768/1440 pass layout/axe;
+four actual screenshots were inspected. A longer role-name sizing defect and
+two test-harness defects were repaired and recorded separately. Full adapter
+184/184, compiler 662/662 plus the focused sizing correction, Workbench 14/14,
+package checks and final Playwright 1/1 pass. Exact Factory/four-Preview cleanup
+is proven and independent review has no P0/P1/P2 findings. See the
+[acceptance record](acceptance/reusable-definition-bank.md) and
+[phone results](acceptance/evidence/consumer-purchase-request/b1-results-390.png).
+
+The [supply shortlist](research/2026-09-10-reusable-assembly-supply.md) covers
+12 public registry, behavior and media candidates with separate license and
+admission status. None is installed or adopted by the research. Track source
+materials, approved assets, authored definitions, runtime families and usable
+applications separately. Expand list/calendar/media supply and additional
+business families only with their applicable acceptance evidence.
+
+The B2 record-finding slice above closes an actual list-screen gap through
+existing materials. Next is B3 Task, followed by Appointment, Inventory and
+Content/Directory according to their missing business semantics. TanStack Table,
+FullCalendar Standard and reviewed media remain demand-driven supply candidates;
+none is adopted yet. Grow 30 detailed definitions,
+then 100 and eventually hundreds/thousands with bounded retrieval and shared
+family regressions. Batch library evidence and automated asset checks instead
+of repeating manual audits per cosmetic variant. H1 identity/access/hosting
+and D2.5 real-model/real-user validation remain separate essential milestones.
+
+## Previous delivery: D2.4 mobile usability correction
+
+The founder's review of `d23-real-results-390.png` rejects its visual quality.
+The earlier business and accessibility checks remain valid within their scope,
+but do not establish ordinary-user presentation acceptance. Loaded CSS/icons
+are not the issue: the generic shell and field stack obscure the task.
+
+[D2.4](superpowers/plans/2026-09-10-approval-mobile-presentation.md) now supplies
+compact record summaries, prominent amounts, textual status with icons and
+semantic color, accessible secondary details and a desktop two-column layout.
+The [new phone result](acceptance/evidence/consumer-approval/d24-results-390.png)
+is 390 x 1016, compared with the unchanged 390 x 2004 D2.3 baseline. This is a
+presentation comparison, not a measured user-effort reduction. The initial
+record's Submit button ends at 461 px in a 390 x 900 browser viewport.
+
+The final actual generated journey passes create/submit/approve/reject/reload
+and requester denial. At 390/768/1440 px, role text fits, summaries fill their
+cards, axe reports no violations and the document does not overflow. The fixed
+interpretation lane reaches ready in 171.646 seconds and completes business
+assertions in 177.411 seconds, with zero questions or technical handoffs. This
+prepared local run does not establish model reliability or physical-device UX.
+See the [acceptance record](acceptance/approval-mobile-presentation.md).
+
+Next: D2.5 coarse-intent and remaining A01-A10 business coverage, then real-phone
+user task validation. Resolve H1 identity/access/hosting separately before
+claiming shareable private apps. No new library or cloud resource was added.
+
+## Active continuation: approval delivery and hosted decision
+
+The long-task goal continues on `codex/consumer-delivery-roadmap` from D1.10
+`2c2815c0`. The [D2 plan](superpowers/plans/2026-09-09-approval-consumer-delivery.md)
+prioritizes the second usable business journey ahead of catalog expansion.
+D2.1 now automatically adopts an eligible standard approval composition and
+runs the existing immutable delivery lifecycle; unsupported or ambiguous
+semantics remain manual. Local demo roles do not provide real-user identity
+or requester-owned record privacy.
+
+D2.1/D2.2 is accepted locally after 17 deterministic consumer browser cases,
+579 Workbench tests plus 67 affected tests for an import-concurrency correction,
+final Workbench build/types, 656 compiler tests plus 34 affected tests for the
+final native-date focus/layout correction, and one clean independent review.
+The generated form's reproduced date-serialization failure is corrected. Typed
+controls, readable declared fields, state-valid actions, safe feedback and seven
+reused pinned Lucide icons now support the complete approval journey.
+
+Both mandatory actual browser lanes passed without retries: the emitted Expense
+app (1/1) and fixed interpretation through real composition, immutable delivery,
+ten-step verification and generated UI (1/1). Two requests were created and
+submitted in the UI, then approved/rejected and read after requester reload;
+unauthorized requester approval returned 403. At 390/768/1440 px, axe reported no
+violations and horizontal overflow was absent. Exact generated-runtime cleanup
+passed. The fixture consumer lane measured 170.538 seconds to ready and 174.406
+seconds to business completion, with 0 questions and 0 technical handoffs in a
+prepared local environment. This is not a real-model reliability or cold-start
+benchmark. Earlier failed attempts remain in the ledger.
+
+D2.3 now passes the genuine supported Expense journey: **167.833 seconds to
+ready, zero questions and zero technical handoffs**, with one browser
+interpretation request. Two requests were created and submitted through the
+generated UI, then approved/rejected and retained after requester reload;
+unauthorized requester approval was denied. Business assertions completed in
+171.716 seconds. Layout and axe checks pass at 390/768/1440 px. This is one
+supported request in a prepared local environment, not a reliability rate or
+cold-start benchmark. Browser calls do not measure internal provider transports.
+
+The genuine requester-privacy case separately returned a consolidated set of
+three material questions in 20.054 seconds, with zero product creation or
+lifecycle. The local demo was not substituted for private authenticated access.
+The implementation reuses a complete canonical Expense definition (ADR-0050),
+stops semantic retries after incomplete provider responses (ADR-0051), and
+removes six complex provider-side text patterns while retaining exact local
+validation (ADR-0052). Earlier manual-handoff and HTTP 422 failures remain in
+the ledger; bounded diagnostics, including one exact pattern-removal contrast,
+guided the corrections rather than unchanged acceptance retries.
+
+Final evidence includes 174 adapter tests, 36 affected Workbench tests, four
+safe-diagnostic tests, package types/build, production image build, independent
+review and separate deterministic/real runtime lanes. Temporary preview and
+Factory resources were removed with exact-label zero counts. The
+[mobile result](acceptance/evidence/consumer-approval/d23-real-results-390.png)
+contains only authored synthetic business data.
+
+D2 still needs broader first-request coverage across its ten-case matrix and
+ordinary-user validation. Next measure coarse Expense intent, preserve material
+workflow/integration differences, and reduce mobile navigation and record-reading
+effort using existing assets. A larger template count is not the next success
+metric. Private real-user identity and hosted access remain separate gaps.
+
+Proposed ADR-0047 specifies an invited-user hosted experiment and required
+account, domain, host, access and spend decisions. No hosted infrastructure has
+been provisioned. Next priorities are first-request generation reliability,
+approval case coverage and cross-device access. Private real-user identity and
+requester-owned record privacy remain explicit gaps; this local acceptance does
+not close the full D2 or H1 milestone.
+
+## Current authoritative checkpoint — consumer generation
+
+The founder approved the consumer product correction on September 7. The
+default outcome is now **describe a need -> answer only necessary business
+questions -> use/share a complete application**. Technical planning, repeated
+user edits, and manual Publish/Compile/Verify steps are not required product
+stages. The platform retains the immutable Graph lifecycle internally.
+
+The [active ledger](superpowers/ledgers/2026-09-07-consumer-generation-delivery.md)
+is the single current task and product-metric authority. The
+[detailed roadmap](superpowers/plans/2026-09-07-consumer-generation-delivery.md)
+orders delivery as regression foundation, complete ordering generation,
+intake/approval, appointment, then measured catalog expansion. Hosted usability
+starts alongside the first business slice and is required before declaring the
+first externally usable milestone complete.
+
+The bounded D1.1-D1.3 supported Restaurant generation slice is accepted locally
+on `codex/consumer-delivery-roadmap`, based on delivered D0 `dfc0f71d`. A fresh
+rough need now selects the canonical definition and automatically applies,
+publishes, compiles, verifies and provides a local app link. Optional manual review
+remains available. The private concise interpretation avoids redundant
+model-authored Restaurant blueprint generation; public Graph/API/lifecycle
+contracts remain unchanged.
+
+The unchanged coarse real case passed **1/1 with zero retries**, **0 business
+questions**, **0 technical handoffs**, **21.385 seconds to verified ready** and
+**40.79 seconds for the complete test**, in a prepared local environment with
+warm caches. Customer checkout, merchant fulfilment APIs, state consistency,
+idempotency, role denial, accessibility/responsive checks and exact runtime
+cleanup passed. Four earlier coarse failures remain recorded; one successful
+case is not a reliability benchmark, cold-start measurement or hosted result.
+The retained manual V3 acceptance also passed 1/1 in 243.85 seconds.
+
+The distinct live-payment negative passed: HTTP 200 clarification in 30.343
+seconds and zero delivery mutations. Its 14 questions (4 integration) expose a
+remaining user-effort defect. D1.4 now closes the observed order-page display
+and explicit refresh gaps. Required business parameter binding, ten-case coverage,
+persistence and hosted delivery remain open; catalog expansion is secondary.
+
+D1.4 is accepted: generated customer list/detail pages show item quantities,
+payment, currency-aware totals and fulfilment labels. A native `Refresh status`
+link reads the existing page, including from the empty state, and customer DOM
+now shows `Ready` after kitchen fulfilment. Shared registry, merchant, Graph,
+API, runtime state and provider behavior are unchanged. Existing immutable
+Compilations are preserved; the change affects newly compiled output.
+
+Validation: **2,310 selected product tests / 147 files** passed in **192.93 s**;
+**17 focused compiler tests** passed; build/types/lint and one independent scoped
+review passed (P0/P1/P2 0/0/0). The new provider-free browser acceptance passed
+**1/1 in 4.2 s**, including keyboard refresh, list/detail values, zero page
+mutations, axe and overflow at 390/768/1440 px. Root inspected desktop/mobile
+screenshots, and the temporary state and both loopback servers were cleaned up.
+No model, Docker or cloud execution was needed. The two existing complete
+factory acceptance files were aligned to the new copy and DOM assertion but
+were not rerun; retained D1.3 generation evidence remains separate.
+
+D1.4 was delivered as `88ec618f`. Founder feedback rejected its visual
+completeness: business readability passed, but the actual mobile output still
+looked unfinished. D1.5 corrects the generated customer shell and order view
+using the existing Fine Dining palette, a brand header, clear status hierarchy,
+receipt layout and persistent touch-sized native navigation with a current-page
+state. Browser diagnosis confirmed healthy CSS/module loading; the cause was
+incomplete target styling, not a missing component dependency.
+
+D1.5 focused validation is 18/18 compiler target tests plus build/types/lint;
+the real emitted-browser journey passed 1/1 in 4.2 s, with no resource failures
+or page errors, native refresh and current navigation, minimum 44px navigation
+targets, no mobile action occlusion, and axe/overflow at 320/390/768/1440 px.
+Mobile, desktop and empty-state screenshots were inspected together. Exact
+generated file comparison preserves shared registry sources/digests, merchant,
+runtime state/API and manifests; only customer rendering/CSS and customer-only
+server's embedded CSS literal change. Final product regression passed 2,311
+tests / 147 files (fresh compiler 621/37 in 184.94 s; unchanged package caches
+retained). Independent scoped review passed P0/P1/P2 0/0/0, including a fresh
+11/11 focused run and inspection of all four visual artifacts. D1.5 is accepted;
+the enclosing branch commit, parent `88ec618f`, is its delivery checkpoint.
+No model, Docker or cloud execution was needed for this correction.
+
+D1.6 implements the founder's explicit icon-library direction using exact
+`lucide-static 0.468.0` at compiler time. Thirteen pinned local SVGs supply
+navigation, status, refresh, detail/back and empty-state imagery. Navigation and
+status retain text; the compact refresh has an accessible name and 48px target.
+Generated apps carry their upstream license, use no icon loader/CDN and acquire
+no runtime dependency. Existing UI registry assets and source digests are intact.
+
+Focused icon/customer/product checks passed 24/24; compiler build/types/lint,
+frozen install and notice/source checks passed. Actual generated-browser
+acceptance passed 1/1 in 4.6 s with visible SVGs, decorative semantics, zero
+external requests/errors, keyboard refresh and four-width accessibility/layout
+checks. The browser harness uses the built compiler in native Node to preserve
+ESM package resolution. Fresh mobile/desktop/empty screenshots were inspected;
+state and servers were cleaned up. Product regression passed 2,317 tests / 148
+files (fresh compiler 627/38 in 188.76 s, unchanged package caches retained).
+Independent scoped review passed P0/P1/P2 0/0/0 with a fresh 24/24 run and
+inspection of all four screenshots. D1.6 is accepted; the enclosing branch
+commit, parent `bdd54f28`, records delivery. Full D1/hosted readiness remains open.
+
+D1.6 was delivered as `e237ed75`. The founder's long-task goal remains active:
+reduce unsupported-request clarification effort, bind business parameters, then
+validate the frozen business cases. D1.7 is accepted: a single unsupported
+external capability no longer reopens unrelated canonical defaults or inferred
+implementation decisions. The final real live-payment case passed 1/1 with
+zero retries: **one integration scope question in 12.840 seconds**, zero delivery
+attempts, 14.2 s test duration. Earlier two- and six-question failures remain
+recorded; one passing case is not a reliability benchmark. Explicit independent
+access, privacy, data and business-rule questions remain, and reiterated
+unsupported follow-ups retain the accepted fail-closed behavior.
+
+Focused interpreter 51/51, full adapters 86/10, affected Workbench 36/4,
+types/lint/build, scoped review P0/P1/P2 0/0/0 and exact local cleanup passed.
+D1.7 was delivered as `2db84e41`; local and remote branch tips matched. No
+whole-repository, main, release or hosted claim is implied. D1.8 is accepted and binds the
+existing Graph application name into visible generated branding/settings under
+accepted name-only ADR-0044. Focused and actual generated-browser checks pass,
+including name changes and order persistence after a customer server restart;
+real named interpretation-to-app acceptance passed with zero questions in
+21.054 seconds. The retained coarse request also reached verified ready with
+zero questions/handoffs in 21.031 seconds. Custom-menu and live-payment requests
+each retained exactly one material question and zero delivery mutations. All
+four real cases passed with zero retries on the corrected source; earlier
+failed diagnostics remain in the ledger. Scoped review is P0/P1/P2 0/0/0,
+final adapters are 100/100, and the previously passing 2,334-test product lane
+is reused with affected checks. Exact local preview and factory cleanup passed.
+The enclosing bounded branch commit records D1.8 delivery; these four cases
+do not establish the frozen ten-case benchmark or hosted reliability.
+
+D1.8 was delivered as `f9d32e08`. D1.9 now carries a supplied initial USD menu
+through validated interpretation, persisted review, immutable Graph and the
+generated customer/merchant app. One to 100 dishes compile; omitted images use
+the existing local icon library. The generated browser matrix passed 4/4,
+including keyboard orders, exact prices, fulfilment, role denial, replay and
+restart persistence at mobile/tablet/desktop widths.
+
+Actual supplied-menu generation required zero questions: 25.577 seconds to the
+verified ready local app and 26.367 seconds to a fulfilled order. Missing-price
+and non-USD requests each stopped at one material question with zero delivery
+mutations. The initial supplied-menu browser harness failed on JSON key order;
+the corrected run passes and both observations remain in the ledger. Selected
+product regression passes 2,385 tests; independent task review and QA are clean.
+Exact preview/factory cleanup is proven. The final review's canonical-menu
+preservation finding is fixed; full adapters now pass 112/112 and the scoped
+recheck is clean. D1.9 is PM accepted. Its enclosing bounded branch commit,
+parent `f9d32e08`, records delivery; these observations are not a ten-case
+reliability rate.
+
+The next business priority is the ten frozen Restaurant cases and broader
+persistence evidence, followed by the accepted hosted-delivery decision and
+cross-business families. The previous
+14-question payment interaction is retained historical evidence; D1.7's
+one-question correction is delivered. Full D1 and a mature hosted consumer
+platform are not declared complete.
+
+D1.9 delivery is verified at `1c525c5e`. D1.10 is accepted for branch delivery: eight deterministic
+page-recovery cases and the five existing consumer browser cases pass. The
+four real request scenarios returned three expected outcomes on the first
+attempt: two of three supported generation scenarios completed all declared
+checks, and the one unsupported-payment scenario was handled honestly. The
+coarse scenario generated in 25.483 seconds but failed its restart-address
+check. A provider-free reproduction confirms Docker reallocates both web/API
+ports after same-container restart while order data remains intact. The accepted ADR-0046 correction now passes provider-free restart acceptance:
+both original addresses, the complete order and customer-visible Ready state
+survive. Real bind contention fails closed with exact cleanup. Full worker
+regression passes 271 tests after correcting reservation-failure directory
+cleanup and concurrent cancellation; the earlier independent QA passes 89
+affected tests. Final Sol recheck is clean; the enclosing bounded commit is the
+D1.10 delivery checkpoint. H1 hosted delivery and D2 intake/approval are next.
+This does not turn the
+first sample into 10/10 reliability or establish hosted delivery.
+
+Readiness PR #3 is merged into main; the latest inspected main CI run
+`33756827488` remains failed in the Node 22.11 Candidate test lane. The latest
+branch checkpoint `34141740418` at `dfc0f71d` also failed Node 22.11 Candidate
+tests while Node 22.x passed. The stopped
+R0 publication experiment is inconclusive and is not restarted here. A green
+selected regression lane does not resolve that release baseline. See the
+ledger for branch, review, regression and delivery evidence.
+
+## Historical checkpoint — through 2026-09-03
+
+Everything below is retained historical context. Its task order, technical-
+evaluator framing, branch tips, and pending integration claims are superseded
+by the current checkpoint and active ledger above.
 
 ## Product outcome
 

@@ -11,6 +11,7 @@ import type {
   WorkbenchCuratedTemplate,
 } from "../lib/control-plane-client";
 import type { ProductJourneyStage } from "../lib/product-journey/journey-model";
+import type { ConsumerFamily } from "../lib/product-journey/consumer-family";
 import type { ProductJourneyFailure } from "../lib/product-journey/interpret-contract";
 import { ClarificationPanel } from "./journey/clarification-panel";
 import { GraphDiffReview } from "./journey/graph-diff-review";
@@ -49,6 +50,17 @@ export type WorkbenchHomeJourneyProps = {
   readonly onChoose: (key: string) => void;
   readonly diffChecksum: string | null;
   readonly onApply: () => void;
+  /** The short-lived consumer delivery state, if this tab started it. */
+  readonly consumer?: {
+    readonly family: ConsumerFamily | null;
+    readonly suppliedMenu?: boolean;
+    readonly manualReview: boolean;
+    readonly setManualReview: (manual: boolean) => void;
+    readonly active: boolean;
+    readonly status: string | null;
+    readonly readyUrl: string | null;
+    readonly retry: () => void;
+  };
 };
 
 type Props = {
@@ -79,6 +91,9 @@ export function ProductConversation({
   readonly autoFocusRequest?: number;
   readonly onAutoFocusHandled?: () => void;
 }) {
+  if (journey.consumer?.active) {
+    return <ConsumerDelivery journey={journey} />;
+  }
   if (journey.stage === "clarifying" && journey.requirement !== null) {
     return (
       <ClarificationPanel
@@ -131,10 +146,76 @@ export function ProductConversation({
       onInterpret={journey.onInterpret}
       examplePrompts={journey.examplePrompts}
       onApplyExample={journey.onApplyExample}
+      manualReview={journey.consumer?.manualReview}
+      onManualReviewChange={journey.consumer?.setManualReview}
       commandFocusToken={commandFocusToken}
       autoFocusRequest={autoFocusRequest}
       onAutoFocusHandled={onAutoFocusHandled}
     />
+  );
+}
+
+function ConsumerDelivery({
+  journey,
+}: {
+  readonly journey: WorkbenchHomeJourneyProps;
+}) {
+  const consumer = journey.consumer;
+  if (consumer === undefined) return null;
+  const paused = consumer.status?.startsWith("Delivery paused") ?? false;
+  const approval = consumer.family === "approval";
+  const task = consumer.family === "task";
+  const label = task ? "Task" : approval ? "Approval" : "Restaurant";
+  return (
+    <section aria-label={`${label} delivery`} className="consumer-delivery">
+      <h2>Your {label} app</h2>
+      <p role="status">{consumer.status ?? `Preparing your ${label} app…`}</p>
+      {task ? (
+        <p>
+          This is a bounded local shared board prototype with selectable demo
+          roles. Team members can create, correct, start, complete and reopen
+          every task; Viewer can read all tasks. Assignee is display text only.
+          Members can correct all five fields in Not started and In progress.
+          Completed tasks must be reopened before correction.
+        </p>
+      ) : approval ? (
+        <p>
+          This is a local demo of your approval workflow on this computer.
+          Select a demo role to submit requests, review them, and read results.
+          Reviewers can approve or reject records according to declared role
+          permissions.
+        </p>
+      ) : (
+        <p>
+          This uses the standard Restaurant configuration in a local demo.
+          Includes a customer menu, table orders, and a merchant workspace. Uses
+          {journey.consumer?.suppliedMenu
+            ? "supplied menu items"
+            : "sample menu items"}{" "}
+          and simulated payments on this computer. Custom rules and live
+          integrations still need setup.
+        </p>
+      )}
+      {consumer.readyUrl !== null && (
+        <a
+          className="primary-action"
+          href={consumer.readyUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open local app
+        </a>
+      )}
+      {paused && (
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={consumer.retry}
+        >
+          Restart local delivery
+        </button>
+      )}
+    </section>
   );
 }
 

@@ -1,0 +1,49 @@
+{
+  "recordedAt": "2026-09-13T09:23:37.2361932Z",
+  "allResourcesRemoved": true,
+  "includesStoppedContainers": true,
+  "projects": [
+    {
+      "project": "factory-task-correction-20260913",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-t9-task-correction-20260913",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-verify-392d3d07-9487-4576-8a34-46466a130b6f",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-verify-aeab0a41-39ec-4414-932c-6f4d2b62f87a",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-verify-351d9a03-21e0-48de-946c-b6a84f991cfc",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-40388b72-b458-4d06-9cfe-d803e51d3bde",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-77885972-1094-4343-89cb-5552d7dbeea6",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    }
+  ]
+}

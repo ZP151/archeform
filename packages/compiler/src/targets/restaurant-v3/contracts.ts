@@ -2,6 +2,9 @@ import { isDeepStrictEqual } from "node:util";
 
 import {
   createCapabilityCompositionLock,
+  composeDefaultCapabilityDraft,
+  bindRestaurantMenuParameters,
+  isRestaurantMenuSeed,
   getCanonicalRestaurantAuthority,
   type CapabilityCompositionLockV1,
 } from "@factory/capabilities";
@@ -246,10 +249,11 @@ function assertCatalogSeed(
   if (
     categories.length !== 1 ||
     categories[0]!.id !== "mains" ||
-    items.length !== 2 ||
-    !isDeepStrictEqual(
-      items.map(({ id }) => id),
-      ["margherita-pizza", "mushroom-risotto"],
+    !(
+      isDeepStrictEqual(
+        items.map(({ id }) => id),
+        ["margherita-pizza", "mushroom-risotto"],
+      ) || isProvidedRestaurantMenu(graph)
     )
   ) {
     failInvalid();
@@ -329,6 +333,47 @@ function assertCatalogSeed(
   }
 }
 
+function isProvidedRestaurantMenu(
+  graph: PublishedApplicationGraphV3Input["graph"],
+): boolean {
+  const seeds = graph.domain.seedData ?? [];
+  const items = seeds.filter(({ entity }) => entity === "menu-item");
+  if (
+    items.length < 1 ||
+    items.length > 100 ||
+    !items.every(
+      (item, i) => item.id === `menu-item-${String(i + 1).padStart(3, "0")}`,
+    ) ||
+    seeds.some(
+      ({ entity }) =>
+        entity === "menu-option-group" || entity === "menu-option",
+    )
+  )
+    return false;
+  try {
+    const rebound = bindRestaurantMenuParameters(graph, {
+      apiVersion: "factory.restaurant-menu-parameters/v1",
+      mode: "provided",
+      currency: "USD",
+      items: items.map(({ values }) => ({
+        name: values.name,
+        description: values.description,
+        priceMinor:
+          typeof values.price === "number" &&
+          Number(values.price.toFixed(2)) === values.price
+            ? Math.round(values.price * 100)
+            : NaN,
+      })),
+    });
+    return (
+      isDeepStrictEqual(rebound.domain.seedData, graph.domain.seedData) &&
+      isDeepStrictEqual(rebound.seedScenarios, graph.seedScenarios)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function normalizeAllowedRestaurantValues(
   graph: PublishedApplicationGraphV3Input["graph"],
 ): PublishedApplicationGraphV3Input["graph"] {
@@ -343,12 +388,36 @@ function normalizeAllowedRestaurantValues(
     home.blocks.find(({ id }) => id === blockId)!,
   );
   home.recipe.regions[0]!.blockIds = [...canonicalHomeOrder];
-  const seedIndex = normalized.domain.seedData!.findIndex(
-    ({ entity, id }) => entity === "menu-item" && id === "margherita-pizza",
-  );
-  normalized.domain.seedData![seedIndex]!.values.name = "Margherita pizza";
-  normalized.seedScenarios[0]!.records[seedIndex]!.values.name =
-    "Margherita pizza";
+  if (isProvidedRestaurantMenu(graph)) {
+    const canonical = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    }).graph.domain.seedData!;
+    const menu = canonical.filter(({ entity }) => isRestaurantMenuSeed(entity));
+    const first = normalized.domain.seedData!.findIndex(({ entity }) =>
+      isRestaurantMenuSeed(entity),
+    );
+    normalized.domain.seedData = normalized.domain.seedData!.flatMap(
+      (seed, index) =>
+        index === first
+          ? structuredClone(menu)
+          : isRestaurantMenuSeed(seed.entity)
+            ? []
+            : [seed],
+    );
+    normalized.seedScenarios[0]!.records = normalized.domain.seedData.map(
+      ({ entity, values }) => ({
+        entityKey: entity,
+        values: structuredClone(values),
+      }),
+    );
+  } else {
+    const seedIndex = normalized.domain.seedData!.findIndex(
+      ({ entity, id }) => entity === "menu-item" && id === "margherita-pizza",
+    );
+    normalized.domain.seedData![seedIndex]!.values.name = "Margherita pizza";
+    normalized.seedScenarios[0]!.records[seedIndex]!.values.name =
+      "Margherita pizza";
+  }
   normalized.experience.theme.mode = "light";
   const authority = getCanonicalRestaurantAuthority();
   normalized.policy.roles = structuredClone(authority.roles);

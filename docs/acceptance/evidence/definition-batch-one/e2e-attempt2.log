@@ -1,0 +1,37 @@
+
+Running 1 test using 1 worker
+
+(node:53156) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:53156) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FACTORY_APPROVAL_DEFINITION_BATCH_FAILURE {"compilationId":null,"definitionKey":"publication-review","lifecycle":[]}
+  x  1 e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey (1.1m)
+
+
+  1) e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey
+
+    Error: [31mTimed out 60000ms waiting for [39m[2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m
+
+    Locator: getByRole('region', { name: 'Approval delivery' })
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+    [2m  - expect.toBeVisible with timeout 60000ms[22m
+    [2m  - waiting for getByRole('region', { name: 'Approval delivery' })[22m
+
+
+       at helpers\approval-definition-batch.ts:470
+
+      468 |       name: definition.deliveryRegion,
+      469 |     });
+    > 470 |     await expect(delivery).toBeVisible({ timeout: 60_000 });
+          |                            ^
+      471 |     await expect(
+      472 |       page.getByRole("button", { name: /Choose |Apply to Draft/ }),
+      473 |     ).toHaveCount(0);
+        at runApprovalDefinitionBatch (C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\helpers\approval-definition-batch.ts:470:28)
+        at C:\Users\15492\Develop\Archeform\.worktrees\consumer-delivery\e2e\approval-definition-batch.spec.ts:15:3
+
+  1 failed
+    e2e\approval-definition-batch.spec.ts:8:5 › Publication Review completes the reusable approval correction journey

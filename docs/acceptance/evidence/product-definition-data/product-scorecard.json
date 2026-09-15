@@ -1,0 +1,61 @@
+{
+  "slice": "product-definition-data",
+  "date": "2026-09-13",
+  "base": "f8cdfe812c6c5ab2710a641862aa8f026134ab15",
+  "status": "delivered",
+  "sourceCommit": "22f5842a96e9cf165fd866ee1117d92adc0c14e7",
+  "registeredDefinitions": 4,
+  "demonstratedLocalRuntimeFamilies": 3,
+  "migratedDefinitions": 4,
+  "newDistinctRuntimeAdmissions": 0,
+  "newRuntimeFamilies": 0,
+  "newUiAssets": 0,
+  "newDependencies": 0,
+  "shippedBatch": {
+    "attempted": 4,
+    "valid": 4,
+    "distinct": 4,
+    "admitted": 4,
+    "durationMs": 381,
+    "timingScope": "One local provider-free validator run; not consumer time-to-app"
+  },
+  "configurationOnlyProbe": {
+    "count": 1,
+    "family": "approval",
+    "change": "One required typed business field",
+    "generatedSchemaAndUiVerified": true,
+    "handwrittenRuntimeOrUiChanges": 0,
+    "runtimeAdmissions": 0,
+    "actualRuntimeJourneySamples": 0
+  },
+  "verification": {
+    "fullAdapterTestsBeforeThreeFinalGuardCases": 218,
+    "finalFocusedDataTests": 26,
+    "independentQaDataAndInterpreterTests": 174,
+    "affectedWorkbenchTests": 64,
+    "finalCompilerAuthoringAndCompatibilityTests": 4,
+    "builtCommandCases": 16,
+    "immutableBaselineChanged": false
+  },
+  "samples": {
+    "existingAuthoredDefinitions": 4,
+    "realModelCalls": 0,
+    "ordinaryUserSessions": 0,
+    "newRuntimeEndToEndRuns": 0
+  },
+  "unchangedEvidenceReuse": [
+    "Task correction actual local journey and responsive UI",
+    "Expense and Purchase correction actual local journeys and responsive UI",
+    "Restaurant V3 accepted runtime and presentation"
+  ],
+  "remainingProductGaps": [
+    "Representative semantically distinct configuration-only admissions",
+    "30-definition measured business coverage",
+    "100-definition bounded retrieval and selection evaluation",
+    "Appointment capacity and conflict invariants",
+    "Inventory movement and concurrency invariants",
+    "Real identity, private access and hosted operations",
+    "Ordinary-user effort and real-model requirement-retention evidence"
+  ],
+  "nextCandidateBriefs": 6
+}
