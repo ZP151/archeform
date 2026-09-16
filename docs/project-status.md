@@ -1,8 +1,75 @@
 # Archeform delivery status
 
-Updated: 2026-09-13
+Updated: 2026-09-17
 
-## Current: five reviewed definitions; representative batch accepted
+## Active long Goal: identifier reliability and sixth product definition
+
+[PR #4](https://github.com/ZP151/archeform/pull/4) merged on September 15.
+Local and remote main both resolve to `bae5e2a0`. The exact merged commit's
+[CI run 34922466619](https://github.com/ZP151/archeform/actions/runs/34922466619)
+passes Node 22.11.0 and 22.x, including tests, build, typecheck and formatting.
+The Candidate verification race, browser teardown and timer-sensitive fixture
+corrections are delivered. Earlier conditional integration statements in the
+historical ledger are superseded by this observed merge and green main run.
+
+The consumer worktree started this check clean at `bbb1e23c`, matching its
+remote branch and the merged main tree. The original checkout remains on an
+older branch with pre-existing edits and has not been changed. The current task
+had no active long Goal at the initial inspection. The founder subsequently
+requested continued execution, and a new long Goal is active: repair generated
+database identifiers, implement reusable numeric domains, and admit Training
+Funding after its actual business journey passes. The identifier implementation
+passes its focused checks and the original failing input now validates and
+migrates in isolated PostgreSQL without truncation. Full regression exposed a
+compatibility-policy conflict: all five old normal fixtures also contain unsafe
+database names, so future repaired output changes their database files. Delivery
+was paused for that exact ADR reconciliation. The amended decision is now
+independently accepted: only six known physical mappings may change future
+output; historical fixtures remain untouched and all other bytes stay exact.
+The numeric Graph contract passes 781 tests and its task review passes after
+correcting optional seed handling for prototype-named fields. Its integration
+through composition, runtime validation and presentation is now in progress.
+The actual long-ID app journey passes (214,158 ms ready, 4.5 minutes total),
+with all 63 generated artifacts identical under the recorded comparison chain.
+The implementation ledger records exact ownership, hashes and evidence.
+
+The identifier repair is now accepted: independent review has no open P0/P1/P2,
+the isolated compiler suite passes 814 tests, and the final inspection-only
+correction passes 101 affected tests with unchanged 63-file output. Actual
+Prisma/PostgreSQL and long-ID Publication evidence is retained; exact owned
+runtime cleanup passes. Normal branch delivery follows. Numeric rules remain
+in progress; their first actual database checks pass, with browser correction
+acceptance still running. See [identifier acceptance](acceptance/bounded-database-identifiers.md).
+
+Product coverage remains five definitions across three runtime families:
+Restaurant Ordering, Expense Approval, Purchase Request Approval, Team Task
+Tracking and Publication Review. The latest functionality evidence is the
+bounded local acceptance below. September 15 integration fixes added no new
+definition. Repository CI success does not establish hosted production readiness.
+
+The next delivery order is:
+
+1. Deliver the accepted long-ID database repair, preserving historical immutable
+   output and rejecting unsupported storage names before generation.
+2. Add shared numeric bounds and consistent create/edit validation, then admit
+   Training Funding as the sixth definition through an actual business journey.
+3. Add calculated-total semantics before Equipment admission; expand to the
+   Appointment family through interval, capacity, conflict and cancellation rules.
+4. Gather bounded real-model selection and consented ordinary-user evidence
+   alongside expansion: retained requirements, necessary questions, time to first
+   useful action, manual rescue and correction effort. These measures remain
+   unproven and should not wait until 30 definitions.
+5. Prove a varied 30-definition catalogue before 100+ retrieval and larger-scale
+   expansion. Production identity and stable hosted delivery remain explicit
+   work required before external maturity claims.
+
+Use focused affected regressions and one review for ordinary in-scope changes;
+retain the existing contract/security and integration gates where applicable.
+No new runtime, model call, user session or deployment ran for the initial
+inspection. Its existing test evidence was inspected rather than rerun. New
+Goal evidence will be recorded separately instead of inheriting those results.
+
+## Delivered: five reviewed definitions; representative batch accepted
 
 Publication Review is the fifth registered definition, composed from data and
 the existing Approval correction family. Six candidate briefs were assessed;

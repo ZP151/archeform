@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-09-16T17:23:28.535Z",
+  "projects": [
+    {
+      "project": "factory-t9-identifiers-20260917",
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    },
+    {
+      "project": "factory-t9-identifiers-sql-20260917",
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    },
+    {
+      "project": "factory-preview-preview-7fbc53c4-12cc-44fa-a48b-32d2d86d0b15",
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    }
+  ],
+  "clean": true
+}

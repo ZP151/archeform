@@ -19,6 +19,10 @@ import {
 } from "../src/index.js";
 import { approvalLegacyFixtures } from "./fixtures/approval-legacy.js";
 import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
+import {
+  legacyDatabaseIdentifierComparison,
+  taskDatabaseIdentifierComparison,
+} from "./fixtures/legacy-database-identifiers.js";
 
 const baselinePath = new URL(
   "./fixtures/task-non-task-baseline.json",
@@ -68,11 +72,14 @@ function currentCompatibility() {
       selections: graph.integration.compositionSelections ?? [],
     });
     bundles[definitionKey] = bundleDigest(
-      generateApplicationBundle({
-        publishedRevisionId: `task-baseline-${definitionKey}`,
-        graph,
-        compositionLock,
-      }).files,
+      taskDatabaseIdentifierComparison(
+        generateApplicationBundle({
+          publishedRevisionId: `task-baseline-${definitionKey}`,
+          graph,
+          compositionLock,
+        }).files,
+        definitionKey,
+      ),
     );
     const published = structuredClone(graph);
     delete published.integration.compositionSelections;
@@ -81,17 +88,24 @@ function currentCompatibility() {
       selections: graph.integration.compositionSelections ?? [],
     });
     bundles[`${definitionKey}-published`] = bundleDigest(
-      generateApplicationBundle({
-        publishedRevisionId: `task-baseline-${definitionKey}`,
-        graph: published,
-        compositionLock: publishedLock,
-      }).files,
+      taskDatabaseIdentifierComparison(
+        generateApplicationBundle({
+          publishedRevisionId: `task-baseline-${definitionKey}`,
+          graph: published,
+          compositionLock: publishedLock,
+        }).files,
+        definitionKey,
+      ),
     );
   }
   for (const [key, fixture] of Object.entries(approvalLegacyFixtures)) {
     bundles[`legacy-${key}`] = bundleDigest(
-      generateApplicationBundle(fixture.input as unknown as PublishedGraphInput)
-        .files,
+      legacyDatabaseIdentifierComparison(
+        generateApplicationBundle(
+          fixture.input as unknown as PublishedGraphInput,
+        ).files,
+        key,
+      ),
     );
   }
   const restaurant = restaurantProductV3Fixture();

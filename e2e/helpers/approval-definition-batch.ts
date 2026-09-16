@@ -31,6 +31,7 @@ type Preview = {
 
 export type ApprovalDefinitionCase = {
   readonly definitionKey: string;
+  readonly requirementIdPrefix?: string;
   readonly brief: string;
   readonly title: string;
   readonly outcome: string;
@@ -469,7 +470,7 @@ export async function runApprovalDefinitionBatch({
     ]),
   ).toBe("false");
 
-  const requirementId = `batch-${randomUUID()}`;
+  const requirementId = `${definition.requirementIdPrefix ?? "batch"}-${randomUUID()}`;
   const interpretation = await authoredInterpretation(
     definition,
     requirementId,

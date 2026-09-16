@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-09-16T17:20:05.149Z",
+  "compilationId": "cmu4cpk2a000do44tf5uflcbq",
+  "publishedRevisionId": "cmu4cpk1h000bo44tsa07lduf",
+  "inputGraphHash": "sha256:b01273b44bf35706caa6bafacde076e3f324d0a97a6d58ad4ce7ef2b19202dc0",
+  "regeneratedGraphHash": "sha256:b01273b44bf35706caa6bafacde076e3f324d0a97a6d58ad4ce7ef2b19202dc0",
+  "artifactCount": 63,
+  "regeneratedFileCount": 63,
+  "mismatchedPaths": [],
+  "allGeneratedFilesIdentical": true,
+  "currentDatabaseTargetSha256": "de163d09b2026b3e7bd91b700fffac32a4e217564913d9616e5fe966613c1605",
+  "testedImageDatabaseTargetSha256": "2f47abd3a2b7816eb8abb031441f69929de19f5e254d4e696d06b11a9299d1f9",
+  "scope": "Evidence reuse is limited to generated artifacts with exact digest and size equality; the validated-snapshot regression is tested separately. Independent review remains required.",
+  "compositionLockInput": "Canonical createCapabilityCompositionLock input, JSON-structurally verified equal to stored Published lock, matching lifecycle queue construction.",
+  "initialProbe": "Raw JSONB property order caused two lock JSON byte mismatches; using the existing lifecycle canonical input resolves this input-construction error.",
+  "testedImageSourceHashVerification": "Read SHA-256 of /workspace/packages/compiler/src/targets/database/target.ts inside the actual running compiler-worker container before teardown; matches recorded tested hash."
+}

@@ -1,0 +1,18 @@
+{
+  "base": "bbb1e23c68f05e3ae213ceaf167737eb0fe86779",
+  "project": "factory-t9-identifiers-sql-20260917",
+  "prismaVersion": "6.19.3",
+  "postgresImage": "postgres:16-alpine",
+  "result": "pass",
+  "prismaValid": true,
+  "migrationExitCode": 0,
+  "truncationNotices": 0,
+  "explicitMaps": 8,
+  "allMappedNamesPresent": true,
+  "maximumIdentifierBytes": 63,
+  "relationCount": 26,
+  "constraintCount": 11,
+  "uniqueRelations": true,
+  "remainingContainers": 0,
+  "recordedAt": "2026-09-16T17:01:01.179Z"
+}

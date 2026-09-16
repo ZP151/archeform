@@ -1,6 +1,34 @@
 # Archeform roadmap
 
-## Next delivery and scale — 2026-09-13
+## Current route — 2026-09-17
+
+The five-definition local Alpha is integrated into main at `bae5e2a0` through
+[PR #4](https://github.com/ZP151/archeform/pull/4). The exact merged commit's
+[two-lane CI](https://github.com/ZP151/archeform/actions/runs/34922466619) passes.
+Task correction, the reviewed JSON catalogue and Publication admission are
+complete; their former next-step entries below are historical.
+
+Return effort to reusable product capability and ordinary-user outcomes:
+
+| Order                           | Delivery                                        | Observable exit                                                                                                                  |
+| ------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1                               | Bounded generated database identifiers          | Long shared prefixes cannot cause silent constraint collisions; historical artifacts remain unchanged                            |
+| 2                               | Shared numeric rules and Training Funding       | Consistent native/API create/edit validation; real correction/approval journey; sixth accepted definition                        |
+| 3                               | Calculated totals and Equipment                 | Authoritative quantity/cost/total rules and recovery; no per-product runtime branch                                              |
+| 4                               | Appointment family                              | Available slots, capacity, booking conflicts, cancellation/rebooking and timezone cases pass                                     |
+| Alongside expansion             | Real-model and ordinary-user evidence           | Measure requirement retention, selection errors, questions, manual rescue and first useful action; keep fixture results separate |
+| After varied proven coverage    | 30 definitions, then 100+ retrieval             | Distinct usable jobs and representative rule/UI regressions, with source-reuse cost recorded                                     |
+| Before external maturity claims | Production identity and durable hosted delivery | Appropriate access boundaries, stable URL, persistence, recovery and operating responsibility                                    |
+
+The immediate implementation target is identifier reliability followed by the
+numeric-domain slice. The current task has an active long Goal covering the
+identifier repair, shared numeric capability and sixth-definition admission.
+Technology-contract changes retain their existing authority; ordinary
+definition additions reuse valid family evidence and proportionate regression.
+See [current status](project-status.md) and the
+[detailed scale plan](superpowers/plans/2026-09-13-product-definition-scale.md).
+
+## Historical next delivery and scale — 2026-09-13
 
 Team Task Tracking under accepted ADR-0057/0063 now passes its actual local
 runtime lane after the expressive UI and approval correction at `d28f1fed`.

@@ -14,18 +14,26 @@ import {
   hashApplicationGraph,
 } from "@factory/graph";
 import { generateApplicationBundle } from "../../src/index.js";
+import type { GeneratedFile } from "../../src/core/generated-files.js";
+import { definitionDatabaseIdentifierComparison } from "./legacy-database-identifiers.js";
 
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
 /** Independent baseline captured before data-authoring implementation. */
-export function currentDefinitionDataCompatibility() {
-  const historicalKeys = [
+export function currentDefinitionDataCompatibility(
+  historicalKeys: readonly string[] = [
     "restaurant-ordering",
     "expense-approval",
     "purchase-request-approval",
     "team-task-tracking",
-  ];
+  ],
+  inspectBundle?: (
+    key: string,
+    current: readonly GeneratedFile[],
+    historicalComparison: readonly GeneratedFile[],
+  ) => void,
+) {
   return historicalKeys.map((key) => {
     const entry = definitionSelectionCatalogue.find(
       (candidate) => candidate.definitionKey === key,
@@ -80,9 +88,16 @@ export function currentDefinitionDataCompatibility() {
         graph: inputGraph,
         compositionLock,
       }).files;
+      const historicalComparison = definitionDatabaseIdentifierComparison(
+        files,
+        key,
+      );
+      inspectBundle?.(key, files, historicalComparison);
       return {
         fileCount: files.length,
-        sha256: digest(files.map(({ path, content }) => [path, content])),
+        sha256: digest(
+          historicalComparison.map(({ path, content }) => [path, content]),
+        ),
       };
     };
     return {

@@ -4911,3 +4911,258 @@ gates, corroborating timing sensitivity without waiving the failed push run.
 Root may commit and normally push this three-file fixture/evidence correction.
 Iteration integration acceptance remains valid conditional on a fresh green
 remote matrix for this final commit, followed by exact-main verification.
+
+### Status reconciliation after main integration - 2026-09-17
+
+The user requests current execution status and the next route. Root owns this
+evidence-only correction to this ledger, docs/project-status.md and
+docs/roadmap.md. No production, test, ADR, dependency or acceptance data changes.
+Existing passing evidence is reused; no new review layer or runtime is needed.
+
+Fresh GitHub inspection confirms PR #4 merged on 2026-09-15 at 02:46:35 UTC.
+The merge commit is bae5e2a0db9ec0f6b273c279cb448063ce75a668, equal to both
+the local main ref and the directly queried remote main tip. CI run 34922466619
+passes both Node 22.11.0 and 22.x at that exact commit, including frozen install,
+formatting, typecheck, tests, build, third-party notices and source studies.
+This closes the previously conditional main-integration work; it is not a
+repository release, new runtime acceptance or production deployment.
+
+The consumer worktree was clean at bbb1e23c before this status correction and
+matches its remote branch. Its tree is identical to merged main. The original
+checkout has pre-existing document and test edits on a different branch; root
+preserves them. The current task has no active long Goal. No implementation of
+the next identifier/numeric-domain slice is recorded in the inspected source
+and ledger. The catalogue still contains exactly five definitions/three families.
+
+Next delivery remains bounded identifier generation/validation, then shared
+numeric rules and actual Training Funding admission. Equipment additionally
+needs calculated totals. Resume distinct family coverage with Appointment only
+after its interval, capacity, conflict and cancellation semantics are supported.
+Use bounded real-model and consented ordinary-user evidence alongside capability
+expansion when the required access is available; do not wait for a large catalogue
+to discover selection or user-effort failures. This inspection starts no new Goal,
+model run, user session, implementation, release or deployment.
+
+### Active long Goal: identifier reliability and sixth definition - 2026-09-17
+
+The founder requests continuous execution of the current roadmap under a long
+Goal. Root resumes the existing consumer-delivery linked worktree on
+codex/consumer-delivery-roadmap at bbb1e23c (tree equal to integrated bae5e2a0).
+The preceding three-file status reconciliation is root-owned pending work and
+will be retained in this delivery. The original checkout remains untouched.
+
+Root owns the design/plan, ledger, integration, services, evidence and all Git.
+Dispatch Tech Lead /root/identifier_decision for proposed ADR-0068 only, covering
+the reproduced long application-ID database constraint collision. No production
+or test implementation before recorded standing acceptance. Root independently
+maps numeric-domain and Training prerequisites while the proposal is prepared.
+Later shared-contract tasks will be dispatched after their own bounded design.
+Acceptance remains actual business usability, prior immutable compatibility,
+approved UI, proportionate affected checks and independent review. No new
+provider use, release, cloud action or credential access is authorized here.
+
+### September 17 pre-implementation evidence and ownership
+
+Root built the compiler and its eight workspace dependencies successfully from
+bbb1e23c. Captured five-definition-baseline.json before any implementation:
+SHA-256 421447a597e6593045b1fe317ed0c83e6469f5540c6156620d05af2503670ae5.
+It includes the original four definitions and Publication, canonical/provider
+projections and ordered full-bundle hashes. The original baseline is untouched.
+
+Fresh RED reproduction generated the original long Publication requirement ID
+into ignored artifacts/identifier-baseline-20260917 and ran Prisma 6.19.3 validate.
+Exit 1, P1012, four Principal/Session primary-key/index truncation collisions.
+No services or provider calls were involved. This is current source evidence,
+not a claim that the shorter prior batch ID resolved the defect.
+
+/root/numeric_decision owns only proposed ADR-0069 while /root/identifier_decision
+owns only proposed ADR-0068. Root owns the cross-stage product design at
+docs/superpowers/specs/2026-09-17-definition-reliability-and-training-design.md.
+The numeric contract will not be implemented in parallel with an unfrozen
+identifier contract. Training admission requires actual business evidence;
+registered and accepted counts remain five until that evidence passes.
+
+### ADR-0068 standing acceptance and Task 1 authorization - 2026-09-17
+
+The independent read-only reviewer /root/identifier_adr_review (GPT-6 Astra)
+returns APPROVED_FOR_STANDING_ACCEPTANCE: yes, P0/P1 0/0, for exact ADR-0068
+SHA-256 5664ac2e18f80709941ff5b789c7803be90f671e9310c1bfbb28225c31601277.
+The initial no verdict on 1f5a7137 is superseded only by this corrected-hash
+review: dual Prisma/SQL candidates, safe asymmetric preservation, mapped-table
+dependencies and synthesized one-to-one uniqueness are now explicit. Reviewer
+finds bounded reversible scope with no unresolved material choices. Root records
+founder acceptance under docs/tech-governance.md September 1 standing authority
+BEFORE implementation. The proposed document bytes remain immutable evidence.
+
+Root authorizes the single compiler owner /root/identifier_owner for Task 1 of
+docs/superpowers/plans/2026-09-17-bounded-database-identifiers.md. Owned paths:
+packages/compiler/src/targets/database/target.ts and
+packages/compiler/test/database-target-parity.test.ts only. Root owns Task 2
+compatibility helper/tests and E2E in disjoint paths, all services/evidence/Git.
+No Graph/API/package/delegate change, baseline recapture or product branch.
+Numeric source implementation waits for its own accepted contract and this
+serialized compiler boundary. No provider, release or deployment authority.
+
+### Local runtime obstacle resolved - 2026-09-17
+
+Before app acceptance, Docker Desktop failed to start on two inaccessible
+zero-length runtime sockets (Inference, then Secrets service). Root inspected
+only endpoint metadata and bounded backend error lines, preserved the exact
+socket-only parent directories as dated sibling backups, and restarted only
+the task-started Docker Desktop processes. No credentials, settings, images,
+volumes or container data were reset. Engine29.6.2 now responds; zero running
+containers before task setup. Upstream issue531 matches the observed class.
+
+Root Task2 compatibility assertions pass2/2 on pre-change source; new long-ID
+E2E collects1 test. Actual SQL probe is prepared in the ignored plan workspace;
+its one network-isolated postgres16 container uses no host port and will be
+removed with its anonymous volume. Factory acceptance retains the existing
+loopback topology and blank model keys. No provider calls are permitted.
+
+### Identifier regression scope reconciliation
+
+The full compiler run exposed three older immutable Approval comparison tests
+whose input Graphs contain already-overlength auth foreign keys (Expense75,
+Purchase91, Appointment81 bytes). ADR0068 explicitly maps unsafe future outputs;
+the original five normal-definition bundles remain exact. Historic fixture bytes
+must stay unchanged. Root extends /root/identifier_owner test-only ownership to
+packages/compiler/test/fixtures/legacy-database-identifiers.ts,
+packages/compiler/test/composition-page-runtime.test.ts and
+packages/compiler/test/approval-correction-runtime.test.ts. The helper may reverse
+ONLY the verified explicit mapping for those pre-existing overlength auth FKs
+when comparing old frozen digests, asserting exact mapped schema/SQL correspondence
+and preserving every other byte. No expected fixture hash may be regenerated.
+This is an intentional affected-input comparison, not a claim of byte-identical
+new output for an unsafe historic Graph. Independent review must inspect it.
+
+### ADR-0069 standing acceptance and Graph contract dispatch - 2026-09-17
+
+/root/identifier_adr_review independently returns APPROVED_FOR_STANDING_ACCEPTANCE:
+yes, P0/P1 0/0 for exact ADR0069 SHA-256
+9a3ab7bc033e78584f8c60876ec54c3813b3019e4074b0156d1a7f9b704d6350.
+The corrected decision preserves old V1 stripping, strict new nested objects,
+fixed composer witnesses, policy-bearing Int32 representation, and transactional
+Decimal validation without a DB type/scale change. Prior no verdict on004bf51c
+is superseded only for this reviewed hash. Reviewer finds bounded reversible
+scope and no unresolved material choice. Root records founder acceptance under
+the September1 standing authority BEFORE implementation; preserve ADR bytes.
+
+Root authorizes /root/numeric_graph_owner for Task1 of
+2026-09-17-numeric-field-domains.md, only its listed Graph module/schema/export/
+conversion tests and files. Exact pure helper signatures are frozen in that plan.
+ADR0068 source is frozen (target SHA2f47abd3a2b7816eb8abb031441f69929de19f5e254d4e696d06b11a9299d1f9),
+its image build context already captured, and its owner now changes only scoped
+legacy comparison tests. This disjoint Graph-only work may proceed; numerical
+compiler/composer integration remains sequential after its contract task.
+Existing shared-contract QA/release applies once to the integrated numeric slice.
+No Training row, provider call, release or cloud action is authorized by this ADR.
+
+### ADR-0068 compatibility amendment accepted - 2026-09-17
+
+Independent /root/identifier_adr_review returns APPROVED_FOR_STANDING_ACCEPTANCE:
+yes, P0/P1 0/0 for amended ADR0068 SHA-256
+11580a2fcdae5e1fb8c6a94494905ce6c19809a10b37a7a6cc8457da071cd69c.
+Root records standing founder acceptance before resuming work. The corrected
+future-output migration permits exactly six known mappings in the protected
+five-definition case, fifteen file instances across three database paths.
+Historical artifact/fixture bytes and digests remain immutable. All canonical,
+provider, projection and non-database bytes stay direct-exact. A strict test-only
+allowlisted inverse must recover each old whole-bundle digest and reject any
+seventh map or unrelated change. Numeric absence adds no delta beyond this
+accepted migration. This supersedes prior literal future-byte-equality wording
+in plans/status and ADR0069 compatibility interpretation; no numeric semantics,
+Graph hashes or public data contract change follows from the amendment.
+
+Evidence correction: initial fullsuite793 =785pass/8fail comprised SEVEN legacy
+comparison failures plus ONE real validated-snapshot regression. The latter is
+fixed in target SHAde163d09b2026b3e7bd91b700fffac32a4e217564913d9616e5fe966613c1605;
+its focused regression passes. The prior running-image journey is diagnostic
+pending final-source equivalence or affected rerun, not final acceptance.
+
+Root resumes /root/identifier_owner and extends test ownership to the protected
+comparison helpers/tests: packages/compiler/test/fixtures/definition-data-compatibility.ts,
+packages/compiler/test/definition-data-compatibility.test.ts,
+packages/compiler/test/task-compatibility.test.ts and task-correction-compatibility.test.ts.
+Preserve root's existing optional key-list signature and five-fixture test.
+Original fixture JSON/TS hashes may not change. Root retains E2E/evidence/runtime
+and all Git. Owner must report exact mapping inventory, negative guards, fresh
+fullsuite and no additional source changes without notice. Graph-only numeric
+Task1 is frozen777/777; numeric integration may begin in disjoint files after
+its separate task review confirms frozen helper behavior.
+
+### Identifier final-source evidence and numeric Task 2 dispatch - 2026-09-17
+
+The final database target remains frozen at SHA-256
+de163d09b2026b3e7bd91b700fffac32a4e217564913d9616e5fe966613c1605.
+Root compared all 63 generated files from the actual tested long-ID Published
+revision with final-source regeneration: exact digest and size equality for all
+63, including both lock files after applying the existing lifecycle canonical
+composition-lock constructor. The first diagnostic used raw JSONB key order;
+its two lock-file differences were input construction, not a product change.
+Actual Prisma/PostgreSQL and Publication browser evidence is submitted for
+independent implementation review by /root/identifier_implementation_review.
+
+Numeric Graph Task 1 review found one own-property absence defect for legal
+constructor/toString field keys. The owner reproduced and fixed it; focused
+RED 2 failures, GREEN 5 passes; full Graph 781/22 files, build/typecheck/lint pass.
+Independent /root/numeric_task_review narrowly rechecked and returns approved,
+ready_for_qa, P0/P1/P2 0/0/0. This is not integrated numeric capability acceptance.
+
+Root authorizes /root/numeric_pipeline_owner for Task 2 of the accepted numeric
+plan, only the listed adapter/composer/compiler Approval/verifier paths and
+focused tests. Graph exports and database target are frozen. Do not edit the
+identifier owner's compatibility helpers/tests or original fixtures. Add new
+numeric tests instead of touching shared legacy comparisons. No Training row,
+new dependency, schema/type/route, product branch, service, Git or source-study
+copy is authorized. Root owns E2E/evidence/status/resources/Git. Any needed
+shared contract change stops implementation for root reconciliation.
+
+### Focused identifier review repair and actual numeric preparation - 2026-09-17
+
+The independent identifier implementation review found unsupported SQL spellings
+escaping length preflight. The owner reproduced both cases and repaired SQL
+inventory handling, then fixed quoted identifier/comment/literal false positives
+with focused RED/GREEN tests. Source is frozen at target SHA-256
+f6fb7489563c31b256a529b860ecf1d8f3e9099705b1af7c9750cfb47e2c6250.
+The final correction uses only an inspection view; generated SQL remains intact.
+The existing runtime receipt is retained, not relabeled as a new run. Root
+captured a 63-file long-input manifest before this correction and will compare
+final output in the isolated identifier verification worktree. Only the accepted
+identifier files are overlaid on base bbb1e23c there, avoiding the active numeric
+writer's temporary source/tests. Normal review reuses unaffected prior evidence.
+
+Root owns new e2e/numeric-domain-runtime.spec.ts and the numeric fixture runtime
+at exact project factory-t9-numeric-runtime-20260917 (loopback 13021/15181).
+This exercises authored capability input, not catalogue admission or model
+selection. It tests rejected numeric mutations against real Prisma state,
+receipts and audit, persisted invalid submit, client no-fetch validation,
+correction/retry and responsive summaries. Training is still not registered.
+
+Task 2 ownership extends narrowly to packages/adapters/src/ai.ts and its focused
+provider tests: the accepted ADR already requires generic Graph-diff numeric
+policy authoring to remain closed. The new Graph property could otherwise pass
+through existing schemas. The owner must reproduce that bypass and enforce the
+already accepted boundary without changing unrelated provider behavior.
+
+### Bounded identifier repair accepted for normal delivery - 2026-09-17
+
+Independent /root/identifier_implementation_review approves final target
+f6fb7489563c31b256a529b860ecf1d8f3e9099705b1af7c9750cfb47e2c6250,
+open P0/P1/P2 0/0/0. It inspected ten actual screenshots and accepted reuse of the
+actual journey with the unchanged-output chain. Root's isolated snapshot includes
+ONLY base bbb1e23c plus the identifier task: full compiler 814/48 files passes at
+69718173, then final quoted-keyword classifier correction passes101/3 files and
+build at f6fb7489; owner typecheck/format pass. This retains the valid fullsuite
+and reruns affected checks rather than starting a new audit. All63 long-fixture
+outputs match the pre-preflight manifest; the earlier63 actual artifact comparison
+is preserved as a separate receipt. Five protected bundle digests and original
+fixture bytes remain unchanged under the exact six-map inverse.
+
+Root accepts bounded local identifier delivery. Actual long-ID ready214158ms,
+correction/persistence/retry/denials, responsive/dark/media cases passed. Exact
+Factory, SQLprobe and Preview resources are absent. No provider/ordinary-user/
+cloud outcome claimed and no new definition added. Commit only identifier source,
+tests, acceptance/evidence and root-owned current planning/status records; do not
+include in-progress numeric source/tests or its new runtime test. Numeric Graph
+and pipeline owners' unfinished files remain explicitly accounted for. The long
+Goal stays active for numeric capability and eventual sixth-definition admission.

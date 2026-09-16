@@ -7,6 +7,7 @@ import {
   type PublishedGraphInput,
 } from "../src/index.js";
 import { approvalLegacyFixtures } from "./fixtures/approval-legacy.js";
+import { legacyDatabaseIdentifierComparison } from "./fixtures/legacy-database-identifiers.js";
 const hash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 export function correctionInput(
@@ -107,11 +108,15 @@ describe("immutable approval correction dispatch", () => {
     },
   );
   it("preserves every ordered baseline byte twice", () => {
-    for (const fixture of Object.values(approvalLegacyFixtures))
+    for (const name of ["expense", "purchase", "booking"] as const)
       for (let attempt = 0; attempt < 2; attempt++) {
-        const files = generateApplicationBundle(
-          structuredClone(fixture.input) as unknown as PublishedGraphInput,
-        ).files;
+        const fixture = approvalLegacyFixtures[name];
+        const files = legacyDatabaseIdentifierComparison(
+          generateApplicationBundle(
+            structuredClone(fixture.input) as unknown as PublishedGraphInput,
+          ).files,
+          name,
+        );
         const manifest = files.map((f) => ({
           path: f.path,
           bytes: Buffer.byteLength(f.content),
@@ -130,6 +135,71 @@ describe("immutable approval correction dispatch", () => {
           ),
         ).toBe(fixture.bundleHash);
       }
+  });
+  it("keeps unrelated mutations visible to the immutable baseline comparison", () => {
+    const files = generateApplicationBundle(
+      structuredClone(
+        approvalLegacyFixtures.expense.input,
+      ) as unknown as PublishedGraphInput,
+    ).files;
+    const baseline = legacyDatabaseIdentifierComparison(files, "expense");
+    const mutation = files.map((file) =>
+      file.path === "api/src/application-runtime.ts"
+        ? { ...file, content: file.content + "\n// Unrelated mutation\n" }
+        : file,
+    );
+    const compared = legacyDatabaseIdentifierComparison(mutation, "expense");
+    expect(
+      compared
+        .find((file) => file.path === "api/src/application-runtime.ts")!
+        .content.endsWith("// Unrelated mutation\n"),
+    ).toBe(true);
+    expect(hash(JSON.stringify(compared))).not.toBe(
+      hash(JSON.stringify(baseline)),
+    );
+  });
+  it("rejects comparison repair of a safe or unpaired foreign key", () => {
+    const files = generateApplicationBundle(
+      structuredClone(
+        approvalLegacyFixtures.expense.input,
+      ) as unknown as PublishedGraphInput,
+    ).files;
+    const safe = files.map((file) => ({
+      ...file,
+      content: file.content.replaceAll("ExpenseApprovalRequirement", "Short"),
+    }));
+    const unpaired = files.map((file) =>
+      file.path.endsWith("migration.sql")
+        ? {
+            ...file,
+            content: file.content.replace(
+              /_fk_[a-f0-9]{16}/,
+              "_fk_0000000000000000",
+            ),
+          }
+        : file,
+    );
+    for (const input of [safe, unpaired])
+      expect(() =>
+        legacyDatabaseIdentifierComparison(input, "expense"),
+      ).toThrow("Legacy database identifier comparison failed.");
+  });
+  it("rejects a changed mapped name even when both schemas and SQL agree", () => {
+    const files = generateApplicationBundle(
+      structuredClone(
+        approvalLegacyFixtures.expense.input,
+      ) as unknown as PublishedGraphInput,
+    ).files;
+    const changed = files.map((file) => ({
+      ...file,
+      content: file.content.replace(
+        /_fk_[a-f0-9]{16}/g,
+        "_fk_0000000000000000",
+      ),
+    }));
+    expect(() =>
+      legacyDatabaseIdentifierComparison(changed, "expense"),
+    ).toThrow("Legacy database identifier comparison failed.");
   });
   it("selects complete correction runtime and isolated schema", () => {
     const files = generateApplicationBundle(correctionInput()).files;

@@ -383,10 +383,11 @@ function renderPrismaSchema(
   additionalSchemaFragments: readonly string[] = [],
   approvalEntity?: string,
   taskEntity?: string,
+  names?: DatabaseNames,
 ): string {
   const duplicateRelationSuffixes = duplicateEndpointRelationSuffixes(graph);
   const relationFields = (entityKey: string): readonly string[] =>
-    graph.domain.relations.flatMap((relation) => {
+    graph.domain.relations.flatMap((relation, relationOrdinal) => {
       const baseRelationName = `${toPascalCase(relation.from)}To${toPascalCase(relation.to)}`;
       const fromModel = toPascalCase(relation.from);
       const toModel = toPascalCase(relation.to);
@@ -429,9 +430,9 @@ function renderPrismaSchema(
           ...(declaredScalar
             ? []
             : [
-                `  ${foreignKey.scalarField} String?${foreignKey.oneToOne ? " @unique" : ""}`,
+                `  ${foreignKey.scalarField} String?${foreignKey.oneToOne ? ` @unique${prismaMap(names, objectId("uq", entityKey, foreignKey.scalarField))}` : ""}`,
               ]),
-          `  ${targetField}${relationSuffix} ${targetModel}${optional} @relation("${relationName}", fields: [${foreignKey.scalarField}], references: [${foreignKey.targetField}])`,
+          `  ${targetField}${relationSuffix} ${targetModel}${optional} @relation("${relationName}", fields: [${foreignKey.scalarField}], references: [${foreignKey.targetField}]${prismaMapArgument(names, objectId("fk", entityKey, String(relationOrdinal)))})`,
         ];
       }
       return [];
@@ -443,15 +444,18 @@ function renderPrismaSchema(
       .map((field) => {
         const optional = field.required ? "" : "?";
         const native = prismaNativeType(field.type);
-        const unique = field.unique ? " @unique" : "";
+        const unique = field.unique
+          ? ` @unique${prismaMap(names, objectId("uq", entity.key, field.key))}`
+          : "";
         return `  ${field.key} ${prismaType(field.type)}${optional}${native ? ` ${native}` : ""}${unique}`;
       });
     const indexes = entity.indexes.map(
-      (index) => `  @@index([${index.fields.join(", ")}])`,
+      (index, ordinal) =>
+        `  @@index([${index.fields.join(", ")}]${prismaMapArgument(names, objectId("ix", entity.key, String(ordinal)))})`,
     );
     return [
       `model ${toPascalCase(entity.key)} {`,
-      "  id String @id @default(cuid())",
+      `  id String @id${prismaMap(names, objectId("pk", entity.key))} @default(cuid())`,
       ...fields,
       ...(approvalEntity === entity.key || taskEntity === entity.key
         ? ["  version Int @default(0)"]
@@ -464,6 +468,9 @@ function renderPrismaSchema(
         ? []
         : ["  updatedAt DateTime @updatedAt"]),
       ...indexes,
+      ...(names?.get(objectId("tb", entity.key))
+        ? [`  @@map(${JSON.stringify(names.get(objectId("tb", entity.key)))})`]
+        : []),
       "}",
     ].join("\n");
   });
@@ -557,6 +564,7 @@ function quoteSqlIdentifier(value: string): string {
 function relationColumnDefinitions(
   graph: ApplicationGraphV1,
   entityKey: string,
+  names?: DatabaseNames,
 ): readonly string[] {
   return graph.domain.relations.flatMap((relation) => {
     if (relation.kind === "many-to-many") return [];
@@ -570,7 +578,7 @@ function relationColumnDefinitions(
       return [];
     }
     return [
-      `${quoteSqlIdentifier(foreignKey.scalarField)} TEXT${foreignKey.oneToOne ? " UNIQUE" : ""}`,
+      `${quoteSqlIdentifier(foreignKey.scalarField)} TEXT${foreignKey.oneToOne ? `${sqlConstraint(names, objectId("uq", entityKey, foreignKey.scalarField))} UNIQUE` : ""}`,
     ];
   });
 }
@@ -581,6 +589,7 @@ function renderInitialMigration(
   additionalMigrationFragments: readonly string[] = [],
   approvalEntity?: string,
   taskEntity?: string,
+  names?: DatabaseNames,
 ): string {
   const duplicateRelationSuffixes = duplicateEndpointRelationSuffixes(graph);
   const createTables = graph.domain.entities.map((entity) => {
@@ -589,14 +598,14 @@ function renderInitialMigration(
       ...(approvalEntity === entity.key || taskEntity === entity.key
         ? ['"version" INTEGER NOT NULL DEFAULT 0']
         : []),
-      '"id" TEXT NOT NULL PRIMARY KEY',
+      `"id" TEXT NOT NULL${sqlConstraint(names, objectId("pk", entity.key))} PRIMARY KEY`,
       ...entity.fields
         .filter((field) => field.key !== "id")
         .map(
           (field) =>
-            `${quoteSqlIdentifier(field.key)} ${postgresType(field.type)}${field.required ? " NOT NULL" : ""}${field.unique ? " UNIQUE" : ""}`,
+            `${quoteSqlIdentifier(field.key)} ${postgresType(field.type)}${field.required ? " NOT NULL" : ""}${field.unique ? `${sqlConstraint(names, objectId("uq", entity.key, field.key))} UNIQUE` : ""}`,
         ),
-      ...relationColumnDefinitions(graph, entity.key),
+      ...relationColumnDefinitions(graph, entity.key, names),
       ...(renderedNames.has("createdAt")
         ? []
         : ['"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP']),
@@ -604,36 +613,38 @@ function renderInitialMigration(
         ? []
         : ['"updatedAt" TIMESTAMP(3) NOT NULL']),
     ];
-    return `CREATE TABLE ${quoteSqlIdentifier(toPascalCase(entity.key))} (\n  ${columns.join(",\n  ")}\n);`;
+    return `CREATE TABLE ${quoteSqlIdentifier(physicalTable(names, entity.key))} (\n  ${columns.join(",\n  ")}\n);`;
   });
   const indexes = graph.domain.entities.flatMap((entity) =>
     entity.indexes.map(
       (index, indexNumber) =>
-        `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ${quoteSqlIdentifier(`${toPascalCase(entity.key)}_${indexNumber}_idx`)} ON ${quoteSqlIdentifier(toPascalCase(entity.key))} (${index.fields.map(quoteSqlIdentifier).join(", ")});`,
+        `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ${quoteSqlIdentifier(names?.get(objectId("ix", entity.key, String(indexNumber))) ?? `${toPascalCase(entity.key)}_${indexNumber}_idx`)} ON ${quoteSqlIdentifier(physicalTable(names, entity.key))} (${index.fields.map(quoteSqlIdentifier).join(", ")});`,
     ),
   );
   const relationTables = graph.domain.relations.flatMap((relation) => {
     if (relation.kind !== "many-to-many") return [];
     const relationName = `${toPascalCase(relation.from)}To${toPascalCase(relation.to)}`;
-    const sourceModel = toPascalCase(relation.from);
-    const targetModel = toPascalCase(relation.to);
+    const sourceModel = physicalTable(names, relation.from);
+    const targetModel = physicalTable(names, relation.to);
     return [
       `CREATE TABLE ${quoteSqlIdentifier(`_${relationName}`)} (\n  "A" TEXT NOT NULL,\n  "B" TEXT NOT NULL,\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_AB_pkey`)} PRIMARY KEY ("A", "B"),\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_A_fkey`)} FOREIGN KEY ("A") REFERENCES ${quoteSqlIdentifier(sourceModel)} ("id") ON DELETE CASCADE ON UPDATE CASCADE,\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_B_fkey`)} FOREIGN KEY ("B") REFERENCES ${quoteSqlIdentifier(targetModel)} ("id") ON DELETE CASCADE ON UPDATE CASCADE\n);`,
       `CREATE INDEX ${quoteSqlIdentifier(`_${relationName}_B_index`)} ON ${quoteSqlIdentifier(`_${relationName}`)} ("B");`,
     ];
   });
-  const relationConstraints = graph.domain.relations.flatMap((relation) => {
-    if (relation.kind === "many-to-many") return [];
-    const foreignKey = resolveRelationForeignKey(graph, relation);
-    const relationSuffix = duplicateRelationSuffixes.get(relation) ?? "";
-    const relationName = boundedForeignKeyConstraintName(
-      `${toPascalCase(foreignKey.targetKey)}To${toPascalCase(foreignKey.ownerKey)}`,
-      relationSuffix,
-    );
-    return [
-      `ALTER TABLE ${quoteSqlIdentifier(toPascalCase(foreignKey.ownerKey))} ADD CONSTRAINT ${quoteSqlIdentifier(relationName)} FOREIGN KEY (${quoteSqlIdentifier(foreignKey.scalarField)}) REFERENCES ${quoteSqlIdentifier(toPascalCase(foreignKey.targetKey))} (${quoteSqlIdentifier(foreignKey.targetField)}) ON DELETE RESTRICT ON UPDATE CASCADE;`,
-    ];
-  });
+  const relationConstraints = graph.domain.relations.flatMap(
+    (relation, ordinal) => {
+      if (relation.kind === "many-to-many") return [];
+      const foreignKey = resolveRelationForeignKey(graph, relation);
+      const relationSuffix = duplicateRelationSuffixes.get(relation) ?? "";
+      const relationName = boundedForeignKeyConstraintName(
+        `${toPascalCase(foreignKey.targetKey)}To${toPascalCase(foreignKey.ownerKey)}`,
+        relationSuffix,
+      );
+      return [
+        `ALTER TABLE ${quoteSqlIdentifier(physicalTable(names, foreignKey.ownerKey))} ADD CONSTRAINT ${quoteSqlIdentifier(names?.get(objectId("fk", foreignKey.ownerKey, String(ordinal))) ?? relationName)} FOREIGN KEY (${quoteSqlIdentifier(foreignKey.scalarField)}) REFERENCES ${quoteSqlIdentifier(physicalTable(names, foreignKey.targetKey))} (${quoteSqlIdentifier(foreignKey.targetField)}) ON DELETE RESTRICT ON UPDATE CASCADE;`,
+      ];
+    },
+  );
   return [
     "-- Generated from a Published Factory Application Graph. Do not edit manually.",
     ...createTables,
@@ -1181,6 +1192,622 @@ const DATABASE_PATHS = [
 const DATABASE_STORAGE_VALIDATION_ERROR =
   "Generated database storage validation failed.";
 
+const IDENTIFIER_ALLOCATION_ERROR =
+  "Generated database identifier allocation failed.";
+const IDENTIFIER_POLICY = "factory.generated-database-identifiers/v1";
+type IdentifierKind = "tb" | "pk" | "uq" | "ix" | "fk";
+type DatabaseNames = ReadonlyMap<string, string>;
+interface StorageIdentifier {
+  readonly name: string;
+  readonly kind: IdentifierKind | "other-constraint";
+  readonly table: string;
+}
+interface DatabaseObject {
+  readonly id: string;
+  readonly key: string;
+  readonly kind: IdentifierKind;
+  readonly owner: string;
+  readonly prisma: StorageIdentifier;
+  readonly sql: StorageIdentifier;
+}
+
+function objectId(kind: IdentifierKind, owner: string, identity = ""): string {
+  return `${kind}\0${owner}\0${identity}`;
+}
+function physicalTable(
+  names: DatabaseNames | undefined,
+  owner: string,
+): string {
+  return names?.get(objectId("tb", owner)) ?? toPascalCase(owner);
+}
+function prismaMap(names: DatabaseNames | undefined, id: string): string {
+  const name = names?.get(id);
+  return name ? `(map: ${JSON.stringify(name)})` : "";
+}
+function prismaMapArgument(
+  names: DatabaseNames | undefined,
+  id: string,
+): string {
+  const name = names?.get(id);
+  return name ? `, map: ${JSON.stringify(name)}` : "";
+}
+function sqlConstraint(names: DatabaseNames | undefined, id: string): string {
+  const name = names?.get(id);
+  return name ? ` CONSTRAINT ${quoteSqlIdentifier(name)}` : "";
+}
+function identifierNamespaces(
+  identifier: StorageIdentifier,
+): readonly string[] {
+  return [
+    ...(identifier.kind === "fk" || identifier.kind === "other-constraint"
+      ? []
+      : ["relation"]),
+    ...(isConstraint(identifier.kind)
+      ? [`constraint:${identifier.table}`]
+      : []),
+  ];
+}
+function isConstraint(kind: StorageIdentifier["kind"]): boolean {
+  return (
+    kind === "pk" ||
+    kind === "uq" ||
+    kind === "fk" ||
+    kind === "other-constraint"
+  );
+}
+function assertColumns(columns: readonly string[]): void {
+  if (
+    hasDuplicateNames(columns) ||
+    columns.some(
+      (name) => Buffer.byteLength(name, "utf8") > POSTGRES_IDENTIFIER_MAX_BYTES,
+    )
+  ) {
+    throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
+  }
+}
+
+/** Inventory the emitted forms, including implicit PostgreSQL-backed indexes.
+ * This is also used for fixed contribution reservations; it never rewrites text.
+ */
+function prismaStorageIdentifiers(schema: string): StorageIdentifier[] {
+  const identifiers: StorageIdentifier[] = [];
+  const models: string[] = [];
+  const implicitRelations = new Map<string, number>();
+  for (const model of schema.matchAll(/\bmodel\s+(\w+)\s*\{([^}]+)\}/g)) {
+    models.push(model[1]!);
+    const body = model[2]!;
+    const table = /@@map\("([^"]+)"\)/.exec(body)?.[1] ?? model[1]!;
+    identifiers.push({ name: table, kind: "tb", table });
+    const columns: string[] = [];
+    for (const raw of body.split("\n")) {
+      const line = raw.trim();
+      const map = /\bmap:\s*"([^"]+)"/.exec(line)?.[1];
+      const compound = /^@@(id|unique|index)\(\[([^\]]+)\]/.exec(line);
+      if (compound) {
+        const fields = compound[2]!
+          .split(",")
+          .map((field) => field.trim().replace(/\(.*/, ""));
+        const kind =
+          compound[1] === "id" ? "pk" : compound[1] === "unique" ? "uq" : "ix";
+        identifiers.push({
+          name:
+            map ??
+            `${table}_${kind === "pk" ? "pkey" : `${fields.join("_")}_${kind === "uq" ? "key" : "idx"}`}`,
+          kind,
+          table,
+        });
+        continue;
+      }
+      const field = /^(\w+)\s+(\w+)(\[\]|\?)?/.exec(line);
+      if (!field) continue;
+      if (
+        [
+          "String",
+          "Int",
+          "BigInt",
+          "Float",
+          "Decimal",
+          "Boolean",
+          "DateTime",
+          "Json",
+          "Bytes",
+        ].includes(field[2]!)
+      ) {
+        const column = /@map\("([^"]+)"\)/.exec(line)?.[1] ?? field[1]!;
+        columns.push(column);
+        if (/@id\b/.test(line))
+          identifiers.push({ name: map ?? `${table}_pkey`, kind: "pk", table });
+        if (/@unique\b/.test(line))
+          identifiers.push({
+            name: map ?? `${table}_${column}_key`,
+            kind: "uq",
+            table,
+          });
+      }
+      const foreign = /@relation\([^\n]*fields:\s*\[([^\]]+)\]/.exec(line);
+      if (foreign)
+        identifiers.push({
+          name:
+            map ??
+            `${table}_${foreign[1]!
+              .split(",")
+              .map((field) => field.trim())
+              .join("_")}_fkey`,
+          kind: "fk",
+          table,
+        });
+      if (field[3] === "[]") {
+        const relation = /@relation\("([^"]+)"\)/.exec(line)?.[1];
+        if (relation)
+          implicitRelations.set(
+            relation,
+            (implicitRelations.get(relation) ?? 0) + 1,
+          );
+      }
+    }
+    assertColumns(columns);
+  }
+  if (hasDuplicateNames(models))
+    throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
+  for (const [relation, count] of implicitRelations) {
+    if (count < 2) continue;
+    const table = `_${relation}`;
+    identifiers.push(
+      { name: table, table, kind: "tb" },
+      { name: `${table}_AB_pkey`, table, kind: "pk" },
+      { name: `${table}_B_index`, table, kind: "ix" },
+      { name: `${table}_A_fkey`, table, kind: "fk" },
+      { name: `${table}_B_fkey`, table, kind: "fk" },
+    );
+  }
+  return identifiers;
+}
+
+/** Keep identifier tokens for inventory, but count DDL keywords only in SQL
+ * code. PostgreSQL comments/literals may contain arbitrary keyword text.
+ * Neither inspection view is emitted as migration source.
+ */
+function sqlInspectionSources(source: string): {
+  ddl: string;
+  keywords: string;
+} {
+  let ddl = "";
+  let keywords = "";
+  let index = 0;
+  while (index < source.length) {
+    const start = index;
+    let quotedIdentifier = false;
+    if (source.startsWith("--", index)) {
+      const newline = source.indexOf("\n", index);
+      index = newline < 0 ? source.length : newline;
+    } else if (source.startsWith("/*", index)) {
+      index += 2;
+      let depth = 1;
+      while (index < source.length && depth > 0) {
+        if (source.startsWith("/*", index)) {
+          depth += 1;
+          index += 2;
+        } else if (source.startsWith("*/", index)) {
+          depth -= 1;
+          index += 2;
+        } else index += 1;
+      }
+      if (depth !== 0) throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
+    } else if (source[index] === '"' || source[index] === "'") {
+      const quote = source[index]!;
+      quotedIdentifier = quote === '"';
+      const escapes =
+        !quotedIdentifier &&
+        /[eE]/.test(source[index - 1] ?? "") &&
+        !/[A-Za-z0-9_$]/.test(source[index - 2] ?? "");
+      index += 1;
+      let closed = false;
+      while (index < source.length) {
+        if (escapes && source[index] === "\\") {
+          index += 2;
+          continue;
+        }
+        if (source[index] !== quote) {
+          index += 1;
+          continue;
+        }
+        if (source[index + 1] === quote) {
+          index += 2;
+          continue;
+        }
+        index += 1;
+        closed = true;
+        break;
+      }
+      if (!closed) throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
+    } else {
+      const delimiter =
+        source[index] === "$" && !/[A-Za-z0-9_$]/.test(source[index - 1] ?? "")
+          ? /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.exec(source.slice(index))?.[0]
+          : undefined;
+      if (delimiter) {
+        const closing = source.indexOf(delimiter, index + delimiter.length);
+        if (closing < 0) throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
+        index = closing + delimiter.length;
+      } else {
+        ddl += source[index];
+        keywords += source[index];
+        index += 1;
+        continue;
+      }
+    }
+    const token = source.slice(start, index);
+    const masked = token.replace(/[^\r\n]/g, " ");
+    ddl += quotedIdentifier ? token : masked;
+    keywords += masked;
+  }
+  return { ddl, keywords };
+}
+
+function sqlStorageIdentifiers(migration: string): StorageIdentifier[] {
+  const { ddl, keywords } = sqlInspectionSources(migration);
+  const identifiers: StorageIdentifier[] = [];
+  const sqlIdentifier = '(?:"(?:[^"]|"")+"|[A-Za-z_][A-Za-z0-9_$]*)';
+  const physicalName = (token: string): string =>
+    token.startsWith('"')
+      ? token.slice(1, -1).replaceAll('""', '"')
+      : token.toLowerCase();
+  let explicitConstraints = 0;
+  const addConstraint = (
+    table: string,
+    definition: string,
+    column?: string,
+  ): void => {
+    const definitionKeywords = sqlInspectionSources(definition).keywords;
+    const kind = /\bPRIMARY\s+KEY\b/i.test(definitionKeywords)
+      ? "pk"
+      : /\bUNIQUE\b/i.test(definitionKeywords)
+        ? "uq"
+        : /\bFOREIGN\s+KEY\b/i.test(definitionKeywords)
+          ? "fk"
+          : undefined;
+    const constraintToken = new RegExp(
+      `\\bCONSTRAINT\\s+(${sqlIdentifier})`,
+      "i",
+    ).exec(definition)?.[1];
+    const explicit =
+      constraintToken === undefined ? undefined : physicalName(constraintToken);
+    if (explicit !== undefined) explicitConstraints += 1;
+    if (!kind) {
+      if (explicit)
+        identifiers.push({ name: explicit, table, kind: "other-constraint" });
+      return;
+    }
+    const fields =
+      column ??
+      [
+        ...(
+          /(?:PRIMARY\s+KEY|UNIQUE|FOREIGN\s+KEY)\s*\(([^)]+)\)/i.exec(
+            definition,
+          )?.[1] ?? ""
+        ).matchAll(/"([^"]+)"/g),
+      ]
+        .map((match) => match[1])
+        .join("_");
+    identifiers.push({
+      name:
+        explicit ??
+        `${table}_${kind === "pk" ? "pkey" : `${fields}_${kind === "uq" ? "key" : "fkey"}`}`,
+      kind,
+      table,
+    });
+  };
+  const tables = [
+    ...ddl.matchAll(
+      new RegExp(
+        `\\bCREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(${sqlIdentifier})\\s*\\(([\\s\\S]*?)\\);`,
+        "gi",
+      ),
+    ),
+  ];
+  for (const match of tables) {
+    const table = physicalName(match[1]!);
+    identifiers.push({ name: table, table, kind: "tb" });
+    const columns: string[] = [];
+    // Commas inside constraint column lists and type arguments are not separators.
+    for (const definition of match[2]!.split(/,(?![^()]*\))/)) {
+      const columnToken =
+        /^\s*(?:CONSTRAINT|PRIMARY\s+KEY|UNIQUE|FOREIGN\s+KEY|CHECK)\b/i.test(
+          definition,
+        )
+          ? undefined
+          : new RegExp(`^\\s*(${sqlIdentifier})`).exec(definition)?.[1];
+      const column =
+        columnToken === undefined ? undefined : physicalName(columnToken);
+      if (column) columns.push(column);
+      addConstraint(table, definition, column);
+    }
+    assertColumns(columns);
+  }
+  const indexes = [
+    ...ddl.matchAll(
+      new RegExp(
+        `\\bCREATE\\s+(?:UNIQUE\\s+)?INDEX\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(${sqlIdentifier})\\s+ON\\s+(${sqlIdentifier})`,
+        "gi",
+      ),
+    ),
+  ];
+  for (const match of indexes)
+    identifiers.push({
+      name: physicalName(match[1]!),
+      table: physicalName(match[2]!),
+      kind: "ix",
+    });
+  for (const match of ddl.matchAll(
+    new RegExp(
+      `\\bALTER\\s+TABLE\\s+(${sqlIdentifier})\\s+ADD\\s+(CONSTRAINT\\s+${sqlIdentifier}[^;]+);`,
+      "gi",
+    ),
+  ))
+    addConstraint(physicalName(match[1]!), match[2]!);
+  // A contribution using an unrecognized DDL form must not disappear from the
+  // namespace inventory. Keep unsupported forms fail-closed rather than emit
+  // identifiers that were never checked for bounds or collisions.
+  if (
+    tables.length !== [...keywords.matchAll(/\bCREATE\s+TABLE\b/gi)].length ||
+    indexes.length !==
+      [...keywords.matchAll(/\bCREATE\s+(?:UNIQUE\s+)?INDEX\b/gi)].length ||
+    explicitConstraints !== [...keywords.matchAll(/\bCONSTRAINT\b/gi)].length
+  )
+    throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
+  return identifiers;
+}
+
+function assertIdentifierInventory(
+  identifiers: readonly StorageIdentifier[],
+): void {
+  const occupied = new Set<string>();
+  for (const identifier of identifiers) {
+    if (
+      Buffer.byteLength(identifier.name, "utf8") > POSTGRES_IDENTIFIER_MAX_BYTES
+    )
+      throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
+    for (const namespace of identifierNamespaces(identifier)) {
+      const key = `${namespace}\0${identifier.name}`;
+      if (occupied.has(key)) throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
+      occupied.add(key);
+    }
+  }
+}
+
+function collectDatabaseObjects(
+  graph: ApplicationGraphV1,
+  names?: DatabaseNames,
+): DatabaseObject[] {
+  const objects: DatabaseObject[] = [];
+  const add = (
+    kind: IdentifierKind,
+    owner: string,
+    fields: readonly string[],
+    identity: string,
+    prisma: string,
+    sql = prisma,
+  ): void => {
+    const table = physicalTable(names, owner);
+    objects.push({
+      id: objectId(
+        kind,
+        owner,
+        kind === "uq"
+          ? fields.join(",")
+          : kind === "ix" || kind === "fk"
+            ? identity.split("\0")[0]!
+            : "",
+      ),
+      key: `${IDENTIFIER_POLICY}\0${kind === "fk" ? "constraint" : "relation"}\0${kind}\0${toPascalCase(owner)}\0${fields.join(",")}\0${identity}`,
+      kind,
+      owner,
+      prisma: { name: prisma, kind, table },
+      sql: { name: sql, kind, table },
+    });
+  };
+  for (const entity of graph.domain.entities) {
+    const logical = toPascalCase(entity.key);
+    const table = physicalTable(names, entity.key);
+    add("tb", entity.key, [], "", logical);
+    add("pk", entity.key, ["id"], "", `${table}_pkey`);
+    for (const field of entity.fields)
+      if (field.unique)
+        add("uq", entity.key, [field.key], "", `${table}_${field.key}_key`);
+    entity.indexes.forEach((index, ordinal) =>
+      add(
+        "ix",
+        entity.key,
+        index.fields,
+        String(ordinal),
+        `${table}_${index.fields.join("_")}_idx`,
+        `${logical}_${ordinal}_idx`,
+      ),
+    );
+    const columns = [...renderedFieldNames(graph, entity.key), "id"];
+    assertColumns(columns);
+  }
+  const suffixes = duplicateEndpointRelationSuffixes(graph);
+  graph.domain.relations.forEach((relation, ordinal) => {
+    if (relation.kind === "many-to-many") return;
+    const foreign = resolveRelationForeignKey(graph, relation);
+    const table = physicalTable(names, foreign.ownerKey);
+    if (
+      foreign.oneToOne &&
+      !graph.domain.entities
+        .find((entity) => entity.key === foreign.ownerKey)!
+        .fields.some((field) => field.key === foreign.scalarField)
+    )
+      add(
+        "uq",
+        foreign.ownerKey,
+        [foreign.scalarField],
+        "",
+        `${table}_${foreign.scalarField}_key`,
+      );
+    add(
+      "fk",
+      foreign.ownerKey,
+      [foreign.scalarField],
+      `${ordinal}\0${toPascalCase(foreign.targetKey)}\0${foreign.targetField}`,
+      `${table}_${foreign.scalarField}_fkey`,
+      boundedForeignKeyConstraintName(
+        `${toPascalCase(foreign.targetKey)}To${toPascalCase(foreign.ownerKey)}`,
+        suffixes.get(relation) ?? "",
+      ),
+    );
+  });
+  if (
+    hasDuplicateNames(objects.map((object) => object.key)) ||
+    hasDuplicateNames(objects.map((object) => object.id))
+  )
+    throw new Error(IDENTIFIER_ALLOCATION_ERROR);
+  return objects;
+}
+
+function allocateDatabaseNames(
+  plan: DatabasePlanV1,
+  graph: ApplicationGraphV1,
+): DatabaseNames {
+  // Rendering an empty domain inventories only existing fixed/compiler/package
+  // fragments. Their identifiers are reservations, never allocation candidates.
+  const empty = {
+    ...graph,
+    domain: { ...graph.domain, entities: [], relations: [] },
+  };
+  const fixedPrisma = prismaStorageIdentifiers(
+    renderPrismaSchema(
+      empty,
+      plan.orderOperationReceiptSchema,
+      plan.includeGenericCommerceLineItems,
+      plan.additionalSchemaFragments,
+      plan.approvalEntity,
+      plan.taskEntity,
+    ),
+  );
+  const fixedSql = sqlStorageIdentifiers(
+    renderInitialMigration(
+      empty,
+      plan.orderOperationReceiptMigration,
+      plan.includeGenericCommerceLineItems,
+      plan.additionalMigrationFragments,
+      plan.approvalEntity,
+      plan.taskEntity,
+    ),
+  );
+  // Implicit join objects are outside the repair surface, including their keys.
+  for (const relation of graph.domain.relations) {
+    if (relation.kind !== "many-to-many") continue;
+    const table = `_${toPascalCase(relation.from)}To${toPascalCase(relation.to)}`;
+    const joins: StorageIdentifier[] = [
+      { name: table, table, kind: "tb" },
+      { name: `${table}_AB_pkey`, table, kind: "pk" },
+      { name: `${table}_B_index`, table, kind: "ix" },
+      { name: `${table}_A_fkey`, table, kind: "fk" },
+      { name: `${table}_B_fkey`, table, kind: "fk" },
+    ];
+    fixedPrisma.push(...joins);
+    fixedSql.push(...joins);
+  }
+  assertIdentifierInventory(fixedPrisma);
+  assertIdentifierInventory(fixedSql);
+  const names = new Map<string, string>();
+  const occupied = new Map<string, string>();
+  const reserve = (identifier: StorageIdentifier, key: string): void => {
+    for (const namespace of [
+      ...identifierNamespaces(identifier),
+      ...(isConstraint(identifier.kind) ? ["mapped-constraint"] : []),
+    ])
+      occupied.set(`${namespace}\0${identifier.name}`, key);
+  };
+  [...fixedPrisma, ...fixedSql].forEach((identifier) =>
+    reserve(identifier, "fixed"),
+  );
+  const unsafe = (
+    object: DatabaseObject,
+    objects: readonly DatabaseObject[],
+  ): boolean =>
+    (["prisma", "sql"] as const).some((stream) => {
+      const candidate = object[stream];
+      if (
+        Buffer.byteLength(candidate.name, "utf8") >
+        POSTGRES_IDENTIFIER_MAX_BYTES
+      )
+        return true;
+      const fixed = stream === "prisma" ? fixedPrisma : fixedSql;
+      return [
+        ...fixed,
+        ...objects
+          .filter((other) => other !== object)
+          .map((other) => other[stream]),
+      ].some(
+        (other) =>
+          other.name === candidate.name &&
+          identifierNamespaces(other).some((namespace) =>
+            identifierNamespaces(candidate).includes(namespace),
+          ),
+      );
+    });
+  const allocate = (objects: readonly DatabaseObject[]): void => {
+    for (const object of [...objects].sort((a, b) =>
+      a.key < b.key ? -1 : a.key > b.key ? 1 : 0,
+    )) {
+      const digest = sha256Digest(object.key);
+      const suffix = `_${object.kind}_${digest.slice(0, 16)}`;
+      let prefix = "";
+      for (const character of object.prisma.name) {
+        if (
+          Buffer.byteLength(prefix + character + suffix, "utf8") >
+          POSTGRES_IDENTIFIER_MAX_BYTES
+        )
+          break;
+        prefix += character;
+      }
+      const namespaces = [
+        ...identifierNamespaces(object.prisma),
+        ...(isConstraint(object.kind) ? ["mapped-constraint"] : []),
+      ];
+      const available = (name: string): boolean =>
+        namespaces.every((namespace) => !occupied.has(`${namespace}\0${name}`));
+      let name = `${prefix}${suffix}`;
+      if (!available(name)) name = `${object.kind}_${digest.slice(0, 60)}`;
+      if (!available(name)) throw new Error(IDENTIFIER_ALLOCATION_ERROR);
+      names.set(object.id, name);
+      reserve({ ...object.prisma, name }, object.key);
+    }
+  };
+  const initial = collectDatabaseObjects(graph);
+  const mappedTables = new Set(
+    initial
+      .filter((object) => object.kind === "tb" && unsafe(object, initial))
+      .map((object) => object.owner),
+  );
+  // Reserve untouched objects from BOTH streams before allocating any table.
+  for (const object of initial)
+    if (!mappedTables.has(object.owner) && !unsafe(object, initial)) {
+      reserve(object.prisma, object.key);
+      reserve(object.sql, object.key);
+    }
+  allocate(
+    initial.filter(
+      (object) => object.kind === "tb" && mappedTables.has(object.owner),
+    ),
+  );
+  const final = collectDatabaseObjects(graph, names);
+  const mapped = final.filter(
+    (object) =>
+      object.kind !== "tb" &&
+      (mappedTables.has(object.owner) || unsafe(object, final)),
+  );
+  for (const object of final)
+    if (object.kind !== "tb" && !mapped.includes(object)) {
+      reserve(object.prisma, object.key);
+      reserve(object.sql, object.key);
+    }
+  allocate(mapped);
+  return names;
+}
+
 function hasDuplicateNames(names: readonly string[]): boolean {
   return new Set(names).size !== names.length;
 }
@@ -1188,46 +1815,21 @@ function hasDuplicateNames(names: readonly string[]): boolean {
 function assertUniqueDatabaseStorageNames(
   schema: string,
   migration: string,
-): void {
-  const prismaModels = [
-    ...schema.matchAll(/^\s*model\s+([A-Za-z][A-Za-z0-9_]*)\s*\{/gm),
-  ].map((match) => match[1]!);
-  const sqlTables = [
-    ...migration.matchAll(/^\s*CREATE\s+TABLE\s+"([^"]+)"/gim),
-  ].map((match) => match[1]!);
-  const sqlIndexes = [
-    ...migration.matchAll(/^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\s+"([^"]+)"/gim),
-  ].map((match) => match[1]!);
-  const constraintsByTable = new Map<string, string[]>();
-  const addConstraint = (table: string, constraint: string): void => {
-    const constraints = constraintsByTable.get(table) ?? [];
-    constraints.push(constraint);
-    constraintsByTable.set(table, constraints);
-  };
-  for (const table of migration.matchAll(
-    /CREATE\s+TABLE\s+"([^"]+)"\s*\(([\s\S]*?)\);/gi,
-  )) {
-    for (const constraint of table[2]!.matchAll(/\bCONSTRAINT\s+"([^"]+)"/gi)) {
-      addConstraint(table[1]!, constraint[1]!);
-    }
-  }
-  for (const constraint of migration.matchAll(
-    /ALTER\s+TABLE\s+"([^"]+)"\s+ADD\s+CONSTRAINT\s+"([^"]+)"/gi,
-  )) {
-    addConstraint(constraint[1]!, constraint[2]!);
-  }
-  if (
-    hasDuplicateNames(prismaModels) ||
-    hasDuplicateNames(sqlTables) ||
-    hasDuplicateNames(sqlIndexes) ||
-    [...constraintsByTable.values()].some(hasDuplicateNames)
-  ) {
-    throw new Error(DATABASE_STORAGE_VALIDATION_ERROR);
-  }
+): readonly [readonly StorageIdentifier[], readonly StorageIdentifier[]] {
+  const inventories = [
+    prismaStorageIdentifiers(schema),
+    sqlStorageIdentifiers(migration),
+  ] as const;
+  inventories.forEach(assertIdentifierInventory);
+  return inventories;
 }
 
 function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
   const graph = assertValidApplicationGraph(plan.graph);
+  const names =
+    plan.prismaSchemaOverride || plan.initialMigrationOverride
+      ? new Map<string, string>()
+      : allocateDatabaseNames(plan, graph);
   const schema = plan.prismaSchemaOverride
     ? plan.prismaSchemaOverride
     : renderPrismaSchema(
@@ -1237,6 +1839,7 @@ function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
         plan.additionalSchemaFragments,
         plan.approvalEntity,
         plan.taskEntity,
+        names,
       );
   const migration = plan.initialMigrationOverride
     ? plan.initialMigrationOverride
@@ -1247,8 +1850,28 @@ function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
         plan.additionalMigrationFragments,
         plan.approvalEntity,
         plan.taskEntity,
+        names,
       );
-  assertUniqueDatabaseStorageNames(schema, migration);
+  const [prismaIdentifiers, sqlIdentifiers] = assertUniqueDatabaseStorageNames(
+    schema,
+    migration,
+  );
+  for (const object of collectDatabaseObjects(graph, names)) {
+    const name = names.get(object.id);
+    if (!name) continue;
+    const table = physicalTable(names, object.owner);
+    if (
+      ![prismaIdentifiers, sqlIdentifiers].every((identifiers) =>
+        identifiers.some(
+          (identifier) =>
+            identifier.name === name &&
+            identifier.kind === object.kind &&
+            identifier.table === table,
+        ),
+      )
+    )
+      throw new Error(IDENTIFIER_ALLOCATION_ERROR);
+  }
   return [
     { path: "database/prisma/schema.prisma", content: schema },
     { path: "api/prisma/schema.prisma", content: schema },

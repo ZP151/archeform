@@ -1,0 +1,33 @@
+{
+  "recordedAt": "2026-09-16T17:38:32.463Z",
+  "base": "bbb1e23c68f05e3ae213ceaf167737eb0fe86779",
+  "isolatedIdentifierOnlySnapshot": true,
+  "fullSuite": {
+    "targetSha256": "697181730f285697776d73a8635329229d173a21661519950c38d0ff4bb4d9ff",
+    "files": 48,
+    "passed": 814,
+    "failed": 0,
+    "exitCode": 0,
+    "durationSeconds": 232.6
+  },
+  "finalCorrection": {
+    "targetSha256": "f6fb7489563c31b256a529b860ecf1d8f3e9099705b1af7c9750cfb47e2c6250",
+    "scope": "Use the already-reviewed SQL keyword inspection view for constraint classification; add quoted unique-field collision regression.",
+    "affectedPassed": 101,
+    "affectedFailed": 0,
+    "files": 3,
+    "buildExitCode": 0,
+    "ownerTypecheckExitCode": 0,
+    "ownerFormattingExitCode": 0
+  },
+  "review": {
+    "reviewer": "/root/identifier_implementation_review",
+    "verdict": "APPROVED",
+    "p0": 0,
+    "p1": 0,
+    "p2": 0,
+    "actualScreensInspected": 10,
+    "evidenceReuse": "Approved for unchanged generated output with chained receipt."
+  },
+  "scope": "No numeric-domain production, test or Graph changes included. Full suite retained with final focused correction per delivery policy; do not describe this as a fresh full run at final hash."
+}

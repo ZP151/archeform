@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { taskDatabaseIdentifierComparison } from "./fixtures/legacy-database-identifiers.js";
 import {
   generateApplicationBundle,
   type PublishedGraphInput,
@@ -17,9 +18,10 @@ describe("Task correction compatibility with delivered immutable Task apps", () 
   it("preserves the complete ordered Published Task bundle captured at 5b65169e", () => {
     expect(baseline.baseline).toBe("5b65169e56c834f2a466539ee81ec020e76541c3");
     for (const entry of baseline.entries) {
-      const files = generateApplicationBundle(
-        entry.input as PublishedGraphInput,
-      ).files;
+      const files = taskDatabaseIdentifierComparison(
+        generateApplicationBundle(entry.input as PublishedGraphInput).files,
+        entry.input.graph.metadata.id,
+      );
       const digest = createHash("sha256")
         .update(
           JSON.stringify(files.map(({ path, content }) => [path, content])),

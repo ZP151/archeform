@@ -1,0 +1,26 @@
+{
+  "compilationId": "cmu4cpk2a000do44tf5uflcbq",
+  "definitionKey": "publication-review",
+  "elapsedToReadyMs": 214158,
+  "externalIntegration": null,
+  "lifecycle": [
+    "publish",
+    "compile",
+    "verify",
+    "preview"
+  ],
+  "modelCalls": 0,
+  "previewRunId": "preview-7fbc53c4-12cc-44fa-a48b-32d2d86d0b15",
+  "requestDiagnostics": [
+    {
+      "code": null,
+      "path": "/api/requirements/interpret",
+      "status": 200
+    },
+    {
+      "code": null,
+      "path": "/product/requirements",
+      "status": 201
+    }
+  ]
+}

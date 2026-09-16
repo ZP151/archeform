@@ -1,4 +1,5 @@
 import { approvalLegacyFixtures } from "./fixtures/approval-legacy.js";
+import { legacyDatabaseIdentifierComparison } from "./fixtures/legacy-database-identifiers.js";
 import { canonicalPurchaseRequestApprovalInterpretation } from "../../adapters/src/requirements/purchase-request-definition-selection.js";
 import { createHash } from "node:crypto";
 import { transpileModule, ModuleKind, JsxEmit } from "typescript";
@@ -484,9 +485,12 @@ describe("approval presentation compatibility", () => {
     const restaurant = restaurantProductV3Fixture();
     const digests = {
       appointment: orderedBundleDigest(
-        generateApplicationBundle(
-          bundleInputFor(await composedGraphFor(bookingBrief)),
-        ).files,
+        legacyDatabaseIdentifierComparison(
+          generateApplicationBundle(
+            bundleInputFor(await composedGraphFor(bookingBrief)),
+          ).files,
+          "booking",
+        ),
       ),
       nonApproval: orderedBundleDigest(
         generateApplicationBundle(bundleInputFor(nonApprovalGraph())).files,
@@ -690,9 +694,14 @@ describe("approval runtime behavior", () => {
         "8dfdca8272c77c9531baf6a165975029ca82e50690af133935d97e517378fd77",
       ],
     ] as const) {
-      const files = generateApplicationBundle(
-        bundleInputFor(graph),
-      ).files.filter(
+      const files = legacyDatabaseIdentifierComparison(
+        generateApplicationBundle(bundleInputFor(graph)).files,
+        graph.domain.entities.some(
+          (entity) => entity.key === "purchase-request",
+        )
+          ? "purchase"
+          : "expense",
+      ).filter(
         (file) => file.path.startsWith("api/") || file.path.includes("prisma/"),
       );
       expect(files).toHaveLength(33);

@@ -1,5 +1,8 @@
 import { approvalLegacyFixtures } from "./fixtures/approval-legacy.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as generatedFiles from "../src/core/generated-files.js";
+import * as graphValidation from "@factory/graph";
+import { projectDefinitionSelection } from "../../adapters/src/requirements/definition-selection-catalogue.js";
 import ts from "typescript";
 
 import { FixtureRequirementInterpreter } from "@factory/adapters";
@@ -31,7 +34,10 @@ import {
   type GeneratedFile,
   type PublishedGraphInput,
 } from "../src/index.js";
-import { databaseTargetPlugin } from "../src/targets/database/target.js";
+import {
+  databaseTargetPlugin,
+  type DatabasePlanV1,
+} from "../src/targets/database/target.js";
 
 const profiles: readonly FactoryProfile[] = [
   "expense-approval",
@@ -40,6 +46,495 @@ const profiles: readonly FactoryProfile[] = [
   "retail-counter",
   "grocery-pickup",
 ];
+
+describe("bounded generated database identifiers", () => {
+  type Entity = ApplicationGraphV1["domain"]["entities"][number];
+  function entity(
+    key: string,
+    fields: Entity["fields"] = [
+      { key: "value", type: "string", required: true },
+    ],
+    indexes: Entity["indexes"] = [],
+  ): Entity {
+    return { key, label: "Test entity", fields, indexes };
+  }
+  function plan(
+    entities: Entity[],
+    relations: ApplicationGraphV1["domain"]["relations"] = [],
+  ): DatabasePlanV1 {
+    const graph = createBlankApplicationDraft({
+      applicationId: "identifier-fixture",
+      workspaceId: "local-workspace",
+      name: "Identifier fixture",
+    }).graph;
+    return {
+      apiVersion: "factory.compiler-target/v1",
+      graph: { ...graph, domain: { ...graph.domain, entities, relations } },
+      includeGenericCommerceLineItems: false,
+      additionalSchemaFragments: [],
+      additionalMigrationFragments: [],
+      hasRestaurantRuntime: false,
+    };
+  }
+  function rendered(input: DatabasePlanV1) {
+    const files = databaseTargetPlugin.render(input);
+    return {
+      schema: files.find(
+        (file) => file.path === "database/prisma/schema.prisma",
+      )!.content,
+      sql: files.find((file) => file.path.endsWith("migration.sql"))!.content,
+    };
+  }
+  const mappings = (schema: string) =>
+    [...schema.matchAll(/(?:map:\s*|@@map\()"([^"]+)"/g)].map(
+      (match) => match[1]!,
+    );
+  const fixedFailure = (
+    operation: () => unknown,
+    message = "Generated database storage validation failed.",
+  ) => {
+    let caught: unknown;
+    try {
+      operation();
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught instanceof Error && caught.message === message).toBe(true);
+  };
+
+  it("maps only an index when its Prisma candidate exceeds 63 bytes and its SQL candidate is safe", () => {
+    const field = "x".repeat(57);
+    const { schema, sql } = rendered(
+      plan([
+        entity(
+          "sample",
+          [{ key: field, type: "string", required: true }],
+          [{ fields: [field] }],
+        ),
+      ]),
+    );
+    const names = mappings(schema);
+    expect(names).toHaveLength(1);
+    // Independently calculated SHA-256 over the BID-002 semantic key.
+    expect(names[0]).toBe(
+      "Sample_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_ix_70ada427c2d52d23",
+    );
+    expect(schema.includes("@@map(")).toBe(false);
+    expect(schema.includes("@id @default")).toBe(true);
+    expect(sql.includes(`INDEX "${names[0]}" ON "Sample" ("${field}")`)).toBe(
+      true,
+    );
+  });
+
+  it("resolves two indexes with identical Prisma candidates even though SQL ordinals differ", () => {
+    const { schema, sql } = rendered(
+      plan([
+        entity("sample", undefined, [
+          { fields: ["value"] },
+          { fields: ["value"] },
+        ]),
+      ]),
+    );
+    const names = mappings(schema);
+    expect(names).toHaveLength(2);
+    expect(new Set(names).size).toBe(2);
+    for (const name of names)
+      expect(sql.includes(`INDEX "${name}" ON "Sample"`)).toBe(true);
+  });
+
+  it("reserves fixed relation names before mapping a colliding domain index", () => {
+    const input = plan([entity("sample", undefined, [{ fields: ["value"] }])]);
+    const { schema, sql } = rendered({
+      ...input,
+      additionalMigrationFragments: [
+        'CREATE INDEX "Sample_0_idx" ON "Factory_AuditEvent" ("actor");',
+      ],
+    });
+    const names = mappings(schema);
+    expect(names).toHaveLength(1);
+    expect(sql.includes('INDEX "Sample_0_idx" ON "Factory_AuditEvent"')).toBe(
+      true,
+    );
+    expect(sql.includes(`INDEX "${names[0]}" ON "Sample"`)).toBe(true);
+  });
+
+  it("maps a table colliding with a fixed index and maps every dependent name", () => {
+    const input = plan([
+      entity(
+        "sample",
+        [{ key: "value", type: "string", unique: true, required: true }],
+        [{ fields: ["value"] }],
+      ),
+    ]);
+    const { schema, sql } = rendered({
+      ...input,
+      additionalMigrationFragments: [
+        'CREATE INDEX "Sample" ON "Factory_AuditEvent" ("actor");',
+      ],
+    });
+    const names = mappings(schema);
+    expect(names).toHaveLength(4);
+    const table = /@@map\("([^"]+)"\)/.exec(schema)![1];
+    expect(sql.includes(`CREATE TABLE "${table}"`)).toBe(true);
+    expect(schema.includes("@id(map:")).toBe(true);
+    expect(schema.includes("@unique(map:")).toBe(true);
+  });
+
+  it("maps declared and synthesized one-to-one uniqueness and every owner-side dependent of a mapped table", () => {
+    const owner = "a".repeat(70);
+    const input = plan(
+      [
+        entity(
+          owner,
+          [{ key: "value", type: "string", unique: true, required: true }],
+          [{ fields: ["value"] }],
+        ),
+        entity("target"),
+      ],
+      [{ from: "target", to: owner, kind: "one-to-one" }],
+    );
+    const { schema, sql } = rendered(input);
+    const ownerBlock = /model A\w+ \{([\s\S]*?)\n\}/.exec(schema)![1]!;
+    expect(mappings(ownerBlock)).toHaveLength(6);
+    expect((ownerBlock.match(/@unique\(map:/g) ?? []).length).toBe(2);
+    const table = /@@map\("([^"]+)"\)/.exec(ownerBlock)![1];
+    expect(sql.includes(`ALTER TABLE "${table}"`)).toBe(true);
+    for (const name of mappings(ownerBlock))
+      expect(sql.includes(`"${name}"`)).toBe(true);
+  });
+
+  it("preserves a safe owner FK when only its target table is mapped", () => {
+    const input = plan(
+      [
+        entity("owner", [{ key: "targetId", type: "string", required: true }]),
+        entity("target"),
+      ],
+      [{ from: "owner", to: "target", kind: "many-to-one", field: "targetId" }],
+    );
+    const { schema, sql } = rendered({
+      ...input,
+      additionalMigrationFragments: [
+        'CREATE INDEX "Target" ON "Factory_AuditEvent" ("actor");',
+      ],
+    });
+    const owner = /model Owner \{([\s\S]*?)\n\}/.exec(schema)![1]!;
+    expect(mappings(owner)).toEqual([]);
+    const table = /@@map\("([^"]+)"\)/.exec(schema)![1];
+    expect(
+      sql.includes(
+        `CONSTRAINT "TargetToOwner_fkey" FOREIGN KEY ("targetId") REFERENCES "${table}"`,
+      ),
+    ).toBe(true);
+  });
+
+  it("escalates digest-prefix collisions independently of entity traversal order", () => {
+    const input = plan([
+      entity("a".repeat(70) + "b"),
+      entity("a".repeat(70) + "c"),
+    ]);
+    const realDigest = generatedFiles.sha256Digest;
+    const spy = vi
+      .spyOn(generatedFiles, "sha256Digest")
+      .mockImplementation((value) =>
+        value.startsWith("factory.generated-database-identifiers/v1")
+          ? "a".repeat(16) + realDigest(value).slice(16)
+          : realDigest(value),
+      );
+    try {
+      const first = rendered(input);
+      const second = rendered({
+        ...input,
+        graph: {
+          ...input.graph,
+          domain: {
+            ...input.graph.domain,
+            entities: [...input.graph.domain.entities].reverse(),
+          },
+        },
+      });
+      expect(mappings(first.schema).sort()).toEqual(
+        mappings(second.schema).sort(),
+      );
+      expect(
+        mappings(first.schema).some((name) => /^tb_[a-f0-9]{60}$/.test(name)),
+      ).toBe(true);
+      expect(
+        mappings(first.schema).every((name) => Buffer.byteLength(name) <= 63),
+      ).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("fails closed if the full digest fallback is also occupied", () => {
+    const input = plan([
+      entity("a".repeat(70) + "b"),
+      entity("a".repeat(70) + "c"),
+      entity("a".repeat(70) + "d"),
+    ]);
+    const spy = vi
+      .spyOn(generatedFiles, "sha256Digest")
+      .mockReturnValue("a".repeat(64));
+    try {
+      fixedFailure(
+        () => rendered(input),
+        "Generated database identifier allocation failed.",
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it.each(["column", "implicit join", "contribution"])(
+    "rejects an unsupported overlength %s with a fixed safe error",
+    (kind) => {
+      const long = "a".repeat(70);
+      const input =
+        kind === "column"
+          ? plan([
+              entity("sample", [{ key: long, type: "string", required: true }]),
+            ])
+          : kind === "implicit join"
+            ? plan(
+                [entity(long), entity("target")],
+                [{ from: long, to: "target", kind: "many-to-many" }],
+              )
+            : {
+                ...plan([entity("sample")]),
+                additionalMigrationFragments: [
+                  `CREATE INDEX "${long}" ON "Factory_AuditEvent" ("actor");`,
+                ],
+              };
+      fixedFailure(() => rendered(input));
+    },
+  );
+
+  it("measures contribution identifiers in UTF-8 bytes and accepts the exact boundary", () => {
+    const input = plan([entity("sample")]);
+    expect(() =>
+      rendered({
+        ...input,
+        additionalMigrationFragments: [
+          `CREATE INDEX "${"é".repeat(31)}x" ON "Factory_AuditEvent" ("actor");`,
+        ],
+      }),
+    ).not.toThrow();
+    fixedFailure(() =>
+      rendered({
+        ...input,
+        additionalMigrationFragments: [
+          `CREATE INDEX "${"é".repeat(32)}" ON "Factory_AuditEvent" ("actor");`,
+        ],
+      }),
+    );
+  });
+
+  it("rejects an unsupported long contribution CHECK constraint", () => {
+    const input = plan([entity("sample")]);
+    fixedFailure(() =>
+      rendered({
+        ...input,
+        additionalMigrationFragments: [
+          `ALTER TABLE "Factory_AuditEvent" ADD CONSTRAINT "${"x".repeat(64)}" CHECK ("actor" <> '');`,
+        ],
+      }),
+    );
+  });
+  it("preserves an ordinary quoted column named constraint", () => {
+    const { sql } = rendered(
+      plan([
+        entity("sample", [
+          { key: "constraint", type: "string", required: true },
+        ]),
+      ]),
+    );
+    expect(sql.includes('"constraint" TEXT NOT NULL')).toBe(true);
+  });
+  it("does not invent a unique constraint from a quoted field named unique", () => {
+    const input = plan([
+      entity("sample", [{ key: "unique", type: "string", required: true }]),
+    ]);
+    const statement =
+      'CREATE INDEX "Sample_unique_key" ON "Sample" ("unique");';
+    const { sql } = rendered({
+      ...input,
+      additionalMigrationFragments: [statement],
+    });
+    expect(sql.includes(statement)).toBe(true);
+  });
+  it("ignores SQL keyword text inside literals and nested comments during preflight", () => {
+    const statement = `-- CONSTRAINT ignored CREATE INDEX ignored
+/* CREATE TABLE ignored /* CONSTRAINT ignored */ CREATE INDEX ignored */
+ALTER TABLE "Factory_AuditEvent" ADD CONSTRAINT "safe_note" CHECK ("actor" <> 'CONSTRAINT ignored CREATE TABLE ignored' AND "action" <> $note$CREATE INDEX ignored CONSTRAINT ignored$note$);`;
+    const { sql } = rendered({
+      ...plan([entity("sample")]),
+      additionalMigrationFragments: [statement],
+    });
+    expect(sql.includes(statement)).toBe(true);
+  });
+  it.each(["unquoted constraint", "conditional index"])(
+    "rejects an overlength %s contribution before emission",
+    (kind) => {
+      const input = plan([entity("sample")]);
+      const name = "x".repeat(64);
+      const statement =
+        kind === "unquoted constraint"
+          ? `ALTER TABLE "Factory_AuditEvent" ADD CONSTRAINT ${name} CHECK ("actor" <> '');`
+          : `CREATE INDEX IF NOT EXISTS "${name}" ON "Factory_AuditEvent" ("actor");`;
+      fixedFailure(() =>
+        rendered({ ...input, additionalMigrationFragments: [statement] }),
+      );
+    },
+  );
+  it.each(["unquoted constraint", "conditional index"])(
+    "preserves a safe 63-byte %s contribution exactly",
+    (kind) => {
+      const input = plan([entity("sample")]);
+      const name = "x".repeat(63);
+      const statement =
+        kind === "unquoted constraint"
+          ? `ALTER TABLE "Factory_AuditEvent" ADD CONSTRAINT ${name} CHECK ("actor" <> '');`
+          : `CREATE INDEX IF NOT EXISTS "${name}" ON "Factory_AuditEvent" ("actor");`;
+      const { sql } = rendered({
+        ...input,
+        additionalMigrationFragments: [statement],
+      });
+      expect(sql.includes(statement)).toBe(true);
+    },
+  );
+
+  it("reserves constraint names schema-wide when allocating mapped constraints", () => {
+    const field = "x".repeat(57);
+    const input = plan([
+      entity("sample", [
+        { key: field, type: "string", unique: true, required: true },
+      ]),
+    ]);
+    const reserved = `Sample_${field}`.slice(0, 43) + "_uq_" + "a".repeat(16);
+    const spy = vi
+      .spyOn(generatedFiles, "sha256Digest")
+      .mockReturnValue("a".repeat(64));
+    try {
+      const { schema, sql } = rendered({
+        ...input,
+        additionalMigrationFragments: [
+          `ALTER TABLE "Factory_AuditEvent" ADD CONSTRAINT "${reserved}" FOREIGN KEY ("actor") REFERENCES "Factory_CapabilityEvent" ("id");`,
+        ],
+      });
+      expect(mappings(schema)).toEqual(["uq_" + "a".repeat(60)]);
+      expect(
+        sql.includes(`CONSTRAINT "${"uq_" + "a".repeat(60)}" UNIQUE`),
+      ).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("rejects duplicate semantic primary-key identities before either can win", () => {
+    const input = plan([entity("same-key"), entity("same_key")]);
+    // Valid Graphs already reject normalized duplicates. Exercise the private
+    // allocator's independent defensive check without exporting a test API.
+    const validation = vi
+      .spyOn(graphValidation, "assertValidApplicationGraph")
+      .mockReturnValue(input.graph);
+    try {
+      fixedFailure(
+        () => rendered(input),
+        "Generated database identifier allocation failed.",
+      );
+    } finally {
+      validation.mockRestore();
+    }
+  });
+
+  function publicationInput() {
+    const interpretation = projectDefinitionSelection({
+      definitionKey: "publication-review",
+      disposition: "supported-default",
+      requirementId:
+        "publication-review-acceptance-e4f0c704-4f1c-4f1d-9699-d91aa0104021",
+      title: "Publication Review",
+      outcome: "Review and approve publications.",
+      materialQuestions: [],
+      businessParameters: null,
+    });
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: interpretation.spec.requirementId,
+      workspaceId: "local-workspace",
+      name: "Publication Review",
+    });
+    const [standard] = planProductAlternatives({
+      requirement: interpretation.spec,
+      blueprint: interpretation.blueprint,
+      baseDraft,
+    });
+    const { diff } = composeProductDraft({
+      plan: standard!.plan,
+      blueprint: interpretation.blueprint,
+      baseDraft,
+    });
+    const graph = applyGraphDiffToDraft(baseDraft, diff).graph;
+    const published = structuredClone(graph);
+    delete published.integration.compositionSelections;
+    return buildCompilationInput({
+      publishedRevisionId: "bounded-identifiers",
+      graph: published,
+      compositionLock: createCapabilityCompositionLock({
+        graphChecksum: hashApplicationGraph(published),
+        selections: graph.integration.compositionSelections ?? [],
+      }),
+    });
+  }
+
+  it("pairs every long Publication physical mapping with its SQL role while retaining logical models", () => {
+    const input = publicationInput();
+    const first = databaseTargetPlugin.render(databaseTargetPlugin.plan(input));
+    expect(first).toEqual(
+      databaseTargetPlugin.render(databaseTargetPlugin.plan(input)),
+    );
+    const schema = first.find(
+      (file) => file.path === "database/prisma/schema.prisma",
+    )!.content;
+    const sql = first.find((file) =>
+      file.path.endsWith("migration.sql"),
+    )!.content;
+    expect(schema.includes("@@map(")).toBe(true);
+    const mappedNames: string[] = [];
+    for (const model of schema.matchAll(/model (\w+) \{([\s\S]*?)\n\}/g)) {
+      const physical = /@@map\("([^"]+)"\)/.exec(model[2]!);
+      if (!physical) continue;
+      expect(model[1]!.startsWith("PublicationReviewAcceptance")).toBe(true);
+      const table = physical[1]!;
+      mappedNames.push(table);
+      expect(sql.includes(`CREATE TABLE "${table}"`)).toBe(true);
+      for (const line of model[2]!.split("\n")) {
+        const mapping = /map: "([^"]+)"/.exec(line)?.[1];
+        if (!mapping) continue;
+        mappedNames.push(mapping);
+        if (line.includes("@id("))
+          expect(sql.includes(`CONSTRAINT "${mapping}" PRIMARY KEY`)).toBe(
+            true,
+          );
+        else if (line.includes("@unique("))
+          expect(sql.includes(`CONSTRAINT "${mapping}" UNIQUE`)).toBe(true);
+        else if (line.includes("@@index("))
+          expect(sql.includes(`INDEX "${mapping}" ON "${table}"`)).toBe(true);
+        else if (line.includes("@relation("))
+          expect(
+            sql.includes(
+              `ALTER TABLE "${table}" ADD CONSTRAINT "${mapping}" FOREIGN KEY`,
+            ),
+          ).toBe(true);
+        else throw new Error("Unexpected mapped role.");
+      }
+    }
+    expect(mappedNames.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(mappedNames).size).toBe(mappedNames.length);
+    expect(mappedNames.every((name) => Buffer.byteLength(name) <= 63)).toBe(
+      true,
+    );
+  });
+});
 
 /**
  * Frozen database digests captured from generateApplicationBundle on
@@ -1901,12 +2396,31 @@ describe("seed binds required foreign-key scalars to seeded target records", () 
     expect(migration).toContain(
       'CONSTRAINT "ServiceToAppointment_fkey" FOREIGN KEY ("serviceKey")',
     );
-    expect(sha256Digest(schema!)).toBe(
+    // This fixture also has an unrelated 81-byte identity FK in the legacy
+    // SQL stream. ADR-0068 repairs that object. Reconstruct only that single
+    // approved mapping to prove all remaining legacy bytes stay exact.
+    const mappedRelations = [
+      ...schema!.matchAll(/@relation\("([^"]+)"[^\n]*, map: "([^"]+)"\)/g),
+    ];
+    expect(mappedRelations).toHaveLength(1);
+    const relationName = mappedRelations[0]![1]!;
+    const mappedName = mappedRelations[0]![2]!;
+    const [owner, target] = relationName.split("To");
+    const legacyName = `${target}To${owner}_fkey`;
+    expect(Buffer.byteLength(legacyName)).toBe(81);
+    expect([...schema!.matchAll(/\bmap:\s*"/g)]).toHaveLength(1);
+    expect(migration!.split(`CONSTRAINT "${mappedName}"`)).toHaveLength(2);
+    expect(sha256Digest(schema!.replace(`, map: "${mappedName}"`, ""))).toBe(
       "2f1d2477f149ab8fa6942440d937c0e531c79636eeb064a008faa2611710d43e",
     );
-    expect(sha256Digest(migration!)).toBe(
-      "c09feaa7fcfb0d4f6b51fe31c8fa6f266cec2f06bc67503fbd5ce57adfecde33",
-    );
+    expect(
+      sha256Digest(
+        migration!.replace(
+          `CONSTRAINT "${mappedName}"`,
+          `CONSTRAINT "${legacyName}"`,
+        ),
+      ),
+    ).toBe("c09feaa7fcfb0d4f6b51fe31c8fa6f266cec2f06bc67503fbd5ce57adfecde33");
   });
 
   it("allocates duplicate relation object fields around valid declared fields", async () => {

@@ -1,0 +1,329 @@
+{
+  "recordedAt": "2026-09-16T17:37:59.534Z",
+  "base": "bbb1e23c68f05e3ae213ceaf167737eb0fe86779",
+  "beforeTargetSha256": "de163d09b2026b3e7bd91b700fffac32a4e217564913d9616e5fe966613c1605",
+  "finalTargetSha256": "f6fb7489563c31b256a529b860ecf1d8f3e9099705b1af7c9750cfb47e2c6250",
+  "graphHash": "sha256:c7cb7b4270d67e715580a0fe3b7bdaa098962fff9eed42182cfeb0b2413b6b10",
+  "fileCount": 63,
+  "allFilesIdentical": true,
+  "beforeManifestSha256": "3af633c831e68da35defbde7a003daac7a7f54677adf0eb040fc2d6c5ee0b6d4",
+  "afterManifestSha256": "3af633c831e68da35defbde7a003daac7a7f54677adf0eb040fc2d6c5ee0b6d4",
+  "scope": "Independent long Publication fixture at the original reproduced requirement identifier, before and after inspection-only SQL preflight fixes. This is chained evidence, not a rerun of the prior actual 63-artifact comparison or actual browser journey.",
+  "files": [
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sizeBytes": 1053,
+      "digest": "8dac8d5c476c101d05d4a2b2b9350ae29685271fa2a8641f9210b9189789013b"
+    },
+    {
+      "path": "package.json",
+      "sizeBytes": 330,
+      "digest": "ee31a6c48dfbfce0790a2a9ff9fbfa09267fc2e4e53303299689dacd3deaff4a"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "sizeBytes": 39,
+      "digest": "f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+    },
+    {
+      "path": "capability-lock.json",
+      "sizeBytes": 1890,
+      "digest": "3024443ddbd05222aca95e0fe9b0920c4575a76fc5f435898694de6dd6dacf68"
+    },
+    {
+      "path": "composition-lock.json",
+      "sizeBytes": 4519,
+      "digest": "d8b52d9f7cb99172f199311bc98bdb533e0bfba064fb60874bc40ade4e21ba94"
+    },
+    {
+      "path": "capability-template-lock.json",
+      "sizeBytes": 2202,
+      "digest": "19a78b2a071da87f4f8fb508df4b3c7cfe12dc2ad18897c09bfe403cf2cd4bbd"
+    },
+    {
+      "path": "simulator/index.html",
+      "sizeBytes": 5316,
+      "digest": "84e2359d46eb6a8b537c050a553cecdf6ba3c9cc0b866032433b240ecfbffaa2"
+    },
+    {
+      "path": "web/package.json",
+      "sizeBytes": 385,
+      "digest": "c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+    },
+    {
+      "path": "web/tsconfig.json",
+      "sizeBytes": 612,
+      "digest": "2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+    },
+    {
+      "path": "web/next-env.d.ts",
+      "sizeBytes": 126,
+      "digest": "bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+    },
+    {
+      "path": "web/app/layout.tsx",
+      "sizeBytes": 256,
+      "digest": "514c15826e87a1a0c34f7bd93966af9ddf49a4d61fa62b4867ff37a846381d95"
+    },
+    {
+      "path": "web/app/page-runtime.tsx",
+      "sizeBytes": 115569,
+      "digest": "324c9f3b990af94acd3419168cdf81ce718bf3cf1d0eaf98b29454c41099b529"
+    },
+    {
+      "path": "web/app/page.tsx",
+      "sizeBytes": 157,
+      "digest": "25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+    },
+    {
+      "path": "web/app/[...path]/page.tsx",
+      "sizeBytes": 362,
+      "digest": "511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+    },
+    {
+      "path": "web/app/favicon.ico/route.ts",
+      "sizeBytes": 349,
+      "digest": "3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+    },
+    {
+      "path": "web/app/api/[...path]/route.ts",
+      "sizeBytes": 1156,
+      "digest": "73a62385c825071371d17a450554e2554d36fca9c457309d8a8047c33bcae9c8"
+    },
+    {
+      "path": "web/app/globals.css",
+      "sizeBytes": 44061,
+      "digest": "c25ad29f04f39d0be06130c55b7e4c7d9f60ae0c7d05af1516b668c49ffc417c"
+    },
+    {
+      "path": "api/package.json",
+      "sizeBytes": 694,
+      "digest": "f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+    },
+    {
+      "path": "api/tsconfig.json",
+      "sizeBytes": 267,
+      "digest": "ba06ca0caffb054b4c1128d1a43e9ba8d40d97993b41e6fe621dd4cfc19b1f70"
+    },
+    {
+      "path": "api/Dockerfile",
+      "sizeBytes": 296,
+      "digest": "620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+    },
+    {
+      "path": "api/.dockerignore",
+      "sizeBytes": 23,
+      "digest": "51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+    },
+    {
+      "path": "api/src/main.ts",
+      "sizeBytes": 9196,
+      "digest": "0141cd18d7fb2254b47b8a5b1255df53f09eea67c7b9d9e9f16a249fa9c7dc7f"
+    },
+    {
+      "path": "api/src/capabilities/contract.ts",
+      "sizeBytes": 6358,
+      "digest": "b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+    },
+    {
+      "path": "api/src/capabilities/core.audit.ts",
+      "sizeBytes": 597,
+      "digest": "337db4f8883795aa8a546905d3f8be1bbba529c75e097f821e84d89ca1d00ceb"
+    },
+    {
+      "path": "api/src/capabilities/core.crud.ts",
+      "sizeBytes": 501,
+      "digest": "840c6f6fc091c8db12c8b20bb80b47d6a4c02cb47221caf0ca9ea3d2a8c8c451"
+    },
+    {
+      "path": "api/src/capabilities/core.identity-policy.ts",
+      "sizeBytes": 2099,
+      "digest": "098611bb5832a79e2003bb81e4c6c8b6f752b02fae0427b6219eb0f5c91657fc"
+    },
+    {
+      "path": "api/src/capabilities/core.notification.ts",
+      "sizeBytes": 657,
+      "digest": "854fd3866e27fc3418b62b82e05c822b737f5de56df7ee640400f651af2323ad"
+    },
+    {
+      "path": "api/src/capabilities/core.policy-declarations.ts",
+      "sizeBytes": 282,
+      "digest": "9949fbf70b599da72224def3872e290e412efeccd5a7621792649b66243f4584"
+    },
+    {
+      "path": "api/src/capabilities/core.workflow.ts",
+      "sizeBytes": 480,
+      "digest": "4907b62b5f79b6b1d65e63e8c8263394d7adb700effe4ab27ac7cb4c7a1758dc"
+    },
+    {
+      "path": "database/prisma/fragments/submission.prisma",
+      "sizeBytes": 54,
+      "digest": "82e9021e4a5516f8f5121feb160342fbcbcde88cd1b50eefe2d1a01151dba037"
+    },
+    {
+      "path": "web/src/app/submission-list/page.tsx",
+      "sizeBytes": 167,
+      "digest": "588e699b3446ee243cbaac3d86d1958fcda5b113eb44dbb39b2933e2ea389e22"
+    },
+    {
+      "path": "api/policy/fragments/resource-action.conf",
+      "sizeBytes": 236,
+      "digest": "05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+    },
+    {
+      "path": "api/policy/fragments/identity-policy.conf",
+      "sizeBytes": 156,
+      "digest": "e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+    },
+    {
+      "path": "api/src/services/identity-policy-local.service.ts",
+      "sizeBytes": 301,
+      "digest": "89bed5b531e06d109e10515f489e9593128a1d34af6f6d8fab13524e96a8be3c"
+    },
+    {
+      "path": "api/test/fixtures/identity-policy.json",
+      "sizeBytes": 254,
+      "digest": "6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+    },
+    {
+      "path": "api/src/capabilities/registry.ts",
+      "sizeBytes": 4104,
+      "digest": "f56c988a988b277e41b73769711287b2b89b90acbec98abff2e7976c53ea36c9"
+    },
+    {
+      "path": "api/src/application-runtime.ts",
+      "sizeBytes": 34343,
+      "digest": "eeead49bea4375483e762d1e33e47d6004fdcacb9d620c5a5e93f4c6dd543136"
+    },
+    {
+      "path": "api/src/prisma-record-store.ts",
+      "sizeBytes": 9170,
+      "digest": "5972b058449a9658fa78d74b93b36dbe7f63131960c00de01ae0127c44c4d1e5"
+    },
+    {
+      "path": "api/src/notification-outbox-worker.ts",
+      "sizeBytes": 2122,
+      "digest": "02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+    },
+    {
+      "path": "api/src/notification-outbox-drain.ts",
+      "sizeBytes": 975,
+      "digest": "439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+    },
+    {
+      "path": "api/README.md",
+      "sizeBytes": 368,
+      "digest": "c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+    },
+    {
+      "path": "api/policy/model.conf",
+      "sizeBytes": 195,
+      "digest": "10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+    },
+    {
+      "path": "api/policy/policy.csv",
+      "sizeBytes": 1064,
+      "digest": "bfbf49ab52216af0331e44786e447cd4125e11fcf7b18fe81ba07cf293b0190b"
+    },
+    {
+      "path": "api/src/policy.ts",
+      "sizeBytes": 1791,
+      "digest": "134d2898571242add604f8d6721d27c6339513f7ea9c0c39fa42406b2c1ef1d8"
+    },
+    {
+      "path": "database/prisma/schema.prisma",
+      "sizeBytes": 3392,
+      "digest": "4520a4103f1e77f2bfe5467b46e3147625965772e1d2bed3e315d91e239035b0"
+    },
+    {
+      "path": "api/prisma/schema.prisma",
+      "sizeBytes": 3392,
+      "digest": "4520a4103f1e77f2bfe5467b46e3147625965772e1d2bed3e315d91e239035b0"
+    },
+    {
+      "path": "database/prisma/migrations/0001_initial/migration.sql",
+      "sizeBytes": 4109,
+      "digest": "46449e2e58947b3d9618adf9e0fdedd9a457292e491cb2a6c0f3b3f025c5cb31"
+    },
+    {
+      "path": "database/prisma/seed.ts",
+      "sizeBytes": 1183,
+      "digest": "19f8dded97b1c181a1434037611574bb39eacd97a96d12ddc29816e8f3ef5f42"
+    },
+    {
+      "path": "database/package.json",
+      "sizeBytes": 380,
+      "digest": "e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+    },
+    {
+      "path": "database/Dockerfile",
+      "sizeBytes": 319,
+      "digest": "3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+    },
+    {
+      "path": "database/.dockerignore",
+      "sizeBytes": 18,
+      "digest": "1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+    },
+    {
+      "path": "api/src/flows/definitions.ts",
+      "sizeBytes": 1546,
+      "digest": "67d423b834271da032b7639fde3ed7e09e0e2bc4a0fa27209595dc5cc9558fcf"
+    },
+    {
+      "path": "api/src/flows/machines.ts",
+      "sizeBytes": 561,
+      "digest": "86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+    },
+    {
+      "path": "api/test/journey.generated.test.ts",
+      "sizeBytes": 1648,
+      "digest": "26ed5ebf523dd276a5e8428e9b11942dac1f1722712a6a4e169eeddfcd6669af"
+    },
+    {
+      "path": "tests/journeys.generated.md",
+      "sizeBytes": 106,
+      "digest": "1b9ac8af87901622f5a4f806535aaa628fa1d9bafab50104d5aa90b703fe70b2"
+    },
+    {
+      "path": "docs/api-reference.md",
+      "sizeBytes": 1289,
+      "digest": "0f096e3b6fc89539cf1875e887622375b7b172efefdeaf7231fbe9d200cb25e5"
+    },
+    {
+      "path": "docs/entity-relationship.md",
+      "sizeBytes": 1096,
+      "digest": "9d9da81f063146edbbd4f865fa8d16ba269dc07cefa5688dbe6f816020bd8ede"
+    },
+    {
+      "path": "docs/permission-matrix.md",
+      "sizeBytes": 993,
+      "digest": "11b6a773084ad8513b1558bb142c251070d7eb3d7d48eeda9057025cffb14eaf"
+    },
+    {
+      "path": "docs/application.md",
+      "sizeBytes": 495,
+      "digest": "79671ce0a77ff046a45e4c32f874b2fa249cfb4e4baa2e14bf3161f9dd0fb28e"
+    },
+    {
+      "path": "web/Dockerfile",
+      "sizeBytes": 186,
+      "digest": "98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+    },
+    {
+      "path": "web/.dockerignore",
+      "sizeBytes": 24,
+      "digest": "b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+    },
+    {
+      "path": "docker-compose.yml",
+      "sizeBytes": 1178,
+      "digest": "2ed85d95fca96c2307545e77a790135e29268fb2afc95ee2e1b8144e43dc35c7"
+    },
+    {
+      "path": "README.md",
+      "sizeBytes": 922,
+      "digest": "42f23ee7714de3f21392d08ba845c0f59560eff356cd2548a34035717c1a7a8c"
+    }
+  ]
+}
