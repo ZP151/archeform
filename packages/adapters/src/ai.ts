@@ -339,10 +339,41 @@ function validateProposal(
         : proposalPayloadSchema.parse(candidate);
     // This performs base-hash, path boundary, schema, and cross-model semantic
     // validation without retaining the resulting Draft or any model text.
-    applyGraphDiffToDraft(
+    // Generic proposals have no reviewed numeric-domain authoring contract.
+    const containsNumericPolicy = (value: unknown): boolean =>
+      !!value &&
+      typeof value === "object" &&
+      (Object.hasOwn(value, "numericDomain") ||
+        Object.values(value).some(containsNumericPolicy));
+    if (
+      proposal.diff.operations.some(
+        (operation) =>
+          operation.path.split("/").includes("numericDomain") ||
+          (operation.op !== "remove" && containsNumericPolicy(operation.value)),
+      )
+    )
+      throw new Error("Unsupported numeric policy authoring.");
+    const updated = applyGraphDiffToDraft(
       createDraftRevision(graph, "proposal-validation"),
       proposal.diff,
     );
+    const policies = (value: ApplicationGraphV1) =>
+      value.domain.entities.flatMap((entity) =>
+        entity.fields
+          .filter((field) => field.numericDomain)
+          .map((field) => ({
+            entity: entity.key,
+            key: field.key,
+            type: field.type,
+            required: field.required,
+            numericDomain: field.numericDomain,
+          })),
+      );
+    if (
+      JSON.stringify(policies(graph)) !==
+      JSON.stringify(policies(updated.graph))
+    )
+      throw new Error("Unsupported numeric policy authoring.");
     return proposal;
   } catch {
     throw new GraphProposalError(

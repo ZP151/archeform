@@ -626,3 +626,125 @@ describe("composeProductDraft", () => {
     expect(() => assertProductBlueprint(withRoute)).toThrow();
   });
 });
+import { canonicalExpenseApprovalInterpretation } from "../../adapters/src/requirements/approval-definition-selection.js";
+import { deriveProductOperations } from "../src/product-composer.js";
+describe("numeric-domain composition", () => {
+  const selectedKeys = [
+    "core.crud",
+    "core.workflow",
+    "core.identity-policy",
+    "core.policy-declarations",
+    "core.audit",
+    "core.notification",
+  ];
+  const positive = {
+    apiVersion: "factory.numeric-field-domain/v1" as const,
+    minimum: { value: 0, inclusive: false },
+  };
+  function constrained() {
+    const blueprint = structuredClone(
+      canonicalExpenseApprovalInterpretation().blueprint,
+    );
+    blueprint.entities[0]!.fields.find(
+      (f) => f.key === "amount",
+    )!.numericDomain = positive;
+    return blueprint;
+  }
+  it("copies the policy with the unchanged decimal witness", () => {
+    const diff = deriveProductOperations({
+      blueprint: constrained(),
+      applicationId: "numeric",
+      selectedKeys,
+    });
+    expect(
+      diff.operations.find((o) => o.path === "/domain/entities/-")?.op,
+    ).toBe("add");
+    const entities = diff.operations.find(
+      (o) => o.path === "/domain/entities/-",
+    ) as any;
+    expect(
+      entities.value.fields.find((f: any) => f.key === "amount").numericDomain,
+    ).toEqual(positive);
+    const seeds = diff.operations.find(
+      (o) => o.path === "/domain/seedData",
+    ) as any;
+    expect(seeds.value[0].values.amount).toBe(125.5);
+  });
+  it.each([
+    "missing-reviewer",
+    "extra-state",
+    "wrong-submit",
+    "secondary-policy",
+  ])("rejects unsupported Approval lookalike %s", (kind) => {
+    const blueprint = constrained();
+    let keys = selectedKeys;
+    if (kind === "missing-reviewer")
+      blueprint.actors[1]!.permissions[0]!.actions = ["read"];
+    if (kind === "extra-state")
+      blueprint.workflows[0]!.states.push({
+        key: "archived",
+        label: "Archived",
+      });
+    if (kind === "wrong-submit")
+      blueprint.workflows[0]!.transitions.find((t) => t.key === "submit")!.to =
+        "approved";
+    if (kind === "secondary-policy")
+      blueprint.entities[1]!.fields.push({
+        key: "otherFee",
+        label: "Other fee",
+        type: "currency",
+        required: false,
+        numericDomain: positive,
+      });
+    expect(() =>
+      deriveProductOperations({
+        blueprint,
+        applicationId: "numeric",
+        selectedKeys: keys,
+      }),
+    ).toThrow();
+  });
+  it("plans Standard but rejects composing the unsupported Minimal target", () => {
+    const { spec } = canonicalExpenseApprovalInterpretation(),
+      blueprint = constrained(),
+      baseDraft = blankDraft(spec.requirementId, "Numeric request");
+    const alternatives = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    expect(() =>
+      composeProductDraft({
+        plan: alternatives[0]!.plan,
+        blueprint,
+        baseDraft,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      composeProductDraft({
+        plan: alternatives[1]!.plan,
+        blueprint,
+        baseDraft,
+      }),
+    ).toThrow(/Numeric domains/);
+  });
+  it("rejects numeric policy on Task", () => {
+    const blueprint = structuredClone(
+      canonicalTeamTaskInterpretation().blueprint,
+    );
+    blueprint.entities[0]!.fields.push({
+      key: "size",
+      label: "Size",
+      type: "number",
+      required: true,
+      numericDomain: positive,
+    });
+    expect(() =>
+      deriveProductOperations({
+        blueprint,
+        applicationId: "numeric",
+        selectedKeys,
+      }),
+    ).toThrow(/Numeric domains/);
+  });
+});

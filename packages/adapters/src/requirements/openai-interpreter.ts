@@ -11,6 +11,8 @@ import {
   blueprintActionVerbs,
   blueprintActionSchema,
   blueprintFieldTypeSchema,
+  numericFieldDomainSchema,
+  isNumericFieldDomainValidForType,
   graphFieldKeySchema,
   graphKeySchema,
   hashRequirementSpec,
@@ -164,6 +166,15 @@ function reconcileClarificationAnswers(
 
 const modelFieldKeySchema = graphFieldKeySchema.refine((key) => key !== "id");
 
+const modelNumericDomainSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      ([key, bound]) =>
+        !(["minimum", "maximum"].includes(key) && bound === null),
+    ),
+  );
+}, numericFieldDomainSchema);
 const modelFieldSchema = z
   .object({
     key: modelFieldKeySchema,
@@ -175,8 +186,28 @@ const modelFieldSchema = z
       z.array(safeBusinessTextSchema.max(160)).min(2).max(50),
     ),
     referenceTo: optionalText(graphKeySchema),
+    numericDomain: optionalText(modelNumericDomainSchema),
   })
-  .strict();
+  .strict()
+  .superRefine((field, context) => {
+    if (
+      field.numericDomain &&
+      (!(field.type === "number" || field.type === "currency") ||
+        !isNumericFieldDomainValidForType(
+          field.numericDomain,
+          field.type === "number" ? "integer" : "decimal",
+        ))
+    )
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["numericDomain"],
+        message: "Numeric domain is incompatible with the field type.",
+      });
+  })
+  .transform(({ numericDomain, ...field }) => ({
+    ...field,
+    ...(numericDomain === undefined ? {} : { numericDomain }),
+  }));
 
 // Entity, actor, page-intent, and workflow keys become graph-symbol segments
 // verbatim (`graph.domain.<key>`, `graph.policy.<key>`, `graph.page.<key>`,
@@ -374,7 +405,7 @@ function namedItemJsonSchema(): Record<string, unknown> {
 }
 
 function fieldJsonSchema(): Record<string, unknown> {
-  return {
+  const base = {
     type: "object",
     additionalProperties: false,
     required: [
@@ -385,6 +416,7 @@ function fieldJsonSchema(): Record<string, unknown> {
       "required",
       "options",
       "referenceTo",
+      "numericDomain",
     ],
     properties: {
       key: { type: "string", pattern: graphFieldKeyJsonPattern },
@@ -423,7 +455,77 @@ function fieldJsonSchema(): Record<string, unknown> {
           { type: "null" },
         ],
       },
+      numericDomain: { type: "null" },
     },
+  };
+  const domain = (integer: boolean) => {
+    const bound = {
+      type: "object",
+      additionalProperties: false,
+      required: ["value", "inclusive"],
+      properties: {
+        value: integer
+          ? { type: "integer", minimum: -2147483648, maximum: 2147483647 }
+          : { type: "number" },
+        inclusive: { type: "boolean" },
+      },
+    };
+    return {
+      anyOf: [
+        { type: "null" },
+        ...[
+          [true, false],
+          [false, true],
+          [true, true],
+        ].map(([minimum, maximum]) => ({
+          type: "object",
+          additionalProperties: false,
+          required: ["apiVersion", "minimum", "maximum"],
+          properties: {
+            apiVersion: {
+              type: "string",
+              enum: ["factory.numeric-field-domain/v1"],
+            },
+            minimum: minimum ? bound : { type: "null" },
+            maximum: maximum ? bound : { type: "null" },
+          },
+        })),
+      ],
+    };
+  };
+  return {
+    ...base,
+    properties: { ...base.properties, numericDomain: domain(false) },
+    anyOf: [
+      {
+        ...base,
+        properties: {
+          ...base.properties,
+          type: { type: "string", enum: ["number"] },
+          numericDomain: domain(true),
+        },
+      },
+      {
+        ...base,
+        properties: {
+          ...base.properties,
+          type: { type: "string", enum: ["currency"] },
+          numericDomain: domain(false),
+        },
+      },
+      {
+        ...base,
+        properties: {
+          ...base.properties,
+          type: {
+            type: "string",
+            enum: base.properties.type.enum.filter(
+              (type) => type !== "number" && type !== "currency",
+            ),
+          },
+        },
+      },
+    ],
   };
 }
 
@@ -793,6 +895,7 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
 };
 
 const interpretationInstructions = [
+  "Emit numericDomain only for an explicitly stated numeric bound on number or currency. Never infer positivity from currency. Use null for absent policy/bounds; numeric policies require the Approval correction target.",
   "You are the Factory Pilot requirement interpreter adapter.",
   "Return only a JSON object matching the provided schema.",
   "For a generated-blueprint result, interpret the brief into a factory.requirement-spec/v1 requirement and a factory.product-blueprint/v1 product blueprint.",

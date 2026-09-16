@@ -367,6 +367,31 @@ const publishedOwnExtraCases = [
 ] as const;
 
 describe("Application Graph V1-to-V2 Draft upgrade", () => {
+  it("rejects constrained V1 conversion explicitly after verifying its published checksum", () => {
+    const source = publishedV1();
+    source.graph.domain.entities[0].fields.push({
+      key: "amount",
+      type: "decimal",
+      required: true,
+      numericDomain: {
+        apiVersion: "factory.numeric-field-domain/v1",
+        minimum: { value: 0, inclusive: false },
+      },
+    });
+    source.graph.domain.seedData = [
+      { entity: "order", values: { amount: 125.5 } },
+    ];
+    source.graphHash = hashApplicationGraph(source.graph);
+    expect(adaptPublishedApplicationGraph(source).graphHash).toBe(
+      source.graphHash,
+    );
+    expect(() =>
+      upgradeApplicationGraphV1ToV2Draft(
+        source as never,
+        upgradeContext() as never,
+      ),
+    ).toThrow(/unsupported numeric-domain conversion/i);
+  });
   it("creates a fresh V2 Draft with immutable Published V1 lineage", () => {
     const source = publishedV1();
     const context = upgradeContext();

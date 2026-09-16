@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-09-16T18:14:18.141Z",
+  "base": "3eebfc0e49b72cbf1a244826723e391987519248",
+  "graphHash": "sha256:7584fec847361ae87ae8c27312c62194e8f706887d6d67cb76fcc5a18569b710",
+  "files": 63,
+  "allFilesIdentical": true,
+  "actualRuntimeSources": [
+    {
+      "service": "api",
+      "imageId": "sha256:0d7712b36051484fa08f4415df97577dd16a690c4a7fc1952117498d5d2c5179",
+      "sourcePath": "api/src/application-runtime.ts",
+      "sourceHash": "d772d12837f55cc2f9cb42b961b3d754bb6a359dc388fdb026e43825c9880055",
+      "matchesGenerated": true
+    }
+  ],
+  "scope": "Actual exact-bound fixture runs regenerated frozen-source artifacts after the Decimal precision repair. All 63 files match its retained build manifest; the API source hash read inside the actual container matches. Only API, PostgreSQL and migration ran for this fixture. It does not claim consumer Publish or registered product admission."
+}

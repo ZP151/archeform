@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-09-16T18:15:56.5860178Z",
+  "projects": [
+    {
+      "project": "factory-t9-numeric-runtime-20260917",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-numeric-runtime-20260917",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-numeric-precision-20260917",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    }
+  ],
+  "allOwnedResourcesGone": true
+}

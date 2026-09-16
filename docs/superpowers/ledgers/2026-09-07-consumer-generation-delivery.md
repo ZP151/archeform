@@ -5166,3 +5166,103 @@ tests, acceptance/evidence and root-owned current planning/status records; do no
 include in-progress numeric source/tests or its new runtime test. Numeric Graph
 and pipeline owners' unfinished files remain explicitly accounted for. The long
 Goal stays active for numeric capability and eventual sixth-definition admission.
+
+### Identifier push verified and numeric runtime observed - 2026-09-17
+
+Identifier delivery commit 3eebfc0e49b72cbf1a244826723e391987519248 was normally
+pushed; git ls-remote confirms exact equality with the iteration branch. No main
+merge or repository release was attempted. The active worktree's remaining
+changes belong to numeric capability and root acceptance. The temporary detached
+verification worktree was deregistered, but Windows long paths left residual
+files. A native removal attempt was rejected by automatic approval policy without
+a specific reason. Root retained the exact residual directory instead of retrying
+through another deletion mechanism. Runtime project cleanup is unaffected.
+
+Numeric actual fixture attempt3 passes1/1 in34.5s, with real database invalid
+create/update/submit snapshots, tinypositive persistence/replay, zero client
+invalid mutation calls, and fullcorrection/retry/restart/denial journey at
+390/768/1440. Root inspected actual390summary and invalidedit. Attempts1/2 were
+harness selector and exactproject-prefix failures; no product repair was needed.
+The active project is factory-preview-numeric-runtime-20260917, replacing and
+removing factory-t9-numeric-runtime-20260917. Final-source equality and integrated
+shared-contract reviews remain open. Definition count staysfive.
+
+### Frozen numeric capability ready for integrated review - 2026-09-17
+
+Task2owner reports DONE with frozen source: adapters233,capabilities412,
+compiler862/49files,worker320; allfourbuild/typecheck/lint pass. Numericfocused47
+and originalfive compatibility pass. The earlier Standard/Minimal planning-guard
+failure was reproduced and fixed inside acceptedscope; failedfullruns are retained
+separately, not hidden by fresh golden hashes.
+
+Root observed actual finalattempt4 pass1/1 in34.8s afterregenerating/rebuilding
+API+web changed sinceattempt3. It adds wrong-state403 before invalidstorednumeric
+validation. All63 finalgeneratedfiles match thebuildmanifest; actualAPI/websource
+hashes were read inside both runningcontainers and match. Integratedtaskreviewer
+has currentevidence; QA/releasereview remains pending. Trainingadmissionplan is
+prepared, no rowregistered. Runtime remains available for bounded QA inspection;
+root will removeexactownedproject beforeacceptance.
+
+### Training preparation ownership, without registration - 2026-09-17
+
+Numeric independent Terra QA passes0/0/0/0; shared release review is active.
+Root may prepare test-only helper parameters for the planned Training journey;
+existing default branches must remain unchanged. /root/training_data_owner may
+prepare an ignored candidate and bounded test edits plan only in its own SDD
+workspace. Do not edit/register catalogue source until root records numeric
+capability acceptance and dispatches execution. Future owner paths are the
+catalogue JSON and directly affected adapter/data-CLI tests; root retains allE2E,
+acceptance/status/docs/services/Git. Spark is unavailable in this session, so the
+bounded data preparation uses available Terra. No shared contract changes.
+
+### Numeric QA passed and runtime teardown verified - 2026-09-17
+
+Integratedtaskreviewer /root/numeric_task_review returns ready_for_qa yes,
+P0/P1/P2 0/0/1 onlyforstaleintermediateacceptancewording;rootcorrectedattempt4,
+fullfinalchecks andsourceproof beforeacceptance. No codefinding remains.
+Independent /root/numeric_qa (Terra) returns PASS0/0/0/0 after focusedGraph236,
+adapters166,capabilities18,compiler47,worker1, diffcheck andactual390/768/1440
+image/source/receipt inspection. No productionchanges required.
+Both numericfixture projects are fully removed (containers/networks/volumes0).
+Independent /root/numeric_release (Sol) is reviewing the frozen numeric scope.
+FutureTrainingtest-only preparation is explicitly excluded from its source scope
+and from the numeric commit; no Training row is registered.
+### Numeric release precision repair - 2026-09-17
+
+Independent Sol release review found P1: trusted Decimal text can round across an
+inclusive bound when converted to Number before comparison. Examples just above
+125.5 or below1 must be judged against the exact stored representation. The owner
+is reproducing/fixing only this accepted VAL003/004 boundary, with no new package,
+policy/scale, public contract or catalogue change. Root prepares actual PostgreSQL
+precision-adjacent tamper/recovery/replay cases. Recheck only the affected numerical
+validation evidence after correction; retain all other QA/review/visual evidence.
+Training remains preparation only. Its provenance uses existing ADR0065 data
+authority; ADR0069 supplies the numeric capability authority in acceptance/docs.
+No provenance schema expansion is needed.
+
+## Numeric precision correction: final actual evidence
+
+The frozen correction passes 90 focused compiler cases (76 numeric and 14
+original-definition compatibility), compiler build/typecheck and formatting.
+Actual regenerated PostgreSQL/browser fixtures pass 2/2 in 35.8 seconds:
+positive correction attempt 5 takes 34.5 seconds and precise inclusive-bound
+SQL tamper/denial/correction/replay takes 2.5 seconds. Both 63-file manifests
+match final source; actual API hashes match and the approved web source is
+unchanged by this repair. Three exact owned numeric projects have zero
+containers/networks/volumes. Independent narrow Terra QA and Sol correction
+recheck are active; prior unaffected full/visual evidence is retained.
+Training preparation now uses the existing ADR-0065 catalogue discriminator,
+with ADR-0069 retained as capability authority. No schema expansion or sixth
+registration occurred. Root prepared the separate consumer E2E and test-helper
+parameters; those remain excluded from numeric capability delivery.
+
+## Numeric capability PM acceptance
+
+Integrated task review is approved, independent Terra QA and its narrow
+precision recheck pass, and Sol release correction verdict is APPROVED with
+P0/P1/P2 0/0/0. The precise Decimal P1 is closed. PM accepts the bounded shared
+capability with 5 existing definitions and no Training registration. Actual
+2/2 runtime results, final source identities, responsive UI evidence and owned
+cleanup are linked in the acceptance record. Root proceeds with normal bounded
+commit/push; the three Training-only E2E/helper paths and its plan remain pending
+for separate data admission. No real-model, real-user or hosted claim is made.

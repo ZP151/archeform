@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  isNumericFieldDomainValidForType,
+  numericFieldDomainSchema,
+} from "./numeric-field-domain.js";
 
 import {
   CompositionError,
@@ -104,6 +108,7 @@ const blueprintEntityFieldSchema = z
     required: z.boolean(),
     options: z.array(safeBusinessTextSchema.max(160)).min(2).max(50).optional(),
     referenceTo: identifierSchema.optional(),
+    numericDomain: numericFieldDomainSchema.optional(),
   })
   .strict();
 
@@ -223,6 +228,18 @@ function assertFieldShape(
   entityKey: string,
   entityKeys: ReadonlySet<string>,
 ): void {
+  if (
+    field.numericDomain !== undefined &&
+    ((field.type !== "number" && field.type !== "currency") ||
+      !isNumericFieldDomainValidForType(
+        field.numericDomain,
+        field.type === "number" ? "integer" : "decimal",
+      ))
+  ) {
+    throw new CompositionError(
+      `Field '${field.key}' of entity '${entityKey}' declares an invalid numeric domain for its type.`,
+    );
+  }
   if (field.type === "enum" && field.options === undefined) {
     throw new CompositionError(
       `Field '${field.key}' of entity '${entityKey}' is an enum and requires options.`,

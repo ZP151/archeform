@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-09-16T18:14:16.562Z",
+  "base": "3eebfc0e49b72cbf1a244826723e391987519248",
+  "graphHash": "sha256:07a7e80ee38f74e00abcf991b22dc9a2b1de79c2b9ef93ffb03bc56dc46574b6",
+  "files": 63,
+  "allFilesIdentical": true,
+  "actualRuntimeSources": [
+    {
+      "service": "api",
+      "imageId": "sha256:30da7796dc3744ec69c086b43d0fa369e0a456a145ddc2cedf21aa7417bf034d",
+      "sourcePath": "api/src/application-runtime.ts",
+      "sourceHash": "5707003e4370b31473281ac4cc023d254665bfc039428e4a412422d9f8f8dd43",
+      "matchesGenerated": true
+    },
+    {
+      "service": "web",
+      "imageId": "sha256:b4756567d0db7e4668152f7f53dfd8f904a8562ff2645138e49cbf27656ecd7d",
+      "sourcePath": "web/app/page-runtime.tsx",
+      "sourceHash": "fdc59b5530188722997202ca4d3d21d0a116c03e1671ac96fa1aa9794c8df8b2",
+      "matchesGenerated": true
+    }
+  ],
+  "scope": "Final actual attempt5 after exact Decimal repair runs regenerated frozen-source fixture. Every generated file matches the retained 63-file build manifest; API and web source hashes read inside the actual containers match their manifest entries. Fixture does not claim consumer Publish or registered product admission."
+}

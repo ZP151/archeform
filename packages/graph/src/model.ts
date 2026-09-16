@@ -4,6 +4,11 @@ import { z } from "zod";
 
 import { experienceDesignSystemSchema } from "./experience.js";
 import {
+  isNumericFieldDomainValidForType,
+  isNumericFieldValueAllowed,
+  numericFieldDomainSchema,
+} from "./numeric-field-domain.js";
+import {
   factoryOwnedRecordIdentityDeclarationError,
   isFactoryOwnedRecordIdentityFieldKey,
 } from "./composition-shared.js";
@@ -72,6 +77,7 @@ const domainModelSchema = z.object({
           required: z.boolean(),
           unique: z.boolean().optional(),
           values: z.array(z.string().min(1)).min(1).optional(),
+          numericDomain: numericFieldDomainSchema.optional(),
         }),
       ),
       indexes: z.array(
@@ -486,12 +492,74 @@ export function parseApplicationGraph(input: unknown): ApplicationGraphV1 {
     ...candidateCapabilityIssues(graph),
     ...ambiguousTypedSymbolIssues(graph),
     ...factoryOwnedRecordIdentityIssues(graph),
+    ...numericFieldDomainIssues(graph),
     ...compositionGraphSymbolIssues(graph),
   ];
   if (parsingIssues.length > 0) {
     throw new GraphSemanticError(parsingIssues);
   }
   return graph;
+}
+
+function numericFieldDomainIssues(
+  graph: ApplicationGraphV1,
+): GraphValidationIssue[] {
+  const issues: GraphValidationIssue[] = [];
+  graph.domain.entities.forEach((entity, entityIndex) => {
+    entity.fields.forEach((field, fieldIndex) => {
+      if (field.numericDomain === undefined) return;
+      const path = [
+        "domain",
+        "entities",
+        entityIndex,
+        "fields",
+        fieldIndex,
+        "numericDomain",
+      ];
+      if (
+        (field.type !== "integer" && field.type !== "decimal") ||
+        !isNumericFieldDomainValidForType(field.numericDomain, field.type)
+      ) {
+        issues.push({
+          code: "domain.field.numeric_domain_invalid",
+          message: `Field '${field.key}' of entity '${entity.key}' declares an invalid numeric domain for its type.`,
+          path,
+        });
+        return;
+      }
+      const type = field.type;
+      const domain = field.numericDomain;
+      let hasWitness = false;
+      (graph.domain.seedData ?? []).forEach((seed, seedIndex) => {
+        if (seed.entity !== entity.key) return;
+        const value = Object.prototype.hasOwnProperty.call(
+          seed.values,
+          field.key,
+        )
+          ? seed.values[field.key]
+          : undefined;
+        // Optional absence is legal seed data, but never an operational numeric witness.
+        if (!field.required && (value === undefined || value === null)) return;
+        if (isNumericFieldValueAllowed(value, type, domain)) {
+          hasWitness = true;
+        } else {
+          issues.push({
+            code: "domain.seed.numeric_domain_invalid",
+            message: `Seed field '${field.key}' of entity '${entity.key}' does not satisfy its numeric domain.`,
+            path: ["domain", "seedData", seedIndex, "values", field.key],
+          });
+        }
+      });
+      if (!hasWitness) {
+        issues.push({
+          code: "domain.field.numeric_domain_witness_missing",
+          message: `Field '${field.key}' of entity '${entity.key}' requires a valid numeric seed witness.`,
+          path,
+        });
+      }
+    });
+  });
+  return issues;
 }
 
 function duplicateValues(values: readonly string[]): string[] {
@@ -608,6 +676,7 @@ export function validateApplicationGraph(
   issues.push(...candidateCapabilityIssues(graph));
   issues.push(...ambiguousTypedSymbolIssues(graph));
   issues.push(...factoryOwnedRecordIdentityIssues(graph));
+  issues.push(...numericFieldDomainIssues(graph));
 
   const pageIds = new Set(graph.page.pages.map((page) => page.id));
   for (const duplicate of duplicateValues(

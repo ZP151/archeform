@@ -1,4 +1,8 @@
 import {
+  selectNumericApproval,
+  renderNumericDomainChecks,
+} from "./approval-numeric-domain.js";
+import {
   renderTaskWorkspace,
   renderTaskWorkspaceStyles,
 } from "./task-workspace-presentation.js";
@@ -2796,8 +2800,10 @@ function renderPageRuntime(
           (types as readonly string[]).includes(field.type),
       ),
     );
+  const numericIdentity = selectNumericApproval(graph, correctionEntity);
   const recordIdentity =
-    correctionEntity &&
+    numericIdentity ??
+    (correctionEntity &&
     approvalEntity?.key === correctionEntity &&
     !legacyIdentity &&
     titleCandidates.length === 1
@@ -2809,7 +2815,7 @@ function renderPageRuntime(
             .slice(0, 2)
             .map((field) => field.key),
         }
-      : undefined;
+      : undefined);
   const projection = createGeneratedPageRuntimeProjection(graph, {
     ...(orderEntityKey ? { orderEntity: orderEntityKey } : {}),
   });
@@ -2825,6 +2831,9 @@ function renderPageRuntime(
           key: field.key,
           required: field.required,
           type: field.type,
+          ...(field.numericDomain
+            ? { numericDomain: field.numericDomain }
+            : {}),
           ...(approval && field.type === "enum"
             ? { values: field.values }
             : {}),
@@ -2901,7 +2910,9 @@ function renderPageRuntime(
           "}",
           ...(recordIdentity
             ? [
-                "// approval-record-identity/v1; approval-decision-history@1.1.0",
+                numericIdentity
+                  ? "// approval-record-identity/v2; approval-decision-history@1.1.0"
+                  : "// approval-record-identity/v1; approval-decision-history@1.1.0",
                 `const approvalRecordIdentity = Object.freeze({ entityKey: ${JSON.stringify(recordIdentity.entityKey)}, titleFieldKey: ${JSON.stringify(recordIdentity.titleFieldKey)}, summaryFieldKeys: Object.freeze(${JSON.stringify(recordIdentity.summaryFieldKeys)}) });`,
                 "function selectRecordTitleField(fields: readonly RuntimeField[], entityKey: string): RuntimeField | undefined {",
                 "  return entityKey === approvalRecordIdentity.entityKey ? fields.find((field) => field.key === approvalRecordIdentity.titleFieldKey) : undefined;",
@@ -2946,7 +2957,7 @@ function renderPageRuntime(
           "  ];",
           "  return semanticMatches.length === 1 ? semanticMatches[0]! : 'neutral';",
           "}",
-          renderWorkspaceDataHelpers(),
+          renderWorkspaceDataHelpers(!!numericIdentity),
           "function validTransitions(role: string, entityKey: string, recordStatus: unknown) {",
           "  const seen = new Set<string>();",
           "  return definition.flow.flows.filter((flow) => flow.entity === entityKey).flatMap((flow) => flow.transitions).filter((transition) => {",
@@ -3360,10 +3371,21 @@ function renderPageRuntime(
         )
     : source;
   return renderApprovalCorrectionPage(
-    presentedSource,
+    numericIdentity
+      ? presentedSource
+          .replace(
+            "type JsonRecord =",
+            renderNumericDomainChecks() + "type JsonRecord =",
+          )
+          .replace(
+            "readonly values?: readonly string[]",
+            "readonly numericDomain?: NumericDomain; readonly values?: readonly string[]",
+          )
+      : presentedSource,
     graph,
     correctionEntity,
     !!recordIdentity,
+    !!numericIdentity,
   );
 }
 
@@ -3883,6 +3905,7 @@ export function generateApplicationBundle(
   const compilationInput = buildCompilationInput(input, options);
   const graph = compilationInput.graph;
   const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
+  selectNumericApproval(graph, approvalEntity);
   const taskEntity = selectTaskContract(graph, input.compositionLock);
   const rendererGraph = compilationInput.rendererGraph;
   const presentationProfile = taskEntity

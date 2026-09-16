@@ -204,8 +204,8 @@ export const approvalWorkspacePresentationCorrection = {
 } as const;
 
 /** Shared finder, typed form, value formatting and native controls port. */
-export function renderWorkspaceDataHelpers(): string {
-  return [
+export function renderWorkspaceDataHelpers(numeric = false): string {
+  const source = [
     "function statusOptions(entityKey: string): readonly string[] {",
     "  const flows = definition.flow.flows.filter((flow) => flow.entity === entityKey && flow.states !== undefined);",
     "  if (flows.length !== 1) return [];",
@@ -283,6 +283,24 @@ export function renderWorkspaceDataHelpers(): string {
     "  return <input {...common} type={field.type === 'datetime' ? 'datetime-local' : field.type === 'string' ? 'text' : field.type} />;",
     "}",
   ].join("\n");
+  if (!numeric) return source;
+  return source
+    .replace(
+      "        const number = Number(value);",
+      "        if(field.numericDomain && !/^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:e[+-]?[0-9]+)?$/i.test(value)) throw new Error();\n        const number = Number(value);",
+    )
+    .replace(
+      "        payload[field.key] = number;",
+      "        if(field.numericDomain && !numericDomainAllows(number,field.type,field.numericDomain)) throw new SafeUiError(numericDomainMessage(field.key,field.numericDomain));\n        payload[field.key] = number;",
+    )
+    .replace(
+      "} catch { throw new SafeUiError('Enter a valid value for '",
+      "} catch (error) { if(error instanceof SafeUiError) throw error; throw new SafeUiError('Enter a valid value for '",
+    )
+    .replace(
+      "type='number' step=",
+      "type='number' min={field.numericDomain?.minimum ? field.numericDomain.minimum.value + (field.type==='integer'&&!field.numericDomain.minimum.inclusive?1:0) : undefined} max={field.numericDomain?.maximum ? field.numericDomain.maximum.value - (field.type==='integer'&&!field.numericDomain.maximum.inclusive?1:0) : undefined} step=",
+    );
 }
 
 /** Shared race-safe collection loading port. */

@@ -53,7 +53,7 @@ function isNumericFieldValueAllowed(
 
 The value helper accepts only finite number primitives; it performs no coercion. The type helper checks bound representation and nonempty intervals, including Int32 discreteness. Blueprint maps number/currency to integer/decimal before calling it. Trusted persisted Decimal normalization belongs to Task 2, not this helper.
 
-- [ ] Write failing focused tests for exact shape, closed nested keys, missing bounds, wrong types, nonfinite bounds, inverted/equal/exclusive ranges and Int32 edge emptiness.
+- [x] Write failing focused tests for exact shape, closed nested keys, missing bounds, wrong types, nonfinite bounds, inverted/equal/exclusive ranges and Int32 edge emptiness.
 
   ```typescript
   const positive = {
@@ -68,12 +68,12 @@ The value helper accepts only finite number primitives; it performs no coercion.
   );
   ```
 
-- [ ] Run `pnpm --filter @factory/graph exec vitest run test/numeric-field-domain.test.ts` and retain the RED result before source edits.
-- [ ] Add the optional policy to numeric Blueprint/Graph fields, reject its use on other types, retain unchanged outer parsing and absence serialization. Keep V2/V3 schemas untouched.
-- [ ] Validate policy-bearing Graph seeds and witness availability under AUT-006. Distinguish absent optional values from a required operational witness; do not alter legacy seed validation when no policy exists.
-- [ ] Reject constrained V1-to-V2 conversion explicitly before copying the domain. Test valid published checksum plus constrained conversion rejection; old conversion output must remain exact.
-- [ ] Add an absent-policy unknown-key stripping regression, canonical/hash preservation checks and browser export verification. No filesystem or Node import in the new shared module.
-- [ ] Run Graph focused/full tests, build, typecheck and affected formatting. Write the report in this plan's workspace with RED/GREEN, exact exports, affected paths and limitations. No Git or service actions.
+- [x] Run `pnpm --filter @factory/graph exec vitest run test/numeric-field-domain.test.ts` and retain the RED result before source edits.
+- [x] Add the optional policy to numeric Blueprint/Graph fields, reject its use on other types, retain unchanged outer parsing and absence serialization. Keep V2/V3 schemas untouched.
+- [x] Validate policy-bearing Graph seeds and witness availability under AUT-006. Distinguish absent optional values from a required operational witness; do not alter legacy seed validation when no policy exists.
+- [x] Reject constrained V1-to-V2 conversion explicitly before copying the domain. Test valid published checksum plus constrained conversion rejection; old conversion output must remain exact.
+- [x] Add an absent-policy unknown-key stripping regression, canonical/hash preservation checks and browser export verification. No filesystem or Node import in the new shared module.
+- [x] Run Graph focused/full tests, build, typecheck and affected formatting. Write the report in this plan's workspace with RED/GREEN, exact exports, affected paths and limitations. No Git or service actions.
 
 ### Task 2: Propagate and enforce the accepted contract
 
@@ -87,14 +87,14 @@ The value helper accepts only finite number primitives; it performs no coercion.
 
 **Interfaces:** Consume Task 1 exports verbatim. Carry an optional `numericDomain` field without adding serialized keys when absent. No new runtime route/envelope, product-key branch, database schema or baseline change.
 
-- [ ] Write failing propagation, provider type-gate, definition fingerprint, unsupported-family and generated API tests before behavior edits.
-- [ ] Mirror the exact nested policy in provider/local authoring schemas, remove only provider-null absence in canonical projection, and never let registered selection overwrite reviewed rules. Keep the generic Graph-diff provider closed to this property.
-- [ ] Copy policy into Approval Graph fields, validate unchanged deterministic witnesses and reject incompatible composition. Verifier requests consume validated Graph witness values instead of hardcoded invalid numeric examples.
-- [ ] Conditionally emit the descriptor and shared numeric checks. API create/update rejects malformed/out-of-range primitives before persistence. Submit/resubmit validates the full authoritative stored record after authorization and before transition. Trusted Decimal normalization is separate from untrusted payload parsing; validate post-write/read values inside the existing transaction boundary.
-- [ ] Preserve exact retry and concurrency semantics; invalid numeric writes create no record/version/receipt/audit changes. Test positive corrections, repeat retries, stale versions, direct malformed payloads and stored invalid values.
-- [ ] Reuse generated form controls with native inclusive limits, safe integer exclusive limits and explicit decimal-exclusive client feedback. Client-invalid input must not call fetch; server denial remains authoritative and recoverable.
-- [ ] Emit `approval-workspace-presentation@2.3.0`, `approval-record-identity/v2` and `factory.generated.approval-numeric-domain/v1` only for the exact numeric-enabled structural profile. Require one unique required short-string title, one constrained numeric business field and one required temporal business field. Render numeric then temporal summaries in cards and matched history, using existing formatting/assets/CSS; ambiguous or unsupported targets fail closed.
-- [ ] Run affected suites plus complete five-definition compatibility and deterministic repeat generation. Record the UI reuse search and unchanged registry keys. Do not register Training in this task.
+- [x] Write failing propagation, provider type-gate, definition fingerprint, unsupported-family and generated API tests before behavior edits.
+- [x] Mirror the exact nested policy in provider/local authoring schemas, remove only provider-null absence in canonical projection, and never let registered selection overwrite reviewed rules. Keep the generic Graph-diff provider closed to this property.
+- [x] Copy policy into Approval Graph fields, validate unchanged deterministic witnesses and reject incompatible composition. Verifier requests consume validated Graph witness values instead of hardcoded invalid numeric examples.
+- [x] Conditionally emit the descriptor and shared numeric checks. API create/update rejects malformed/out-of-range primitives before persistence. Submit/resubmit validates the full authoritative stored record after authorization and before transition. Trusted Decimal normalization is separate from untrusted payload parsing; validate post-write/read values inside the existing transaction boundary.
+- [x] Preserve exact retry and concurrency semantics; invalid numeric writes create no record/version/receipt/audit changes. Test positive corrections, repeat retries, stale versions, direct malformed payloads and stored invalid values.
+- [x] Reuse generated form controls with native inclusive limits, safe integer exclusive limits and explicit decimal-exclusive client feedback. Client-invalid input must not call fetch; server denial remains authoritative and recoverable.
+- [x] Emit `approval-workspace-presentation@2.3.0`, `approval-record-identity/v2` and `factory.generated.approval-numeric-domain/v1` only for the exact numeric-enabled structural profile. Require one unique required short-string title, one constrained numeric business field and one required temporal business field. Render numeric then temporal summaries in cards and matched history, using existing formatting/assets/CSS; ambiguous or unsupported targets fail closed.
+- [x] Run affected suites plus complete five-definition compatibility and deterministic repeat generation. Record the UI reuse search and unchanged registry keys. Do not register Training in this task.
 
 ### Task 3: Shared-contract acceptance and handoff to data admission
 
@@ -102,8 +102,8 @@ The value helper accepts only finite number primitives; it performs no coercion.
 
 **Files:** `docs/acceptance/numeric-field-domains.md`, safe evidence under `docs/acceptance/evidence/numeric-field-domains/`, active ledger, authoring guide and status/roadmap.
 
-- [ ] Exercise generated InMemory and actual Prisma persistence with policy-bearing authored fixtures, including invalid create/update/submit and successful correction/retry. Record exact source and actual database behavior without raw values or credentials.
-- [ ] Run affected full package tests/typecheck/build and unchanged five-definition compatibility. Review schema/propagation/runtime/UI as one integrated shared contract; fix concrete findings and rerun affected cases only.
-- [ ] Record the existing independent QA/release verdicts once for this capability boundary. No per-row repetition of that ceremony.
+- [x] Exercise generated InMemory and actual Prisma persistence with policy-bearing authored fixtures, including invalid create/update/submit and successful correction/retry. Record exact source and actual database behavior without raw values or credentials.
+- [x] Run affected full package tests/typecheck/build and unchanged five-definition compatibility. Review schema/propagation/runtime/UI as one integrated shared contract; fix concrete findings and rerun affected cases only.
+- [x] Record the existing independent QA/release verdicts once for this capability boundary. No per-row repetition of that ceremony.
 - [ ] Root accepts and commits/pushes the bounded shared capability, verifying remote equality. Preserve ongoing root-owned planning files explicitly.
 - [ ] Start a separate Training Funding data-admission task using this accepted capability and the existing generic Approval E2E helper. Require actual 390/768/1440 screens, positive fee/date/justification, return/correct/resubmit/approve, denial, retry, persistence and effort measurements before increasing the accepted definition count.

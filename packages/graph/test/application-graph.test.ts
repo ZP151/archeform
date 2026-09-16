@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertValidApplicationGraph,
   applyGraphDiffToDraft,
   createGraphSymbolIndex,
   createDraftRevision,
@@ -14,6 +15,236 @@ import {
   validateApplicationGraph,
   type ApplicationGraphV1,
 } from "../src/index.js";
+
+describe("Graph numeric domains", () => {
+  const numericDomain = {
+    apiVersion: "factory.numeric-field-domain/v1" as const,
+    minimum: { value: 0, inclusive: false },
+  };
+
+  function constrained(required = true): ApplicationGraphV1 {
+    const graph = structuredClone(expenseGraph);
+    graph.domain.entities[0]!.fields[0] = {
+      key: "amount",
+      type: "decimal",
+      required,
+      numericDomain,
+    };
+    graph.domain.seedData = [{ entity: "expense", values: { amount: 125.5 } }];
+    return graph;
+  }
+
+  it("preserves a valid policy and witness through parse and hash", () => {
+    const graph = constrained();
+    expect(assertValidApplicationGraph(graph)).toEqual(graph);
+    expect(validateApplicationGraph(graph)).toEqual([]);
+    const noPolicy = structuredClone(graph);
+    delete noPolicy.domain.entities[0]!.fields[0]!.numericDomain;
+    expect(hashApplicationGraph(graph)).not.toBe(
+      hashApplicationGraph(noPolicy),
+    );
+  });
+
+  it.each([
+    "string",
+    "text",
+    "boolean",
+    "date",
+    "datetime",
+    "enum",
+    "json",
+    "url",
+    "email",
+  ] as const)("rejects numeric policies on %s", (type) => {
+    const graph = constrained();
+    graph.domain.entities[0]!.fields[0]!.type = type;
+    expect(validateApplicationGraph(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "domain.field.numeric_domain_invalid",
+        }),
+      ]),
+    );
+    expect(() => parseApplicationGraph(graph)).toThrow(GraphSemanticError);
+  });
+
+  it.each([
+    0,
+    -1,
+    "125.5",
+    " ",
+    true,
+    {},
+    [],
+    NaN,
+    Infinity,
+    -Infinity,
+    null,
+    undefined,
+  ])("rejects invalid required seed %j without echoing it", (value) => {
+    const graph = constrained();
+    graph.domain.seedData![0]!.values.amount = value;
+    expect(validateApplicationGraph(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "domain.seed.numeric_domain_invalid",
+          path: ["domain", "seedData", 0, "values", "amount"],
+        }),
+      ]),
+    );
+    expect(() => assertValidApplicationGraph(graph)).toThrow(
+      GraphSemanticError,
+    );
+  });
+
+  it("rejects an omitted required constrained seed value", () => {
+    const graph = constrained();
+    delete graph.domain.seedData![0]!.values.amount;
+    expect(
+      validateApplicationGraph(graph).some(
+        ({ code }) => code === "domain.seed.numeric_domain_invalid",
+      ),
+    ).toBe(true);
+  });
+
+  it.each([null, undefined])(
+    "allows optional absence %j when another seed supplies a witness",
+    (value) => {
+      const graph = constrained(false);
+      graph.domain.seedData!.push({
+        entity: "expense",
+        values: { amount: value },
+      });
+      expect(validateApplicationGraph(graph)).toEqual([]);
+      expect(assertValidApplicationGraph(graph)).toEqual(graph);
+    },
+  );
+
+  it.each([true, false])(
+    "requires an operational witness even when required is %s",
+    (required) => {
+      const graph = constrained(required);
+      delete graph.domain.seedData;
+      expect(
+        validateApplicationGraph(graph).some(
+          ({ code }) => code === "domain.field.numeric_domain_witness_missing",
+        ),
+      ).toBe(true);
+      expect(() => parseApplicationGraph(graph)).toThrow(GraphSemanticError);
+    },
+  );
+
+  it.each(["constructor", "toString"])(
+    "allows omitted optional %s when another seed supplies an own numeric witness",
+    (key) => {
+      const graph = constrained(false);
+      graph.domain.entities[0]!.fields[0]!.key = key;
+      graph.domain.seedData = [
+        { entity: "expense", values: { [key]: 125.5 } },
+        { entity: "expense", values: {} },
+      ];
+      expect(validateApplicationGraph(graph)).toEqual([]);
+      expect(assertValidApplicationGraph(graph)).toEqual(graph);
+    },
+  );
+
+  it.each(["constructor", "toString"])(
+    "rejects omitted required %s despite another seed supplying an own numeric witness",
+    (key) => {
+      const graph = constrained();
+      graph.domain.entities[0]!.fields[0]!.key = key;
+      graph.domain.seedData = [
+        { entity: "expense", values: { [key]: 125.5 } },
+        { entity: "expense", values: {} },
+      ];
+      expect(validateApplicationGraph(graph)).toEqual([
+        expect.objectContaining({
+          code: "domain.seed.numeric_domain_invalid",
+          path: ["domain", "seedData", 1, "values", key],
+        }),
+      ]);
+      expect(() => assertValidApplicationGraph(graph)).toThrow(
+        GraphSemanticError,
+      );
+    },
+  );
+
+  it.each([null, undefined])(
+    "does not treat optional absence %j as a numeric witness",
+    (value) => {
+      const graph = constrained(false);
+      graph.domain.seedData![0]!.values.amount = value;
+      const issues = validateApplicationGraph(graph);
+      expect(
+        issues.some(
+          ({ code }) => code === "domain.seed.numeric_domain_invalid",
+        ),
+      ).toBe(false);
+      expect(
+        issues.some(
+          ({ code }) => code === "domain.field.numeric_domain_witness_missing",
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it("accepts an explicit witness different from the composed default", () => {
+    const graph = constrained();
+    graph.domain.entities[0]!.fields[0]!.numericDomain = {
+      ...numericDomain,
+      minimum: { value: 200, inclusive: true },
+    };
+    graph.domain.seedData![0]!.values.amount = 201;
+    expect(validateApplicationGraph(graph)).toEqual([]);
+  });
+
+  it.each([0.5, 2147483648, 3_000_000_000])(
+    "enforces Int32 representation for constrained seed %s",
+    (value) => {
+      const graph = constrained();
+      graph.domain.entities[0]!.fields[0]!.type = "integer";
+      graph.domain.seedData![0]!.values.amount = value;
+      expect(
+        validateApplicationGraph(graph).some(
+          ({ code }) => code === "domain.seed.numeric_domain_invalid",
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each([
+    { ...numericDomain, extra: true },
+    { ...numericDomain, minimum: { ...numericDomain.minimum, extra: true } },
+    { ...numericDomain, maximum: { value: 1, inclusive: true, extra: true } },
+  ])("rejects unknown keys only inside the recognized policy", (domain) => {
+    const graph = constrained();
+    graph.domain.entities[0]!.fields[0]!.numericDomain = domain;
+    expect(() => parseApplicationGraph(graph)).toThrow();
+  });
+
+  it("preserves legacy outer stripping, bytes, hashes and permissive seed validation", () => {
+    const graph = structuredClone(expenseGraph);
+    graph.domain.seedData = [{ entity: "expense", values: { amount: -125.5 } }];
+    const extra = structuredClone(graph) as ApplicationGraphV1 & {
+      unrelated?: boolean;
+    };
+    extra.unrelated = true;
+    Object.assign(extra.domain.entities[0]!.fields[0]!, {
+      unrelatedField: true,
+    });
+    expect(parseApplicationGraph(extra)).toEqual(graph);
+    expect(JSON.stringify(parseApplicationGraph(extra))).toBe(
+      JSON.stringify(graph),
+    );
+    expect(hashApplicationGraph(extra)).toBe(hashApplicationGraph(graph));
+    expect(JSON.stringify(parseApplicationGraph(extra))).not.toContain(
+      "numericDomain",
+    );
+    graph.domain.entities[0]!.fields[0]!.type = "integer";
+    graph.domain.seedData[0]!.values.amount = 3_000_000_000;
+    expect(validateApplicationGraph(graph)).toEqual([]);
+  });
+});
 
 const expenseGraph: ApplicationGraphV1 = {
   apiVersion: "factory.application-graph/v1",

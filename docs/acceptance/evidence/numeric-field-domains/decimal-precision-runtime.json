@@ -1,0 +1,11 @@
+{
+  "fixtureOnly": true,
+  "lowerInclusive": 1,
+  "upperInclusive": 125.5,
+  "precisionAdjacentDenials": 2,
+  "denialPreservesExactStoredStateAndAudit": true,
+  "exactBoundaryAccepted": true,
+  "deniedKeyReusableAfterCorrection": true,
+  "acceptedReplayHasNoSideEffects": true,
+  "modelCalls": 0
+}

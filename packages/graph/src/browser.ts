@@ -1,4 +1,5 @@
 export * from "./model.js";
+export * from "./numeric-field-domain.js";
 export * from "./product-intent.js";
 export * from "./product-recipe.js";
 export * from "./source-overlay.js";

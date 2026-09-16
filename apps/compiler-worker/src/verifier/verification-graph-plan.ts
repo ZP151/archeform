@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import type { PublishedGraphInput } from "@factory/compiler";
 import {
   VerificationContractError,
+  isNumericFieldValueAllowed,
   hashApplicationGraph,
   type ApplicationGraphV1,
 } from "@factory/graph";
@@ -206,11 +207,34 @@ function createBodyFor(
   for (const field of required) {
     body[field.key] =
       foreignKeyValue(graph, entity.key, field.key) ??
-      derivedCreateValue(entity.key, field);
+      (field.numericDomain
+        ? numericWitness(graph, entity.key, field)
+        : derivedCreateValue(entity.key, field));
   }
   return JSON.stringify(body);
 }
 
+function numericWitness(
+  graph: ApplicationGraphV1,
+  entity: string,
+  field: ApplicationGraphV1["domain"]["entities"][number]["fields"][number],
+): number {
+  if (field.type === "integer" || field.type === "decimal")
+    for (const seed of graph.domain.seedData ?? [])
+      if (
+        seed.entity === entity &&
+        Object.hasOwn(seed.values, field.key) &&
+        isNumericFieldValueAllowed(
+          seed.values[field.key],
+          field.type,
+          field.numericDomain!,
+        )
+      )
+        return seed.values[field.key] as number;
+  throw new VerificationContractError(
+    "Numeric verification witness is unavailable.",
+  );
+}
 function requiredCreateFields(
   entity: ApplicationGraphV1["domain"]["entities"][number],
   hasFlow: boolean,
@@ -218,7 +242,7 @@ function requiredCreateFields(
 ): ApplicationGraphV1["domain"]["entities"][number]["fields"] {
   return entity.fields.filter(
     (field) =>
-      field.required &&
+      (field.required || field.numericDomain !== undefined) &&
       !(field.key === "status" && hasFlow) &&
       !(field.key === "version" && isOrderEntity),
   );

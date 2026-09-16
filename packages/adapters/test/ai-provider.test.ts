@@ -261,3 +261,34 @@ describe("AI Graph proposal adapter", () => {
     ).rejects.toThrow("OPENAI_API_KEY");
   });
 });
+it("keeps numeric policy authoring closed in generic Graph-diff proposals", async () => {
+  const source = structuredClone(graph);
+  source.domain.seedData = [
+    { entity: "expense", id: "one", values: { amount: 12 } },
+  ];
+  const provider = new FixtureGraphProposalProvider({
+    diff: {
+      apiVersion: "factory.graph-diff/v1",
+      operations: [
+        {
+          op: "replace",
+          path: "/domain/entities/0/fields/0",
+          value: {
+            key: "amount",
+            type: "decimal",
+            required: true,
+            numericDomain: {
+              apiVersion: "factory.numeric-field-domain/v1",
+              minimum: { value: 0, inclusive: false },
+            },
+          },
+        },
+      ],
+    },
+    impact: { summary: "Bound amount.", affectedModels: ["domain"], risks: [] },
+    testSuggestions: [],
+  });
+  await expect(
+    provider.propose({ graph: source, brief: "Make amount positive." }),
+  ).rejects.toMatchObject({ code: "proposal_invalid" });
+});

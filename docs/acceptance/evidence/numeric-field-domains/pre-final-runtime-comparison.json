@@ -1,0 +1,9 @@
+{
+  "recordedAt": "2026-09-16T17:45:31.211Z",
+  "sameGraphHash": true,
+  "changedPaths": [
+    "web/app/page-runtime.tsx",
+    "api/src/application-runtime.ts"
+  ],
+  "scope": "Actual attempt3 preceded a submit state-authorization ordering correction. Regenerated files replace the owned fixture before affected actual rerun; attempt3 is not final-source acceptance."
+}

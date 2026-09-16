@@ -8,6 +8,77 @@ import {
   hashProductBlueprint,
 } from "../src/product-blueprint.js";
 
+describe("Blueprint numeric domains", () => {
+  const numericDomain = {
+    apiVersion: "factory.numeric-field-domain/v1",
+    minimum: { value: 0, inclusive: false },
+  };
+
+  function withField(type: string, domain: unknown = numericDomain) {
+    const blueprint = validBlueprint();
+    const entities = blueprint.entities as Array<{
+      fields: Array<Record<string, unknown>>;
+    }>;
+    entities[0]!.fields[0] = {
+      key: "amount",
+      label: "Amount",
+      type,
+      required: true,
+      numericDomain: domain,
+    };
+    return blueprint;
+  }
+
+  it.each(["number", "currency"])("preserves explicit policy on %s", (type) => {
+    expect(
+      assertProductBlueprint(withField(type)).entities[0]!.fields[0]!
+        .numericDomain,
+    ).toEqual(numericDomain);
+  });
+
+  it.each([
+    "text",
+    "long-text",
+    "boolean",
+    "date",
+    "datetime",
+    "enum",
+    "reference",
+    "file",
+  ])("rejects a numeric policy on %s", (type) => {
+    expect(() => assertProductBlueprint(withField(type))).toThrow(/numeric/i);
+  });
+
+  it.each([
+    { ...numericDomain, minimum: { value: 0.5, inclusive: true } },
+    { ...numericDomain, minimum: { value: 2147483648, inclusive: true } },
+    { ...numericDomain, maximum: { value: 1, inclusive: false } },
+  ])("rejects integer representation or empty intervals", (domain) => {
+    expect(() => assertProductBlueprint(withField("number", domain))).toThrow(
+      /numeric/i,
+    );
+  });
+
+  it("hashes the policy and retains absence serialization", () => {
+    const legacy = validBlueprint();
+    expect(assertProductBlueprint(legacy)).toEqual(legacy);
+    expect(JSON.stringify(assertProductBlueprint(legacy))).not.toContain(
+      "numericDomain",
+    );
+    expect(hashProductBlueprint(withField("currency"))).not.toBe(
+      hashProductBlueprint(legacy),
+    );
+    expect(
+      hashProductBlueprint(
+        withField("currency", {
+          ...numericDomain,
+          minimum: { value: 0, inclusive: true },
+        }),
+      ),
+    ).not.toBe(hashProductBlueprint(withField("currency")));
+  });
+});
+
 describe("canonical Task action vocabulary", () => {
   it.each(["start", "complete", "reopen"])(
     "accepts %s without an approval alias",

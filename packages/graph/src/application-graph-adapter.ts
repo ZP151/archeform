@@ -385,6 +385,15 @@ export function upgradeApplicationGraphV1ToV2Draft(
   contextInput: ApplicationGraphV1ToV2UpgradeContext,
 ): ApplicationGraphV2DraftRevision {
   const source = assertPublishedV1(sourceInput);
+  if (
+    source.graph.domain.entities.some((entity) =>
+      entity.fields.some((field) => field.numericDomain !== undefined),
+    )
+  ) {
+    throw new CompositionError(
+      "Unsupported numeric-domain conversion from Application Graph V1 to V2.",
+    );
+  }
   const context = parseStrict(
     applicationGraphV1ToV2UpgradeContextSchema,
     contextInput,

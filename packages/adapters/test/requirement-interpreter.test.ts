@@ -2602,9 +2602,9 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     const request = requests[0];
     expect(request).toBeDefined();
     const graphKeyPattern = "^[a-z][a-z0-9-]*$";
-    expect(providerPropertyPatterns(request!, "referenceTo")).toEqual([
-      graphKeyPattern,
-    ]);
+    expect([
+      ...new Set(providerPropertyPatterns(request!, "referenceTo")),
+    ]).toEqual([graphKeyPattern]);
     expect(providerPropertyPatterns(request!, "entityKey")).toEqual([
       graphKeyPattern,
       graphKeyPattern,

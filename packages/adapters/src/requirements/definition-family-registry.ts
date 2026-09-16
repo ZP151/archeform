@@ -532,6 +532,7 @@ function semanticBlueprint(entry: ProductDefinitionData) {
         type: f.type,
         required: f.required,
         ...(f.options ? { options: f.options } : {}),
+        ...(f.numericDomain ? { numericDomain: f.numericDomain } : {}),
         ...(f.referenceTo ? { referenceTo: entity(f.referenceTo) } : {}),
       })),
     })),
@@ -1206,6 +1207,13 @@ export function validateFamilyDefinition(
   if (entry.parameterPolicy !== row.parameterPolicy)
     return ["definition.invalid-binding"];
   const reasons: DefinitionReason[] = [];
+  if (
+    entry.familyBinding.key !== "approval" &&
+    entry.canonical.blueprint.entities.some((e) =>
+      e.fields.some((f) => f.numericDomain),
+    )
+  )
+    reasons.push("definition.unsupported-semantics");
   if (entry.selection.providerGuide.definitionKey !== entry.definitionKey)
     reasons.push("definition.invalid-binding");
   if (!validatePlanningSemantics(entry))

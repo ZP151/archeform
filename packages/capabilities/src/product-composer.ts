@@ -1,5 +1,6 @@
 import {
   CompositionError,
+  isNumericFieldValueAllowed,
   assertCompositionPlan,
   assertProductBlueprint,
   canonicalEquals,
@@ -318,6 +319,9 @@ function derivedEntities(
           key: field.key,
           type: FIELD_TYPES[field.type],
           required: field.required,
+          ...(field.numericDomain
+            ? { numericDomain: field.numericDomain }
+            : {}),
         };
       });
     const states = workflowStateValues.get(entity.key);
@@ -512,10 +516,133 @@ function derivedSeedData(
  * carriers exclude page operations (`/page/pages/-`) because plans cannot
  * carry route strings; `hashProductCompositionDiff` binds the full Diff.
  */
+/** Numeric authoring is limited to the exact existing Approval family shape. */
+function supportsNumericApprovalBlueprint(
+  blueprint: ProductBlueprintV1,
+  selectedKeys?: readonly string[],
+): boolean {
+  const equalSet = (actual: readonly string[], expected: readonly string[]) =>
+    actual.length === expected.length &&
+    new Set(actual).size === actual.length &&
+    expected.every((value) => actual.includes(value));
+  if (
+    blueprint.workflows.length !== 1 ||
+    blueprint.entities.length !== 2 ||
+    blueprint.actors.length !== 3 ||
+    (selectedKeys !== undefined &&
+      !equalSet(selectedKeys, [
+        "core.crud",
+        "core.workflow",
+        "core.identity-policy",
+        "core.policy-declarations",
+        "core.audit",
+        "core.notification",
+      ]))
+  )
+    return false;
+  const flow = blueprint.workflows[0]!,
+    primary = blueprint.entities[0]!,
+    secondary = blueprint.entities[1]!;
+  if (
+    flow.entityKey !== primary.key ||
+    secondary.fields.some((field) => field.numericDomain) ||
+    !equalSet(
+      flow.states.map((s) => s.key),
+      ["draft", "submitted", "approved", "returned"],
+    ) ||
+    flow.states[0]!.key !== "draft" ||
+    flow.transitions.length !== 4
+  )
+    return false;
+  const requester = flow.transitions.find((t) => t.key === "submit")?.actorKey,
+    reviewer = flow.transitions.find((t) => t.key === "approve")?.actorKey;
+  const auditor = blueprint.actors.find((a) =>
+    a.permissions.some(
+      (p) => p.entityKey === primary.key && p.actions.includes("audit"),
+    ),
+  )?.key;
+  if (
+    !requester ||
+    !reviewer ||
+    !auditor ||
+    !equalSet(
+      blueprint.actors.map((a) => a.key),
+      [requester, reviewer, auditor],
+    )
+  )
+    return false;
+  for (const [key, from, to, actorKey] of [
+    ["submit", "draft", "submitted", requester],
+    ["approve", "submitted", "approved", reviewer],
+    ["reject", "submitted", "returned", reviewer],
+    ["update", "returned", "draft", requester],
+  ])
+    if (
+      !flow.transitions.some(
+        (t) =>
+          t.key === key &&
+          t.from === from &&
+          t.to === to &&
+          t.actorKey === actorKey,
+      )
+    )
+      return false;
+  const grants = blueprint.actors.flatMap((a) =>
+    a.permissions.flatMap((p) =>
+      p.actions.map((action) => a.key + ":" + p.entityKey + ":" + action),
+    ),
+  );
+  const expected = [
+    ...["create", "read", "update", "submit"].map(
+      (action) => requester + ":" + primary.key + ":" + action,
+    ),
+    ...["read", "approve", "reject"].map(
+      (action) => reviewer + ":" + primary.key + ":" + action,
+    ),
+    ...["read", "audit"].map(
+      (action) => auditor + ":" + primary.key + ":" + action,
+    ),
+    ...["read", "update"].map(
+      (action) => requester + ":" + secondary.key + ":" + action,
+    ),
+  ];
+  return (
+    equalSet(grants, expected) &&
+    blueprint.pageIntents.length === 6 &&
+    equalSet(
+      blueprint.pageIntents.map((p) => p.intent),
+      ["dashboard", "list", "form", "detail", "queue", "settings"],
+    ) &&
+    blueprint.pageIntents.every((p) =>
+      p.intent === "settings"
+        ? p.entityKey === undefined
+        : p.entityKey === primary.key,
+    )
+  );
+}
+
 export function deriveProductOperations(
   input: ProductDerivationInput,
 ): GraphDiffV1 {
   const blueprint = assertProductBlueprint(input.blueprint);
+  const constrained = blueprint.entities.flatMap((entity) =>
+    entity.fields.filter((field) => field.numericDomain),
+  );
+  if (constrained.length && !supportsNumericApprovalBlueprint(blueprint))
+    throw new CompositionError(
+      "Numeric domains require the Approval correction target.",
+    );
+  for (const field of constrained)
+    if (
+      !isNumericFieldValueAllowed(
+        field.type === "number" ? 12 : 125.5,
+        field.type === "number" ? "integer" : "decimal",
+        field.numericDomain!,
+      )
+    )
+      throw new CompositionError(
+        "Numeric domain does not admit the deterministic composition witness.",
+      );
   const selectedKeys = new Set(input.selectedKeys);
   const pages = derivedPages(blueprint);
   const navigation = derivedNavigation(blueprint, pages);
@@ -731,6 +858,15 @@ export function composeProductDraft(input: {
     );
   }
   const selectedKeys = plan.capabilityLocks.map((lock) => lock.key);
+  if (
+    blueprint.entities.some((entity) =>
+      entity.fields.some((field) => field.numericDomain),
+    ) &&
+    !supportsNumericApprovalBlueprint(blueprint, selectedKeys)
+  )
+    throw new CompositionError(
+      "Numeric domains require the Approval correction target.",
+    );
   const derived = deriveProductOperations({
     blueprint,
     applicationId: input.baseDraft.graph.metadata.id,

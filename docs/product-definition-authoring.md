@@ -25,11 +25,11 @@ and corresponding guide data together. Keep execution expectations equal to the
 fixed family row; changing an expectation never enables a runtime capability.
 A different title, role label, example or case key is not a distinct product.
 
-| Family              | Current reusable boundary                                                              | Requirements that need another capability decision                         |
-| ------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Restaurant Ordering | Accepted V3 ordering authority and bounded menu parameters                             | New authority, live payment or external integrations                       |
-| Approval            | One-stage submit/approve/return with same-record correction and supported typed fields | Multiple reviewers, thresholds, private ownership or external provisioning |
-| Team Task           | Exact Task V2 fields, state transitions and correction policy                          | New fields/states, private assignment, scheduling or additional actions    |
+| Family              | Current reusable boundary                                                                       | Requirements that need another capability decision                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Restaurant Ordering | Accepted V3 ordering authority and bounded menu parameters                                      | New authority, live payment or external integrations                                           |
+| Approval            | One-stage correction, typed fields and explicit numeric bounds in the supported numeric profile | Multiple reviewers, conditional decision authority, private ownership or external provisioning |
+| Team Task           | Exact Task V2 fields, state transitions and correction policy                                   | New fields/states, private assignment, scheduling or additional actions                        |
 
 Build the adapters and validate the checked-in catalogue:
 
@@ -74,8 +74,11 @@ without reflecting business payloads or instructions.
 The independent compiler authoring test demonstrates one supported Approval
 field variation reaching generated Prisma and UI output with no runtime/UI
 source changes. It does not count as a new admitted product or actual runtime
-journey. Existing definitions must still match the immutable four-definition
-baseline, including every emitted file and its order.
+journey. Existing definitions must retain the immutable historical fixture
+digests. The identifier repair allows only ADR-0068's six physical-name mappings
+across the protected five-definition database outputs; its strict test-only
+inverse recovers the original complete bundles. Numeric absence adds no further
+change. Never recapture a baseline to admit a new row.
 
 For a new runtime admission, use the next representative batch in
 `docs/superpowers/plans/2026-09-13-product-definition-scale.md`. Prove the business
@@ -123,3 +126,43 @@ with no per-product field-name branch. Definitions without an unambiguous title
 remain a presentation gap; do not count them as complete because Details exists.
 The family hero remains available while record photos are optional for this
 product. Existing Expense/Purchase media requirements remain unchanged.
+
+## Explicit numeric rules
+
+ADR-0069 adds an optional policy to Blueprint `number` and `currency` fields:
+
+```json
+{
+  "key": "fee",
+  "label": "Fee",
+  "type": "currency",
+  "required": true,
+  "numericDomain": {
+    "apiVersion": "factory.numeric-field-domain/v1",
+    "minimum": { "value": 0, "inclusive": false }
+  }
+}
+```
+
+At least one finite lower or upper bound is required. Bound objects have exactly
+`value` and `inclusive`; no other policy keys are accepted. Integers with a policy
+must fit Int32 and have a nonempty discrete interval. Decimal fields preserve the
+existing database representation; this policy introduces no rounding, currency
+unit, scale, calculated total or default positivity. Unconstrained legacy fields
+retain their existing behavior. Copy the same policy into reviewed provider-guide
+data so selection and semantic fingerprints preserve the declared rule.
+
+The first supported target is the exact Approval correction family, with exactly
+one required short-text title candidate, one constrained numeric business field,
+and one required date/datetime field. “One title candidate” does not mean a unique
+database column. Cards and matched history show numeric then temporal summaries
+using the existing assets. No enum or product-name branch is needed. Other family
+or ambiguous presentation shapes fail closed; V1-to-V2 conversion and generic
+Graph-diff AI authoring do not silently remove or add this policy.
+
+Composition keeps the established number witness `12` and currency witness
+`125.5`. A policy excluding that witness is rejected; authors cannot add a new
+seed field to the Blueprint envelope. Explicit Graph seed data may supply another
+valid witness, which the verifier uses. A successful authored runtime fixture is
+shared capability evidence, not a new admitted definition; see
+[numeric acceptance](acceptance/numeric-field-domains.md).

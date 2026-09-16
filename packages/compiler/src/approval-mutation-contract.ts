@@ -1,3 +1,8 @@
+import {
+  numericApprovalWitness,
+  renderNumericDomainChecks,
+  renderTrustedNumericRecord,
+} from "./approval-numeric-domain.js";
 import { writeProtectionFragments } from "./mutation-write-protection.js";
 import type { CapabilityCompositionLockV1 } from "@factory/capabilities";
 import { isDeepStrictEqual } from "node:util";
@@ -316,6 +321,7 @@ export function renderApprovalMutationRuntime(
     hashApplicationGraph(graph),
   );
   const fields = graph.domain.entities.find((e) => e.key === entity)!.fields;
+  const numeric = fields.some((field) => field.numericDomain);
   source = 'import { createHash } from "node:crypto";\n' + source;
   source = replace(
     source,
@@ -328,7 +334,7 @@ export function renderApprovalMutationRuntime(
     `export type ApprovalMutationReceipt = { scope: string; idempotencyKey: string; requestHash: string; operation: string; recordId: string; responseStatus: number; responseBody: StoredRecord };
 export class ApprovalMutationError extends Error { constructor(readonly status: number, readonly body: Record<string, unknown>) { super('Approval request rejected.'); } }
 const approvalEntity = ${JSON.stringify(entity)};
-const approvalFields = ${JSON.stringify(fields)} as readonly {key:string;type:string;required?:boolean;values?:readonly string[]}[];
+const approvalFields = ${JSON.stringify(fields)} as readonly {key:string;type:string;required?:boolean;values?:readonly string[]${numeric ? ";numericDomain?:NumericDomain" : ""}}[];${numeric ? "\n" + renderNumericDomainChecks() + renderTrustedNumericRecord() : ""}
 // factory.generated.approval-mutation/v1
 function failApproval(status:number,code:string,current?:StoredRecord):never { throw new ApprovalMutationError(status,{code,...(current?{current:{id:current.id,status:current.status,version:current.version}}:{})}); }
 function plainApproval(value:unknown): asserts value is Record<string,unknown> {
@@ -336,7 +342,7 @@ function plainApproval(value:unknown): asserts value is Record<string,unknown> {
  for(const key of Reflect.ownKeys(value)) { const d=Object.getOwnPropertyDescriptor(value,key)!; if(typeof key!=='string' || !d.enumerable || !('value' in d)) failApproval(400,'approval.invalid_request'); }
 }
 ${protection.canonical}
-function approvalValues(value:unknown,create:boolean):Record<string,unknown> {
+function approvalValues(value:unknown,create:boolean${numeric ? ",trustedDecimalDomains=false" : ""}):Record<string,unknown> {
  plainApproval(value); if(!create && Object.keys(value).length===0) failApproval(400,'approval.invalid_request');
  const fields=approvalFields.filter(f=>!['id','status','version','createdAt','updatedAt'].includes(f.key));
  for(const [key,v] of Object.entries(value)) {
@@ -353,7 +359,7 @@ function approvalValues(value:unknown,create:boolean):Record<string,unknown> {
   else if(f.type==='decimal') valid=typeof v==='number' && Number.isFinite(v);
   else if(f.type==='boolean') valid=typeof v==='boolean';
   else if(f.type==='json') { const check=(x:unknown):boolean=> x===null || typeof x==='string' || typeof x==='boolean' || (typeof x==='number' && Number.isFinite(x)) || (Array.isArray(x)?x.every(check):!!x && typeof x==='object' && (plainApproval(x),Object.values(x).every(check))); valid=check(v); }
-  if(!valid) failApproval(400,'approval.invalid_request');
+${numeric ? "  if(f.numericDomain && !(trustedDecimalDomains && f.type==='decimal') && !numericDomainAllows(v,f.type,f.numericDomain)) throw new ApprovalMutationError(400,{code:'approval.invalid_request',fieldErrors:{[f.key]:numericDomainMessage(f.key,f.numericDomain)}});\n" : ""}  if(!valid) failApproval(400,'approval.invalid_request');
  }
  if(create && fields.some(f=>f.required&&!Object.hasOwn(value,f.key))) failApproval(400,'approval.invalid_request');
  return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,v!==null && ['date','datetime'].includes(fields.find(f=>f.key===key)!.type) ? new Date(v as string).toISOString() : structuredClone(v)]));
@@ -409,7 +415,7 @@ ${protection.validateKey}
     const normalized=operation==='create'?{values}:operation==='update'?{expectedVersion:body.expectedVersion,values}:operation==='reject'?{expectedVersion:body.expectedVersion,reason}:{expectedVersion:body.expectedVersion};
 ${protection.identity}
 ${protection.replay}
-${protection.transactionStart}
+${numeric ? protection.transactionStart.replace("if(existing) return replay(existing);", "if(existing) { if(operation==='submit') { const current=recordId?await store.find(entityKey,recordId):undefined; if(!current) failApproval(404,'approval.not_found'); validateTrustedApprovalRecord(current); } return replay(existing); }") : protection.transactionStart}
       let record:StoredRecord; let effects:readonly {capability:string;operation:string}[]=[];
       if(operation==='create') { record=await store.create(entityKey,{...values,status:'draft',version:0}); }
       else {
@@ -418,9 +424,9 @@ ${protection.transactionStart}
         let status=current.status!;
         if(operation==='update' && status==='draft') { /* Draft edits have no transition effect. */ }
         else { const transition=this.flow(entityKey)?.transitions.find(t=>t.event===operation && t.from===status && t.roles?.includes(role)); if(!transition || operation==='update' && status!=='returned') failApproval(403,'approval.denied'); status=transition.to; effects=transition.effects??[]; }
-${protection.conditionalWrite}
+${numeric ? "        if(operation==='submit') validateTrustedApprovalRecord(current);\n" : ""}${protection.conditionalWrite}
       }
-      const at=new Date().toISOString();
+${numeric ? "      if(operation==='create'||operation==='update') validateTrustedApprovalRecord(record);\n" : ""}      const at=new Date().toISOString();
       await store.appendAudit({actor:role,action:operation,entity:entityKey,recordId:record.id,reason,at});
       for(const effect of effects) {
         this.assertCapability(effect.capability,effect.operation);
@@ -598,12 +604,13 @@ export function renderApprovalCorrectionPage(
   graph: ApplicationGraphV1,
   entity = selectApprovalCorrection(graph),
   genericIdentity = false,
+  numericIdentity = false,
 ): string {
   if (!entity) return source;
   source = replace(
     source,
     "type JsonRecord =",
-    `// approval-workspace-presentation@${genericIdentity ? "2.2.0" : "2.1.0"}; approval-presentation-components@1.1.0; approval-visual-assets@1.1.0
+    `// approval-workspace-presentation@${numericIdentity ? "2.3.0" : genericIdentity ? "2.2.0" : "2.1.0"}; approval-presentation-components@1.1.0; approval-visual-assets@1.1.0
 const correctionEntity = ${JSON.stringify(entity)};
 type JsonRecord =`,
   );
@@ -753,23 +760,25 @@ export function renderApprovalJourney(
       .filter((f) => f.key !== "status" && f.required)
       .map((f) => [
         f.key,
-        f.type === "integer" || f.type === "decimal"
-          ? 1
-          : f.type === "boolean"
-            ? true
-            : f.type === "enum"
-              ? f.values![0]
-              : f.type === "date"
-                ? "2026-01-01"
-                : f.type === "datetime"
-                  ? "2026-01-01T00:00:00.000Z"
-                  : f.type === "url"
-                    ? "https://example.test"
-                    : f.type === "email"
-                      ? "user@example.test"
-                      : f.type === "json"
-                        ? { sample: true }
-                        : "Sample " + f.key,
+        f.numericDomain
+          ? numericApprovalWitness(graph, key, f)
+          : f.type === "integer" || f.type === "decimal"
+            ? 1
+            : f.type === "boolean"
+              ? true
+              : f.type === "enum"
+                ? f.values![0]
+                : f.type === "date"
+                  ? "2026-01-01"
+                  : f.type === "datetime"
+                    ? "2026-01-01T00:00:00.000Z"
+                    : f.type === "url"
+                      ? "https://example.test"
+                      : f.type === "email"
+                        ? "user@example.test"
+                        : f.type === "json"
+                          ? { sample: true }
+                          : "Sample " + f.key,
       ]),
   );
   return `import {describe,it,expect} from 'vitest';

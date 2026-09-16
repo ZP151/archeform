@@ -37,9 +37,18 @@ The identifier repair is now accepted: independent review has no open P0/P1/P2,
 the isolated compiler suite passes 814 tests, and the final inspection-only
 correction passes 101 affected tests with unchanged 63-file output. Actual
 Prisma/PostgreSQL and long-ID Publication evidence is retained; exact owned
-runtime cleanup passes. Normal branch delivery follows. Numeric rules remain
-in progress; their first actual database checks pass, with browser correction
-acceptance still running. See [identifier acceptance](acceptance/bounded-database-identifiers.md).
+runtime cleanup passes. It is delivered at `3eebfc0e`, with the remote branch
+verified equal. See [identifier acceptance](acceptance/bounded-database-identifiers.md).
+
+Numeric rules have passed integrated task review and independent QA. The release
+review found a precision-boundary defect in trusted Decimal conversion, now
+repaired with 90 affected tests passing. Final actual PostgreSQL/browser checks
+pass 2/2: the correction journey takes 34.5 seconds and the separate exact-bound
+fixture takes 2.5 seconds. Both 63-file manifests match final generated sources;
+all three owned numeric projects are cleaned up. Narrow independent correction
+rechecks remain open. Training Funding is prepared but not registered; it will
+reuse the approved numeric Approval family after capability acceptance. See
+[numeric acceptance](acceptance/numeric-field-domains.md).
 
 Product coverage remains five definitions across three runtime families:
 Restaurant Ordering, Expense Approval, Purchase Request Approval, Team Task
@@ -49,10 +58,11 @@ definition. Repository CI success does not establish hosted production readiness
 
 The next delivery order is:
 
-1. Deliver the accepted long-ID database repair, preserving historical immutable
-   output and rejecting unsupported storage names before generation.
-2. Add shared numeric bounds and consistent create/edit validation, then admit
-   Training Funding as the sixth definition through an actual business journey.
+1. Deliver the accepted shared numeric bounds with
+   consistent create/edit and stored-record validation. The long-ID repair is
+   already delivered with historical immutable output preserved.
+2. Admit Training Funding as the sixth definition through an actual business
+   journey, using data and existing presentation bindings only.
 3. Add calculated-total semantics before Equipment admission; expand to the
    Appointment family through interval, capacity, conflict and cancellation rules.
 4. Gather bounded real-model selection and consented ordinary-user evidence

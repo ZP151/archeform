@@ -1,0 +1,19 @@
+{
+  "fixtureOnly": true,
+  "registeredDefinitionAdded": false,
+  "invalidCreateCases": 9,
+  "invalidUpdateCases": 5,
+  "invalidMutationsPreserveReceiptsAndAudit": true,
+  "storedInvalidSubmitDenied": true,
+  "stateAuthorizationPrecedesNumericValidation": true,
+  "smallPositiveDecimalPersisted": true,
+  "invalidClientCreateFetches": 0,
+  "invalidClientEditFetches": 0,
+  "correctionRecordId": "cmu4f6gfb0005lx01bev88gls",
+  "modelCalls": 0,
+  "responsiveWidths": [
+    390,
+    768,
+    1440
+  ]
+}
