@@ -1,0 +1,19 @@
+{
+  "entity": "training-request",
+  "recordId": "cmu4frp7q0000s101syuej4qj",
+  "finalVersion": 7,
+  "finalStatus": "approved",
+  "sameRecordCorrection": true,
+  "returnedReasonSurvivesReload": true,
+  "retainedDecisions": 2,
+  "auditEvents": 8,
+  "createLostResponseReplayed": true,
+  "apiRestartBeforeCreateReplay": true,
+  "returnLostResponseReplayed": true,
+  "concurrentEditRejected": true,
+  "concurrentApiWritesCommitOnce": true,
+  "duplicateActivationIgnored": true,
+  "submittedEditDenied": true,
+  "responsiveWidths": [390, 768, 1440],
+  "modelCalls": 0
+}

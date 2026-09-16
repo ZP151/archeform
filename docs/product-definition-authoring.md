@@ -6,7 +6,7 @@ run the validator or manage Draft/Publish/Compilation steps.
 
 The reviewed catalogue is
 `packages/adapters/src/requirements/definitions/product-definitions.v1.json`.
-Its five entries supply canonical requirements/blueprints and selection
+Its six entries supply canonical requirements/blueprints and selection
 guidance. Fixed adapter family code owns validation, projection and execution
 bindings. A definition cannot select a package, module, route or executable
 template. The exact private data authority is accepted ADR-0065.
@@ -112,7 +112,7 @@ history, persistence and responsive presentation. Build packages before
 Playwright collection; built workspace dependencies retain native ESM format.
 Use `docs/acceptance/definition-batch-one.md` for current acceptance and limits.
 
-Current catalogue assertions explicitly name five keys. Historical compatibility
+Current catalogue assertions explicitly name six keys. Historical compatibility
 still compares the original four keys against the unchanged
 `definition-data-baseline.json`; never regenerate that baseline to admit a row.
 CLI membership alone does not establish a finished business product.
@@ -166,3 +166,27 @@ seed field to the Blueprint envelope. Explicit Graph seed data may supply anothe
 valid witness, which the verifier uses. A successful authored runtime fixture is
 shared capability evidence, not a new admitted definition; see
 [numeric acceptance](acceptance/numeric-field-domains.md).
+
+## Training Funding: reuse a numeric Approval profile
+
+The sixth catalogue key, `training-funding-approval`, is a data-only product
+addition on the accepted numeric capability. Its primary fields are courseTitle,
+fee, sessionDate and justification; its employee/manager/finance labels map to the
+existing requester/reviewer/auditor permissions. Keep the positive fee rule in
+both canonical Blueprint and provider-guide data, preserve capability locks,
+and retain material questions for payment, enrollment and private identity.
+Catalogue provenance continues to use ADR-0065; ADR-0069 is its capability
+authority, not a new provenance discriminator.
+
+For the reusable E2E case, declare `visibleSummary` values for fee/date,
+`retainedDetails` for justification, `invalidUpdates` for server denials,
+`clientInvalidValue` for zero-fee no-fetch feedback, and `finalCorrectionFields`
+for reason changes in the same returned-record save. The corrected field is
+asserted in its configured summary or Details location; do not require duplicate
+visible values merely to satisfy a test. The old Publication case retains its
+enum summaries and original Details assertions.
+
+Record catalogue membership and accepted journeys separately. A clean actual
+Publish/Compilation/verification/preview and business/UI result is required by
+[Training acceptance](acceptance/training-funding.md); a new JSON row or green
+data CLI alone does not raise accepted product coverage.

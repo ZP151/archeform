@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-09-16T18:36:41.9285730Z",
+  "projects": [
+    {
+      "project": "factory-t9-training-20260917",
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    },
+    {
+      "project": "factory-preview-preview-8e48d4cc-50aa-45b0-8a45-6453026965fe",
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    },
+    {
+      "project": "factory-preview-preview-bf47aacf-5981-47bd-b8d0-883755a913ab",
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    }
+  ],
+  "clean": true
+}

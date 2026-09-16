@@ -213,12 +213,23 @@ immutable. Acceptance status and final evidence: docs/acceptance/definition-batc
 
 ### Next bounded delivery: numeric rules, then Training admission
 
-Before broad batch scale, repair the separately reproduced long-application-ID
-namespace defect: generated Principal/Session database constraint names can
-truncate to the same PostgreSQL identifier. Propose deterministic bounded naming
-or fail-early validation under its compiler contract authority; test colliding
-prefixes and unchanged historic outputs. The batch's shorter unique test ID is
-test isolation and does not close this platform issue.
+September 17 execution: the bounded identifier repair is delivered at `3eebfc0e`;
+historical five-definition fixture bytes are retained. Shared numeric domains are
+accepted and delivered at `9eabe817`, including exact persisted Decimal boundary
+checks and actual PostgreSQL/browser correction evidence. Training Funding is
+accepted as the sixth local definition after actual attempt 2, with 180,306 ms
+ready time, two approved courses, complete correction/recovery and reviewed
+390/768/1440 presentation. It adds one catalogue row and zero product-specific
+runtime/UI branches; demonstrated families remain three. Its initial helper-only
+failure remains recorded separately. Independent review has no open P0/P1/P2.
+See [numeric acceptance](../../acceptance/numeric-field-domains.md) and
+[Training admission](../../acceptance/training-funding.md) for current evidence.
+
+The completed prerequisite repairs the long-application-ID namespace defect:
+generated Principal/Session constraint names previously truncated to the same
+PostgreSQL identifier. Accepted deterministic bounded naming and fail-early
+validation now cover colliding prefixes while retaining historic fixtures.
+The original shorter test ID remains test isolation, not the production fix.
 
 1. Use the rejected Training and Equipment demands as failing examples. The
    first decision must specify finite numeric bounds, inclusive versus exclusive
@@ -246,3 +257,30 @@ ready time, material requirements retained, business closure, visual acceptance,
 and per-product implementation changes. Retain one independent review per
 ordinary accepted slice; apply the existing full gate only to its load-bearing
 Graph/API/security contract boundary, not again for each catalogue row.
+
+### Route after the sixth local product
+
+1. **Calculated requests before Equipment.** Decide authoritative quantity,
+   unit-price and total semantics, including the supported numeric precision and
+   rounding behavior. The current numeric presentation supports exactly one
+   constrained field, so multiple constrained inputs and derived read-only totals
+   are explicit shared gaps. Tech Lead proposes the smallest extension under
+   existing authority before implementation. Acceptance must prove correct totals
+   after edits, rejection of forged totals/invalid quantities, persistence and
+   concurrent correction; only then admit Equipment through data.
+2. **A small varied data batch.** Use the authoring recipe and reusable consumer
+   runner to assess several distinct jobs in supported families. Record rejected
+   requirements and per-product source changes. Keep one ordinary review, affected
+   tests and actual checks for each new rule/presentation combination; reuse
+   unchanged contract and visual evidence. Do not inflate coverage with label-only
+   variants or material counts.
+3. **Appointment as the next new family.** Prioritize interval/timezone,
+   availability, capacity, simultaneous booking, cancellation and rebooking.
+   These are authoritative business rules, not a calendar widget or renamed CRUD.
+   Require a complete booking-and-recovery journey before counting the family.
+4. **Measure ordinary-user effort alongside expansion.** Run bounded real-model
+   rough-prompt/paraphrase selection evaluation and consented user sessions when
+   their inputs and authority are available. Track necessary questions, retained
+   requirements, first useful action, manual rescue and correction effort. Local
+   authored success is a baseline, not proof of these outcomes. Identity and
+   dependable hosted delivery remain necessary before external maturity claims.

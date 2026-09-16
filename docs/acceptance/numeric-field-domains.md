@@ -1,9 +1,9 @@
 # Reusable numeric domains acceptance
 
-Status: integrated task review and independent QA passed; the release precision
-finding is repaired and its narrow independent rechecks remain open.
-Final-source runtime comparison passes. No sixth definition
-has been registered or accepted.
+Status: accepted and delivered at `9eabe817`, with remote equality verified.
+Integrated task review, independent Terra QA and Sol release review pass after
+the exact Decimal correction; final P0/P1/P2 are 0/0/0. Final-source runtime
+comparison passes. No sixth definition was registered in this capability task.
 
 ## Accepted contract and scope
 

@@ -5227,6 +5227,7 @@ Both numericfixture projects are fully removed (containers/networks/volumes0).
 Independent /root/numeric_release (Sol) is reviewing the frozen numeric scope.
 FutureTrainingtest-only preparation is explicitly excluded from its source scope
 and from the numeric commit; no Training row is registered.
+
 ### Numeric release precision repair - 2026-09-17
 
 Independent Sol release review found P1: trusted Decimal text can round across an
@@ -5266,3 +5267,50 @@ capability with 5 existing definitions and no Training registration. Actual
 cleanup are linked in the acceptance record. Root proceeds with normal bounded
 commit/push; the three Training-only E2E/helper paths and its plan remain pending
 for separate data admission. No real-model, real-user or hosted claim is made.
+
+## Training Funding execution dispatch
+
+Numeric capability delivered at 9eabe8172568dc18be5ba43265dff70ef0fb97c1; remote
+branch equality verified. Root authorizes /root/training_data_owner to execute
+Task 1 of the existing Training plan: catalogue JSON row and directly affected
+adapter/data-CLI tests only, starting with focused RED. Shared contracts stay
+frozen; ADR-0065 provenance and accepted ADR-0069 rules are reused. Root owns
+E2E/helper parameters, services, evidence, docs and all Git. Accepted definitions
+remain 5 until actual consumer and visual acceptance. One ordinary independent
+review reuses the accepted shared-capability QA/release evidence.
+
+## Training actual attempt 1 and scoped helper repair
+
+Actual Publish/compile/verify/preview succeeded and correction reached approved
+version7 with2decisions/8audit. Attempt1 then failed a helper-only locator:
+Fee is a visible numeric summary, not a duplicate Details field. Root derives
+the asserted location from declared summary metadata while retaining Publication's
+original Details path; both assert visibility and exact value. The existing
+independent reviewer confirms the scoped repair preserves defaults. No product
+source, assets or image rebuild changed. Attempt1 failure screenshot and correction
+receipt remain; fresh full attempt2 is running before any acceptance/count claim.
+
+## Training Funding PM acceptance and long Goal closure
+
+Single independent ordinary review /root/training_admission_review returns
+APPROVED_FOR_ACCEPTANCE: yes, P0/P1/P2 0/0/0. It inspected final source/data,
+focused test evidence, both attempt records, actual responsive/state/dark/media
+screens, source identity and exact cleanup. PM accepts Training Funding as
+local definition6; families remain3. Attempt2 passes1/1 in4.1minutes, ready180306ms,
+acceptance218198ms, one authored selection, zero model calls/technical handoffs/
+in-run manual rescues. Two courses approved; fee/date/justification and reasons
+persist, correction ends version7 with2decisions/8audit, denial/retry/restart/
+concurrency and immutable compilation checks pass. Three exact owned projects
+have zero containers/networks/volumes. Source-only catalogue addition has no
+product-specific runtime/UI branch or new asset. Protected five-definition
+baseline SHA421447a597e6593045b1fe317ed0c83e6469f5540c6156620d05af2503670ae5
+is unchanged. Focused data29/interpreter149/compatibility14, typecheck, CLI6/6/6/6
+and formatting pass. The independent review reuses accepted numeric contract
+QA/release evidence; no fresh shared-contract ceremony was added for this row.
+
+Root proceeds with normal bounded commit/push and remote equality. The current
+long Goal closes only after that delivery and clean consumer worktree verification.
+Next roadmap priority is authoritative calculated requests before Equipment, then
+varied data expansion and Appointment capacity/conflict/cancellation. Real-model,
+consented ordinary-user, identity and hosted outcomes remain unproven. The original
+checkout and the deletion-rejected detached verification residual stay untouched.

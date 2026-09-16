@@ -2,84 +2,75 @@
 
 Updated: 2026-09-17
 
-## Active long Goal: identifier reliability and sixth product definition
+## Current long Goal: sixth local product accepted
 
-[PR #4](https://github.com/ZP151/archeform/pull/4) merged on September 15.
-Local and remote main both resolve to `bae5e2a0`. The exact merged commit's
-[CI run 34922466619](https://github.com/ZP151/archeform/actions/runs/34922466619)
-passes Node 22.11.0 and 22.x, including tests, build, typecheck and formatting.
-The Candidate verification race, browser teardown and timer-sensitive fixture
-corrections are delivered. Earlier conditional integration statements in the
-historical ledger are superseded by this observed merge and green main run.
+The identifier repair, reusable numeric capability and Training Funding admission
+are accepted. Coverage is **six distinct registered and locally accepted product
+definitions across three demonstrated runtime families**: Restaurant Ordering,
+Expense Approval, Purchase Request Approval, Team Task Tracking, Publication
+Review and Training Funding. This remains local Alpha evidence, not hundreds of
+products, real-user success or production hosting.
 
-The consumer worktree started this check clean at `bbb1e23c`, matching its
-remote branch and the merged main tree. The original checkout remains on an
-older branch with pre-existing edits and has not been changed. The current task
-had no active long Goal at the initial inspection. The founder subsequently
-requested continued execution, and a new long Goal is active: repair generated
-database identifiers, implement reusable numeric domains, and admit Training
-Funding after its actual business journey passes. The identifier implementation
-passes its focused checks and the original failing input now validates and
-migrates in isolated PostgreSQL without truncation. Full regression exposed a
-compatibility-policy conflict: all five old normal fixtures also contain unsafe
-database names, so future repaired output changes their database files. Delivery
-was paused for that exact ADR reconciliation. The amended decision is now
-independently accepted: only six known physical mappings may change future
-output; historical fixtures remain untouched and all other bytes stay exact.
-The numeric Graph contract passes 781 tests and its task review passes after
-correcting optional seed handling for prototype-named fields. Its integration
-through composition, runtime validation and presentation is now in progress.
-The actual long-ID app journey passes (214,158 ms ready, 4.5 minutes total),
-with all 63 generated artifacts identical under the recorded comparison chain.
-The implementation ledger records exact ownership, hashes and evidence.
+- Identifier repair delivered at `3eebfc0e`: deterministic bounded database names,
+  actual long-ID Prisma/PostgreSQL migration and consumer journey, original
+  historical fixture bytes retained. The accepted test-only inverse permits only
+  six documented future physical mappings; no historical compilation changes.
+- Numeric capability delivered at `9eabe817`: explicit finite bounds propagated
+  from definition to Graph, composition, verifier, API and form feedback. Exact
+  persisted Decimal comparisons close the release precision finding. Integrated
+  review, independent Terra QA and Sol release review pass; final focused
+  correction tests pass 90/90 and actual runtime fixtures pass 2/2.
+- Training Funding adds one catalogue row on that accepted capability, with zero
+  product-specific runtime/UI branches and no new visual assets. Actual attempt 2
+  passes 1/1 in 4.1 minutes including cleanup; ready time is **180,306 ms** and
+  acceptance checks complete in 218,198 ms. Two courses complete approval, with
+  corrected fee/justification, retained dates/reasons, denial, retry, restart,
+  concurrency and immutable-compilation checks. Independent ordinary review
+  passes P0/P1/P2 0/0/0; PM accepts the sixth local product.
 
-The identifier repair is now accepted: independent review has no open P0/P1/P2,
-the isolated compiler suite passes 814 tests, and the final inspection-only
-correction passes 101 affected tests with unchanged 63-file output. Actual
-Prisma/PostgreSQL and long-ID Publication evidence is retained; exact owned
-runtime cleanup passes. It is delivered at `3eebfc0e`, with the remote branch
-verified equal. See [identifier acceptance](acceptance/bounded-database-identifiers.md).
+Training data/interpreter tests pass 29/29 and 149/149, adapter typecheck passes,
+the data CLI reports 6/6/6/6, and all 14 protected five-definition compatibility
+cases pass. Actual phone/tablet/desktop, dark and media-failure screens are
+reviewed. The approved color, imagery, icons and visible course/fee/date summaries
+remain intact. Exact owned Factory and both preview projects are cleaned up.
+The first attempt's helper-only Fee-in-Details failure is retained separately;
+the generic assertion now follows declared summary placement and preserves
+Publication's original detail assertion.
 
-Numeric rules have passed integrated task review and independent QA. The release
-review found a precision-boundary defect in trusted Decimal conversion, now
-repaired with 90 affected tests passing. Final actual PostgreSQL/browser checks
-pass 2/2: the correction journey takes 34.5 seconds and the separate exact-bound
-fixture takes 2.5 seconds. Both 63-file manifests match final generated sources;
-all three owned numeric projects are cleaned up. Narrow independent correction
-rechecks remain open. Training Funding is prepared but not registered; it will
-reuse the approved numeric Approval family after capability acceptance. See
-[numeric acceptance](acceptance/numeric-field-domains.md).
+Evidence: [identifier acceptance](acceptance/bounded-database-identifiers.md),
+[numeric acceptance](acceptance/numeric-field-domains.md),
+[Training acceptance](acceptance/training-funding.md), and
+[phone results](acceptance/evidence/training-funding/two-authored-records-390.png).
 
-Product coverage remains five definitions across three runtime families:
-Restaurant Ordering, Expense Approval, Purchase Request Approval, Team Task
-Tracking and Publication Review. The latest functionality evidence is the
-bounded local acceptance below. September 15 integration fixes added no new
-definition. Repository CI success does not establish hosted production readiness.
+The measured Training run uses one authored selection, zero model calls, zero
+technical handoffs and zero in-run manual rescue. It is not real-model selection
+or ordinary-user evidence. Demo roles do not establish authentication, private
+ownership or tenancy. Payment, enrollment, calendar delivery, production identity
+and stable hosted delivery remain unsupported outcomes. No cloud deployment or
+new repository release is claimed.
 
-The next delivery order is:
+The next route is:
 
-1. Deliver the accepted shared numeric bounds with
-   consistent create/edit and stored-record validation. The long-ID repair is
-   already delivered with historical immutable output preserved.
-2. Admit Training Funding as the sixth definition through an actual business
-   journey, using data and existing presentation bindings only.
-3. Add calculated-total semantics before Equipment admission; expand to the
-   Appointment family through interval, capacity, conflict and cancellation rules.
-4. Gather bounded real-model selection and consented ordinary-user evidence
-   alongside expansion: retained requirements, necessary questions, time to first
-   useful action, manual rescue and correction effort. These measures remain
-   unproven and should not wait until 30 definitions.
-5. Prove a varied 30-definition catalogue before 100+ retrieval and larger-scale
-   expansion. Production identity and stable hosted delivery remain explicit
-   work required before external maturity claims.
+1. Add authoritative quantity/unit-price/total semantics and support multiple
+   numeric inputs before Equipment admission; resolve precision/rounding through
+   the existing technology authority and test forged totals plus corrections.
+2. Expand a small, semantically varied batch through data and reused components,
+   retaining one ordinary review and affected checks for in-scope additions.
+3. Add the Appointment family through interval/timezone, availability, capacity,
+   concurrency, cancellation and rebooking rules, then prove its whole journey.
+4. Measure real-model rough-prompt selection and consented ordinary-user effort
+   alongside expansion. Prove varied 30-definition coverage before 100+ retrieval;
+   keep material inventory separate from accepted product counts.
 
-Use focused affected regressions and one review for ordinary in-scope changes;
-retain the existing contract/security and integration gates where applicable.
-No new runtime, model call, user session or deployment ran for the initial
-inspection. Its existing test evidence was inspected rather than rerun. New
-Goal evidence will be recorded separately instead of inheriting those results.
+The [scale roadmap](superpowers/plans/2026-09-13-product-definition-scale.md)
+records these exits. The original checkout is unchanged. Current work is on the
+consumer delivery branch; the previously observed main baseline remains PR #4
+at `bae5e2a0` with CI run 34922466619. This task does not claim a new main merge.
+A deregistered temporary identifier-verification directory retains residual
+files after automatic deletion approval was rejected; it does not affect the
+consumer worktree or runtime cleanup.
 
-## Delivered: five reviewed definitions; representative batch accepted
+## Historical milestone: five reviewed definitions
 
 Publication Review is the fifth registered definition, composed from data and
 the existing Approval correction family. Six candidate briefs were assessed;

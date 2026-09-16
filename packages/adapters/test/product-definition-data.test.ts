@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { hashRequirementSpec } from "@factory/graph";
+import {
+  composeProductDraft,
+  planProductAlternatives,
+} from "@factory/capabilities/node";
+import {
+  createBlankApplicationDraft,
+  hashRequirementSpec,
+} from "@factory/graph";
 import {
   loadProductDefinitionData,
   parseProductDefinitionCatalogue,
@@ -22,9 +29,9 @@ const report = (definitions: unknown[]) =>
   validateDefinitionBatch(bytes(definitions));
 
 describe("Product definition data", () => {
-  it("loads five immutable data entries and admits only the shipped catalogue", () => {
+  it("loads six immutable data entries and admits only the shipped catalogue", () => {
     const data = loadProductDefinitionData();
-    expect(data.definitions).toHaveLength(5);
+    expect(data.definitions).toHaveLength(6);
     expect(
       Object.isFrozen(
         data.definitions[1]!.canonical.blueprint.entities[0]!.fields,
@@ -39,7 +46,7 @@ describe("Product definition data", () => {
           ),
         ),
       ),
-    ).toMatchObject({ attempted: 5, valid: 5, distinct: 5, admitted: 5 });
+    ).toMatchObject({ attempted: 6, valid: 6, distinct: 6, admitted: 6 });
   });
   it("admits the distinct reviewed Publication definition with its bounded scope", () => {
     const publication = loadProductDefinitionData().definitions.find(
@@ -103,6 +110,179 @@ describe("Product definition data", () => {
       "real identity",
     );
   });
+  it("admits Training Funding with the exact local Approval field contract", () => {
+    const training = loadProductDefinitionData().definitions.find(
+      (definition) => definition.definitionKey === "training-funding-approval",
+    );
+    expect(training).toBeDefined();
+    if (!training)
+      throw new Error("Training Funding definition was not found.");
+
+    expect(training).toMatchObject({
+      definitionVersion: "1.0.0",
+      familyBinding: { key: "approval", version: "approval-correction/v1" },
+      parameterPolicy: "none/v1",
+      primaryJob: {
+        actorKey: "employee",
+        operation: "submit",
+        entityKey: "training-request",
+        successState: "submitted",
+      },
+      provenance: { decision: "ADR-0065" },
+    });
+    expect(training.canonical.blueprint.entities[0]).toMatchObject({
+      key: "training-request",
+      label: "Training request",
+      fields: [
+        { key: "courseTitle", type: "text", required: true },
+        {
+          key: "fee",
+          type: "currency",
+          required: true,
+          numericDomain: {
+            apiVersion: "factory.numeric-field-domain/v1",
+            minimum: { value: 0, inclusive: false },
+          },
+        },
+        { key: "sessionDate", type: "date", required: true },
+        { key: "justification", type: "long-text", required: true },
+      ],
+    });
+    expect(
+      training.canonical.blueprint.entities[0]!.fields.map(
+        ({ key, type, required, options }) => ({
+          key,
+          type,
+          required,
+          options,
+        }),
+      ),
+    ).toEqual([
+      { key: "courseTitle", type: "text", required: true, options: undefined },
+      { key: "fee", type: "currency", required: true, options: undefined },
+      { key: "sessionDate", type: "date", required: true, options: undefined },
+      {
+        key: "justification",
+        type: "long-text",
+        required: true,
+        options: undefined,
+      },
+    ]);
+    expect(training.canonical.blueprint.actors.map(({ key }) => key)).toEqual([
+      "employee",
+      "manager",
+      "finance",
+    ]);
+    expect(
+      training.canonical.blueprint.pageIntents.map(({ label }) => label),
+    ).toContain("All training requests");
+    expect(
+      training.canonical.blueprint.pageIntents.map(({ label }) => label),
+    ).toContain("New training request");
+    expect(
+      training.canonical.blueprint.workflows[0]!.states.map(({ key }) => key),
+    ).toEqual(["draft", "submitted", "approved", "returned"]);
+    expect(training.journeys.failure[0]?.steps).toEqual([
+      {
+        actorKey: "finance",
+        entityKey: "training-request",
+        operation: "approve",
+        fromState: "submitted",
+        toState: "approved",
+        expectation: "denied",
+      },
+    ]);
+
+    const entry = createDefinitionEntry(training);
+    const selection = {
+      definitionKey: training.definitionKey,
+      disposition: "supported-default" as const,
+      requirementId: "training-funding-admission-check",
+      title: "Training Funding Approval",
+      outcome: "Review local training funding.",
+      materialQuestions: [],
+      businessParameters: null,
+    };
+    const first = entry.project(selection);
+    const second = entry.project(selection);
+    expect(second).toEqual(first);
+    expect(first.blueprint.requirementChecksum).toBe(
+      hashRequirementSpec(first.spec),
+    );
+
+    const materialQuestions = [
+      {
+        category: "integration" as const,
+        question: "Is payment execution required after a funding decision?",
+      },
+      {
+        category: "integration" as const,
+        question: "Is course enrollment required after approval?",
+      },
+      {
+        category: "integration" as const,
+        question: "Is calendar delivery required for the training session?",
+      },
+      {
+        category: "visibility" as const,
+        question: "Must each employee have private training requests?",
+      },
+    ];
+    expect(
+      entry.project({
+        ...selection,
+        disposition: "needs-clarification",
+        materialQuestions,
+      }).spec.openQuestions,
+    ).toEqual(materialQuestions);
+  });
+  it("composes equivalent Training Funding Approval diffs from repeated selections", () => {
+    const training = loadProductDefinitionData().definitions.find(
+      (definition) => definition.definitionKey === "training-funding-approval",
+    );
+    expect(training).toBeDefined();
+    if (!training)
+      throw new Error("Training Funding definition was not found.");
+
+    const entry = createDefinitionEntry(training);
+    const selection = {
+      definitionKey: training.definitionKey,
+      disposition: "supported-default" as const,
+      requirementId: "training-funding-composition",
+      title: "Training Funding Approval",
+      outcome: "Review local training funding.",
+      materialQuestions: [],
+      businessParameters: null,
+    };
+    const compose = () => {
+      const interpretation = entry.project(selection);
+      const baseDraft = createBlankApplicationDraft({
+        applicationId: interpretation.spec.requirementId,
+        workspaceId: "local-workspace",
+        name: interpretation.blueprint.title,
+      });
+      const [standard] = planProductAlternatives({
+        requirement: interpretation.spec,
+        blueprint: interpretation.blueprint,
+        baseDraft,
+      });
+      expect(standard?.plan.compatibility.result).toBe("compatible");
+      return composeProductDraft({
+        plan: standard!.plan,
+        blueprint: interpretation.blueprint,
+        baseDraft,
+      }).diff;
+    };
+
+    const first = compose();
+    const second = compose();
+    expect(second).toEqual(first);
+    expect(JSON.stringify(first)).toContain(
+      '"apiVersion":"factory.numeric-field-domain/v1"',
+    );
+    expect(JSON.stringify(first)).toContain('"courseTitle"');
+    expect(JSON.stringify(first)).toContain('"sessionDate"');
+  });
   it("projects a validated supported Approval field variant from data without registration", () => {
     const data = candidate();
     data.definitionKey = "equipment-approval";
@@ -138,7 +318,7 @@ describe("Product definition data", () => {
       distinct: 1,
       admitted: 0,
     });
-    expect(loadProductDefinitionData().definitions).toHaveLength(5);
+    expect(loadProductDefinitionData().definitions).toHaveLength(6);
   });
   it.each([
     '{"apiVersion":"x","apiVersion":"y"}',

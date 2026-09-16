@@ -977,7 +977,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       ).toBe(false);
     }
   });
-  it("keeps five coherent registrations and refuses schema, guide and projector drift", () => {
+  it("keeps six coherent registrations and refuses schema, guide and projector drift", () => {
     expect(
       definitionSelectionCatalogue.map((entry) => entry.definitionKey),
     ).toEqual([
@@ -986,6 +986,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       "purchase-request-approval",
       "team-task-tracking",
       "publication-review",
+      "training-funding-approval",
     ]);
     expect(Object.isFrozen(definitionSelectionCatalogue)).toBe(true);
     expect(() =>
@@ -2069,7 +2070,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         generatedInterpretation: { anyOf: unknown[] };
       };
     };
-    expect(schema.properties.definitionSelection.anyOf).toHaveLength(6);
+    expect(schema.properties.definitionSelection.anyOf).toHaveLength(7);
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({
       requirement: interpretation.spec,

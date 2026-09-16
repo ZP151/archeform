@@ -1,0 +1,76 @@
+{
+  "recordedAt": "2026-09-16T18:29:21.247Z",
+  "base": "9eabe8172568dc18be5ba43265dff70ef0fb97c1",
+  "catalogueDefinitions": 6,
+  "reviewedCatalogueSha256": "af941b492a07a0095b9ec7039d6bdbfa3d447a6a1c79c9be6dbb09ff224e42dc",
+  "reviewedCatalogueCanonicalSha256": "17526e9e674e1ff61e6d78d44687e9544018dfe96d60f9f0751b5febdaf984f4",
+  "factoryServices": [
+    {
+      "service": "control-plane",
+      "imageId": "sha256:680c7168725dc9584dbc59fdbf1b080411a08b5de4157a1da856a2fe957b7a44",
+      "entries": [
+        {
+          "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+          "sha256": "fb84d3cefbbd3063b627bae79837d0ef3ee7c547bacfdb8124c51ef8b63999ff",
+          "canonical": "17526e9e674e1ff61e6d78d44687e9544018dfe96d60f9f0751b5febdaf984f4",
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-numeric-domain.ts",
+          "sha256": "ba0a599b15e17e0e5c7b6cc7c91551c53aeb524fe365270ddcbb9ac9e99d9e9a",
+          "canonical": null,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/adapters/dist/requirements/definitions/product-definitions.v1.json",
+          "sha256": "fb84d3cefbbd3063b627bae79837d0ef3ee7c547bacfdb8124c51ef8b63999ff",
+          "canonical": "17526e9e674e1ff61e6d78d44687e9544018dfe96d60f9f0751b5febdaf984f4",
+          "matchesReviewedInput": true
+        }
+      ]
+    },
+    {
+      "service": "compiler-worker",
+      "imageId": "sha256:fe3cdf929d7a6bb9f1c598091550018e0a90855e526006ff13778b9a3b1db681",
+      "entries": [
+        {
+          "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+          "sha256": "fb84d3cefbbd3063b627bae79837d0ef3ee7c547bacfdb8124c51ef8b63999ff",
+          "canonical": "17526e9e674e1ff61e6d78d44687e9544018dfe96d60f9f0751b5febdaf984f4",
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-numeric-domain.ts",
+          "sha256": "ba0a599b15e17e0e5c7b6cc7c91551c53aeb524fe365270ddcbb9ac9e99d9e9a",
+          "canonical": null,
+          "matchesReviewedInput": true
+        }
+      ]
+    },
+    {
+      "service": "workbench",
+      "imageId": "sha256:184efa5a71ff125e9fd7e376f46613fa15978629b76cbb9ba6226ed959995deb",
+      "entries": [
+        {
+          "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+          "sha256": "fb84d3cefbbd3063b627bae79837d0ef3ee7c547bacfdb8124c51ef8b63999ff",
+          "canonical": "17526e9e674e1ff61e6d78d44687e9544018dfe96d60f9f0751b5febdaf984f4",
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-numeric-domain.ts",
+          "sha256": "ba0a599b15e17e0e5c7b6cc7c91551c53aeb524fe365270ddcbb9ac9e99d9e9a",
+          "canonical": null,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/adapters/dist/requirements/definitions/product-definitions.v1.json",
+          "sha256": "fb84d3cefbbd3063b627bae79837d0ef3ee7c547bacfdb8124c51ef8b63999ff",
+          "canonical": "17526e9e674e1ff61e6d78d44687e9544018dfe96d60f9f0751b5febdaf984f4",
+          "matchesReviewedInput": true
+        }
+      ]
+    }
+  ],
+  "scope": "All catalogue JSON values match the reviewed frozen input, including ordering. Build copied the pre-format whitespace (different byte hash); canonical JSON is identical. Compiler numeric source bytes match. Worker does not build adapters, so its source copy alone is checked. No credentials or raw provider content is recorded."
+}

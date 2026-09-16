@@ -7,7 +7,7 @@ import {
 } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
@@ -41,10 +41,16 @@ export type ApprovalDefinitionCase = {
     ApprovalCorrectionOptions,
     "evidence" | "previewProject"
   >;
+  readonly retainedDetails?: Readonly<Record<string, string>>;
+  readonly visibleSummary?: readonly {
+    readonly label: string;
+    readonly corrected: string;
+    readonly additional: string;
+  }[];
   readonly additionalApprovedRecord: {
     readonly identity: string;
     readonly fields: Record<string, string>;
-    readonly selectValue: string;
+    readonly selectValue?: string;
   };
 };
 
@@ -111,6 +117,9 @@ export const publicationReviewDefinitionCase: ApprovalDefinitionCase = {
         "A distinct newsletter submission for final editorial approval.",
     },
     selectValue: "newsletter",
+  },
+  retainedDetails: {
+    "Editorial notes": "Keep the opening concise for the local review.",
   },
 };
 
@@ -293,15 +302,16 @@ async function verifyVisibleBusinessIdentity(
   records: readonly {
     readonly id: string;
     readonly identity: string;
-    readonly channel: string;
+    readonly summaries: readonly {
+      readonly label: string;
+      readonly value: string;
+    }[];
     readonly decisionCount: number;
   }[],
 ): Promise<void> {
   const { correction } = definition;
-  if (!correction.identityKey || !correction.select)
-    throw new Error(
-      "Definition case must declare visible identity and enum keys.",
-    );
+  if (!correction.identityKey)
+    throw new Error("Definition case must declare its visible identity key.");
   const history = page.locator(".approval-decision-history");
   await expect(history).toBeVisible();
   for (const width of [390, 768, 1440]) {
@@ -317,12 +327,12 @@ async function verifyVisibleBusinessIdentity(
       const title = row.locator(".approval-record-title");
       await expect(title).toBeVisible();
       await expect(title).toContainText(record.identity);
-      await expect(
-        visibleSummaryValue(row, correction.select.label),
-      ).toBeVisible();
-      await expect(
-        visibleSummaryValue(row, correction.select.label),
-      ).toHaveText(record.channel);
+      for (const summary of record.summaries) {
+        await expect(visibleSummaryValue(row, summary.label)).toBeVisible();
+        await expect(visibleSummaryValue(row, summary.label)).toHaveText(
+          summary.value,
+        );
+      }
     }
     await page.screenshot({
       path: resolve(
@@ -343,7 +353,8 @@ async function verifyVisibleBusinessIdentity(
         const historyTitle = historyRow.getByRole("heading", { level: 3 });
         await expect(historyTitle).toBeVisible();
         await expect(historyTitle).toContainText(record.identity);
-        await expect(historyTitle).toContainText(record.channel);
+        for (const summary of record.summaries)
+          await expect(historyTitle).toContainText(summary.value);
         await expect(
           historyRow.getByText(record.id, { exact: true }),
           "record identifiers stay out of the visible decision history summary",
@@ -373,10 +384,8 @@ function detailValue(row: import("@playwright/test").Locator, label: string) {
 async function createAndApproveAdditionalRecord(
   page: Page,
   definition: ApprovalDefinitionCase,
-): Promise<{ id: string; identity: string; channel: string }> {
+): Promise<{ id: string; identity: string }> {
   const { correction, additionalApprovedRecord } = definition;
-  if (!correction.select)
-    throw new Error("Definition case must declare an enum selection.");
   await navigateApproval(page, correction.list);
   const role = page.getByLabel("Demo role", { exact: true });
   await role.selectOption(correction.requester);
@@ -386,9 +395,13 @@ async function createAndApproveAdditionalRecord(
   await role.selectOption(correction.requester);
   for (const [label, value] of Object.entries(additionalApprovedRecord.fields))
     await page.getByLabel(label, { exact: true }).fill(value);
-  await page
-    .getByLabel(correction.select.label, { exact: true })
-    .selectOption(additionalApprovedRecord.selectValue);
+  if (correction.select) {
+    if (!additionalApprovedRecord.selectValue)
+      throw new Error("The additional record must declare its enum selection.");
+    await page
+      .getByLabel(correction.select.label, { exact: true })
+      .selectOption(additionalApprovedRecord.selectValue);
+  }
   const createdResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
@@ -433,7 +446,6 @@ async function createAndApproveAdditionalRecord(
   return {
     id: created.id,
     identity: additionalApprovedRecord.identity,
-    channel: additionalApprovedRecord.selectValue,
   };
 }
 
@@ -612,25 +624,59 @@ export async function runApprovalDefinitionBatch({
     );
     await correctedDetails.locator("summary").focus();
     await correctedDetails.locator("summary").press("Enter");
-    await expect(
-      detailValue(correctedRow, definition.correction.correction!.label),
-    ).toHaveText(String(definition.correction.correction!.expectedFinalValue));
-    await expect(detailValue(correctedRow, "Editorial notes")).toHaveText(
-      definition.correction.fields["Editorial notes"]!,
+    const correctedField = definition.correction.correction!;
+    const correctedValue = definition.visibleSummary?.some(
+      ({ label }) => label === correctedField.label,
+    )
+      ? visibleSummaryValue(correctedRow, correctedField.label)
+      : detailValue(correctedRow, correctedField.label);
+    await expect(correctedValue).toBeVisible();
+    await expect(correctedValue).toHaveText(
+      String(correctedField.expectedFinalValue),
     );
+    for (const [label, value] of Object.entries(
+      definition.retainedDetails ?? {},
+    ))
+      await expect(detailValue(correctedRow, label)).toHaveText(value);
     await correctedDetails.locator("summary").press("Enter");
     const additional = await createAndApproveAdditionalRecord(
       generated,
       definition,
     );
+    const summary =
+      definition.visibleSummary ??
+      (definition.correction.select &&
+      definition.additionalApprovedRecord.selectValue
+        ? [
+            {
+              label: definition.correction.select.label,
+              corrected: definition.correction.select.value,
+              additional: definition.additionalApprovedRecord.selectValue,
+            },
+          ]
+        : []);
+    expect(
+      summary.length,
+      "each definition declares visible business summaries",
+    ).toBeGreaterThan(0);
     await verifyVisibleBusinessIdentity(generated, definition, [
       {
         id: correctionFacts.recordId,
         identity: definition.correction.identity,
-        channel: definition.correction.select!.value,
+        summaries: summary.map(({ label, corrected }) => ({
+          label,
+          value: corrected,
+        })),
         decisionCount: 2,
       },
-      { ...additional, decisionCount: 1 },
+      {
+        ...additional,
+        summaries: summary.map(({ label, additional: value }) => ({
+          label,
+          value,
+        })),
+        decisionCount: 1,
+      },
     ]);
     await verifyExpressiveRecovery(
       generated,
@@ -644,6 +690,33 @@ export async function runApprovalDefinitionBatch({
         controlPlaneUrl(`/compilations/${compilationId}`),
       ),
     ).toBe(immutableBefore);
+    await writeFile(
+      resolve(definition.evidenceDirectory, "delivery-journey.json"),
+      JSON.stringify(
+        {
+          definitionKey: definition.definitionKey,
+          compilationId,
+          previewRunId: preview!.id,
+          elapsedToReadyMs,
+          elapsedThroughAcceptanceMs: Date.now() - startedAt,
+          lifecycle,
+          authoredSelections: interpretationCalls,
+          modelCalls: 0,
+          technicalHandoffs: 0,
+          inRunManualRescues: 0,
+          immutableCompilationPreserved: true,
+          authoredRecordsApproved: 2,
+          clientInvalidCreateAndEditNoFetch: Boolean(
+            definition.correction.clientInvalidValue,
+          ),
+          businessSummaries: summary.map(({ label }) => label),
+          scope:
+            "Authored interpretation fixture and prepared local runtime. Durations include test instrumentation and visual checks; no real-model, ordinary-user or hosted performance claim.",
+        },
+        null,
+        2,
+      ) + "\n",
+    );
     console.info(
       "FACTORY_APPROVAL_DEFINITION_BATCH",
       JSON.stringify({

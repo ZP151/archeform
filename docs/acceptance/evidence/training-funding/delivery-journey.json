@@ -1,0 +1,17 @@
+{
+  "definitionKey": "training-funding-approval",
+  "compilationId": "cmu4ftfcs002gp94tir7b7kmf",
+  "previewRunId": "preview-bf47aacf-5981-47bd-b8d0-883755a913ab",
+  "elapsedToReadyMs": 180306,
+  "elapsedThroughAcceptanceMs": 218198,
+  "lifecycle": ["publish", "compile", "verify", "preview"],
+  "authoredSelections": 1,
+  "modelCalls": 0,
+  "technicalHandoffs": 0,
+  "inRunManualRescues": 0,
+  "immutableCompilationPreserved": true,
+  "authoredRecordsApproved": 2,
+  "clientInvalidCreateAndEditNoFetch": true,
+  "businessSummaries": ["Fee", "Session date"],
+  "scope": "Authored interpretation fixture and prepared local runtime. Durations include test instrumentation and visual checks; no real-model, ordinary-user or hosted performance claim."
+}

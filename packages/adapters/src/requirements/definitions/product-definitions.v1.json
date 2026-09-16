@@ -2860,6 +2860,679 @@
         "reviewedOn": "2026-09-13",
         "decision": "ADR-0065"
       }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "training-funding-approval",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "approval",
+        "version": "approval-correction/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "employee",
+        "operation": "submit",
+        "entityKey": "training-request",
+        "successState": "submitted"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "training-funding-approval-requirement",
+          "outcome": "Employees submit local training funding requests and managers decide them; finance audits the decisions.",
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "Submits local training funding requests with a course title, fee, session date, and justification."
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "description": "Approves or returns submitted training funding requests."
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "description": "Audits all training funding decisions."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "training-request",
+              "label": "Training request",
+              "description": "A request for a manager decision on local training funding."
+            },
+            {
+              "key": "approval",
+              "label": "Approval",
+              "description": "A manager decision on a submitted training funding request."
+            },
+            {
+              "key": "audit-trail",
+              "label": "Audit trail",
+              "description": "The record of every decision."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "training-funding-approval",
+              "label": "Training funding approval",
+              "description": "Create and edit a draft, submit, return with a required reason, revise the same record, resubmit and approve."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "employee-submits-training-request",
+              "given": "an employee with a training request",
+              "when": "the employee submits it",
+              "then": "the training request is submitted for approval"
+            },
+            {
+              "key": "manager-approves-training-request",
+              "given": "a submitted training request",
+              "when": "the manager approves it",
+              "then": "the training request is approved"
+            },
+            {
+              "key": "manager-returns-training-request",
+              "given": "a submitted training request",
+              "when": "the manager returns it with a reason",
+              "then": "the training request is returned with a required reason for same-record revision and resubmission"
+            },
+            {
+              "key": "finance-audits-training-decisions",
+              "given": "decided training requests",
+              "when": "finance audits them",
+              "then": "every decision is recorded in the audit trail"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:ecf2d44d11031357d2e18a79a08b683ec27087cfd9e8d00bb2e7529661c12149",
+          "title": "Training Funding Approval",
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "permissions": [
+                {
+                  "entityKey": "training-request",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                {
+                  "entityKey": "employee",
+                  "actions": ["read", "update"]
+                }
+              ]
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "permissions": [
+                {
+                  "entityKey": "training-request",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "permissions": [
+                {
+                  "entityKey": "training-request",
+                  "actions": ["read", "audit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "training-request",
+              "label": "Training request",
+              "description": "A request for a manager decision on local training funding.",
+              "fields": [
+                {
+                  "key": "courseTitle",
+                  "label": "Course title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "fee",
+                  "label": "Fee",
+                  "type": "currency",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "sessionDate",
+                  "label": "Session date",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "key": "justification",
+                  "label": "Justification",
+                  "type": "long-text",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "The person who submits training funding requests.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "training-request-dashboard",
+              "label": "Training request dashboard",
+              "intent": "dashboard",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-list",
+              "label": "All training requests",
+              "intent": "list",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-form",
+              "label": "New training request",
+              "intent": "form",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-detail",
+              "label": "Training request detail",
+              "intent": "detail",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-queue",
+              "label": "Approval queue",
+              "intent": "queue",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-settings",
+              "label": "Training request settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "training-funding-approval",
+              "label": "Training funding approval",
+              "entityKey": "training-request",
+              "states": [
+                {
+                  "key": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "key": "returned",
+                  "label": "Returned"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "employee"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "employee"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "employee-submits-training-request",
+              "description": "An employee submits a training request.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits a training request"
+                }
+              ]
+            },
+            {
+              "key": "manager-decides-training-request",
+              "description": "A manager approves or returns a submitted training request.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits a training request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "approves or returns it"
+                },
+                {
+                  "actorKey": "employee",
+                  "action": "edits the returned record, saves it as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "finance-audits-training-decisions",
+              "description": "Finance audits every decision.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits a training request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "decides it"
+                },
+                {
+                  "actorKey": "finance",
+                  "action": "audits the decision"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "definitionKey": "training-funding-approval",
+          "template": {
+            "key": "approval-definition-template",
+            "version": "2.0.0"
+          },
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "permissions": [
+                {
+                  "entityKey": "training-request",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                {
+                  "entityKey": "employee",
+                  "actions": ["read", "update"]
+                }
+              ]
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "permissions": [
+                {
+                  "entityKey": "training-request",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "permissions": [
+                {
+                  "entityKey": "training-request",
+                  "actions": ["read", "audit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "training-request",
+              "label": "Training request",
+              "description": "A request for a manager decision on local training funding.",
+              "fields": [
+                {
+                  "key": "courseTitle",
+                  "label": "Course title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "fee",
+                  "label": "Fee",
+                  "type": "currency",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "sessionDate",
+                  "label": "Session date",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "key": "justification",
+                  "label": "Justification",
+                  "type": "long-text",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "The person who submits training funding requests.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "training-request-dashboard",
+              "label": "Training request dashboard",
+              "intent": "dashboard",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-list",
+              "label": "All training requests",
+              "intent": "list",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-form",
+              "label": "New training request",
+              "intent": "form",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-detail",
+              "label": "Training request detail",
+              "intent": "detail",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-queue",
+              "label": "Approval queue",
+              "intent": "queue",
+              "entityKey": "training-request"
+            },
+            {
+              "key": "training-request-settings",
+              "label": "Training request settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "training-funding-approval",
+              "label": "Training funding approval",
+              "entityKey": "training-request",
+              "states": [
+                {
+                  "key": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "key": "returned",
+                  "label": "Returned"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "employee"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "employee"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "employee-submits-training-request",
+              "description": "An employee submits a training request.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits a training request"
+                }
+              ]
+            },
+            {
+              "key": "manager-decides-training-request",
+              "description": "A manager approves or returns a submitted training request.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits a training request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "approves or returns it"
+                },
+                {
+                  "actorKey": "employee",
+                  "action": "edits the returned record, saves it as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "finance-audits-training-decisions",
+              "description": "Finance audits every decision.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits a training request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "decides it"
+                },
+                {
+                  "actorKey": "finance",
+                  "action": "audits the decision"
+                }
+              ]
+            }
+          ],
+          "identity": "Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation.",
+          "integrations": "No payment, reimbursement execution, course enrollment, calendar delivery, private identity, external identity, HR, accounting or notification integration."
+        },
+        "providerInstruction": "Every Training Funding Approval brief returns definition-selection with definitionKey training-funding-approval, generatedInterpretation null and businessParameters null. The reviewed local demo lets an employee create and edit drafts, submit, revise returned records and resubmit the same record; one manager approves or returns with a required reason, and finance reads and audits. A decision records local funding approval only: it does not execute payment or reimbursement, enroll an employee in a course, provide calendar delivery, verify an entitlement, or create a private identity boundary. Omitted routine pages and presentation accept supported-default with zero questions. Explicit or ambiguous requester-only or private records, real identity, SSO, tenant isolation, thresholds, budgets, multiple or sequential reviewers, editing submitted or approved records, reopening approved records, configurable reason policy, changed fields or requiredness, currency codes, symbols, conversion or precision, payment, reimbursement execution, enrollment, calendar delivery, entitlement verification, external identity, HR, accounting or notification delivery require needs-clarification. Preserve every independent material question using authorization, visibility, role, business-rule, data or integration. Follow-ups retain every still-required exclusion until the user explicitly accepts supported scope; never infer acceptance or hide requirements in identity text. Fee is a required local funding amount greater than zero without an invented currency code, symbol, scale or payment behavior. The exact roles are selectable local demo roles with role-wide reads. <supported-training-funding-default>{\"definitionKey\":\"training-funding-approval\",\"template\":{\"key\":\"approval-definition-template\",\"version\":\"2.0.0\"},\"actors\":[{\"key\":\"employee\",\"label\":\"Employee\",\"permissions\":[{\"entityKey\":\"training-request\",\"actions\":[\"create\",\"read\",\"update\",\"submit\"]},{\"entityKey\":\"employee\",\"actions\":[\"read\",\"update\"]}]},{\"key\":\"manager\",\"label\":\"Manager\",\"permissions\":[{\"entityKey\":\"training-request\",\"actions\":[\"read\",\"approve\",\"reject\"]}]},{\"key\":\"finance\",\"label\":\"Finance\",\"permissions\":[{\"entityKey\":\"training-request\",\"actions\":[\"read\",\"audit\"]}]}],\"entities\":[{\"key\":\"training-request\",\"label\":\"Training request\",\"description\":\"A request for a manager decision on local training funding.\",\"fields\":[{\"key\":\"courseTitle\",\"label\":\"Course title\",\"type\":\"text\",\"required\":true},{\"key\":\"fee\",\"label\":\"Fee\",\"type\":\"currency\",\"required\":true,\"numericDomain\":{\"apiVersion\":\"factory.numeric-field-domain/v1\",\"minimum\":{\"value\":0,\"inclusive\":false}}},{\"key\":\"sessionDate\",\"label\":\"Session date\",\"type\":\"date\",\"required\":true},{\"key\":\"justification\",\"label\":\"Justification\",\"type\":\"long-text\",\"required\":true}]},{\"key\":\"employee\",\"label\":\"Employee\",\"description\":\"The person who submits training funding requests.\",\"fields\":[{\"key\":\"name\",\"label\":\"Name\",\"type\":\"text\",\"required\":true},{\"key\":\"department\",\"label\":\"Department\",\"type\":\"text\",\"required\":false}]}],\"pageIntents\":[{\"key\":\"training-request-dashboard\",\"label\":\"Training request dashboard\",\"intent\":\"dashboard\",\"entityKey\":\"training-request\"},{\"key\":\"training-request-list\",\"label\":\"All training requests\",\"intent\":\"list\",\"entityKey\":\"training-request\"},{\"key\":\"training-request-form\",\"label\":\"New training request\",\"intent\":\"form\",\"entityKey\":\"training-request\"},{\"key\":\"training-request-detail\",\"label\":\"Training request detail\",\"intent\":\"detail\",\"entityKey\":\"training-request\"},{\"key\":\"training-request-queue\",\"label\":\"Approval queue\",\"intent\":\"queue\",\"entityKey\":\"training-request\"},{\"key\":\"training-request-settings\",\"label\":\"Training request settings\",\"intent\":\"settings\"}],\"workflows\":[{\"key\":\"training-funding-approval\",\"label\":\"Training funding approval\",\"entityKey\":\"training-request\",\"states\":[{\"key\":\"draft\",\"label\":\"Draft\"},{\"key\":\"submitted\",\"label\":\"Submitted\"},{\"key\":\"approved\",\"label\":\"Approved\"},{\"key\":\"returned\",\"label\":\"Returned\"}],\"transitions\":[{\"key\":\"submit\",\"from\":\"draft\",\"to\":\"submitted\",\"label\":\"Submit\",\"actorKey\":\"employee\"},{\"key\":\"approve\",\"from\":\"submitted\",\"to\":\"approved\",\"label\":\"Approve\",\"actorKey\":\"manager\"},{\"key\":\"reject\",\"from\":\"submitted\",\"to\":\"returned\",\"label\":\"Return\",\"actorKey\":\"manager\"},{\"key\":\"update\",\"from\":\"returned\",\"to\":\"draft\",\"label\":\"Revise\",\"actorKey\":\"employee\"}]}],\"acceptanceJourneys\":[{\"key\":\"employee-submits-training-request\",\"description\":\"An employee submits a training request.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits a training request\"}]},{\"key\":\"manager-decides-training-request\",\"description\":\"A manager approves or returns a submitted training request.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits a training request\"},{\"actorKey\":\"manager\",\"action\":\"approves or returns it\"},{\"actorKey\":\"employee\",\"action\":\"edits the returned record, saves it as draft and resubmits the same record\"}]},{\"key\":\"finance-audits-training-decisions\",\"description\":\"Finance audits every decision.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits a training request\"},{\"actorKey\":\"manager\",\"action\":\"decides it\"},{\"actorKey\":\"finance\",\"action\":\"audits the decision\"}]}],\"identity\":\"Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation.\",\"integrations\":\"No payment, reimbursement execution, course enrollment, calendar delivery, private identity, external identity, HR, accounting or notification integration.\"}</supported-training-funding-default>"
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-record-recovery",
+            "steps": [
+              {
+                "actorKey": "manager",
+                "entityKey": "training-request",
+                "operation": "reject",
+                "fromState": "submitted",
+                "toState": "returned",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "employee",
+                "entityKey": "training-request",
+                "operation": "update",
+                "fromState": "returned",
+                "toState": "draft",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "employee",
+                "entityKey": "training-request",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "submitted",
+                "expectation": "success"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "unauthorized-mutation",
+            "steps": [
+              {
+                "actorKey": "finance",
+                "entityKey": "training-request",
+                "operation": "approve",
+                "fromState": "submitted",
+                "toState": "approved",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "approval-v1",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "approval-correction/v1"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-17",
+        "decision": "ADR-0065"
+      }
     }
   ]
 }

@@ -813,6 +813,14 @@ export type ApprovalCorrectionOptions = {
   readonly recordMedia?: ApprovalRecordMediaPolicy;
   /** Explicitly exercise auditor denial of create, edit, and state transition. */
   readonly assertAuditorDenied?: boolean;
+  /** Declared business-rule violations, tested against the same draft record. */
+  readonly invalidUpdates?: readonly Readonly<Record<string, unknown>>[];
+  /** An invalid business value that must be rejected before create/edit fetch. */
+  readonly clientInvalidValue?: {
+    readonly label: string;
+    readonly input: string;
+    readonly message: string;
+  };
   /** The field that must survive correction, conflicts, and final approval. */
   readonly correction?: {
     readonly key: string;
@@ -824,6 +832,13 @@ export type ApprovalCorrectionOptions = {
     readonly finalInput: string;
     readonly expectedFinalValue: string | number;
   };
+  /** Additional controls changed within the same returned-record correction. */
+  readonly finalCorrectionFields?: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly input: string;
+    readonly expectedValue: string | number;
+  }[];
   readonly evidence: string;
   readonly previewProject: string;
 };
@@ -962,6 +977,50 @@ export async function verifyApprovalCorrection(
       .selectOption(select.value);
 
   const createPath = `/api/${options.entity}`;
+  const verifyClientDenial = async (
+    scope: import("@playwright/test").Locator,
+    action: string,
+    method: string,
+    path: string,
+    restore: string,
+    name: string,
+  ) => {
+    const invalid = options.clientInvalidValue;
+    if (!invalid) return;
+    let writes = 0;
+    const observe = (request: import("@playwright/test").Request) => {
+      if (
+        request.method() === method &&
+        new URL(request.url()).pathname === path
+      )
+        writes += 1;
+    };
+    page.on("request", observe);
+    try {
+      await scope
+        .getByLabel(invalid.label, { exact: true })
+        .fill(invalid.input);
+      await scope.getByRole("button", { name: action, exact: true }).click();
+      await expect(scope.getByRole("alert")).toContainText(invalid.message);
+      expect(
+        writes,
+        "client-invalid business value does not issue a write",
+      ).toBe(0);
+      await capture(name, [390], scope, "form");
+      await scope.getByLabel(invalid.label, { exact: true }).fill(restore);
+    } finally {
+      page.off("request", observe);
+    }
+  };
+  if (options.clientInvalidValue)
+    await verifyClientDenial(
+      page.locator(".approval-form-card"),
+      options.createAction,
+      "POST",
+      createPath,
+      options.fields[options.clientInvalidValue.label]!,
+      "invalid-create",
+    );
   const createKeys: string[] = [];
   let created: RecordValue | undefined;
   const createPattern = `**${createPath}`;
@@ -1078,6 +1137,17 @@ export async function verifyApprovalCorrection(
     ).toBe(400);
     expect(await readRecord(id)).toMatchObject({ version: 0, status: "draft" });
   }
+  for (const values of options.invalidUpdates ?? []) {
+    const invalid = await page.request.patch(url(recordPath), {
+      headers: headers(options.requester),
+      data: { expectedVersion: 0, values },
+    });
+    expect(
+      invalid.status(),
+      "declared invalid business values are rejected",
+    ).toBe(400);
+    expect(await readRecord(id)).toMatchObject({ version: 0, status: "draft" });
+  }
   if (options.assertAuditorDenied) {
     const deniedCreate = await page.request.post(url(createPath), {
       headers: headers(options.auditor),
@@ -1162,6 +1232,14 @@ export async function verifyApprovalCorrection(
 
   // Two real concurrent requests race at the version this UI has already read.
   await row.getByRole("button", { name: "Edit", exact: true }).click();
+  await verifyClientDenial(
+    row,
+    "Save",
+    "PATCH",
+    recordPath,
+    correction.firstEditInput,
+    "invalid-edit",
+  );
   await edit
     .getByLabel(correction.label, { exact: true })
     .fill(correction.firstEditInput);
@@ -1351,6 +1429,8 @@ export async function verifyApprovalCorrection(
   await edit
     .getByLabel(correction.label, { exact: true })
     .fill(correction.finalInput);
+  for (const field of options.finalCorrectionFields ?? [])
+    await edit.getByLabel(field.label, { exact: true }).fill(field.input);
   const revised = waitCommand(recordPath, "PATCH");
   await edit.getByRole("button", { name: "Save", exact: true }).click();
   const revision = await revised;
@@ -1380,6 +1460,8 @@ export async function verifyApprovalCorrection(
     version: 7,
   });
   expect(recordValue(persistedApproval)).toBe(correction.expectedFinalValue);
+  for (const field of options.finalCorrectionFields ?? [])
+    expect(persistedApproval[field.key]).toBe(field.expectedValue);
   await role.selectOption(options.requester);
   await expect(
     row.getByRole("button", { name: "Edit", exact: true }),
