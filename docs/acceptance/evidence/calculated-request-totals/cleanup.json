@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-09-17T13:20:16.206Z",
+  "resources": [
+    {
+      "project": "factory-preview-calculated-runtime-20260917",
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    },
+    {
+      "project": "factory-preview-calculated-runtime-attempt2-20260917",
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    }
+  ],
+  "allOwnedResourcesRemoved": true
+}

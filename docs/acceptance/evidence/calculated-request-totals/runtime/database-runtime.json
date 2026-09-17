@@ -1,0 +1,17 @@
+{
+  "fixtureOnly": true,
+  "alternateSeedExact": true,
+  "seed": {
+    "quantity": 3,
+    "unitPrice": 0.07,
+    "total": 0.21
+  },
+  "invalidCreateCases": 15,
+  "exactCreateAndPartialCorrection": true,
+  "realPrismaPostWriteFailureRollsBackAllTables": true,
+  "raceHasOneWinner": true,
+  "trustedPrecisionReadTransitionReplayDenial": true,
+  "authorizedCorrectionRepair": true,
+  "originalReceiptSurvivesEditsAndRestart": true,
+  "modelCalls": 0
+}

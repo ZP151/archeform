@@ -591,3 +591,109 @@ it.each(['{"x":"\\ud800"}', '{"x":"\\udc00"}'])(
     ).toBe(1);
   },
 );
+
+describe("calculation definition semantics", () => {
+  function calculated() {
+    const data = candidate();
+    const positive = {
+      apiVersion: "factory.numeric-field-domain/v1" as const,
+      minimum: { value: 0, inclusive: false },
+    };
+    data.definitionKey = "calculated-fixture";
+    data.selection.providerGuide.definitionKey = data.definitionKey;
+    data.canonical.blueprint.entities[0]!.fields = [
+      { key: "item", label: "Item", type: "text", required: true },
+      {
+        key: "quantity",
+        label: "Quantity",
+        type: "number",
+        required: true,
+        numericDomain: positive,
+      },
+      {
+        key: "price",
+        label: "Price",
+        type: "currency",
+        required: true,
+        numericDomain: positive,
+      },
+      {
+        key: "total",
+        label: "Total",
+        type: "currency",
+        required: true,
+        calculation: {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+          quantityFieldKey: "quantity",
+          unitPriceFieldKey: "price",
+        },
+      },
+    ];
+    data.selection.providerGuide.entities = structuredClone(
+      data.canonical.blueprint.entities,
+    );
+    return data;
+  }
+  it("includes calculation semantics and normalizes equivalent field aliases", () => {
+    const a = calculated(),
+      b = calculated();
+    b.definitionKey = "renamed-calculated";
+    b.selection.providerGuide.definitionKey = b.definitionKey;
+    const fields = b.canonical.blueprint.entities[0]!.fields;
+    fields.forEach((field, index) => {
+      field.key = `renamed${index}`;
+    });
+    fields[3]!.calculation!.quantityFieldKey = "renamed1";
+    fields[3]!.calculation!.unitPriceFieldKey = "renamed2";
+    b.selection.providerGuide.entities = structuredClone(
+      b.canonical.blueprint.entities,
+    );
+    expect(semanticFingerprint(a)).toBe(semanticFingerprint(b));
+    const manual = calculated();
+    delete manual.canonical.blueprint.entities[0]!.fields[3]!.calculation;
+    manual.selection.providerGuide.entities = structuredClone(
+      manual.canonical.blueprint.entities,
+    );
+    expect(semanticFingerprint(a)).not.toBe(semanticFingerprint(manual));
+  });
+  it("keeps reviewed projected calculation immutable and denies guide rewriting", () => {
+    const a = calculated();
+    const entry = createDefinitionEntry(a);
+    const projected = entry.project({
+      definitionKey: a.definitionKey,
+      disposition: "supported-default",
+      requirementId: "calculated",
+      title: "Calculated",
+      outcome: "Review requests.",
+      materialQuestions: [],
+      businessParameters: null,
+    });
+    expect(projected.blueprint.entities[0]!.fields[3]!.calculation).toEqual(
+      a.canonical.blueprint.entities[0]!.fields[3]!.calculation,
+    );
+    projected.blueprint.entities[0]!.fields[3]!.calculation!.quantityFieldKey =
+      "changed";
+    expect(
+      entry.canonical().blueprint.entities[0]!.fields[3]!.calculation!
+        .quantityFieldKey,
+    ).toBe("quantity");
+    expect(() =>
+      entry.project({
+        definitionKey: a.definitionKey,
+        disposition: "supported-default",
+        requirementId: "calculated",
+        title: "Calculated",
+        outcome: "Review requests.",
+        materialQuestions: [],
+        businessParameters: null,
+        calculation: {},
+      }),
+    ).toThrow();
+
+    const drift = calculated();
+    (
+      drift.selection.providerGuide.entities as any[]
+    )[0].fields[3].calculation.unitPriceFieldKey = "quantity";
+    expect(() => createDefinitionEntry(drift)).toThrow();
+  });
+});

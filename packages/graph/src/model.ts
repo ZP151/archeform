@@ -1,3 +1,8 @@
+import {
+  quantityUnitPriceTotalSchema,
+  isCalculatedFieldSetValid,
+  createCalculatedRequestTotalRuntime,
+} from "./calculated-request-total.js";
 import { sha256HexUtf8 } from "./sha256.js";
 
 import { z } from "zod";
@@ -71,14 +76,34 @@ const domainModelSchema = z.object({
       key: identifier,
       label: z.string().min(1).max(120),
       fields: z.array(
-        z.object({
-          key: fieldKey,
-          type: fieldTypeSchema,
-          required: z.boolean(),
-          unique: z.boolean().optional(),
-          values: z.array(z.string().min(1)).min(1).optional(),
-          numericDomain: numericFieldDomainSchema.optional(),
-        }),
+        z.preprocess(
+          (input, context) => {
+            if (
+              input &&
+              typeof input === "object" &&
+              "calculation" in input &&
+              input.calculation !== undefined &&
+              ["default", "defaultValue", "input"].some((key) =>
+                Object.hasOwn(input, key),
+              )
+            )
+              context.addIssue({
+                code: z.ZodIssueCode.custom,
+                message:
+                  "Calculated fields cannot declare independent input or defaults.",
+              });
+            return input;
+          },
+          z.object({
+            key: fieldKey,
+            type: fieldTypeSchema,
+            required: z.boolean(),
+            unique: z.boolean().optional(),
+            values: z.array(z.string().min(1)).min(1).optional(),
+            numericDomain: numericFieldDomainSchema.optional(),
+            calculation: quantityUnitPriceTotalSchema.optional(),
+          }),
+        ),
       ),
       indexes: z.array(
         z.object({
@@ -493,6 +518,7 @@ export function parseApplicationGraph(input: unknown): ApplicationGraphV1 {
     ...ambiguousTypedSymbolIssues(graph),
     ...factoryOwnedRecordIdentityIssues(graph),
     ...numericFieldDomainIssues(graph),
+    ...calculatedRequestTotalIssues(graph),
     ...compositionGraphSymbolIssues(graph),
   ];
   if (parsingIssues.length > 0) {
@@ -677,6 +703,7 @@ export function validateApplicationGraph(
   issues.push(...ambiguousTypedSymbolIssues(graph));
   issues.push(...factoryOwnedRecordIdentityIssues(graph));
   issues.push(...numericFieldDomainIssues(graph));
+  issues.push(...calculatedRequestTotalIssues(graph));
 
   const pageIds = new Set(graph.page.pages.map((page) => page.id));
   for (const duplicate of duplicateValues(
@@ -985,4 +1012,86 @@ export function hashApplicationGraph(input: unknown): string {
   const graph = assertValidApplicationGraph(input);
   const canonicalJson = JSON.stringify(canonicalize(graph));
   return `sha256:${sha256HexUtf8(canonicalJson)}`;
+}
+
+function calculatedRequestTotalIssues(
+  graph: ApplicationGraphV1,
+): GraphValidationIssue[] {
+  const issues: GraphValidationIssue[] = [];
+  const runtime = createCalculatedRequestTotalRuntime();
+  graph.domain.entities.forEach((entity, entityIndex) => {
+    const outputs = entity.fields.filter((field) => field.calculation);
+    if (!outputs.length) return;
+    const forbidden = graph.domain.relations.flatMap((relation) => {
+      if (relation.kind === "many-to-many") return [];
+      if (relation.field)
+        return relation.from === entity.key ? [relation.field] : [];
+      const sourceIsOne =
+        relation.kind === "one-to-many" || relation.kind === "one-to-one";
+      const owner = sourceIsOne ? relation.to : relation.from;
+      const target = sourceIsOne ? relation.from : relation.to;
+      const targetField =
+        target
+          .split("-")
+          .filter(Boolean)
+          .map((part, index) =>
+            index ? part[0]!.toUpperCase() + part.slice(1) : part,
+          )
+          .join("") + "Id";
+      return owner === entity.key ? [targetField] : [];
+    });
+    const invalid =
+      !isCalculatedFieldSetValid(entity.fields, forbidden) ||
+      entity.indexes.some(
+        (index) =>
+          index.unique &&
+          outputs.some((output) => index.fields.includes(output.key)),
+      );
+    const path = ["domain", "entities", entityIndex, "fields"];
+    if (invalid) {
+      issues.push({
+        code: "domain.field.calculation_invalid",
+        message: "Invalid calculated request total field relationships.",
+        path,
+      });
+      return;
+    }
+    const output = outputs[0]!,
+      rule = output.calculation!;
+    const quantity = entity.fields.find(
+        (field) => field.key === rule.quantityFieldKey,
+      )!,
+      price = entity.fields.find(
+        (field) => field.key === rule.unitPriceFieldKey,
+      )!;
+    const rows = (graph.domain.seedData ?? []).filter(
+      (row) => row.entity === entity.key,
+    );
+    if (!rows.length)
+      issues.push({
+        code: "domain.seed.calculation_witness_missing",
+        message: "Calculated request total requires a coherent seed witness.",
+        path,
+      });
+    (graph.domain.seedData ?? []).forEach((row, index) => {
+      if (row.entity !== entity.key) return;
+      const q = row.values[quantity.key],
+        p = row.values[price.key],
+        t = row.values[output.key];
+      const expected = runtime.calculate(
+        q,
+        p,
+        quantity.numericDomain!,
+        price.numericDomain!,
+      );
+      if (typeof t !== "number" || expected === null || expected !== t)
+        issues.push({
+          code: "domain.seed.calculation_invalid",
+          message:
+            "Calculated seed values must contain a coherent exact total.",
+          path: ["domain", "seedData", index, "values"],
+        });
+    });
+  });
+  return issues;
 }

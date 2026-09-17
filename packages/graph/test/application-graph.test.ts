@@ -1182,3 +1182,98 @@ describe("ApplicationGraphV1", () => {
     });
   });
 });
+
+describe("Calculated Graph fields", () => {
+  const positive = {
+    apiVersion: "factory.numeric-field-domain/v1" as const,
+    minimum: { value: 0, inclusive: false },
+  };
+  function calculated() {
+    const g = structuredClone(expenseGraph);
+    g.domain.entities[0]!.fields = [
+      {
+        key: "quantity",
+        type: "integer",
+        required: true,
+        numericDomain: positive,
+      },
+      {
+        key: "price",
+        type: "decimal",
+        required: true,
+        numericDomain: positive,
+      },
+      {
+        key: "total",
+        type: "decimal",
+        required: true,
+        calculation: {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+          quantityFieldKey: "quantity",
+          unitPriceFieldKey: "price",
+        },
+      },
+    ];
+    g.domain.seedData = [
+      {
+        entity: g.domain.entities[0]!.key,
+        values: { quantity: 3, price: 0.1, total: 0.3 },
+      },
+    ];
+    return g;
+  }
+  it("preserves a valid calculation while stripping unrelated field keys", () => {
+    const g = calculated();
+    Object.assign(g.domain.entities[0]!.fields[2]!, { unknown: true });
+    const parsed = parseApplicationGraph(g);
+    expect(parsed.domain.entities[0]!.fields[2]).toHaveProperty("calculation");
+    expect(parsed.domain.entities[0]!.fields[2]).not.toHaveProperty("unknown");
+  });
+  it("rejects implicit relation foreign keys as calculation operands", () => {
+    const g = calculated(),
+      entity = g.domain.entities[0]!;
+    const foreignKey = entity.key + "Id";
+    entity.fields[0]!.key = foreignKey;
+    entity.fields[2]!.calculation!.quantityFieldKey = foreignKey;
+    g.domain.seedData![0]!.values[foreignKey] = 3;
+    delete g.domain.seedData![0]!.values.quantity;
+    g.domain.relations.push({
+      from: entity.key,
+      to: entity.key,
+      kind: "many-to-one",
+    });
+    expect(() => parseApplicationGraph(g)).toThrow();
+  });
+  it.each([
+    "wrong-total",
+    "missing-total",
+    "missing-row",
+    "unique",
+    "relation",
+    "output-domain",
+    "output-default",
+    "missing-reference",
+    "extra-key",
+  ])("rejects %s", (kind) => {
+    const g = calculated(),
+      output = g.domain.entities[0]!.fields[2]!;
+    if (kind === "wrong-total") g.domain.seedData![0]!.values.total = 0.31;
+    if (kind === "missing-total") delete g.domain.seedData![0]!.values.total;
+    if (kind === "missing-row") g.domain.seedData = [];
+    if (kind === "unique") output.unique = true;
+    if (kind === "relation")
+      g.domain.relations.push({
+        from: g.domain.entities[0]!.key,
+        to: g.domain.entities[0]!.key,
+        kind: "many-to-one",
+        field: "quantity",
+      });
+    if (kind === "output-domain") output.numericDomain = positive;
+    if (kind === "output-default") Object.assign(output, { default: 99 });
+    if (kind === "missing-reference")
+      output.calculation!.quantityFieldKey = "missing";
+    if (kind === "extra-key")
+      Object.assign(output.calculation!, { extra: true });
+    expect(() => parseApplicationGraph(g)).toThrow();
+  });
+});

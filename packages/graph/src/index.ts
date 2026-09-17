@@ -413,3 +413,9 @@ export function applyGraphDiffToDraft(
     graph: assertValidApplicationGraph(next),
   };
 }
+
+export {
+  quantityUnitPriceTotalSchema,
+  createCalculatedRequestTotalRuntime,
+  type QuantityUnitPriceTotalV1,
+} from "./calculated-request-total.js";

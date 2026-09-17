@@ -33,6 +33,7 @@ export function currentDefinitionDataCompatibility(
     current: readonly GeneratedFile[],
     historicalComparison: readonly GeneratedFile[],
   ) => void,
+  comparison: "historical-identifiers" | "current" = "historical-identifiers",
 ) {
   return historicalKeys.map((key) => {
     const entry = definitionSelectionCatalogue.find(
@@ -88,10 +89,10 @@ export function currentDefinitionDataCompatibility(
         graph: inputGraph,
         compositionLock,
       }).files;
-      const historicalComparison = definitionDatabaseIdentifierComparison(
-        files,
-        key,
-      );
+      const historicalComparison =
+        comparison === "current"
+          ? files
+          : definitionDatabaseIdentifierComparison(files, key);
       inspectBundle?.(key, files, historicalComparison);
       return {
         fileCount: files.length,

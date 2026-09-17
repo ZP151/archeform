@@ -9,6 +9,29 @@ import {
 } from "./fixtures/legacy-database-identifiers.js";
 
 describe("Product definition data compatibility", () => {
+  it("preserves all six delivered definitions and current Published bytes from 436484fc", () => {
+    const baselineBytes = readFileSync(
+      new URL("./fixtures/six-definition-baseline.json", import.meta.url),
+      "utf8",
+    );
+    expect(createHash("sha256").update(baselineBytes).digest("hex")).toBe(
+      "b88e5c9f21907b382d09b877b2208e90aab087b12bd2b365d7aa94cf48ec62e8",
+    );
+    const expected = JSON.parse(baselineBytes);
+    expect(expected.base).toBe("436484fc71f63adf11e8f48938bc5983ac42ca41");
+    expect(expected.comparison).toBe("current-generated-bytes");
+    expect(expected.entries).toHaveLength(6);
+    expect(
+      currentDefinitionDataCompatibility(
+        expected.entries.map(
+          (entry: { definitionKey: string }) => entry.definitionKey,
+        ),
+        undefined,
+        "current",
+      ),
+    ).toEqual(expected.entries);
+  });
+
   it("preserves all five delivered definitions and complete Published bundles from bbb1e23c", () => {
     const baselineBytes = readFileSync(
       new URL("./fixtures/five-definition-baseline.json", import.meta.url),

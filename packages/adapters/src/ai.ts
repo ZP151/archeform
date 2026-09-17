@@ -344,11 +344,14 @@ function validateProposal(
       !!value &&
       typeof value === "object" &&
       (Object.hasOwn(value, "numericDomain") ||
+        Object.hasOwn(value, "calculation") ||
         Object.values(value).some(containsNumericPolicy));
     if (
       proposal.diff.operations.some(
         (operation) =>
-          operation.path.split("/").includes("numericDomain") ||
+          operation.path
+            .split("/")
+            .some((key) => key === "numericDomain" || key === "calculation") ||
           (operation.op !== "remove" && containsNumericPolicy(operation.value)),
       )
     )
@@ -360,13 +363,14 @@ function validateProposal(
     const policies = (value: ApplicationGraphV1) =>
       value.domain.entities.flatMap((entity) =>
         entity.fields
-          .filter((field) => field.numericDomain)
+          .filter((field) => field.numericDomain || field.calculation)
           .map((field) => ({
             entity: entity.key,
             key: field.key,
             type: field.type,
             required: field.required,
             numericDomain: field.numericDomain,
+            calculation: field.calculation,
           })),
       );
     if (

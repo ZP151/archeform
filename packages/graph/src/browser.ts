@@ -8,3 +8,9 @@ export * from "./application-graph-v3.js";
 export * from "./draft-preview-snapshot.js";
 export * from "./draft-preview-snapshot-v2.js";
 export * from "./application-graph-adapter.js";
+
+export {
+  quantityUnitPriceTotalSchema,
+  createCalculatedRequestTotalRuntime,
+  type QuantityUnitPriceTotalV1,
+} from "./calculated-request-total.js";

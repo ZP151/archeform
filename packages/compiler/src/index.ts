@@ -1,4 +1,10 @@
 import {
+  selectCalculatedApproval,
+  renderCalculatedPage,
+  calculatedRuntimeFiles,
+  calculatedApprovalStyles,
+} from "./approval-calculated-total.js";
+import {
   selectNumericApproval,
   renderNumericDomainChecks,
 } from "./approval-numeric-domain.js";
@@ -2800,8 +2806,12 @@ function renderPageRuntime(
           (types as readonly string[]).includes(field.type),
       ),
     );
-  const numericIdentity = selectNumericApproval(graph, correctionEntity);
+  const calculatedIdentity = selectCalculatedApproval(graph, correctionEntity);
+  const numericIdentity = calculatedIdentity
+    ? undefined
+    : selectNumericApproval(graph, correctionEntity);
   const recordIdentity =
+    calculatedIdentity ??
     numericIdentity ??
     (correctionEntity &&
     approvalEntity?.key === correctionEntity &&
@@ -2831,6 +2841,7 @@ function renderPageRuntime(
           key: field.key,
           required: field.required,
           type: field.type,
+          ...(field.calculation ? { calculation: field.calculation } : {}),
           ...(field.numericDomain
             ? { numericDomain: field.numericDomain }
             : {}),
@@ -2910,9 +2921,11 @@ function renderPageRuntime(
           "}",
           ...(recordIdentity
             ? [
-                numericIdentity
-                  ? "// approval-record-identity/v2; approval-decision-history@1.1.0"
-                  : "// approval-record-identity/v1; approval-decision-history@1.1.0",
+                calculatedIdentity
+                  ? "// approval-record-identity/v3; approval-decision-history@1.1.0"
+                  : numericIdentity
+                    ? "// approval-record-identity/v2; approval-decision-history@1.1.0"
+                    : "// approval-record-identity/v1; approval-decision-history@1.1.0",
                 `const approvalRecordIdentity = Object.freeze({ entityKey: ${JSON.stringify(recordIdentity.entityKey)}, titleFieldKey: ${JSON.stringify(recordIdentity.titleFieldKey)}, summaryFieldKeys: Object.freeze(${JSON.stringify(recordIdentity.summaryFieldKeys)}) });`,
                 "function selectRecordTitleField(fields: readonly RuntimeField[], entityKey: string): RuntimeField | undefined {",
                 "  return entityKey === approvalRecordIdentity.entityKey ? fields.find((field) => field.key === approvalRecordIdentity.titleFieldKey) : undefined;",
@@ -2957,7 +2970,7 @@ function renderPageRuntime(
           "  ];",
           "  return semanticMatches.length === 1 ? semanticMatches[0]! : 'neutral';",
           "}",
-          renderWorkspaceDataHelpers(!!numericIdentity),
+          renderWorkspaceDataHelpers(!!numericIdentity || !!calculatedIdentity),
           "function validTransitions(role: string, entityKey: string, recordStatus: unknown) {",
           "  const seen = new Set<string>();",
           "  return definition.flow.flows.filter((flow) => flow.entity === entityKey).flatMap((flow) => flow.transitions).filter((transition) => {",
@@ -3370,8 +3383,8 @@ function renderPageRuntime(
           "className='approval-summary-support'",
         )
     : source;
-  return renderApprovalCorrectionPage(
-    numericIdentity
+  const correctedSource = renderApprovalCorrectionPage(
+    numericIdentity || calculatedIdentity
       ? presentedSource
           .replace(
             "type JsonRecord =",
@@ -3386,7 +3399,11 @@ function renderPageRuntime(
     correctionEntity,
     !!recordIdentity,
     !!numericIdentity,
+    !!calculatedIdentity,
   );
+  return calculatedIdentity
+    ? renderCalculatedPage(correctedSource)
+    : correctedSource;
 }
 
 function renderWebProxyRoute(
@@ -3513,6 +3530,9 @@ function renderWebStyles(
             : []),
           approvalDecisionHistoryStyles,
           approvalPresentationComponentStyles,
+          ...(selectCalculatedApproval(graph, approvalEntity)
+            ? [calculatedApprovalStyles]
+            : []),
         ]
       : []),
     "",
@@ -3805,6 +3825,15 @@ export function buildCompilationInput(
   options: GenerateApplicationBundleOptions = {},
 ): PublishedCompilationInput {
   const graph = assertValidApplicationGraph(input.graph);
+  if (
+    graph.domain.entities.some((entity) =>
+      entity.fields.some((field) => field.calculation),
+    )
+  )
+    selectCalculatedApproval(
+      graph,
+      selectApprovalCorrection(graph, input.compositionLock),
+    );
   // A Published Graph deliberately does not retain mutable Draft selections.
   // The Compiler materializes a private lock view for Profile-specific
   // renderers from the separately validated immutable composition lock. It
@@ -3905,7 +3934,8 @@ export function generateApplicationBundle(
   const compilationInput = buildCompilationInput(input, options);
   const graph = compilationInput.graph;
   const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
-  selectNumericApproval(graph, approvalEntity);
+  const calculatedApproval = selectCalculatedApproval(graph, approvalEntity);
+  if (!calculatedApproval) selectNumericApproval(graph, approvalEntity);
   const taskEntity = selectTaskContract(graph, input.compositionLock);
   const rendererGraph = compilationInput.rendererGraph;
   const presentationProfile = taskEntity
@@ -4240,8 +4270,12 @@ export function generateApplicationBundle(
               strict: true,
               experimentalDecorators: true,
               emitDecoratorMetadata: true,
+              ...(calculatedApproval ? { allowJs: true } : {}),
             },
-            include: ["src/**/*.ts"],
+            include: [
+              "src/**/*.ts",
+              ...(calculatedApproval ? ["src/**/*.js"] : []),
+            ],
           },
           null,
           2,
@@ -4273,6 +4307,7 @@ export function generateApplicationBundle(
           hasTaskCorrection(graph, taskEntity),
         ),
     },
+    ...(calculatedApproval ? calculatedRuntimeFiles() : []),
     ...(restaurantRuntimeEnabled
       ? [
           {

@@ -52,6 +52,17 @@ retain clear words. Apply the [assembly guide](../design/generated-ui-assembly.m
 to future recipes and interpretation/configuration changes. These checks are part
 of the existing review and add no separate gate.
 
+When a summary contains several numeric values, people must be able to distinguish
+their meanings without opening an editor. Keep meaningful quantity, unit-price
+and total labels visibly readable, with appropriate emphasis for the outcome.
+Check computed clipping and geometry as well as DOM text: an accessible label
+hidden by a one-pixel style does not establish visual comprehension. Preserve
+declared units and avoid inventing currency. Derived fields must be read-only,
+preview from valid operands and show the saved authoritative result after reload.
+For changed numeric persistence behavior, prove the actual database adapter and
+seed path with precision-sensitive values and transactional rollback; in-memory
+arithmetic alone is insufficient. Reuse this shared evidence for unchanged rows.
+
 ## Required acceptance dimensions
 
 | Dimension                          | Observable acceptance condition                                                                                                                                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                                                                                               |

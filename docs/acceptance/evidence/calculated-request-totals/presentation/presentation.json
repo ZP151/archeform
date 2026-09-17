@@ -1,0 +1,38 @@
+{
+  "fixtureOnly": true,
+  "facts": [
+    {
+      "width": 390,
+      "theme": "light",
+      "labelsVisible": true
+    },
+    {
+      "width": 768,
+      "theme": "light",
+      "labelsVisible": true
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "labelsVisible": true
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "labelsVisible": true
+    },
+    {
+      "width": 768,
+      "theme": "dark",
+      "labelsVisible": true
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "labelsVisible": true
+    }
+  ],
+  "totalEmphasized": true,
+  "previewUsesOrdinaryLanguage": true,
+  "unchangedApiEvidenceReused": true
+}

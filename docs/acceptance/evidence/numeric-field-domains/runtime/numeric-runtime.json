@@ -11,9 +11,5 @@
   "invalidClientEditFetches": 0,
   "correctionRecordId": "cmu4f6gfb0005lx01bev88gls",
   "modelCalls": 0,
-  "responsiveWidths": [
-    390,
-    768,
-    1440
-  ]
+  "responsiveWidths": [390, 768, 1440]
 }

@@ -1,0 +1,51 @@
+{
+  "recordedAt": "2026-09-17T13:18:39.988Z",
+  "fixtureOnly": true,
+  "graphHash": "sha256:3ed63637a82a0324d3942302bb0e384c8bb15445cd7b4a73a078fb0fb60232e9",
+  "files": 67,
+  "allGeneratedFilesIdentical": true,
+  "actualRuntimeSources": [
+    {
+      "path": "api/src/application-runtime.ts",
+      "imageId": "sha256:ae84643a7e1d0db7760ce1f9ee16457130bb507b2052e751f9a56e7f4bedda1d",
+      "sourceHash": "3a5337d0d32a229b9cea41902d5a3b979bde0e32fcd4254daf245921f6382130",
+      "matches": true
+    },
+    {
+      "path": "api/src/prisma-record-store.ts",
+      "imageId": "sha256:ae84643a7e1d0db7760ce1f9ee16457130bb507b2052e751f9a56e7f4bedda1d",
+      "sourceHash": "1377ded314cf3aa0f355d22c5220333e4306dccf108d11c21d20639cd008c2bb",
+      "matches": true
+    },
+    {
+      "path": "api/src/calculated-request-total.js",
+      "imageId": "sha256:ae84643a7e1d0db7760ce1f9ee16457130bb507b2052e751f9a56e7f4bedda1d",
+      "sourceHash": "8d6671fbb14319ea0141eb09885b1321cffdfed02df4da4183c5de7f756ba52c",
+      "matches": true
+    },
+    {
+      "path": "web/app/page-runtime.tsx",
+      "imageId": "sha256:358660b8099fa6a123fc1fa6df4d6d25101d87250be92864871917e35d0ab8dd",
+      "sourceHash": "7cbd1e91b7ae51a884bc6f9ed900b2832d1e6ea63a06d49d9858b1ddc709d00f",
+      "matches": true
+    },
+    {
+      "path": "web/app/globals.css",
+      "imageId": "sha256:358660b8099fa6a123fc1fa6df4d6d25101d87250be92864871917e35d0ab8dd",
+      "sourceHash": "072a8f193d7101ec29d91a2f4bf9bd4156743b63c539173b05adcfaed6a75602",
+      "matches": true
+    },
+    {
+      "path": "web/app/calculated-request-total.js",
+      "imageId": "sha256:358660b8099fa6a123fc1fa6df4d6d25101d87250be92864871917e35d0ab8dd",
+      "sourceHash": "8d6671fbb14319ea0141eb09885b1321cffdfed02df4da4183c5de7f756ba52c",
+      "matches": true
+    }
+  ],
+  "unchangedApiAndSeed": true,
+  "changedFromDatabaseAttempt3": [
+    "web/app/page-runtime.tsx",
+    "web/app/globals.css"
+  ],
+  "scope": "Database and full correction passed in attempt 3. The final UI-only confirmation changes exactly two web files; API, exact arithmetic and seed outputs remain byte-identical. No consumer admission or real-model claim."
+}

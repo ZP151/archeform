@@ -1,3 +1,7 @@
+import {
+  quantityUnitPriceTotalSchema,
+  isCalculatedFieldSetValid,
+} from "./calculated-request-total.js";
 import { z } from "zod";
 import {
   isNumericFieldDomainValidForType,
@@ -109,6 +113,7 @@ const blueprintEntityFieldSchema = z
     options: z.array(safeBusinessTextSchema.max(160)).min(2).max(50).optional(),
     referenceTo: identifierSchema.optional(),
     numericDomain: numericFieldDomainSchema.optional(),
+    calculation: quantityUnitPriceTotalSchema.optional(),
   })
   .strict();
 
@@ -330,6 +335,10 @@ export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
 
   for (const entity of blueprint.entities) {
     assertUniqueKeys(entity.fields, `field`);
+    if (!isCalculatedFieldSetValid(entity.fields))
+      throw new CompositionError(
+        "Invalid calculated request total field relationships.",
+      );
     for (const field of entity.fields) {
       assertFieldShape(field, entity.key, entityKeys);
     }

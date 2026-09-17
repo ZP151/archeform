@@ -510,7 +510,10 @@ function slotsFor(entry: ProductDefinitionData): Slots {
     workflows: new Map([[f.key, "lifecycle"]]),
   };
 }
-function semanticBlueprint(entry: ProductDefinitionData) {
+function semanticBlueprint(
+  entry: ProductDefinitionData,
+  normalizeCalculatedFields = false,
+) {
   const b = entry.canonical.blueprint,
     m = slotsFor(entry),
     role = (s: string) => m.roles.get(s) ?? s,
@@ -527,12 +530,29 @@ function semanticBlueprint(entry: ProductDefinitionData) {
     })),
     entities: b.entities.map((e) => ({
       slot: entity(e.key),
-      fields: e.fields.map((f) => ({
-        key: f.key,
+      fields: e.fields.map((f, index) => ({
+        key:
+          normalizeCalculatedFields &&
+          e.fields.some((field) => field.calculation)
+            ? `field-${index}`
+            : f.key,
         type: f.type,
         required: f.required,
         ...(f.options ? { options: f.options } : {}),
         ...(f.numericDomain ? { numericDomain: f.numericDomain } : {}),
+        ...(f.calculation
+          ? {
+              calculation: {
+                ...f.calculation,
+                quantityFieldKey: normalizeCalculatedFields
+                  ? `field-${e.fields.findIndex((field) => field.key === f.calculation!.quantityFieldKey)}`
+                  : f.calculation.quantityFieldKey,
+                unitPriceFieldKey: normalizeCalculatedFields
+                  ? `field-${e.fields.findIndex((field) => field.key === f.calculation!.unitPriceFieldKey)}`
+                  : f.calculation.unitPriceFieldKey,
+              },
+            }
+          : {}),
         ...(f.referenceTo ? { referenceTo: entity(f.referenceTo) } : {}),
       })),
     })),
@@ -1210,7 +1230,7 @@ export function validateFamilyDefinition(
   if (
     entry.familyBinding.key !== "approval" &&
     entry.canonical.blueprint.entities.some((e) =>
-      e.fields.some((f) => f.numericDomain),
+      e.fields.some((f) => f.numericDomain || f.calculation),
     )
   )
     reasons.push("definition.unsupported-semantics");
@@ -1254,7 +1274,7 @@ export function semanticFingerprint(entry: ProductDefinitionData): string {
       actorKey: role(entry.primaryJob.actorKey),
       entityKey: entity(entry.primaryJob.entityKey),
     },
-    blueprint: semanticBlueprint(entry),
+    blueprint: semanticBlueprint(entry, true),
     journeys: {
       correction: cases(entry.journeys.correction),
       failure: cases(entry.journeys.failure),

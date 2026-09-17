@@ -1,4 +1,8 @@
 import {
+  selectCalculatedApproval,
+  renderCalculatedTrustedRecord,
+} from "./approval-calculated-total.js";
+import {
   numericApprovalWitness,
   renderNumericDomainChecks,
   renderTrustedNumericRecord,
@@ -322,6 +326,20 @@ export function renderApprovalMutationRuntime(
   );
   const fields = graph.domain.entities.find((e) => e.key === entity)!.fields;
   const numeric = fields.some((field) => field.numericDomain);
+  const calculated = selectCalculatedApproval(graph, entity);
+  if (calculated) {
+    protection.replay = protection.replay.replace(
+      "return {status:receipt.responseStatus",
+      "validateTrustedApprovalRecord(receipt.responseBody); return {status:receipt.responseStatus",
+    );
+    protection.transactionStart = protection.transactionStart.replace(
+      "if(existing) return replay(existing);",
+      "if(existing) { if(!['create','update'].includes(operation)) {const current=recordId?await store.find(entityKey,recordId):undefined;if(!current)failApproval(404,'approval.not_found');validateTrustedApprovalRecord(current);}return replay(existing);}",
+    );
+    protection.conditionalWrite =
+      "        if(operation==='update')values=deriveApprovalValues(values,current);else validateTrustedApprovalRecord(current);\n" +
+      protection.conditionalWrite;
+  }
   source = 'import { createHash } from "node:crypto";\n' + source;
   source = replace(
     source,
@@ -334,7 +352,7 @@ export function renderApprovalMutationRuntime(
     `export type ApprovalMutationReceipt = { scope: string; idempotencyKey: string; requestHash: string; operation: string; recordId: string; responseStatus: number; responseBody: StoredRecord };
 export class ApprovalMutationError extends Error { constructor(readonly status: number, readonly body: Record<string, unknown>) { super('Approval request rejected.'); } }
 const approvalEntity = ${JSON.stringify(entity)};
-const approvalFields = ${JSON.stringify(fields)} as readonly {key:string;type:string;required?:boolean;values?:readonly string[]${numeric ? ";numericDomain?:NumericDomain" : ""}}[];${numeric ? "\n" + renderNumericDomainChecks() + renderTrustedNumericRecord() : ""}
+const approvalFields = ${JSON.stringify(fields)} as readonly {key:string;type:string;required?:boolean;values?:readonly string[]${calculated ? ";calculation?:CalculatedRule" : ""}${numeric ? ";numericDomain?:NumericDomain" : ""}}[];${numeric ? "\n" + renderNumericDomainChecks() + (calculated ? renderCalculatedTrustedRecord() : renderTrustedNumericRecord()) : ""}
 // factory.generated.approval-mutation/v1
 function failApproval(status:number,code:string,current?:StoredRecord):never { throw new ApprovalMutationError(status,{code,...(current?{current:{id:current.id,status:current.status,version:current.version}}:{})}); }
 function plainApproval(value:unknown): asserts value is Record<string,unknown> {
@@ -346,7 +364,7 @@ function approvalValues(value:unknown,create:boolean${numeric ? ",trustedDecimal
  plainApproval(value); if(!create && Object.keys(value).length===0) failApproval(400,'approval.invalid_request');
  const fields=approvalFields.filter(f=>!['id','status','version','createdAt','updatedAt'].includes(f.key));
  for(const [key,v] of Object.entries(value)) {
-  const f=fields.find(f=>f.key===key); if(!f) failApproval(400,'approval.invalid_request');
+  const f=fields.find(f=>f.key===key); if(!f${calculated ? " || f.calculation&&!trustedDecimalDomains" : ""}) failApproval(400,'approval.invalid_request');
   if(v===null) { if(f.required) failApproval(400,'approval.invalid_request'); continue; }
   let valid=false;
   if(['string','text','url','email','enum','date','datetime'].includes(f.type)) {
@@ -361,7 +379,7 @@ function approvalValues(value:unknown,create:boolean${numeric ? ",trustedDecimal
   else if(f.type==='json') { const check=(x:unknown):boolean=> x===null || typeof x==='string' || typeof x==='boolean' || (typeof x==='number' && Number.isFinite(x)) || (Array.isArray(x)?x.every(check):!!x && typeof x==='object' && (plainApproval(x),Object.values(x).every(check))); valid=check(v); }
 ${numeric ? "  if(f.numericDomain && !(trustedDecimalDomains && f.type==='decimal') && !numericDomainAllows(v,f.type,f.numericDomain)) throw new ApprovalMutationError(400,{code:'approval.invalid_request',fieldErrors:{[f.key]:numericDomainMessage(f.key,f.numericDomain)}});\n" : ""}  if(!valid) failApproval(400,'approval.invalid_request');
  }
- if(create && fields.some(f=>f.required&&!Object.hasOwn(value,f.key))) failApproval(400,'approval.invalid_request');
+ if(create && fields.some(f=>f.required${calculated ? "&&(!f.calculation||trustedDecimalDomains)" : ""}&&!Object.hasOwn(value,f.key))) failApproval(400,'approval.invalid_request');
  return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,v!==null && ['date','datetime'].includes(fields.find(f=>f.key===key)!.type) ? new Date(v as string).toISOString() : structuredClone(v)]));
 }
 export interface RecordStore {
@@ -417,7 +435,7 @@ ${protection.identity}
 ${protection.replay}
 ${numeric ? protection.transactionStart.replace("if(existing) return replay(existing);", "if(existing) { if(operation==='submit') { const current=recordId?await store.find(entityKey,recordId):undefined; if(!current) failApproval(404,'approval.not_found'); validateTrustedApprovalRecord(current); } return replay(existing); }") : protection.transactionStart}
       let record:StoredRecord; let effects:readonly {capability:string;operation:string}[]=[];
-      if(operation==='create') { record=await store.create(entityKey,{...values,status:'draft',version:0}); }
+      if(operation==='create') { ${calculated ? "values=deriveApprovalValues(values); " : ""}record=await store.create(entityKey,{...values,status:'draft',version:0}); }
       else {
         const current=recordId?await store.find(entityKey,recordId):undefined; if(!current) failApproval(404,'approval.not_found');
         if(current.version!==body.expectedVersion) failApproval(409,'approval.version_conflict',current);
@@ -426,7 +444,7 @@ ${numeric ? protection.transactionStart.replace("if(existing) return replay(exis
         else { const transition=this.flow(entityKey)?.transitions.find(t=>t.event===operation && t.from===status && t.roles?.includes(role)); if(!transition || operation==='update' && status!=='returned') failApproval(403,'approval.denied'); status=transition.to; effects=transition.effects??[]; }
 ${numeric ? "        if(operation==='submit') validateTrustedApprovalRecord(current);\n" : ""}${protection.conditionalWrite}
       }
-${numeric ? "      if(operation==='create'||operation==='update') validateTrustedApprovalRecord(record);\n" : ""}      const at=new Date().toISOString();
+${calculated ? "      validateTrustedApprovalRecord(record);\n" : numeric ? "      if(operation==='create'||operation==='update') validateTrustedApprovalRecord(record);\n" : ""}      const at=new Date().toISOString();
       await store.appendAudit({actor:role,action:operation,entity:entityKey,recordId:record.id,reason,at});
       for(const effect of effects) {
         this.assertCapability(effect.capability,effect.operation);
@@ -443,7 +461,7 @@ ${protection.transactionRetry}
   async approvalDecisionEvents(role:string,entity:string,recordId:string):Promise<readonly AuditEvent[]> {
     if(entity!==approvalEntity) failApproval(404,'approval.not_found');
     if(!(await enforce(role,entity,'read'))) failApproval(403,'approval.denied');
-    if(!await this.store.find(entity,recordId)) failApproval(404,'approval.not_found');
+    ${calculated ? "const current=await this.store.find(entity,recordId);if(!current)failApproval(404,'approval.not_found');validateTrustedApprovalRecord(current);" : "if(!await this.store.find(entity,recordId)) failApproval(404,'approval.not_found');"}
     return (await this.store.listAudit()).filter(e=>e.entity===entity && e.recordId===recordId && ['approve','reject'].includes(e.action)).map(e=>({actor:e.actor,action:e.action,entity:e.entity,recordId:e.recordId,reason:e.reason??null,at:e.at}));
   }`,
   );
@@ -478,6 +496,18 @@ ${protection.transactionRetry}
     "    return this.store.listAudit();",
     "    return (await this.store.listAudit()).map(e=>({actor:e.actor,action:e.action,entity:e.entity,recordId:e.recordId,reason:e.reason??null,at:e.at}));",
   );
+  if (calculated) {
+    source = replace(
+      source,
+      "    await this.assertAllowed(role, entityKey, 'read');",
+      "    await this.assertAllowed(role, entityKey, 'read');\n    if(entityKey===approvalEntity)return (await this.store.list(entityKey)).map(projectCalculatedRecord);",
+    );
+    source = replace(
+      source,
+      "    if (!record) throw new Error(`Record '${recordId}' was not found.`);\n    return record;",
+      "    if (!record) throw new Error(`Record '${recordId}' was not found.`);\n    return entityKey===approvalEntity?projectCalculatedRecord(record):record;",
+    );
+  }
   return source;
 }
 export function renderApprovalPrismaStore(
@@ -486,6 +516,19 @@ export function renderApprovalPrismaStore(
   entity = selectApprovalCorrection(graph),
 ): string {
   if (!entity) return source;
+  const calculated = selectCalculatedApproval(graph, entity);
+  if (calculated) {
+    source = replace(
+      source,
+      'import { PrismaClient } from "@prisma/client";',
+      'import { Prisma, PrismaClient } from "@prisma/client";',
+    );
+    source = replace(
+      source,
+      "function asStoredRecord(value: unknown): StoredRecord { return value as StoredRecord; }",
+      "function asStoredRecord(value: unknown): StoredRecord { return Object.fromEntries(Object.entries(value as Record<string,unknown>).map(([key,entry])=>[key,entry instanceof Prisma.Decimal?entry.toString():entry])) as StoredRecord; }",
+    );
+  }
   const protection = writeProtectionFragments(
     "approval",
     hashApplicationGraph(graph),
@@ -515,6 +558,32 @@ export function renderApprovalPrismaStore(
     "operation(new PrismaRecordStore(client)));",
     "operation(new PrismaRecordStore(client)),{isolationLevel:'Serializable'});",
   );
+  if (calculated) {
+    source = replace(
+      source,
+      "function asStoredRecord(value: unknown): StoredRecord {",
+      `// Preserve canonical decimal wire values before Prisma's number-to-decimal conversion.
+function calculatedPrismaValues(entity:string,values:Record<string,unknown>):Record<string,unknown> {
+ if(entity!==${JSON.stringify(entity)})return values;
+ return Object.fromEntries(Object.entries(values).map(([key,value])=>[key,${JSON.stringify([calculated.price.key, calculated.output.key])}.includes(key)&&typeof value==='number'&&Number.isFinite(value)?String(value):value]));
+}
+function asStoredRecord(value: unknown): StoredRecord {`,
+    );
+    source = source.replaceAll(
+      "{ data: input }",
+      "{ data: calculatedPrismaValues(entityKey,input) }",
+    );
+    source = replace(
+      source,
+      "data: input }));",
+      "data: calculatedPrismaValues(entityKey,input) }));",
+    );
+    source = replace(
+      source,
+      "data:values});",
+      "data:calculatedPrismaValues(entity,values)});",
+    );
+  }
   return source;
 }
 export const approvalReceiptSchema = `model ApprovalMutationReceipt {
@@ -605,12 +674,13 @@ export function renderApprovalCorrectionPage(
   entity = selectApprovalCorrection(graph),
   genericIdentity = false,
   numericIdentity = false,
+  calculatedIdentity = false,
 ): string {
   if (!entity) return source;
   source = replace(
     source,
     "type JsonRecord =",
-    `// approval-workspace-presentation@${numericIdentity ? "2.3.0" : genericIdentity ? "2.2.0" : "2.1.0"}; approval-presentation-components@1.1.0; approval-visual-assets@1.1.0
+    `// approval-workspace-presentation@${calculatedIdentity ? "2.4.0" : numericIdentity ? "2.3.0" : genericIdentity ? "2.2.0" : "2.1.0"}; approval-presentation-components@1.1.0; approval-visual-assets@1.1.0
 const correctionEntity = ${JSON.stringify(entity)};
 type JsonRecord =`,
   );
@@ -750,6 +820,7 @@ export function renderApprovalJourney(
 ): string | undefined {
   if (!key) return undefined;
   const entity = graph.domain.entities.find((e) => e.key === key)!;
+  const calculated = selectCalculatedApproval(graph, key);
   const flow = graph.flow.flows[0]!;
   const requester = flow.transitions.find((t) => t.event === "submit")!
     .roles![0]!;
@@ -757,28 +828,30 @@ export function renderApprovalJourney(
     .roles![0]!;
   const values = Object.fromEntries(
     entity.fields
-      .filter((f) => f.key !== "status" && f.required)
+      .filter((f) => f.key !== "status" && f.required && !f.calculation)
       .map((f) => [
         f.key,
-        f.numericDomain
-          ? numericApprovalWitness(graph, key, f)
-          : f.type === "integer" || f.type === "decimal"
-            ? 1
-            : f.type === "boolean"
-              ? true
-              : f.type === "enum"
-                ? f.values![0]
-                : f.type === "date"
-                  ? "2026-01-01"
-                  : f.type === "datetime"
-                    ? "2026-01-01T00:00:00.000Z"
-                    : f.type === "url"
-                      ? "https://example.test"
-                      : f.type === "email"
-                        ? "user@example.test"
-                        : f.type === "json"
-                          ? { sample: true }
-                          : "Sample " + f.key,
+        calculated
+          ? calculated.witness.values[f.key]
+          : f.numericDomain
+            ? numericApprovalWitness(graph, key, f)
+            : f.type === "integer" || f.type === "decimal"
+              ? 1
+              : f.type === "boolean"
+                ? true
+                : f.type === "enum"
+                  ? f.values![0]
+                  : f.type === "date"
+                    ? "2026-01-01"
+                    : f.type === "datetime"
+                      ? "2026-01-01T00:00:00.000Z"
+                      : f.type === "url"
+                        ? "https://example.test"
+                        : f.type === "email"
+                          ? "user@example.test"
+                          : f.type === "json"
+                            ? { sample: true }
+                            : "Sample " + f.key,
       ]),
   );
   return `import {describe,it,expect} from 'vitest';

@@ -387,6 +387,14 @@ export function upgradeApplicationGraphV1ToV2Draft(
   const source = assertPublishedV1(sourceInput);
   if (
     source.graph.domain.entities.some((entity) =>
+      entity.fields.some((field) => field.calculation),
+    )
+  )
+    throw new CompositionError(
+      "Unsupported calculated-total conversion from Application Graph V1 to V2.",
+    );
+  if (
+    source.graph.domain.entities.some((entity) =>
       entity.fields.some((field) => field.numericDomain !== undefined),
     )
   ) {

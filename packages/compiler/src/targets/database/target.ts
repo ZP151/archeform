@@ -688,6 +688,20 @@ function renderPrismaSeed(
         .map((field) => [`${entity.key}:${field.key}`, field.type]),
     ),
   );
+  // The calculated profile preserves exact decimal spellings at every Prisma
+  // write boundary, including initialization. Unrelated profiles retain bytes.
+  const calculatedDecimalFields = new Set(
+    graph.domain.entities.flatMap((entity) =>
+      entity.fields.flatMap((field) =>
+        field.calculation
+          ? [
+              `${entity.key}:${field.key}`,
+              `${entity.key}:${field.calculation.unitPriceFieldKey}`,
+            ]
+          : [],
+      ),
+    ),
+  );
   const prismaDateTimeValue = (
     entityKey: string,
     fieldKey: string,
@@ -748,7 +762,15 @@ function renderPrismaSeed(
       Object.entries(seed.values).flatMap(([key, value]) =>
         key === "id"
           ? []
-          : [[key, prismaDateTimeValue(seed.entity, key, value)]],
+          : [
+              [
+                key,
+                calculatedDecimalFields.has(`${seed.entity}:${key}`) &&
+                typeof value === "number"
+                  ? String(value)
+                  : prismaDateTimeValue(seed.entity, key, value),
+              ],
+            ],
       ),
     );
     for (const relation of graph.domain.relations ?? []) {

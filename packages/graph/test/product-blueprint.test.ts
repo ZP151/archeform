@@ -644,3 +644,73 @@ describe("productBlueprintSchema", () => {
     expect(blueprint.requirementChecksum).toBe(hashRequirementSpec(spec));
   });
 });
+
+describe("Calculated Blueprint fields", () => {
+  const positive = {
+    apiVersion: "factory.numeric-field-domain/v1",
+    minimum: { value: 0, inclusive: false },
+  };
+  function calculated() {
+    const b = validBlueprint();
+    const fields = [
+      {
+        key: "quantity",
+        label: "Quantity",
+        type: "number",
+        required: true,
+        numericDomain: positive,
+      },
+      {
+        key: "price",
+        label: "Price",
+        type: "currency",
+        required: true,
+        numericDomain: positive,
+      },
+      {
+        key: "total",
+        label: "Total",
+        type: "currency",
+        required: true,
+        calculation: {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+          quantityFieldKey: "quantity",
+          unitPriceFieldKey: "price",
+        },
+      },
+    ];
+    (b.entities as Array<{ fields: unknown[] }>)[0]!.fields = fields;
+    return { b, fields: fields as Array<Record<string, any>> };
+  }
+  it("preserves the closed calculation", () => {
+    const { b } = calculated();
+    expect(assertProductBlueprint(b).entities[0]!.fields[2]).toHaveProperty(
+      "calculation.quantityFieldKey",
+      "quantity",
+    );
+  });
+  it.each([
+    "missing",
+    "self",
+    "chained",
+    "optional",
+    "wrong-type",
+    "output-domain",
+    "output-options",
+    "status",
+  ])("rejects %s calculation", (kind) => {
+    const { b, fields } = calculated();
+    if (kind === "missing") fields[2]!.calculation.quantityFieldKey = "absent";
+    if (kind === "self") fields[2]!.calculation.unitPriceFieldKey = "total";
+    if (kind === "chained") fields[1]!.calculation = fields[2]!.calculation;
+    if (kind === "optional") fields[0]!.required = false;
+    if (kind === "wrong-type") fields[0]!.type = "currency";
+    if (kind === "output-domain") fields[2]!.numericDomain = positive;
+    if (kind === "output-options") fields[2]!.options = ["a", "b"];
+    if (kind === "status") {
+      fields[0]!.key = "status";
+      fields[2]!.calculation.quantityFieldKey = "status";
+    }
+    expect(() => assertProductBlueprint(b)).toThrow();
+  });
+});

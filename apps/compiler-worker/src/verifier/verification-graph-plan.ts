@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import type { PublishedGraphInput } from "@factory/compiler";
 import {
   VerificationContractError,
+  assertValidApplicationGraph,
+  createCalculatedRequestTotalRuntime,
   isNumericFieldValueAllowed,
   hashApplicationGraph,
   type ApplicationGraphV1,
@@ -204,14 +206,102 @@ function createBodyFor(
   const required = requiredCreateFields(entity, hasFlow, isOrderEntity);
   if (required.length === 0) return undefined;
   const body: Record<string, unknown> = {};
+  const calculated = calculatedWitness(graph, entity);
   for (const field of required) {
     body[field.key] =
       foreignKeyValue(graph, entity.key, field.key) ??
+      calculated?.[field.key] ??
       (field.numericDomain
         ? numericWitness(graph, entity.key, field)
         : derivedCreateValue(entity.key, field));
   }
   return JSON.stringify(body);
+}
+
+/** Both writable operands come from one complete, validated immutable row. */
+function calculatedWitness(
+  graph: ApplicationGraphV1,
+  entity: ApplicationGraphV1["domain"]["entities"][number],
+): Record<string, number> | undefined {
+  const output = entity.fields.find((field) => field.calculation);
+  if (!output) return undefined;
+  const { quantityFieldKey, unitPriceFieldKey } = output.calculation!;
+  const quantity = entity.fields.find(
+    (field) => field.key === quantityFieldKey,
+  );
+  const price = entity.fields.find((field) => field.key === unitPriceFieldKey);
+  if (quantity?.numericDomain && price?.numericDomain) {
+    const arithmetic = createCalculatedRequestTotalRuntime();
+    for (const seed of graph.domain.seedData ?? []) {
+      if (
+        seed.entity !== entity.key ||
+        !completeCalculatedBusinessSeed(entity, seed.values)
+      )
+        continue;
+      const q = seed.values[quantityFieldKey];
+      const p = seed.values[unitPriceFieldKey];
+      const total = arithmetic.calculate(
+        q,
+        p,
+        quantity.numericDomain,
+        price.numericDomain,
+      );
+      if (total !== null && seed.values[output.key] === total)
+        return {
+          [quantityFieldKey]: q as number,
+          [unitPriceFieldKey]: p as number,
+        };
+    }
+  }
+  throw new VerificationContractError(
+    "Calculated verification requires a complete coherent seed witness.",
+  );
+}
+
+/** Independent verifier counterpart of the calculated compiler witness boundary. */
+function completeCalculatedBusinessSeed(
+  entity: ApplicationGraphV1["domain"]["entities"][number],
+  values: Record<string, unknown>,
+): boolean {
+  return entity.fields
+    .filter(
+      (field) =>
+        !["id", "status", "version", "createdAt", "updatedAt"].includes(
+          field.key,
+        ),
+    )
+    .every((field) => {
+      const value = values[field.key];
+      if (value === undefined || value === null) return !field.required;
+      if (["integer", "decimal"].includes(field.type))
+        return typeof value === "number";
+      if (field.type === "boolean") return typeof value === "boolean";
+      if (field.type === "json") return true;
+      if (typeof value !== "string" || (field.required && !value.trim()))
+        return false;
+      if (field.type === "enum") return field.values?.includes(value) === true;
+      if (field.type === "email")
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      if (field.type === "url") {
+        try {
+          return ["http:", "https:"].includes(new URL(value).protocol);
+        } catch {
+          return false;
+        }
+      }
+      if (field.type === "date")
+        return (
+          /^\d{4}-\d{2}-\d{2}(T00:00:00(?:\.000)?Z)?$/.test(value) &&
+          Number.isFinite(Date.parse(value)) &&
+          new Date(value).toISOString().slice(0, 10) === value.slice(0, 10)
+        );
+      if (field.type === "datetime")
+        return (
+          /^\d{4}-\d{2}-\d{2}T/.test(value) &&
+          Number.isFinite(Date.parse(value))
+        );
+      return true;
+    });
 }
 
 function numericWitness(
@@ -242,6 +332,7 @@ function requiredCreateFields(
 ): ApplicationGraphV1["domain"]["entities"][number]["fields"] {
   return entity.fields.filter(
     (field) =>
+      field.calculation === undefined &&
       (field.required || field.numericDomain !== undefined) &&
       !(field.key === "status" && hasFlow) &&
       !(field.key === "version" && isOrderEntity),
@@ -495,6 +586,26 @@ export function deriveVerificationProfile(
       correctionEntity = approvalProtocolEntity(graph, lock.packages);
   } catch {
     /* Unsupported profiles retain their existing protocol. */
+  }
+  // A recognized calculation must never fall back to a generic writable total.
+  if (graph.domain.entities.some((e) => e.fields.some((f) => f.calculation))) {
+    try {
+      assertValidApplicationGraph(graph);
+      const calculatedEntities = graph.domain.entities.filter((e) =>
+        e.fields.some((f) => f.calculation),
+      );
+      if (
+        !correctionEntity ||
+        calculatedEntities.length !== 1 ||
+        calculatedEntities[0]!.key !== correctionEntity
+      )
+        throw new Error("Unsupported calculated verification profile.");
+      calculatedWitness(graph, calculatedEntities[0]!);
+    } catch {
+      throw new VerificationContractError(
+        "Calculated verification requires a supported immutable Approval profile and coherent seed.",
+      );
+    }
   }
   let taskEntity: string | undefined;
   try {

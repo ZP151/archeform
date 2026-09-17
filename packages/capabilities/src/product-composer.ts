@@ -1,5 +1,6 @@
 import {
   CompositionError,
+  createCalculatedRequestTotalRuntime,
   isNumericFieldValueAllowed,
   assertCompositionPlan,
   assertProductBlueprint,
@@ -322,6 +323,7 @@ function derivedEntities(
           ...(field.numericDomain
             ? { numericDomain: field.numericDomain }
             : {}),
+          ...(field.calculation ? { calculation: field.calculation } : {}),
         };
       });
     const states = workflowStateValues.get(entity.key);
@@ -505,6 +507,26 @@ function derivedSeedData(
         values[field.key] = `Sample ${field.label}`;
       else values[field.key] = `Sample ${field.label} detail`;
     }
+    for (const output of entity.fields.filter((field) => field.calculation)) {
+      const rule = output.calculation!;
+      const quantity = entity.fields.find(
+        (field) => field.key === rule.quantityFieldKey,
+      )!;
+      const price = entity.fields.find(
+        (field) => field.key === rule.unitPriceFieldKey,
+      )!;
+      const total = createCalculatedRequestTotalRuntime().calculate(
+        values[quantity.key],
+        values[price.key],
+        quantity.numericDomain!,
+        price.numericDomain!,
+      );
+      if (total === null)
+        throw new CompositionError(
+          "Calculation does not admit the deterministic composition witness.",
+        );
+      values[output.key] = total;
+    }
     if (workflow !== undefined) values["status"] = workflow.states[0].key;
     return { entity: entity.key, id: `sample-${entity.key}`, values };
   });
@@ -545,7 +567,9 @@ function supportsNumericApprovalBlueprint(
     secondary = blueprint.entities[1]!;
   if (
     flow.entityKey !== primary.key ||
-    secondary.fields.some((field) => field.numericDomain) ||
+    secondary.fields.some(
+      (field) => field.numericDomain || field.calculation,
+    ) ||
     !equalSet(
       flow.states.map((s) => s.key),
       ["draft", "submitted", "approved", "returned"],
@@ -625,6 +649,25 @@ export function deriveProductOperations(
   input: ProductDerivationInput,
 ): GraphDiffV1 {
   const blueprint = assertProductBlueprint(input.blueprint);
+  const calculations = blueprint.entities.flatMap((entity) =>
+    entity.fields.filter((field) => field.calculation),
+  );
+  if (calculations.length) {
+    const primary = blueprint.entities[0]!;
+    if (
+      calculations.length !== 1 ||
+      !primary.fields.includes(calculations[0]!) ||
+      !supportsNumericApprovalBlueprint(blueprint) ||
+      primary.fields.filter((field) => field.type === "text" && field.required)
+        .length !== 1 ||
+      primary.fields.filter(
+        (field) => field.type === "number" || field.type === "currency",
+      ).length !== 3
+    )
+      throw new CompositionError(
+        "Calculated totals require the complete supported Approval correction profile.",
+      );
+  }
   const constrained = blueprint.entities.flatMap((entity) =>
     entity.fields.filter((field) => field.numericDomain),
   );

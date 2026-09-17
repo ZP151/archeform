@@ -367,6 +367,43 @@ const publishedOwnExtraCases = [
 ] as const;
 
 describe("Application Graph V1-to-V2 Draft upgrade", () => {
+  it("explicitly rejects calculated V1 conversion with a validated immutable source", () => {
+    const source = publishedV1();
+    const domain = {
+      apiVersion: "factory.numeric-field-domain/v1",
+      minimum: { value: 0, inclusive: false },
+    };
+    source.graph.domain.entities[0].fields.push(
+      {
+        key: "quantity",
+        type: "integer",
+        required: true,
+        numericDomain: domain,
+      },
+      { key: "price", type: "decimal", required: true, numericDomain: domain },
+      {
+        key: "total",
+        type: "decimal",
+        required: true,
+        calculation: {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+          quantityFieldKey: "quantity",
+          unitPriceFieldKey: "price",
+        },
+      },
+    );
+    source.graph.domain.seedData = [
+      { entity: "order", values: { quantity: 3, price: 0.1, total: 0.3 } },
+    ];
+    source.graphHash = hashApplicationGraph(source.graph);
+    expect(() =>
+      upgradeApplicationGraphV1ToV2Draft(
+        source as never,
+        upgradeContext() as never,
+      ),
+    ).toThrow(/unsupported calculated-total conversion/i);
+  });
+
   it("rejects constrained V1 conversion explicitly after verifying its published checksum", () => {
     const source = publishedV1();
     source.graph.domain.entities[0].fields.push({

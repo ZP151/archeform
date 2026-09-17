@@ -748,3 +748,111 @@ describe("numeric-domain composition", () => {
     ).toThrow(/Numeric domains/);
   });
 });
+
+describe("calculated request composition", () => {
+  const positive = {
+    apiVersion: "factory.numeric-field-domain/v1" as const,
+    minimum: { value: 0, inclusive: false },
+  };
+  function calculated() {
+    const source = canonicalExpenseApprovalInterpretation();
+    const blueprint = structuredClone(source.blueprint);
+    blueprint.entities[0]!.fields = [
+      { key: "item", label: "Item", type: "text", required: true },
+      {
+        key: "quantity",
+        label: "Quantity",
+        type: "number",
+        required: true,
+        numericDomain: positive,
+      },
+      {
+        key: "price",
+        label: "Unit price",
+        type: "currency",
+        required: true,
+        numericDomain: positive,
+      },
+      {
+        key: "total",
+        label: "Total",
+        type: "currency",
+        required: true,
+        calculation: {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+          quantityFieldKey: "quantity",
+          unitPriceFieldKey: "price",
+        },
+      },
+      {
+        key: "reason",
+        label: "Justification",
+        type: "long-text",
+        required: true,
+      },
+    ];
+    return { ...source, blueprint };
+  }
+  it("composes the complete profile with coherent operand/output witnesses", () => {
+    const { spec, blueprint } = calculated(),
+      baseDraft = blankDraft("calculated", "Calculated requests");
+    const [standard, minimal] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    const diff = composeProductDraft({
+      plan: standard!.plan,
+      blueprint,
+      baseDraft,
+    }).diff;
+    const graph = applyGraphDiffToDraft(baseDraft, diff).graph;
+    expect(
+      graph.domain.entities[0]!.fields.find((f) => f.key === "total")
+        ?.calculation,
+    ).toEqual(blueprint.entities[0]!.fields[3]!.calculation);
+    expect(graph.domain.seedData![0]!.values).toMatchObject({
+      quantity: 12,
+      price: 125.5,
+      total: 1506,
+    });
+    expect(() =>
+      composeProductDraft({ plan: minimal!.plan, blueprint, baseDraft }),
+    ).toThrow();
+  });
+  it.each([
+    "extra-numeric",
+    "ambiguous-title",
+    "bad-witness",
+    "secondary-calculation",
+  ])("rejects unsupported %s", (kind) => {
+    const { spec, blueprint } = calculated(),
+      baseDraft = blankDraft("calculated", "Calculated requests");
+    if (kind === "extra-numeric")
+      blueprint.entities[0]!.fields.push({
+        key: "fee",
+        label: "Fee",
+        type: "currency",
+        required: false,
+      });
+    if (kind === "ambiguous-title")
+      blueprint.entities[0]!.fields.push({
+        key: "otherTitle",
+        label: "Other title",
+        type: "text",
+        required: true,
+      });
+    if (kind === "bad-witness")
+      blueprint.entities[0]!.fields[1]!.numericDomain = {
+        ...positive,
+        minimum: { value: 20, inclusive: true },
+      };
+    if (kind === "secondary-calculation")
+      blueprint.entities[1]!.fields = structuredClone(
+        blueprint.entities[0]!.fields,
+      );
+    expect(() =>
+      planProductAlternatives({ requirement: spec, blueprint, baseDraft }),
+    ).toThrow();
+  });
+});

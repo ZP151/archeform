@@ -5314,3 +5314,191 @@ Next roadmap priority is authoritative calculated requests before Equipment, the
 varied data expansion and Appointment capacity/conflict/cancellation. Real-model,
 consented ordinary-user, identity and hosted outcomes remain unproven. The original
 checkout and the deletion-rejected detached verification residual stay untouched.
+
+## New long Goal: calculated requests and delivery engineering
+
+The founder asks to continue the roadmap, complete this local product/runtime
+iteration, and then produce a detailed optimization plan for faster, more
+structured engineering with unnecessary redundancy removed. Root starts at clean
+consumer base436484fc71f63adf11e8f48938bc5983ac42ca41. Six accepted definitions and
+three families remain the coverage baseline. No new acceptance or provider/hosted
+claim is implied by the new Goal.
+
+PM dispatches /root/calculated_requests_tech_lead (strongest assigned model for
+the Graph/lifecycle boundary) to propose ADR0070 for the smallest reusable
+quantity×unit-price total contract. It owns that proposal only; no code/services/
+Git authority. Root owns plan, tests/runtime/evidence coordination and delivery.
+Separate qualified read-only standing acceptance is required before implementation.
+Existing founder roadmap authorization covers in-scope reversible implementation;
+no routine reapproval or new per-product gate will be introduced. Engineering
+optimization will be grounded in actual source/test/delivery costs and finalized
+after the new local product journey, rather than an unrelated framework rewrite.
+
+## Pre-implementation compatibility and delivery findings
+
+Root reproduced the stale five-key assertion in the independent built data-CLI
+verifier and added the already accepted Training key. Its16 adversarial command
+cases now pass; no production semantics changed. This concrete omission informs
+the later engineering plan: keep a reviewed current delivery inventory and make
+admission validation one executable lane instead of scattered manual counters.
+
+Before any calculation production edit, root captured a separate six-definition
+current-byte baseline from base436484fc. Newfixture SHA256:
+b88e5c9f21907b382d09b877b2208e90aab087b12bd2b365d7aa94cf48ec62e8.
+The old four/five fixtures and strict identifier inverse are unchanged. The
+existing helper gains an explicit current-byte comparison option only; default
+historical behavior remains unchanged. All15 compatibility tests pass, including
+all6 current canonical/provider/projection and complete generated bundles.
+Root owns these test-only preconditions and CLI verifier correction. TechLead
+continues to own only the proposed ADR; no calculation implementation authorized.
+
+### 2026-09-17 — ADR-0070 standing acceptance and implementation ownership
+
+The independent read-only reviewer `/root/calculation_authority_review` verified
+ADR-0070 SHA-256 `38554faa5533b94dd61ac832947bd19f646219959f218d75e36fe733a4e3fc88`
+and returned `APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 **0/0/0**.
+The proposer was `/root/calculated_requests_tech_lead`; the reviewer changed no
+files, ran no services and approved no implementation. PM accepts the exact
+proposal through the founder standing policy in `docs/tech-governance.md` and
+now authorizes Tasks 1–3 of `2026-09-17-calculated-request-totals.md` within its
+frozen scope. Equipment admission follows shared acceptance; counts remain six.
+
+The contract is bounded and reversible: exact versioned multiplication only,
+explicit numeric domains, server-owned totals, transaction/read/replay checks,
+coherent witnesses, conditional UI and exact six-output preservation. Equipment
+uses positive quantities and positive estimated prices; zero/free demand is a
+material clarification. No currency settlement, new dependency, deployment,
+identity or security expansion is authorized. Demo roles and privileged store
+corruption remain residual limits. Rollback retains published bytes/readers.
+
+Ownership is serialized: `/root/calculation_contract_owner` owns Graph schema,
+exact helper, trusted authoring/provider/fingerprint integration and composer
+plus focused tests (Task 1 paths); no compiler, worker, catalogue or evidence
+writes. Root owns product design/plan, protected current/historical baselines,
+service leases, acceptance evidence, status and Git. A shared shape change stops
+affected implementation and returns to authority review. The integrated task,
+Terra QA and Sol release gate occurs once after shared integration; narrow
+repairs reuse valid evidence. Ordinary Equipment data admission has one review.
+
+### 2026-09-17 — Frozen calculation API and disjoint implementation wave
+
+Task 1 owner froze `packages/graph/src/calculated-request-total.ts` exports:
+`quantityUnitPriceTotalSchema`, `QuantityUnitPriceTotalV1`, and self-contained
+`createCalculatedRequestTotalRuntime()`. The factory returns `calculate(q,p,qDomain,pDomain): number|null`,
+`normalizeTrusted(value,type,domain?): number|null`, and
+`validateTrustedTotal(q,p,total,qDomain,pDomain): boolean`. `calculate` accepts
+number primitives only; trusted normalization accepts numbers/strict bounded
+strings. Actual Prisma Decimal identity is checked by the emitted adapter before
+passing its serialization. Null means invalid; zero is not an error sentinel.
+The factory has no runtime imports and may be emitted verbatim from `.toString()`.
+The descriptor, errors, versions and semantics remain the exact accepted ADR.
+
+PM authorizes disjoint writers against this frozen API: Task 1 retains Graph,
+adapters and composer; `/root/calculation_runtime_owner` owns only compiler
+source and focused compiler tests for Task 2. Root owns worker verifier and its
+focused tests plus existing documentation/evidence paths. Integration/tests
+requiring rebuilt dependencies are serialized by the controller after writers
+finish; no competing full builds or runtime services. Any API/behavior change
+stops affected writers. No protected snapshots or catalogue changes are allowed.
+
+### 2026-09-17 — Calculated runtime local resource ownership
+
+Root owns only project `factory-preview-calculated-runtime-20260917` for the
+shared capability fixture, generated under `artifacts/calculated-request-runtime-20260917`.
+The immutable fixture Graph hash is `sha256:166a0af32fb12f14153ac5c3ca82f3613d5072ed6f4ec60a78ba89d79d4666df`;
+67 complete ordered files reproduce identically. No catalogue row is added and
+this authored fixture does not claim actual consumer Publish or provider usage.
+The accepted generated Compose runs locally with loopback ephemeral ports;
+no cloud, paid service or deployment action. Root owns build/start/test/cleanup;
+workers may not manage these resources. Actual source-byte comparison and exact
+label-scoped cleanup are required before shared acceptance.
+
+### 2026-09-17 — Actual database repair and retained first failure
+
+Actual fixture attempt 1 failed at the first valid partial price correction:
+create `3 * 0.1 = 0.3` passed, but changing price to `0.07` returned
+`409 approval.calculation_invalid_record`. The failed command rolled back.
+A root-owned isolated Prisma transaction reproduced the cause: a numeric
+`0.07` update persisted as exact decimal `0.07000000000000001`; its matching
+`0.21` total stayed unchanged. Both values were actual Prisma Decimal instances.
+The diagnostic threw an explicit rollback sentinel and changed no committed row.
+
+The compiler owner now repairs the calculated-only persistence adapter to send
+canonical decimal strings to Prisma, preserving the accepted decoded-number
+semantics without coercing HTTP inputs or altering database types. Independent
+review found the same issue in Prisma seed upserts; PM extends compiler ownership
+to `packages/compiler/src/targets/database/target.ts` and focused seed tests.
+Old six bundles remain byte-identical. The next actual fixture uses an explicit
+`3 / 0.07 / 0.21` seed and includes post-write fault injection proving real
+PostgreSQL rollback of records, receipts, audit, outbox and capability effects.
+
+The full gate first stopped at formatting in four pre-existing JSON evidence
+receipts. Root applied formatting only; no receipt value or acceptance claim
+changed. Do not describe this stopped gate as passed. Retry required checks after
+source repairs, retaining valid focused evidence and the failed attempt log.
+
+Root now owns the fresh replacement fixture project
+`factory-preview-calculated-runtime-attempt2-20260917` at
+`artifacts/calculated-request-runtime-attempt2-20260917`. Its explicit seed uses
+quantity 3, unit price 0.07 and total 0.21 to exercise canonical Prisma seed writes.
+The first attempt's generated files/input/manifest/log are retained separately;
+its exact Compose project is being cleaned. New image source is frozen after the
+canonical API/seed decimal adapter repair; fixture manifests must not be overwritten.
+
+### 2026-09-17 calculated totals: actual acceptance and integrated task gate
+
+The root-owned replacement fixture passed actual attempt 3: exact alternate
+3 / 0.07 / 0.21 seed, server-owned arithmetic, forged input and role/state
+denial, partial updates, precision-corruption recovery, all-table post-write
+rollback, concurrent versions, original receipt replay and API restart. Full
+same-record correction finished approved at version 7 with two decisions and
+eight audits. No consumer definition is admitted by this authored fixture.
+
+Visual inspection identified hidden summary labels inherited from the old
+profile. The owner repaired only the calculated profile, with visible Quantity,
+Unit price and Total labels, emphasized Total and concise preview copy. The
+computed-style regression was RED then GREEN. Actual final light/dark summary
+and form checks pass at 390/768/1440; root inspected the final phone summary,
+phone form and desktop dark screen. Existing six output bundles remain exact.
+
+All 67 generated files reproduce; six actual runtime source hashes match. The
+final change after database acceptance is exactly two web files; API, arithmetic
+and seed outputs are unchanged. Both exact fixture projects now have zero owned
+containers, networks and volumes, recorded in the capability evidence directory.
+
+Fresh root format/lint/typecheck/test/build gates passed. Test duration was
+443,372 ms, across 29 Turbo tasks; build was 79,635 ms across 17 tasks. Final UI
+repair has separate 20 calculated + 15 compatibility checks and actual UI
+verification. Four pre-existing JSON receipt formatting repairs are parsed-value
+identical to HEAD. No full-gate failure was waived.
+
+Integrated task reviewer `/root/calculation_task_review` returned READY FOR
+INDEPENDENT QA, P0/P1/P2 0/0/0, resolving the Prisma and seed persistence finding.
+Independent Terra QA `/root/calculation_independent_qa` is active, read-only except
+ignored logs. Root retains services, evidence, PM documents and Git ownership.
+Counts remain six locally accepted definitions / three demonstrated families.
+
+Independent Terra QA `/root/calculation_independent_qa` reports PASS,
+P0/P1/P2 0/0/0. Its independent focused runs passed Graph 26, provider 7,
+compiler 20, worker 12 and compatibility 15 cases. It verified actual database
+receipts, final source correspondence, responsive label/total screenshots and
+zero exact Docker resources. Independent Sol release review is now active;
+Equipment remains an ignored candidate only, with tracked E2E-helper preparation
+excluded from the shared capability commit. The optimization plan remains a draft
+for reconciliation after product acceptance.
+
+### 2026-09-17 calculated totals: PM acceptance and controller delivery
+
+Independent Sol `/root/calculation_release` approves acceptance with P0/P1/P2
+0/0/0. Fresh independent Graph 225, provider 7, compiler/compatibility 35 and
+worker 12 checks pass; 67-file regeneration, six runtime-source correspondences,
+cleanup and diff checks pass. The verdict reuses reviewed actual PostgreSQL,
+UI and complete shared-gate evidence, and excludes Equipment preparation and
+the optimization draft. It makes no model/user/cloud or production identity claim.
+
+PM accepts the shared capability under ADR-0070. All six historical products
+retain their exact current output. The controller will deliver this bounded
+capability normally and verify remote equality before registering Equipment.
+Equipment owner `/root/calculation_contract_owner` has prepared only ignored
+candidate data and tests; root's prepared E2E helper/case and optimization/status
+edits are explicitly outside this capability commit. No new product is counted.

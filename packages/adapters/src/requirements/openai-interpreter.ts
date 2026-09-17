@@ -12,6 +12,7 @@ import {
   blueprintActionSchema,
   blueprintFieldTypeSchema,
   numericFieldDomainSchema,
+  quantityUnitPriceTotalSchema,
   isNumericFieldDomainValidForType,
   graphFieldKeySchema,
   graphKeySchema,
@@ -187,6 +188,7 @@ const modelFieldSchema = z
     ),
     referenceTo: optionalText(graphKeySchema),
     numericDomain: optionalText(modelNumericDomainSchema),
+    calculation: optionalText(quantityUnitPriceTotalSchema),
   })
   .strict()
   .superRefine((field, context) => {
@@ -204,9 +206,10 @@ const modelFieldSchema = z
         message: "Numeric domain is incompatible with the field type.",
       });
   })
-  .transform(({ numericDomain, ...field }) => ({
+  .transform(({ numericDomain, calculation, ...field }) => ({
     ...field,
     ...(numericDomain === undefined ? {} : { numericDomain }),
+    ...(calculation === undefined ? {} : { calculation }),
   }));
 
 // Entity, actor, page-intent, and workflow keys become graph-symbol segments
@@ -417,6 +420,7 @@ function fieldJsonSchema(): Record<string, unknown> {
       "options",
       "referenceTo",
       "numericDomain",
+      "calculation",
     ],
     properties: {
       key: { type: "string", pattern: graphFieldKeyJsonPattern },
@@ -456,6 +460,7 @@ function fieldJsonSchema(): Record<string, unknown> {
         ],
       },
       numericDomain: { type: "null" },
+      calculation: { type: "null" },
     },
   };
   const domain = (integer: boolean) => {
@@ -493,9 +498,37 @@ function fieldJsonSchema(): Record<string, unknown> {
       ],
     };
   };
+  const calculation = {
+    anyOf: [
+      { type: "null" },
+      {
+        type: "object",
+        additionalProperties: false,
+        required: ["apiVersion", "quantityFieldKey", "unitPriceFieldKey"],
+        properties: {
+          apiVersion: {
+            type: "string",
+            enum: ["factory.quantity-unit-price-total/v1"],
+          },
+          quantityFieldKey: {
+            type: "string",
+            pattern: graphFieldKeyJsonPattern,
+          },
+          unitPriceFieldKey: {
+            type: "string",
+            pattern: graphFieldKeyJsonPattern,
+          },
+        },
+      },
+    ],
+  };
   return {
     ...base,
-    properties: { ...base.properties, numericDomain: domain(false) },
+    properties: {
+      ...base.properties,
+      numericDomain: domain(false),
+      calculation,
+    },
     anyOf: [
       {
         ...base,
@@ -511,6 +544,7 @@ function fieldJsonSchema(): Record<string, unknown> {
           ...base.properties,
           type: { type: "string", enum: ["currency"] },
           numericDomain: domain(false),
+          calculation,
         },
       },
       {
@@ -895,6 +929,7 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
 };
 
 const interpretationInstructions = [
+  "Emit calculation only for explicitly requested quantity-times-unit-price semantics, never inferred from total, money labels or product names. Only a required currency total may carry the closed rule, with distinct required number quantity and currency unit-price operands with explicit numeric domains. Use null for absent calculation. Calculations require the complete Approval correction target.",
   "Emit numericDomain only for an explicitly stated numeric bound on number or currency. Never infer positivity from currency. Use null for absent policy/bounds; numeric policies require the Approval correction target.",
   "You are the Factory Pilot requirement interpreter adapter.",
   "Return only a JSON object matching the provided schema.",

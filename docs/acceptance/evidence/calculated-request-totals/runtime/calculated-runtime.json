@@ -1,0 +1,20 @@
+{
+  "fixtureOnly": true,
+  "registeredDefinitionAdded": false,
+  "invalidCreateCases": 15,
+  "exactPrimitiveAndStoredArithmetic": true,
+  "realPrismaPostWriteFailureRollsBackAllTables": true,
+  "partialUpdatesRecalculate": true,
+  "rejectedWritesPreserveAllTables": true,
+  "concurrentVersionProtection": true,
+  "originalReceiptSurvivesEditsAndRestart": true,
+  "trustedPrecisionReadAndTransitionDenial": true,
+  "invalidRetainedOperandRequiresReplacement": true,
+  "invalidOldTotalRepair": true,
+  "submitAndDecisionReplayValidateFreshRecord": true,
+  "clientInvalidCreateFetches": 0,
+  "responsiveWidths": [390, 768, 1440],
+  "correctionRecordId": "cmu5jnpg10000pq01zc5dysey",
+  "finalTotal": 747.5,
+  "modelCalls": 0
+}

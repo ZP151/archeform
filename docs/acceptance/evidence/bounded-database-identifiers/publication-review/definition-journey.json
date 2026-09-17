@@ -3,12 +3,7 @@
   "definitionKey": "publication-review",
   "elapsedToReadyMs": 214158,
   "externalIntegration": null,
-  "lifecycle": [
-    "publish",
-    "compile",
-    "verify",
-    "preview"
-  ],
+  "lifecycle": ["publish", "compile", "verify", "preview"],
   "modelCalls": 0,
   "previewRunId": "preview-7fbc53c4-12cc-44fa-a48b-32d2d86d0b15",
   "requestDiagnostics": [

@@ -292,3 +292,32 @@ it("keeps numeric policy authoring closed in generic Graph-diff proposals", asyn
     provider.propose({ graph: source, brief: "Make amount positive." }),
   ).rejects.toMatchObject({ code: "proposal_invalid" });
 });
+
+it("rejects calculation keys even when nested in otherwise valid generic Graph authoring", async () => {
+  const diff = structuredClone(addReceiptField);
+  diff.operations = [
+    {
+      op: "add",
+      path: "/page/pages/0/blocks/-",
+      value: {
+        id: "note",
+        type: "text",
+        props: {
+          calculation: {
+            apiVersion: "factory.quantity-unit-price-total/v1",
+            quantityFieldKey: "quantity",
+            unitPriceFieldKey: "price",
+          },
+        },
+      },
+    },
+  ];
+  const provider = new FixtureGraphProposalProvider({
+    diff,
+    impact: { summary: "Add field.", affectedModels: ["domain"], risks: [] },
+    testSuggestions: [],
+  });
+  await expect(
+    provider.propose({ graph, brief: "Add field." }),
+  ).rejects.toMatchObject({ code: "proposal_invalid" });
+});
