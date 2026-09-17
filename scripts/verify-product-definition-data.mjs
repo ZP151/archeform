@@ -36,6 +36,7 @@ const expectedKeys = [
   "team-task-tracking",
   "publication-review",
   "training-funding-approval",
+  "equipment-procurement-approval",
 ];
 assert.deepEqual(
   catalogue.definitions.map((entry) => entry.definitionKey),

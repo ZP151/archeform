@@ -1,0 +1,11 @@
+{
+  "compilationId": "cmu5ljep1002klu4tk6eye2xz",
+  "previewRunId": "preview-adf47eb0-4fcf-43d2-984e-1d22b2d79893",
+  "project": "factory-preview-preview-adf47eb0-4fcf-43d2-984e-1d22b2d79893",
+  "status": "stopped",
+  "outcome": "failed-case-message-casing",
+  "elapsedToReadyMs": 196978,
+  "elapsedAtFailureMs": 205586,
+  "primaryActionCriteriaPassed": true,
+  "scope": "The exact error-copy casing expectation differed from the clear accepted runtime message. Product source is unchanged; the case now uses the same stable greater-than-zero meaning as shared acceptance. This incomplete run does not establish business acceptance."
+}

@@ -29,9 +29,9 @@ const report = (definitions: unknown[]) =>
   validateDefinitionBatch(bytes(definitions));
 
 describe("Product definition data", () => {
-  it("loads six immutable data entries and admits only the shipped catalogue", () => {
+  it("loads seven immutable data entries and admits only the shipped catalogue", () => {
     const data = loadProductDefinitionData();
-    expect(data.definitions).toHaveLength(6);
+    expect(data.definitions).toHaveLength(7);
     expect(
       Object.isFrozen(
         data.definitions[1]!.canonical.blueprint.entities[0]!.fields,
@@ -46,7 +46,7 @@ describe("Product definition data", () => {
           ),
         ),
       ),
-    ).toMatchObject({ attempted: 6, valid: 6, distinct: 6, admitted: 6 });
+    ).toMatchObject({ attempted: 7, valid: 7, distinct: 7, admitted: 7 });
   });
   it("admits the distinct reviewed Publication definition with its bounded scope", () => {
     const publication = loadProductDefinitionData().definitions.find(
@@ -318,7 +318,7 @@ describe("Product definition data", () => {
       distinct: 1,
       admitted: 0,
     });
-    expect(loadProductDefinitionData().definitions).toHaveLength(6);
+    expect(loadProductDefinitionData().definitions).toHaveLength(7);
   });
   it.each([
     '{"apiVersion":"x","apiVersion":"y"}',

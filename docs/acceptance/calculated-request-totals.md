@@ -136,3 +136,10 @@ Independent Terra QA ran Graph 26, provider 7, compiler 20, worker 12 and
 compatibility 15 cases. Sol release independently ran Graph 225, provider 7,
 compiler/compatibility 35 and worker 12 cases, regenerated the exact 67-file
 manifest and checked cleanup. Both verdicts pass without open findings.
+
+Equipment subsequently exposed complete-workspace density gaps with visible
+multi-numeric labels. The focused shared CSS repair preserves API/seed output,
+all six older bundles, readable labels and 44px controls; the complete multi-record
+browser regression and actual consumer attempt4 pass. See
+[Equipment acceptance](equipment-procurement.md) for this ordinary repair and
+its retained failures. The original shared arithmetic/transaction verdict stands.

@@ -1,0 +1,36 @@
+{
+  "recordedAt": "2026-09-17T14:26:35.0628321Z",
+  "scope": "Exact owned Factory and four consumer previews only",
+  "projects": [
+    {
+      "project": "factory-t9-equipment-20260917",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-da3c16bb-d924-4f73-8239-904ea1952c8f",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-adf47eb0-4fcf-43d2-984e-1d22b2d79893",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-192e7d32-933a-4e9e-8a13-fd9eb629d359",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    {
+      "project": "factory-preview-preview-38a4229f-6054-4dcc-b31c-21eb18f61bdf",
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    }
+  ]
+}

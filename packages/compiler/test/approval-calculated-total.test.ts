@@ -115,133 +115,185 @@ function webRuntime() {
   return exports;
 }
 describe("calculated Approval emitted runtime", () => {
-  it("renders readable calculated summary labels and emphasizes the total at phone and desktop widths", async () => {
-    const input = calculatedInput(),
-      bundle = generateApplicationBundle(input),
-      source = bundle.files.find(
-        (f) => f.path === "web/app/page-runtime.tsx",
-      )!.content,
-      css = bundle.files.find((f) => f.path === "web/app/globals.css")!.content;
-    const reactRequire = createRequire(
-        join(__dirname, "../../../apps/workbench/package.json"),
-      ),
-      React = reactRequire("react"),
-      record = {
-        id: "label-check",
-        ...input.graph.domain.seedData![0]!.values,
-        version: 0,
-      };
-    const hooks = {
-        ...React,
-        useState: (initial: unknown) => [
-          Array.isArray(initial)
-            ? [record]
-            : initial === true
-              ? false
-              : initial,
-          () => {},
-        ],
-      },
-      exports: any = {},
-      math: any = {};
-    new Function(
-      "exports",
-      transpileModule(
-        bundle.files.find(
-          (f) => f.path === "web/app/calculated-request-total.js",
+  it.each(["author", "audit"])(
+    "keeps calculated labels and useful records within the complete %s workspace",
+    async (scope) => {
+      const input = calculatedInput(),
+        bundle = generateApplicationBundle(input),
+        source = bundle.files.find(
+          (f) => f.path === "web/app/page-runtime.tsx",
         )!.content,
-        { compilerOptions: { module: ModuleKind.CommonJS, target: 99 } },
-      ).outputText,
-    )(math);
-    new Function(
-      "require",
-      "exports",
-      transpileModule(source + "\nexport {definition,EntityRecords};", {
-        compilerOptions: {
-          module: ModuleKind.CommonJS,
-          jsx: JsxEmit.ReactJSX,
-          target: 99,
+        css = bundle.files.find(
+          (f) => f.path === "web/app/globals.css",
+        )!.content;
+      const reactRequire = createRequire(
+          join(__dirname, "../../../apps/workbench/package.json"),
+        ),
+        React = reactRequire("react"),
+        record = {
+          id: "label-check",
+          ...input.graph.domain.seedData![0]!.values,
+          version: 0,
         },
-      }).outputText,
-    )(
-      (name: string) =>
-        name === "react"
-          ? hooks
-          : name === "./calculated-request-total.js"
-            ? math
-            : reactRequire(name),
-      exports,
-    );
-    const html = reactRequire("react-dom/server").renderToStaticMarkup(
-      React.createElement(exports.EntityRecords, {
-        entity: exports.definition.entities[0],
-        block: { id: "labels", props: {} },
-        role: input.graph.policy.roles[0],
-        reportError() {},
-      }),
-    );
-    const browser = await nodeRequire("@playwright/test").chromium.launch({
-      headless: true,
-    });
-    try {
-      const page = await browser.newPage();
-      await page.route("**/*", (route: any) => route.abort());
-      for (const width of [390, 1440]) {
-        await page.setViewportSize({ width, height: 1000 });
-        await page.setContent(
-          `<style>${css}</style><main class="generated-app approval-v1" data-theme="light">${html}</main>`,
-        );
-        const summary = page.locator(".approval-summary").first();
-        const labels = await summary
-          .locator("dt")
-          .evaluateAll((elements: HTMLElement[]) =>
-            elements.slice(0, 3).map((element) => {
-              const style = getComputedStyle(element),
-                rect = element.getBoundingClientRect();
-              return {
-                text: element.textContent,
-                clip: style.clipPath,
-                overflow: style.overflow,
-                position: style.position,
-                fontSize: parseFloat(style.fontSize),
-                width: rect.width,
-                height: rect.height,
-              };
-            }),
-          );
-        expect(labels.map((label: any) => label.text)).toEqual([
-          "Quantity",
-          "Unit price",
-          "Total",
-        ]);
-        for (const label of labels) {
-          expect(label.clip).toBe("none");
-          expect(label.position).not.toBe("absolute");
-          expect(label.overflow).toBe("visible");
-          expect(label.width).toBeGreaterThan(30);
-          expect(label.height).toBeGreaterThan(12);
-          expect(label.fontSize).toBeGreaterThanOrEqual(12);
+        records = [
+          record,
+          {
+            ...record,
+            id: "corrected",
+            itemName: "Adjustable shared-workspace desks",
+            quantity: 5,
+            unitPrice: 299.5,
+            total: 1497.5,
+            status: "approved",
+            version: 7,
+          },
+          {
+            ...record,
+            id: "additional",
+            itemName: "Meeting-room display stands",
+            quantity: 2,
+            unitPrice: 89.9,
+            total: 179.8,
+            status: "approved",
+            version: 2,
+          },
+        ];
+      const hooks = {
+          ...React,
+          useState: (initial: unknown) => [
+            Array.isArray(initial)
+              ? records
+              : initial === true
+                ? false
+                : initial === input.graph.policy.roles[0] && scope === "audit"
+                  ? input.graph.policy.roles[2]
+                  : typeof initial === "function"
+                    ? initial()
+                    : initial,
+            () => {},
+          ],
+        },
+        exports: any = {},
+        math: any = {};
+      new Function(
+        "exports",
+        transpileModule(
+          bundle.files.find(
+            (f) => f.path === "web/app/calculated-request-total.js",
+          )!.content,
+          { compilerOptions: { module: ModuleKind.CommonJS, target: 99 } },
+        ).outputText,
+      )(math);
+      new Function(
+        "require",
+        "exports",
+        transpileModule(source + "\nexport {definition,EntityRecords};", {
+          compilerOptions: {
+            module: ModuleKind.CommonJS,
+            jsx: JsxEmit.ReactJSX,
+            target: 99,
+          },
+        }).outputText,
+      )(
+        (name: string) =>
+          name === "react"
+            ? hooks
+            : name === "./calculated-request-total.js"
+              ? math
+              : reactRequire(name),
+        exports,
+      );
+      const html = reactRequire("react-dom/server").renderToStaticMarkup(
+        React.createElement(exports.GeneratedApplication, {
+          requestedPath: "/submission-list",
+        }),
+      );
+      const browser = await nodeRequire("@playwright/test").chromium.launch({
+        headless: true,
+      });
+      try {
+        const page = await browser.newPage();
+        await page.route("**/*", (route: any) => route.abort());
+        for (const width of [390, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.setContent(`<style>${css}</style>${html}`);
+          if (scope === "author") {
+            const submit = page
+              .getByRole("button", { name: "Submit", exact: true })
+              .first();
+            const actionBox = await submit.boundingBox();
+            expect(actionBox).not.toBeNull();
+            expect(actionBox!.height).toBeGreaterThanOrEqual(44);
+            expect(actionBox!.width).toBeGreaterThanOrEqual(44);
+            expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(650);
+          } else {
+            expect(
+              await page
+                .locator(".approval-decision-history:not([open])")
+                .count(),
+            ).toBe(1);
+            const secondSummary = await page
+              .locator(".approval-summary")
+              .nth(1)
+              .boundingBox();
+            expect(secondSummary).not.toBeNull();
+            expect(secondSummary!.y).toBeGreaterThanOrEqual(0);
+            expect(
+              secondSummary!.y + secondSummary!.height,
+            ).toBeLessThanOrEqual(900);
+          }
+          const summary = page.locator(".approval-summary").first();
+          const labels = await summary
+            .locator("dt")
+            .evaluateAll((elements: HTMLElement[]) =>
+              elements.slice(0, 3).map((element) => {
+                const style = getComputedStyle(element),
+                  rect = element.getBoundingClientRect();
+                return {
+                  text: element.textContent,
+                  clip: style.clipPath,
+                  overflow: style.overflow,
+                  position: style.position,
+                  fontSize: parseFloat(style.fontSize),
+                  width: rect.width,
+                  height: rect.height,
+                };
+              }),
+            );
+          expect(labels.map((label: any) => label.text)).toEqual([
+            "Quantity",
+            "Unit price",
+            "Total",
+          ]);
+          for (const label of labels) {
+            expect(label.clip).toBe("none");
+            expect(label.position).not.toBe("absolute");
+            expect(label.overflow).toBe("visible");
+            expect(label.width).toBeGreaterThan(30);
+            expect(label.height).toBeGreaterThan(12);
+            expect(label.fontSize).toBeGreaterThanOrEqual(12);
+          }
+          const values = await summary
+            .locator("dd")
+            .evaluateAll((elements: HTMLElement[]) =>
+              elements.slice(0, 3).map((element) => {
+                const style = getComputedStyle(element);
+                return {
+                  size: parseFloat(style.fontSize),
+                  weight: Number(style.fontWeight),
+                  text: element.textContent,
+                };
+              }),
+            );
+          expect(values[2].size).toBeGreaterThan(values[0].size);
+          expect(values[2].weight).toBeGreaterThanOrEqual(600);
+          expect(values[2].text).toBe("1506");
         }
-        const values = await summary
-          .locator("dd")
-          .evaluateAll((elements: HTMLElement[]) =>
-            elements.slice(0, 3).map((element) => {
-              const style = getComputedStyle(element);
-              return {
-                size: parseFloat(style.fontSize),
-                weight: Number(style.fontWeight),
-                text: element.textContent,
-              };
-            }),
-          );
-        expect(values[2].size).toBeGreaterThan(values[0].size);
-        expect(values[2].weight).toBeGreaterThanOrEqual(600);
-        expect(values[2].text).toBe("1506");
+      } finally {
+        await browser.close();
       }
-    } finally {
-      await browser.close();
-    }
-  });
+    },
+  );
   it("preserves alternate coherent decimal seeds through the emitted Prisma upsert", async () => {
     const input = calculatedInput();
     Object.assign(input.graph.domain.seedData![0]!.values, {

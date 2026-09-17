@@ -1,0 +1,20 @@
+{
+  "definitionKey": "equipment-procurement-approval",
+  "compilationId": "cmu5mbffv006ylu4tyeyt6s7n",
+  "previewRunId": "preview-38a4229f-6054-4dcc-b31c-21eb18f61bdf",
+  "elapsedToReadyMs": 197474,
+  "elapsedThroughAcceptanceMs": 248387,
+  "lifecycle": ["publish", "compile", "verify", "preview"],
+  "authoredSelections": 1,
+  "modelCalls": 0,
+  "technicalHandoffs": 0,
+  "inRunManualRescues": 0,
+  "immutableCompilationPreserved": true,
+  "authoredRecordsApproved": 2,
+  "clientInvalidCreateAndEditNoFetch": true,
+  "businessSummaries": ["Quantity", "Unit price", "Total"],
+  "calculatedPreviewReadOnly": true,
+  "browserWritesOmitCalculatedOutput": true,
+  "numericLabelsVisiblyMeasured": true,
+  "scope": "Authored interpretation fixture and prepared local runtime. Durations include test instrumentation and visual checks; no real-model, ordinary-user or hosted performance claim."
+}

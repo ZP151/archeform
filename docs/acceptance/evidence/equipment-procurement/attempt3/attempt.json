@@ -1,0 +1,12 @@
+{
+  "compilationId": "cmu5lpsuc004rlu4tdpsl0f5g",
+  "previewRunId": "preview-192e7d32-933a-4e9e-8a13-fd9eb629d359",
+  "project": "factory-preview-preview-192e7d32-933a-4e9e-8a13-fd9eb629d359",
+  "status": "stopped",
+  "outcome": "failed-multi-record-mobile-density",
+  "elapsedToReadyMs": 197283,
+  "elapsedAtFailureMs": 239448,
+  "correctionJourneyPassed": true,
+  "secondSummaryViewportRatio": 0.8431087136268616,
+  "requiredViewportRatio": 1
+}

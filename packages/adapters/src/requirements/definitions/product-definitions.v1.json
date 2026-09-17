@@ -3533,6 +3533,715 @@
         "reviewedOn": "2026-09-17",
         "decision": "ADR-0065"
       }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "equipment-procurement-approval",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "approval",
+        "version": "approval-correction/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "employee",
+        "operation": "submit",
+        "entityKey": "equipment-request",
+        "successState": "submitted"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "equipment-procurement-approval-requirement",
+          "outcome": "Employees submit single-item equipment procurement requests with a quantity, estimated unit price, calculated total and justification; a manager returns or approves them and finance audits the decisions.",
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "Creates and corrects a single-item equipment request using a positive integer quantity, positive estimated unit price and justification; the total is calculated automatically."
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "description": "Approves or returns submitted equipment procurement requests."
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "description": "Audits all equipment procurement decisions."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "equipment-request",
+              "label": "Equipment request",
+              "description": "A single-item request for a manager decision on estimated equipment procurement cost, with a server-calculated quantity-times-unit-price total."
+            },
+            {
+              "key": "approval",
+              "label": "Approval",
+              "description": "A manager decision on a submitted equipment procurement request."
+            },
+            {
+              "key": "audit-trail",
+              "label": "Audit trail",
+              "description": "The record of every decision."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "equipment-procurement-approval",
+              "label": "Equipment procurement approval",
+              "description": "Create and edit a draft, submit, return with a required reason, revise the same record, resubmit and approve."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "employee-submits-equipment-request",
+              "given": "an employee with an equipment request",
+              "when": "the employee submits it",
+              "then": "the equipment request is submitted with the exact server-calculated quantity-times-unit-price total"
+            },
+            {
+              "key": "manager-approves-equipment-request",
+              "given": "a submitted equipment request",
+              "when": "the manager approves it",
+              "then": "the equipment request is approved"
+            },
+            {
+              "key": "manager-returns-equipment-request",
+              "given": "a submitted equipment request",
+              "when": "the manager returns it with a reason",
+              "then": "the same equipment request is returned with a required reason; the employee can correct both quantity and estimated unit price, save a recalculated total and resubmit"
+            },
+            {
+              "key": "finance-audits-equipment-decisions",
+              "given": "decided equipment requests",
+              "when": "finance audits them",
+              "then": "every decision is recorded in the audit trail"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:2c5f48d926f08298e7fed66909cff2b15a9686e3c1e37ecff128f68bedbef904",
+          "title": "Equipment Procurement Approval",
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "permissions": [
+                {
+                  "entityKey": "equipment-request",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                {
+                  "entityKey": "employee",
+                  "actions": ["read", "update"]
+                }
+              ]
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "permissions": [
+                {
+                  "entityKey": "equipment-request",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "permissions": [
+                {
+                  "entityKey": "equipment-request",
+                  "actions": ["read", "audit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "equipment-request",
+              "label": "Equipment request",
+              "description": "A single-item request for a manager decision on estimated equipment procurement cost, with a server-calculated quantity-times-unit-price total.",
+              "fields": [
+                {
+                  "key": "itemName",
+                  "label": "Item name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "quantity",
+                  "label": "Quantity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "unitPrice",
+                  "label": "Unit price",
+                  "type": "currency",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "total",
+                  "label": "Total",
+                  "type": "currency",
+                  "required": true,
+                  "calculation": {
+                    "apiVersion": "factory.quantity-unit-price-total/v1",
+                    "quantityFieldKey": "quantity",
+                    "unitPriceFieldKey": "unitPrice"
+                  }
+                },
+                {
+                  "key": "justification",
+                  "label": "Justification",
+                  "type": "long-text",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "The person who submits equipment procurement requests.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "equipment-request-dashboard",
+              "label": "Equipment request dashboard",
+              "intent": "dashboard",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-list",
+              "label": "All equipment requests",
+              "intent": "list",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-form",
+              "label": "New equipment request",
+              "intent": "form",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-detail",
+              "label": "Equipment request detail",
+              "intent": "detail",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-queue",
+              "label": "Approval queue",
+              "intent": "queue",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-settings",
+              "label": "Equipment request settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "equipment-procurement-approval",
+              "label": "Equipment procurement approval",
+              "entityKey": "equipment-request",
+              "states": [
+                {
+                  "key": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "key": "returned",
+                  "label": "Returned"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "employee"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "employee"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "employee-submits-equipment-request",
+              "description": "An employee submits an equipment request.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits a single-item equipment request with positive quantity, positive estimated unit price, calculated total and justification"
+                }
+              ]
+            },
+            {
+              "key": "manager-decides-equipment-request",
+              "description": "A manager approves or returns a submitted equipment request.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an equipment request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "approves or returns it"
+                },
+                {
+                  "actorKey": "employee",
+                  "action": "corrects both quantity and estimated unit price on the returned record, saves the recalculated total as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "finance-audits-equipment-decisions",
+              "description": "Finance audits every decision.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an equipment request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "decides it"
+                },
+                {
+                  "actorKey": "finance",
+                  "action": "audits the decision"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "definitionKey": "equipment-procurement-approval",
+          "template": {
+            "key": "approval-definition-template",
+            "version": "2.0.0"
+          },
+          "actors": [
+            {
+              "key": "employee",
+              "label": "Employee",
+              "permissions": [
+                {
+                  "entityKey": "equipment-request",
+                  "actions": ["create", "read", "update", "submit"]
+                },
+                {
+                  "entityKey": "employee",
+                  "actions": ["read", "update"]
+                }
+              ]
+            },
+            {
+              "key": "manager",
+              "label": "Manager",
+              "permissions": [
+                {
+                  "entityKey": "equipment-request",
+                  "actions": ["read", "approve", "reject"]
+                }
+              ]
+            },
+            {
+              "key": "finance",
+              "label": "Finance",
+              "permissions": [
+                {
+                  "entityKey": "equipment-request",
+                  "actions": ["read", "audit"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "equipment-request",
+              "label": "Equipment request",
+              "description": "A single-item request for a manager decision on estimated equipment procurement cost, with a server-calculated quantity-times-unit-price total.",
+              "fields": [
+                {
+                  "key": "itemName",
+                  "label": "Item name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "quantity",
+                  "label": "Quantity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "unitPrice",
+                  "label": "Unit price",
+                  "type": "currency",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "total",
+                  "label": "Total",
+                  "type": "currency",
+                  "required": true,
+                  "calculation": {
+                    "apiVersion": "factory.quantity-unit-price-total/v1",
+                    "quantityFieldKey": "quantity",
+                    "unitPriceFieldKey": "unitPrice"
+                  }
+                },
+                {
+                  "key": "justification",
+                  "label": "Justification",
+                  "type": "long-text",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "employee",
+              "label": "Employee",
+              "description": "The person who submits equipment procurement requests.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "department",
+                  "label": "Department",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "equipment-request-dashboard",
+              "label": "Equipment request dashboard",
+              "intent": "dashboard",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-list",
+              "label": "All equipment requests",
+              "intent": "list",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-form",
+              "label": "New equipment request",
+              "intent": "form",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-detail",
+              "label": "Equipment request detail",
+              "intent": "detail",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-queue",
+              "label": "Approval queue",
+              "intent": "queue",
+              "entityKey": "equipment-request"
+            },
+            {
+              "key": "equipment-request-settings",
+              "label": "Equipment request settings",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "equipment-procurement-approval",
+              "label": "Equipment procurement approval",
+              "entityKey": "equipment-request",
+              "states": [
+                {
+                  "key": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "key": "returned",
+                  "label": "Returned"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "draft",
+                  "to": "submitted",
+                  "label": "Submit",
+                  "actorKey": "employee"
+                },
+                {
+                  "key": "approve",
+                  "from": "submitted",
+                  "to": "approved",
+                  "label": "Approve",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "reject",
+                  "from": "submitted",
+                  "to": "returned",
+                  "label": "Return",
+                  "actorKey": "manager"
+                },
+                {
+                  "key": "update",
+                  "from": "returned",
+                  "to": "draft",
+                  "label": "Revise",
+                  "actorKey": "employee"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "employee-submits-equipment-request",
+              "description": "An employee submits an equipment request.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits a single-item equipment request with positive quantity, positive estimated unit price, calculated total and justification"
+                }
+              ]
+            },
+            {
+              "key": "manager-decides-equipment-request",
+              "description": "A manager approves or returns a submitted equipment request.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an equipment request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "approves or returns it"
+                },
+                {
+                  "actorKey": "employee",
+                  "action": "corrects both quantity and estimated unit price on the returned record, saves the recalculated total as draft and resubmits the same record"
+                }
+              ]
+            },
+            {
+              "key": "finance-audits-equipment-decisions",
+              "description": "Finance audits every decision.",
+              "steps": [
+                {
+                  "actorKey": "employee",
+                  "action": "submits an equipment request"
+                },
+                {
+                  "actorKey": "manager",
+                  "action": "decides it"
+                },
+                {
+                  "actorKey": "finance",
+                  "action": "audits the decision"
+                }
+              ]
+            }
+          ],
+          "identity": "Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation. Finance reads and audits but cannot create, edit, submit or decide equipment requests.",
+          "integrations": "No payment, reimbursement, supplier or vendor ordering, inventory tracking, stock changes, inventory reservation, tax calculation, currency conversion, external identity, procurement-system, accounting or notification-delivery integration."
+        },
+        "providerInstruction": "Every Equipment Procurement Approval brief returns definition-selection with definitionKey equipment-procurement-approval, generatedInterpretation null and businessParameters null. The reviewed local demo handles one equipment item per request: item name, a required positive integer quantity, a required positive estimated unit price, an exact server-calculated quantity-times-unit-price total and a required justification. Employee creates and edits drafts, submits, corrects both quantity and unit price on returned records, saves the recalculated total and resubmits the same record. One manager approves or returns with a required reason. Finance reads and audits without mutating requests. The total is always server-owned and read-only; never request or accept a caller-entered total. Omitted routine pages and presentation accept supported-default with zero questions. Explicit or ambiguous zero-cost or free equipment, zero or fractional quantity, multiple line items, tax, discount, rounding, currency codes, symbols, scale, conversion, payment, reimbursement, supplier or vendor ordering, inventory tracking, stock changes, inventory reservation, private or requester-only records, real identity, SSO, tenant isolation, thresholds, budgets, multiple or sequential reviewers, editing submitted or approved records, reopening approved records, configurable reason policy, changed fields or requiredness, procurement systems, accounting or notification delivery require needs-clarification. Preserve every independent material question using authorization, visibility, role, business-rule, data or integration. Follow-ups retain every still-required exclusion until the user explicitly accepts the supported scope; never infer acceptance. The estimate uses consistent unspecified units without currency symbols, minor-unit rounding or settlement. The exact roles are selectable local demo roles with role-wide reads. <supported-equipment-procurement-default>{\"definitionKey\":\"equipment-procurement-approval\",\"template\":{\"key\":\"approval-definition-template\",\"version\":\"2.0.0\"},\"actors\":[{\"key\":\"employee\",\"label\":\"Employee\",\"permissions\":[{\"entityKey\":\"equipment-request\",\"actions\":[\"create\",\"read\",\"update\",\"submit\"]},{\"entityKey\":\"employee\",\"actions\":[\"read\",\"update\"]}]},{\"key\":\"manager\",\"label\":\"Manager\",\"permissions\":[{\"entityKey\":\"equipment-request\",\"actions\":[\"read\",\"approve\",\"reject\"]}]},{\"key\":\"finance\",\"label\":\"Finance\",\"permissions\":[{\"entityKey\":\"equipment-request\",\"actions\":[\"read\",\"audit\"]}]}],\"entities\":[{\"key\":\"equipment-request\",\"label\":\"Equipment request\",\"description\":\"A single-item request for a manager decision on estimated equipment procurement cost, with a server-calculated quantity-times-unit-price total.\",\"fields\":[{\"key\":\"itemName\",\"label\":\"Item name\",\"type\":\"text\",\"required\":true},{\"key\":\"quantity\",\"label\":\"Quantity\",\"type\":\"number\",\"required\":true,\"numericDomain\":{\"apiVersion\":\"factory.numeric-field-domain/v1\",\"minimum\":{\"value\":0,\"inclusive\":false}}},{\"key\":\"unitPrice\",\"label\":\"Unit price\",\"type\":\"currency\",\"required\":true,\"numericDomain\":{\"apiVersion\":\"factory.numeric-field-domain/v1\",\"minimum\":{\"value\":0,\"inclusive\":false}}},{\"key\":\"total\",\"label\":\"Total\",\"type\":\"currency\",\"required\":true,\"calculation\":{\"apiVersion\":\"factory.quantity-unit-price-total/v1\",\"quantityFieldKey\":\"quantity\",\"unitPriceFieldKey\":\"unitPrice\"}},{\"key\":\"justification\",\"label\":\"Justification\",\"type\":\"long-text\",\"required\":true}]},{\"key\":\"employee\",\"label\":\"Employee\",\"description\":\"The person who submits equipment procurement requests.\",\"fields\":[{\"key\":\"name\",\"label\":\"Name\",\"type\":\"text\",\"required\":true},{\"key\":\"department\",\"label\":\"Department\",\"type\":\"text\",\"required\":false}]}],\"pageIntents\":[{\"key\":\"equipment-request-dashboard\",\"label\":\"Equipment request dashboard\",\"intent\":\"dashboard\",\"entityKey\":\"equipment-request\"},{\"key\":\"equipment-request-list\",\"label\":\"All equipment requests\",\"intent\":\"list\",\"entityKey\":\"equipment-request\"},{\"key\":\"equipment-request-form\",\"label\":\"New equipment request\",\"intent\":\"form\",\"entityKey\":\"equipment-request\"},{\"key\":\"equipment-request-detail\",\"label\":\"Equipment request detail\",\"intent\":\"detail\",\"entityKey\":\"equipment-request\"},{\"key\":\"equipment-request-queue\",\"label\":\"Approval queue\",\"intent\":\"queue\",\"entityKey\":\"equipment-request\"},{\"key\":\"equipment-request-settings\",\"label\":\"Equipment request settings\",\"intent\":\"settings\"}],\"workflows\":[{\"key\":\"equipment-procurement-approval\",\"label\":\"Equipment procurement approval\",\"entityKey\":\"equipment-request\",\"states\":[{\"key\":\"draft\",\"label\":\"Draft\"},{\"key\":\"submitted\",\"label\":\"Submitted\"},{\"key\":\"approved\",\"label\":\"Approved\"},{\"key\":\"returned\",\"label\":\"Returned\"}],\"transitions\":[{\"key\":\"submit\",\"from\":\"draft\",\"to\":\"submitted\",\"label\":\"Submit\",\"actorKey\":\"employee\"},{\"key\":\"approve\",\"from\":\"submitted\",\"to\":\"approved\",\"label\":\"Approve\",\"actorKey\":\"manager\"},{\"key\":\"reject\",\"from\":\"submitted\",\"to\":\"returned\",\"label\":\"Return\",\"actorKey\":\"manager\"},{\"key\":\"update\",\"from\":\"returned\",\"to\":\"draft\",\"label\":\"Revise\",\"actorKey\":\"employee\"}]}],\"acceptanceJourneys\":[{\"key\":\"employee-submits-equipment-request\",\"description\":\"An employee submits an equipment request.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits a single-item equipment request with positive quantity, positive estimated unit price, calculated total and justification\"}]},{\"key\":\"manager-decides-equipment-request\",\"description\":\"A manager approves or returns a submitted equipment request.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits an equipment request\"},{\"actorKey\":\"manager\",\"action\":\"approves or returns it\"},{\"actorKey\":\"employee\",\"action\":\"corrects both quantity and estimated unit price on the returned record, saves the recalculated total as draft and resubmits the same record\"}]},{\"key\":\"finance-audits-equipment-decisions\",\"description\":\"Finance audits every decision.\",\"steps\":[{\"actorKey\":\"employee\",\"action\":\"submits an equipment request\"},{\"actorKey\":\"manager\",\"action\":\"decides it\"},{\"actorKey\":\"finance\",\"action\":\"audits the decision\"}]}],\"identity\":\"Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation. Finance reads and audits but cannot create, edit, submit or decide equipment requests.\",\"integrations\":\"No payment, reimbursement, supplier or vendor ordering, inventory tracking, stock changes, inventory reservation, tax calculation, currency conversion, external identity, procurement-system, accounting or notification-delivery integration.\"}</supported-equipment-procurement-default>"
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-record-recovery",
+            "steps": [
+              {
+                "actorKey": "manager",
+                "entityKey": "equipment-request",
+                "operation": "reject",
+                "fromState": "submitted",
+                "toState": "returned",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "employee",
+                "entityKey": "equipment-request",
+                "operation": "update",
+                "fromState": "returned",
+                "toState": "draft",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "employee",
+                "entityKey": "equipment-request",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "submitted",
+                "expectation": "success"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "unauthorized-mutation",
+            "steps": [
+              {
+                "actorKey": "finance",
+                "entityKey": "equipment-request",
+                "operation": "approve",
+                "fromState": "submitted",
+                "toState": "approved",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "approval-v1",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "approval-correction/v1"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-17",
+        "decision": "ADR-0065"
+      }
     }
   ]
 }

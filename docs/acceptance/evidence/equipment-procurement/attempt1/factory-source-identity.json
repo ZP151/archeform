@@ -1,0 +1,160 @@
+{
+  "recordedAt": "2026-09-17T13:47:11.475Z",
+  "base": "ada413fc41300da5db50072af297b397fd705bbb",
+  "catalogueDefinitions": 7,
+  "reviewedCatalogueSha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+  "factoryServices": [
+    {
+      "service": "control-plane",
+      "imageId": "sha256:d7636a22ee1ad9849346d763017c9a49aabcc96e2f8a4076312de373fb2e6b85",
+      "entries": [
+        {
+          "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+          "sha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+          "canonical": "7b6dea7e5a3e5d806f642e2fa0e9a86737a760acb86624fae58c15d9b73c4da9",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/graph/src/calculated-request-total.ts",
+          "sha256": "7443cca15cb8198eaf7a51f615aa2546df1ff98f7b2e5170eb67d09da9767874",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-calculated-total.ts",
+          "sha256": "eb24fa96e52087cc6ac7dfccecb6c0e4f00c65b5e44f2a78f52a4160f82e5122",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-mutation-contract.ts",
+          "sha256": "3ba2fc58779acd31f4f2091ca627eff49c67947f1ac3975ff70f7cf005a9669b",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/targets/database/target.ts",
+          "sha256": "d11b614f3065e2ab291da9d82b9bc19540864c9ac82dea91902b1ed3eabf64c6",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+          "sha256": "448eea2ce268fae1032116a88d47b89cdce64f4a610f2dfa8795ebe5ac704ada",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/adapters/dist/requirements/definitions/product-definitions.v1.json",
+          "sha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+          "canonical": "7b6dea7e5a3e5d806f642e2fa0e9a86737a760acb86624fae58c15d9b73c4da9",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        }
+      ]
+    },
+    {
+      "service": "compiler-worker",
+      "imageId": "sha256:bd71404a540d0d660206aad4a39cb4c8aab9345556f6cea8c9ce835b70de2b3d",
+      "entries": [
+        {
+          "path": "packages/graph/src/calculated-request-total.ts",
+          "sha256": "7443cca15cb8198eaf7a51f615aa2546df1ff98f7b2e5170eb67d09da9767874",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-calculated-total.ts",
+          "sha256": "eb24fa96e52087cc6ac7dfccecb6c0e4f00c65b5e44f2a78f52a4160f82e5122",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-mutation-contract.ts",
+          "sha256": "3ba2fc58779acd31f4f2091ca627eff49c67947f1ac3975ff70f7cf005a9669b",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/targets/database/target.ts",
+          "sha256": "d11b614f3065e2ab291da9d82b9bc19540864c9ac82dea91902b1ed3eabf64c6",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+          "sha256": "448eea2ce268fae1032116a88d47b89cdce64f4a610f2dfa8795ebe5ac704ada",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        }
+      ]
+    },
+    {
+      "service": "workbench",
+      "imageId": "sha256:73cd3aaf810561ec66b9121e76359db71eff30172165e1d030579bcf2596d254",
+      "entries": [
+        {
+          "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+          "sha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+          "canonical": "7b6dea7e5a3e5d806f642e2fa0e9a86737a760acb86624fae58c15d9b73c4da9",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/graph/src/calculated-request-total.ts",
+          "sha256": "7443cca15cb8198eaf7a51f615aa2546df1ff98f7b2e5170eb67d09da9767874",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-calculated-total.ts",
+          "sha256": "eb24fa96e52087cc6ac7dfccecb6c0e4f00c65b5e44f2a78f52a4160f82e5122",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-mutation-contract.ts",
+          "sha256": "3ba2fc58779acd31f4f2091ca627eff49c67947f1ac3975ff70f7cf005a9669b",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/targets/database/target.ts",
+          "sha256": "d11b614f3065e2ab291da9d82b9bc19540864c9ac82dea91902b1ed3eabf64c6",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+          "sha256": "448eea2ce268fae1032116a88d47b89cdce64f4a610f2dfa8795ebe5ac704ada",
+          "canonical": null,
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/adapters/dist/requirements/definitions/product-definitions.v1.json",
+          "sha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+          "canonical": "7b6dea7e5a3e5d806f642e2fa0e9a86737a760acb86624fae58c15d9b73c4da9",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        }
+      ]
+    }
+  ],
+  "scope": "Catalogue source/dist match reviewed input in Control Plane and Workbench. The unchanged worker image is reused: it has no adapters dependency/catalogue import and consumes the immutable Graph. Its unused catalogue source copy is not an execution input; all checked shared Graph/compiler/worker source bytes match. Byte equality is reported for every checked file. This is authored-fixture local evidence, not real-model or hosted evidence."
+}

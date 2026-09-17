@@ -63,6 +63,13 @@ For changed numeric persistence behavior, prove the actual database adapter and
 seed path with precision-sensitive values and transactional rollback; in-memory
 arithmetic alone is insufficient. Reuse this shared evidence for unchanged rows.
 
+For a recipe's action-position or density criterion, the cheap emitted-browser
+check must render its complete workspace, including navigation, heading, hero,
+filters and business labels. An isolated card cannot establish the first action's
+position on the page. Keep the accepted recipe bounds and 44 px controls; fix
+composition spacing rather than weakening a failed threshold. Reuse this focused
+check before expensive actual generation, within the existing review.
+
 ## Required acceptance dimensions
 
 | Dimension                          | Observable acceptance condition                                                                                                                                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                                                                                               |
@@ -153,3 +160,10 @@ One reviewer evaluates the complete journey, actual images and user effort in th
 existing review. No extra audit stage. Agent approval or passing axe/geometry
 checks cannot overrule explicit user rejection. Cross-contract/security gates
 remain applicable only at their existing boundaries.
+
+Complete-workspace density checks must include representative record counts and
+role-dependent chrome: at least the seed plus two distinct authored records,
+realistic title lengths, and closed global history where available. Verify the
+existing first-action and first-two-summary bounds before expensive generation;
+a single isolated card or empty page cannot prove these outcomes. Check invalid
+input by its required meaning unless exact wording is an explicit copy contract.

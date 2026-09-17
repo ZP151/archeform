@@ -10,19 +10,26 @@ complete; their former next-step entries below are historical.
 
 Return effort to reusable product capability and ordinary-user outcomes:
 
-| Order                           | Delivery                                        | Observable exit                                                                                                                  |
-| ------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 1                               | Bounded generated database identifiers          | Long shared prefixes cannot cause silent constraint collisions; historical artifacts remain unchanged                            |
-| 2                               | Shared numeric rules and Training Funding       | Consistent native/API create/edit validation; real correction/approval journey; sixth accepted definition                        |
-| 3                               | Calculated totals and Equipment                 | Authoritative quantity/cost/total rules and recovery; no per-product runtime branch                                              |
-| 4                               | Appointment family                              | Available slots, capacity, booking conflicts, cancellation/rebooking and timezone cases pass                                     |
-| Alongside expansion             | Real-model and ordinary-user evidence           | Measure requirement retention, selection errors, questions, manual rescue and first useful action; keep fixture results separate |
-| After varied proven coverage    | 30 definitions, then 100+ retrieval             | Distinct usable jobs and representative rule/UI regressions, with source-reuse cost recorded                                     |
-| Before external maturity claims | Production identity and durable hosted delivery | Appropriate access boundaries, stable URL, persistence, recovery and operating responsibility                                    |
+| Order                           | Delivery                                                  | Observable exit                                                                                                                  |
+| ------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1                               | Bounded generated database identifiers                    | Long shared prefixes cannot cause silent constraint collisions; historical artifacts remain unchanged                            |
+| 2                               | Shared numeric rules and Training Funding                 | Consistent native/API create/edit validation; real correction/approval journey; sixth accepted definition                        |
+| 3                               | Calculated totals and Equipment                           | Authoritative quantity/cost/total rules and recovery; no per-product runtime branch                                              |
+| 4                               | Short admission lane, setup savings and varied data batch | Missing case/UI bindings fail before builds; measured cache reuse; 3–5 distinct supported jobs with complete journeys            |
+| 5                               | Appointment family                                        | Available slots, capacity, booking conflicts, cancellation/rebooking and timezone cases pass                                     |
+| Alongside expansion             | Real-model and ordinary-user evidence                     | Measure requirement retention, selection errors, questions, manual rescue and first useful action; keep fixture results separate |
+| After varied proven coverage    | 30 definitions, then 100+ retrieval                       | Distinct usable jobs and representative rule/UI regressions, with source-reuse cost recorded                                     |
+| Before external maturity claims | Production identity and durable hosted delivery           | Appropriate access boundaries, stable URL, persistence, recovery and operating responsibility                                    |
 
-The immediate implementation target is identifier reliability followed by the
-numeric-domain slice. The current task has an active long Goal covering the
-identifier repair, shared numeric capability and sixth-definition admission.
+Identifier reliability, numeric domains, Training Funding and shared calculated
+totals are delivered on the consumer branch. Equipment's actual attempt 4 and
+independent ordinary review pass: seven locally accepted definitions across
+three families, ready in 197,474 ms with fixture interpretation. The long Goal's
+detailed engineering plan reduces repeated build, verification and authoring
+effort. Follow the
+[engineering plan](superpowers/plans/2026-09-17-iteration-engineering-optimization.md)
+for proposed short admission lanes, bounded cache improvements, varied batches
+and module extraction; its proposals are not completed source changes.
 Technology-contract changes retain their existing authority; ordinary
 definition additions reuse valid family evidence and proportionate regression.
 See [current status](project-status.md) and the

@@ -130,21 +130,21 @@ focused definition tests, `scripts/verify-product-definition-data.mjs`,
 `e2e/helpers/approval-definition-batch.ts`, its batch spec and narrowly necessary
 reusable acceptance bindings. No new product-key runtime branches or new assets.
 
-- [ ] Add the distinct reviewed definition and safe supported/clarification
+- [x] Add the distinct reviewed definition and safe supported/clarification
       selection examples. Update the independent CLI exact inventory to seven.
-- [ ] Prove authored selection and distinct semantic fingerprint, not a renamed
+- [x] Prove authored selection and distinct semantic fingerprint, not a renamed
       Purchase amount. Run the full independent CLI and focused admission tests.
-- [ ] Drive actual Draft -> Publish -> Compilation -> verified local Preview.
+- [x] Drive actual Draft -> Publish -> Compilation -> verified local Preview.
       Record every attempt and measured ready time against 300,000 ms.
-- [ ] Complete two distinct item requests; change both quantity and unit price
+- [x] Complete two distinct item requests; change both quantity and unit price
       through the return/correction/resubmit/approval journey. Check all summary,
       detail and history labels/values, justification and decision reasons.
-- [ ] Cover invalid client no-fetch, forged total API rejection, state/role
+- [x] Cover invalid client no-fetch, forged total API rejection, state/role
       denial, stale/conflicting correction, retry and restart persistence.
-- [ ] Visually inspect actual screenshots at 390/768/1440, dark mode and media
+- [x] Visually inspect actual screenshots at 390/768/1440, dark mode and media
       failure. Confirm visible output, retained visual richness, no overflow,
       accessible labels/focus/touch targets and useful loading/error recovery.
-- [ ] Use one independent ordinary product review, reusing shared evidence.
+- [x] Use one independent ordinary product review, reusing shared evidence.
       Count seven definitions only after all applicable outcomes pass. Families
       remain three. Retain fixture-provider/real-model/production limitations.
 
@@ -154,21 +154,23 @@ reusable acceptance bindings. No new product-key runtime branches or new assets.
 ordinary admission review where practical. **Paths:** new engineering plan,
 current status, roadmap, authoring guide and PM ledger. No broad source rewrite.
 
-- [ ] Establish observed costs: repeated inventory lists, compiler module size,
+- [x] Establish observed costs: repeated inventory lists, compiler module size,
       catalogue data duplication/limits, Docker cache context, runtime setup,
       evidence/ledger size, test lanes and repair/review duplication.
-- [ ] Rank concrete changes by ordinary-user effort and admission lead time.
+- [x] Rank concrete changes by ordinary-user effort and admission lead time.
       State affected paths, owners, prerequisites, acceptance metrics, rollback
       and required authority for every proposed contract/operability change.
-- [ ] Prefer current scripts, owned-resource leases, parameterized journeys and
+- [x] Prefer current scripts, owned-resource leases, parameterized journeys and
       registries. Separate one-time shared family work from data-only admission;
       keep security/transaction/immutable-output checks at shared boundaries.
-- [ ] Define short, medium and scale-out stages: dependable seven-product
+- [x] Define short, medium and scale-out stages: dependable seven-product
       baseline; cheaper varied batches; Appointment interval/capacity family;
       larger searchable definitions and consented real-user/model evidence.
-- [ ] Identify redundant work to remove now versus structural changes requiring
+- [x] Identify redundant work to remove now versus structural changes requiring
       a later accepted task. Do not delete immutable goldens or useful evidence.
-- [ ] Update current status/counts and roadmap, record actual outcomes and limits,
-      and finish normal reviewed commit/push with remote equality and clean tree.
-- [ ] Complete the long Goal only when product acceptance and engineering plan
-      are both delivered; an intermediate green package test is insufficient.
+- [x] Update current status/counts and roadmap, record actual outcomes and limits,
+      and prepare the reviewed delivery.
+
+Controller must finish normal commit/push, verify remote equality and a clean
+consumer worktree, and only then mark the long Goal complete. Delivery verification
+is reported after creating this commit; a green package test is insufficient.

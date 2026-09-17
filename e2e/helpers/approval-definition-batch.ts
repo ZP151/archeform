@@ -42,6 +42,8 @@ export type ApprovalDefinitionCase = {
     "evidence" | "previewProject"
   >;
   readonly retainedDetails?: Readonly<Record<string, string>>;
+  readonly requireVisibleSummaryLabels?: boolean;
+  readonly calculatedOutput?: { readonly key: string; readonly label: string };
   readonly visibleSummary?: readonly {
     readonly label: string;
     readonly corrected: string;
@@ -328,10 +330,36 @@ async function verifyVisibleBusinessIdentity(
       await expect(title).toBeVisible();
       await expect(title).toContainText(record.identity);
       for (const summary of record.summaries) {
+        if (definition.requireVisibleSummaryLabels) {
+          const term = row.locator(".approval-summary dt", {
+            hasText: new RegExp(`^${summary.label}$`),
+          });
+          await expect(term).toBeVisible();
+          const style = await term.evaluate((node) => {
+            const css = getComputedStyle(node),
+              box = node.getBoundingClientRect();
+            return {
+              clip: css.clipPath,
+              position: css.position,
+              width: box.width,
+              height: box.height,
+            };
+          });
+          expect(style.clip).toBe("none");
+          expect(style.position).not.toBe("absolute");
+          expect(style.width).toBeGreaterThan(20);
+          expect(style.height).toBeGreaterThan(10);
+        }
         await expect(visibleSummaryValue(row, summary.label)).toBeVisible();
         await expect(visibleSummaryValue(row, summary.label)).toHaveText(
           summary.value,
         );
+        if (summary.label === definition.calculatedOutput?.label)
+          expect(
+            await visibleSummaryValue(row, summary.label).evaluate((node) =>
+              Number(getComputedStyle(node).fontWeight),
+            ),
+          ).toBeGreaterThanOrEqual(600);
       }
     }
     await page.screenshot({
@@ -395,6 +423,23 @@ async function createAndApproveAdditionalRecord(
   await role.selectOption(correction.requester);
   for (const [label, value] of Object.entries(additionalApprovedRecord.fields))
     await page.getByLabel(label, { exact: true }).fill(value);
+  if (definition.calculatedOutput) {
+    const output = page.getByLabel(definition.calculatedOutput.label, {
+      exact: true,
+    });
+    await expect(output).toHaveJSProperty("tagName", "OUTPUT");
+    await expect(output).toHaveText(
+      definition.visibleSummary!.find(
+        ({ label }) => label === definition.calculatedOutput!.label,
+      )!.additional,
+    );
+    await expect(
+      page.locator(`input[name="${definition.calculatedOutput.key}"]`),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText("Calculated preview", { exact: true }),
+    ).toBeVisible();
+  }
   if (correction.select) {
     if (!additionalApprovedRecord.selectValue)
       throw new Error("The additional record must declare its enum selection.");
@@ -412,9 +457,17 @@ async function createAndApproveAdditionalRecord(
     .click();
   const createResult = await createdResponse;
   expect(createResult.status()).toBe(201);
-  const created = (await createResult.json()) as { id?: unknown };
+  const created = (await createResult.json()) as Record<string, unknown>;
   if (typeof created.id !== "string")
     throw new Error("Additional authored record has no server identity.");
+  if (definition.calculatedOutput)
+    expect(created[definition.calculatedOutput.key]).toBe(
+      Number(
+        definition.visibleSummary!.find(
+          ({ label }) => label === definition.calculatedOutput!.label,
+        )!.additional,
+      ),
+    );
 
   await navigateApproval(page, correction.list);
   const row = page
@@ -508,6 +561,9 @@ export async function runApprovalDefinitionBatch({
   let interpretationCalls = 0;
   let generated: Page | null = null;
   const pageErrors: string[] = [];
+  const callerOutputKeys: string[] = [];
+  let generatedBrowserWrites = 0;
+  let elapsedToReadyMs: number | null = null;
   page.on("pageerror", (error) => pageErrors.push(error.name));
   page.on("response", (response) => {
     if (response.request().method() !== "POST") return;
@@ -581,7 +637,7 @@ export async function runApprovalDefinitionBatch({
       )
       .not.toBe("pending");
     expect(outcome, "definition delivery terminal outcome").toBe("ready");
-    const elapsedToReadyMs = Date.now() - startedAt;
+    elapsedToReadyMs = Date.now() - startedAt;
     expect(elapsedToReadyMs, "prepared local ready target").toBeLessThanOrEqual(
       300_000,
     );
@@ -605,6 +661,23 @@ export async function runApprovalDefinitionBatch({
 
     generated = await context.newPage();
     generated.on("pageerror", (error) => pageErrors.push(error.name));
+    generated.on("request", (outgoing) => {
+      if (
+        !definition.calculatedOutput ||
+        !["POST", "PATCH"].includes(outgoing.method()) ||
+        !new URL(outgoing.url()).pathname.startsWith(
+          `/api/${definition.correction.entity}`,
+        )
+      )
+        return;
+      const body = outgoing.postDataJSON() as {
+        values?: Record<string, unknown>;
+      } | null;
+      if (!body?.values) return;
+      generatedBrowserWrites++;
+      if (Object.hasOwn(body.values, definition.calculatedOutput.key))
+        callerOutputKeys.push(definition.calculatedOutput.key);
+    });
     await generated.goto(href);
     await verifyApprovalAssets(generated);
     await verifyAssetFailureDetection(generated);
@@ -616,6 +689,27 @@ export async function runApprovalDefinitionBatch({
       evidence: definition.evidenceDirectory,
       previewProject: preview!.composeProjectName,
     });
+    if (definition.calculatedOutput) {
+      const persisted = await generated.request.get(
+        new URL(
+          `/api/${definition.correction.entity}/${correctionFacts.recordId}`,
+          href,
+        ).toString(),
+        {
+          headers: {
+            "x-factory-fixture-session": `fixture-session-${definition.correction.auditor}`,
+          },
+        },
+      );
+      expect(persisted.status()).toBe(200);
+      expect((await persisted.json())[definition.calculatedOutput.key]).toBe(
+        Number(
+          definition.visibleSummary!.find(
+            ({ label }) => label === definition.calculatedOutput!.label,
+          )!.corrected,
+        ),
+      );
+    }
     const correctedRow = generated
       .locator(".generated-records > li")
       .filter({ hasText: definition.correction.identity });
@@ -684,6 +778,12 @@ export async function runApprovalDefinitionBatch({
       definition.correction.recordMedia,
     );
     expect(pageErrors).toEqual([]);
+    if (definition.calculatedOutput) {
+      expect(generatedBrowserWrites).toBeGreaterThan(0);
+      expect(callerOutputKeys, "browser writes contain operands only").toEqual(
+        [],
+      );
+    }
     expect(
       await immutableApprovalFingerprint(
         request,
@@ -710,6 +810,14 @@ export async function runApprovalDefinitionBatch({
             definition.correction.clientInvalidValue,
           ),
           businessSummaries: summary.map(({ label }) => label),
+          ...(definition.calculatedOutput
+            ? {
+                calculatedPreviewReadOnly: true,
+                browserWritesOmitCalculatedOutput: true,
+                numericLabelsVisiblyMeasured:
+                  definition.requireVisibleSummaryLabels === true,
+              }
+            : {}),
           scope:
             "Authored interpretation fixture and prepared local runtime. Durations include test instrumentation and visual checks; no real-model, ordinary-user or hosted performance claim.",
         },
@@ -751,6 +859,8 @@ export async function runApprovalDefinitionBatch({
       JSON.stringify({
         compilationId,
         definitionKey: definition.definitionKey,
+        elapsedToReadyMs,
+        elapsedAtFailureMs: Date.now() - startedAt,
         lifecycle,
         pageErrors,
         requestDiagnostics,

@@ -5502,3 +5502,131 @@ capability normally and verify remote equality before registering Equipment.
 Equipment owner `/root/calculation_contract_owner` has prepared only ignored
 candidate data and tests; root's prepared E2E helper/case and optimization/status
 edits are explicitly outside this capability commit. No new product is counted.
+
+### 2026-09-17 Equipment admission: frozen ordinary data wave
+
+Shared capability delivery is `ada413fc41300da5db50072af297b397fd705bbb`;
+normal push and remote equality are verified. PM authorizes the prepared
+Equipment data-only task under ADR-0065 and the accepted ADR-0070 capability.
+
+Owner `/root/calculation_contract_owner` writes only the catalogue JSON, direct
+adapter admission/inventory tests and independent CLI membership. Root owns the
+parameterized E2E helper/case, actual services, evidence, documents and Git.
+The frozen equipment-request fields are Item name, positive integer Quantity,
+positive Unit price, server-owned Total, and Justification; employee/manager/
+finance reuse the exact Approval correction profile. No runtime source, schema,
+package or new UI asset is needed. Other writers must not alter shared contracts.
+
+The ordinary acceptance case requires two distinct requests, changes to both
+operands on the same returned record, exact visible totals and justification,
+roles/states, invalid no-fetch/API values and forged total denial, conflicts,
+retry/restart persistence, retained decisions and actual 390/768/1440, dark,
+media-failure and recovery UI. One ordinary independent review will reuse the
+shared capability's accepted precision/transaction evidence. Registered count may
+become seven during preparation; accepted count stays six until actual admission.
+
+Equipment initial Factory preparation build succeeded in 221,221 ms but was not
+started for consumer acceptance. The ordinary review found incomplete inventory
+tracking/stock-change exclusion guidance, a manifest-authority ambiguity in the
+optimization plan and minor prose/metric wording. Data owner repairs mirrored
+catalogue guidance/checksum plus a focused inventory clarification case; root
+makes the proposed current index explicitly derived and non-authoritative and
+clarifies that the zero-edit metric excludes reviewed data and case bindings.
+A fresh build will use the corrected source after scoped review. This avoidable
+setup cost is recorded in the optimization plan; no failed consumer attempt is
+hidden and no prior image is relabelled as final-source acceptance.
+
+Scoped ordinary recheck closes all source/data/plan findings. Final frozen
+catalogue SHA-256 is d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789.
+The reviewer confirms mirrored guidance, explicit inventory/stock exclusions,
+new clarification cases, exact business fields and independent old-six guard.
+Data owner reports 200 focused tests, 16 CLI cases and build/types/format green.
+
+Only Control Plane and Workbench consume the updated catalogue, so their images
+are rebuilt. The unchanged compiler-worker image is reused: its package has no
+adapters dependency or catalogue import, production code/lockfile are unchanged,
+and source identity plus actual immutable-Graph execution will verify it. The
+reviewer accepts this bounded reuse. Its stale unused source-copy catalogue is
+not claimed as a current execution input. No Compose/operability contract changes.
+
+### Equipment attempt 1: shared presentation-density correction
+
+Actual consumer attempt 1 reached Publish/Compile/Verify/Preview and passed the
+prepared-local ready target, then failed the unchanged 390px primary-action
+criterion: Submit bottom 654.6875px exceeds 650px. The prior failure reporter did
+not retain exact ready duration; no exact time is invented. The screenshot and
+safe compilation/preview receipt are retained under equipment-procurement/attempt1.
+The preview stopped and its exact resource checks passed. Product acceptance
+remains six.
+
+The ordinary reviewer identifies this as a shared calculated-presentation gap,
+not grounds to relax the existing criterion. Root serially owns one CSS margin
+correction in approval-calculated-total.ts and its focused compiler test. The
+emitted test now renders the complete GeneratedApplication shell/list, reproduces
+654.6875 RED, and verifies 650px plus visible labels, emphasis and 44px controls.
+Removing only the calculated-label bottom margin passes all 35 calculated and
+protected compatibility cases; compiler build passes. The reviewer approves the
+narrow correction. No Graph/API/transaction/source contract changes or new
+product-name branch is introduced.
+
+Regenerating the same accepted 67-file fixture proves only web/app/globals.css
+changes; API, seed and behavior output are identical. Only compiler-worker renders
+these applications and needs rebuilding. Control Plane imports compiler export/
+Restaurant-preview helpers, and Workbench does not render calculated bundles;
+their unused source copies of the calculated CSS module are explicitly checked
+against ada413fc while their live catalogue inputs remain current. Actual next-run
+verification will exercise the new worker. This bounded presentation repair reuses
+valid shared QA/release evidence; no new full audit is required.
+
+The failure reporter also now records ready/failure elapsed time in future failed
+attempts, without raw payloads. The optimization plan will record this shared
+presentation exception rather than claiming Equipment required zero runtime work.
+
+Attempt 2 reached ready in 196,978 ms and passed the standing primary-action
+criterion at 390/768/1440. It failed a case-only capitalization expectation at
+205,586 ms (Unit price versus Unit Price). The same ordinary reviewer confirms
+no product defect or frozen copy contract; root aligns the case with shared
+acceptance's stable greater-than-zero substring. Exact control labels, invalid
+value, create/edit no-fetch and API checks remain. No production/image changes.
+Attempt2 screenshots/source/preview receipts are retained; its preview is stopped.
+Fresh consumer attempt3 now runs with the same reviewed images and corrected case.
+
+Attempt 3 reached ready in 197,283 ms and completed the real correction journey
+(version 7, two decisions, eight audits), then failed second-summary visibility
+at 390x900. Its receipt/screens are retained in attempt3 and its resources are
+absent. Root expanded the emitted-browser regression to three realistic records,
+author/audit roles and closed global history: 915.171875px RED against 900px.
+Readable 1.25 calculated-label line-height and existing space-1 row gap complete
+the shared density repair. Final 21 calculated + 15 compatibility tests and
+compiler build pass; only globals.css changes in the same 67-file fixture.
+The same ordinary reviewer approves the narrow patch with no findings. Only the
+affected worker is rebuilt before a fresh actual attempt; no extra audit stage.
+
+## 2026-09-17 Equipment and engineering plan accepted
+
+Final actual attempt4 passes 1/1 in 4.4 minutes including preview cleanup:
+ready 197,474 ms, checks complete 248,387 ms. Two authored items are approved at
+1497.5 and 179.8; correction version7 retains two decisions/eight audits. Invalid
+create/edit no-fetch, forged totals, role/state denials, retry/restart/concurrency,
+readonly preview, operand-only browser writes and immutable Compilation pass.
+Actual 390/768/1440, dark/history/media-fallback/recovery screens are inspected.
+All20 scoped source/built checks match; exact Factory plus four previews are at
+zero containers/networks/volumes. Source correspondence explicitly distinguishes
+unused accepted-base copies from current worker inputs.
+
+The single ordinary reviewer approves the full admission and engineering plan
+with P0/P1/P2 0/0/0. PM accepts seven registered/seven locally accepted definitions
+across three runtime families. Shared QA/release evidence remains valid; no fresh
+full gate was added for ordinary data/spacing repairs. Root removed only three
+root-level duplicate failure images after matching their retained archive hashes.
+The source change adds one reviewed catalogue row and a reusable calculated
+presentation repair, not a product-name runtime branch. Earlier failures remain
+visible; this iteration did not pass on its first consumer attempt.
+
+The reviewed optimization plan prioritizes a short complete admission command,
+non-authoritative case/evidence index, bounded build cache/owned-runner reuse,
+varied data batches and incremental compiler extraction before measured catalogue
+scale. Appointment remains the next new family. Paths, owners, authority,
+acceptance metrics and rollback are explicit. Cache/refactor/retrieval changes
+remain future work. No real-model/user/private-identity/cloud claim is made.
+Controller owns final normal commit/push and remote equality/clean-tree check.

@@ -1,0 +1,187 @@
+{
+  "recordedAt": "2026-09-17T13:59:36.827Z",
+  "base": "ada413fc41300da5db50072af297b397fd705bbb",
+  "catalogueDefinitions": 7,
+  "reviewedCatalogueSha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+  "factoryServices": [
+    {
+      "service": "control-plane",
+      "imageId": "sha256:d7636a22ee1ad9849346d763017c9a49aabcc96e2f8a4076312de373fb2e6b85",
+      "entries": [
+        {
+          "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+          "sha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+          "canonical": "7b6dea7e5a3e5d806f642e2fa0e9a86737a760acb86624fae58c15d9b73c4da9",
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/graph/src/calculated-request-total.ts",
+          "sha256": "7443cca15cb8198eaf7a51f615aa2546df1ff98f7b2e5170eb67d09da9767874",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-calculated-total.ts",
+          "sha256": "eb24fa96e52087cc6ac7dfccecb6c0e4f00c65b5e44f2a78f52a4160f82e5122",
+          "canonical": null,
+          "expectedSource": "ada413fc: unused source copy; this service does not render calculated applications",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-mutation-contract.ts",
+          "sha256": "3ba2fc58779acd31f4f2091ca627eff49c67947f1ac3975ff70f7cf005a9669b",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/targets/database/target.ts",
+          "sha256": "d11b614f3065e2ab291da9d82b9bc19540864c9ac82dea91902b1ed3eabf64c6",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+          "sha256": "448eea2ce268fae1032116a88d47b89cdce64f4a610f2dfa8795ebe5ac704ada",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/adapters/dist/requirements/definitions/product-definitions.v1.json",
+          "sha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+          "canonical": "7b6dea7e5a3e5d806f642e2fa0e9a86737a760acb86624fae58c15d9b73c4da9",
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        }
+      ]
+    },
+    {
+      "service": "compiler-worker",
+      "imageId": "sha256:6b788b03350b5964ce945bbc14f3ed62c824a0d8e5cd5f32f8b8ed273f8e338e",
+      "entries": [
+        {
+          "path": "packages/graph/src/calculated-request-total.ts",
+          "sha256": "7443cca15cb8198eaf7a51f615aa2546df1ff98f7b2e5170eb67d09da9767874",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-calculated-total.ts",
+          "sha256": "3e6821b94960b1f2f7b93fc12dffec2ef67bdc5ba2fce5d5149c6d26e1bfa510",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-mutation-contract.ts",
+          "sha256": "3ba2fc58779acd31f4f2091ca627eff49c67947f1ac3975ff70f7cf005a9669b",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/targets/database/target.ts",
+          "sha256": "d11b614f3065e2ab291da9d82b9bc19540864c9ac82dea91902b1ed3eabf64c6",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+          "sha256": "448eea2ce268fae1032116a88d47b89cdce64f4a610f2dfa8795ebe5ac704ada",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/dist/approval-calculated-total.js",
+          "sha256": "070a92e4c149a7b02deb70090b9a431f12ebf951e313decc559811aec7f42e80",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        }
+      ]
+    },
+    {
+      "service": "workbench",
+      "imageId": "sha256:73cd3aaf810561ec66b9121e76359db71eff30172165e1d030579bcf2596d254",
+      "entries": [
+        {
+          "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+          "sha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+          "canonical": "7b6dea7e5a3e5d806f642e2fa0e9a86737a760acb86624fae58c15d9b73c4da9",
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/graph/src/calculated-request-total.ts",
+          "sha256": "7443cca15cb8198eaf7a51f615aa2546df1ff98f7b2e5170eb67d09da9767874",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-calculated-total.ts",
+          "sha256": "eb24fa96e52087cc6ac7dfccecb6c0e4f00c65b5e44f2a78f52a4160f82e5122",
+          "canonical": null,
+          "expectedSource": "ada413fc: unused source copy; this service does not render calculated applications",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/approval-mutation-contract.ts",
+          "sha256": "3ba2fc58779acd31f4f2091ca627eff49c67947f1ac3975ff70f7cf005a9669b",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/compiler/src/targets/database/target.ts",
+          "sha256": "d11b614f3065e2ab291da9d82b9bc19540864c9ac82dea91902b1ed3eabf64c6",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+          "sha256": "448eea2ce268fae1032116a88d47b89cdce64f4a610f2dfa8795ebe5ac704ada",
+          "canonical": null,
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        },
+        {
+          "path": "packages/adapters/dist/requirements/definitions/product-definitions.v1.json",
+          "sha256": "d63b116bb8c8fb8b37d7dc5c454a26adcca2caae8ee8bbc751c40933c1af4789",
+          "canonical": "7b6dea7e5a3e5d806f642e2fa0e9a86737a760acb86624fae58c15d9b73c4da9",
+          "expectedSource": "current working tree",
+          "byteIdentical": true,
+          "matchesReviewedInput": true
+        }
+      ]
+    }
+  ],
+  "scope": "Catalogue source/dist match current input in Control Plane and Workbench. Only the worker is rebuilt for the calculated CSS density repair; it consumes immutable Graphs and does not import the catalogue. Its current source and built calculation module match. The other services do not render calculated applications, so their unused calculated-template source copies are checked against accepted ada413fc instead. This explicitly scoped image reuse changes no runtime contract. This is authored-fixture local evidence, not real-model or hosted evidence."
+}

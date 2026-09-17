@@ -225,4 +225,4 @@ export function renderCalculatedPage(source: string): string {
 }
 
 export const calculatedApprovalStyles =
-  ".approval-v1 .approval-calculated-summary > div:not(.approval-summary-status) > dt { position: static; width: auto; height: auto; padding: 0; margin: 0 0 var(--factory-spacing-space-1); overflow: visible; clip-path: none; white-space: normal; font-size: var(--factory-typography-font-size-sm); }";
+  ".approval-v1 .approval-calculated-summary > div:not(.approval-summary-status) > dt { position: static; width: auto; height: auto; padding: 0; margin: 0; overflow: visible; clip-path: none; white-space: normal; font-size: var(--factory-typography-font-size-sm); line-height: 1.25; }\n.approval-v1 .approval-record .approval-calculated-summary { row-gap: var(--factory-spacing-space-1); }";

@@ -2,7 +2,55 @@
 
 Updated: 2026-09-17
 
-## Current long Goal: sixth local product accepted
+## Current local result: seven products, three runtime families
+
+The calculated-request long Goal's product and planning work is accepted locally.
+Coverage is **seven distinct registered / seven locally accepted definitions /
+three demonstrated runtime families**. Equipment Procurement joins Restaurant
+Ordering, Expense Approval, Purchase Request Approval, Team Task Tracking,
+Publication Review and Training Funding. The ordinary-user goal remains a
+complete assembled app with minimal business questions.
+
+- Shared server-owned quantity-times-price capability is delivered at `ada413fc`.
+  Actual PostgreSQL, exact decimal persistence, rollback, correction and the full
+  shared gate pass; task review, Terra QA and Sol release have no open findings.
+- Equipment final attempt passes in 4.4 minutes: ready **197,474 ms**, complete
+  business/visual checks **248,387 ms**. Both requests are approved with exact
+  totals 1497.5 and 179.8. Correction, history, denial, retry, restart, concurrency
+  and immutable Compilation are verified. One ordinary review approves 0/0/0.
+- Three prior consumer failures are retained: two shared presentation density
+  gaps and one case-copy mismatch. The repaired full-workspace multi-record
+  regression passes 36 calculated/compatibility cases; old six output bytes
+  remain unchanged. No Equipment-specific runtime/UI branch was introduced.
+- All five owned Factory/preview projects are cleaned. Actual phone/tablet/
+  desktop, dark and media-failure screenshots are reviewed; current service
+  correspondence is verified. The fixture run makes zero model calls and does
+  not establish real-user effort, private identity/tenancy or cloud hosting.
+
+See [Equipment acceptance](acceptance/equipment-procurement.md),
+[phone results](acceptance/evidence/equipment-procurement/two-authored-records-390.png)
+and [shared capability](acceptance/calculated-request-totals.md).
+
+The next route follows the reviewed
+[engineering optimization plan](superpowers/plans/2026-09-17-iteration-engineering-optimization.md):
+
+1. Deliver one short definition regression entry point and a non-authoritative
+   case/evidence index; catch control, validation and full-page gaps before builds.
+2. Improve bounded build context/cache and reuse the owned acceptance runner,
+   under the existing operability authority; measure cold/warm costs separately.
+3. Admit 3–5 varied supported jobs through data and shared components, using one
+   ordinary review. Extract private compiler responsibilities in small exact-byte
+   steps without delaying usable products.
+4. Add Appointment's interval/capacity/conflict/cancel/rebook invariants; measure
+   real-model selection and consented user effort alongside expansion. Prove
+   varied 30-definition coverage before 100+ retrieval and larger catalogues.
+
+The plan is a delivered proposal with concrete paths, owners, exits and rollback;
+its future cache/refactor/retrieval changes are not implemented claims. Normal
+controller commit/push delivery follows acceptance on the consumer branch; no new
+main merge, repository release or cloud deployment is claimed here.
+
+## Historical accepted baseline: six products
 
 The identifier repair, reusable numeric capability and Training Funding admission
 are accepted. Coverage is **six distinct registered and locally accepted product

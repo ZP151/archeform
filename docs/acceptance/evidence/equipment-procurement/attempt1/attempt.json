@@ -1,0 +1,11 @@
+{
+  "compilationId": "cmu5l3d8y000dlu4t3ufn0j4n",
+  "previewRunId": "preview-da3c16bb-d924-4f73-8239-904ea1952c8f",
+  "project": "factory-preview-preview-da3c16bb-d924-4f73-8239-904ea1952c8f",
+  "status": "stopped",
+  "outcome": "failed-presentation",
+  "observedSubmitBottomPx": 654.6875,
+  "requiredSubmitBottomPx": 650,
+  "readyTargetAssertionPassed": true,
+  "scope": "Application reached verified ready within the prepared-local target, then failed the standing mobile action-position criterion. Exact duration was not recorded by the old failure reporter. No business acceptance claim."
+}

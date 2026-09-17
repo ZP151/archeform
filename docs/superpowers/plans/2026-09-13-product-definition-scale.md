@@ -284,3 +284,27 @@ Graph/API/security contract boundary, not again for each catalogue row.
    requirements, first useful action, manual rescue and correction effort. Local
    authored success is a baseline, not proof of these outcomes. Identity and
    dependable hosted delivery remain necessary before external maturity claims.
+
+### Current route after the seventh local product — 2026-09-17
+
+Shared calculated totals were accepted and delivered at `ada413fc`. Equipment
+Procurement now passes actual attempt 4 and one ordinary independent review,
+P0/P1/P2 0/0/0: seven registered / seven locally accepted definitions and three
+runtime families. Its ready time is 197,474 ms; complete checks take 248,387 ms.
+The same-record correction and two approved totals (1497.5 and 179.8), visible
+numeric summaries, responsive/dark/fallback states, denial/recovery and exact
+cleanup are proven. Old six output bytes remain unchanged. Earlier failures are
+retained; the shared density repair adds no Equipment-specific runtime branch.
+
+The [engineering optimization plan](2026-09-17-iteration-engineering-optimization.md)
+now orders the next work: short complete definition lane and derived case index;
+bounded setup/cache savings; 3–5 distinct supported business jobs; small private
+compiler extractions; Appointment's interval/capacity/conflict/cancel/rebook
+invariants. Keep actual DB authority and business/UI checks, but reuse unchanged
+shared reviews and images. Measure cold/warm setup and first-pass outcomes.
+
+Thirty varied definitions precede 100+ retrieval, then hundreds/thousands backed
+by proven reusable families. Catalogue size and materials remain separate from
+accepted products. Real-model and consented ordinary-user evaluation run alongside
+expansion; private identity and stable hosted delivery remain unproven. See
+[Equipment acceptance](../../acceptance/equipment-procurement.md) for exact scope.

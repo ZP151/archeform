@@ -1,0 +1,13 @@
+{
+  "base": "ada413fc",
+  "graphHash": "sha256:3ed63637a82a0324d3942302bb0e384c8bb15445cd7b4a73a078fb0fb60232e9",
+  "generatedFiles": 67,
+  "changedOutputs": ["web/app/globals.css"],
+  "apiSeedAndBehaviorOutputsUnchanged": true,
+  "observedMobileSubmitBottomBeforePx": 654.6875,
+  "requiredMaximumPx": 650,
+  "observedSecondSummaryBottomBeforePx": 915.171875,
+  "requiredSecondSummaryBottomMaximumPx": 900,
+  "repair": "Remove calculated-label bottom margin, set readable 1.25 label line-height and use the existing space-1 row gap; preserve fonts, all labels and 44px controls.",
+  "focusedCalculatedAndCompatibilityCases": 36
+}
