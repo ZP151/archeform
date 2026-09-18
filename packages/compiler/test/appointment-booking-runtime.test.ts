@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createCapabilityCompositionLock, getCapabilityAsset } from "@factory/capabilities";
+import { hashApplicationGraph } from "@factory/graph";
 import {
   createAppointmentCommandRuntime,
   renderAppointmentApiDispatch,
@@ -8,6 +10,7 @@ import {
   type AppointmentRuntimeProfile,
 } from "../src/appointment-mutation-contract.js";
 import { createGeneratedPageRuntimeProjection } from "../src/page-runtime-projection.js";
+import { generateApplicationBundle, type PublishedGraphInput } from "../src/index.js";
 import type { ApplicationGraphV1 } from "@factory/graph";
 
 const profile: AppointmentRuntimeProfile = {
@@ -40,6 +43,45 @@ const context = (role: string, key: string) => ({
   requestHash: `hash:${key}`,
   now: "2026-10-01T00:00:00.000Z",
 });
+
+function generatedAppointmentBundle(): ReturnType<typeof generateApplicationBundle> {
+  const asset = getCapabilityAsset("scheduling.appointment");
+  const bindings = {
+    serviceEntity: { graphSymbol: "graph.domain.service" },
+    serviceNameField: { graphSymbol: "graph.domain.service", fieldKey: "name" },
+    serviceDurationMinutesField: { graphSymbol: "graph.domain.service", fieldKey: "durationMinutes" },
+    serviceActiveField: { graphSymbol: "graph.domain.service", fieldKey: "active" },
+    scheduleEntity: { graphSymbol: "graph.domain.schedule" },
+    scheduleServiceReferenceField: { graphSymbol: "graph.domain.schedule", fieldKey: "serviceId" },
+    scheduleStartField: { graphSymbol: "graph.domain.schedule", fieldKey: "start" },
+    scheduleEndField: { graphSymbol: "graph.domain.schedule", fieldKey: "end" },
+    scheduleTimezoneField: { graphSymbol: "graph.domain.schedule", fieldKey: "timezone" },
+    scheduleCapacityField: { graphSymbol: "graph.domain.schedule", fieldKey: "capacity" },
+    scheduleStatusField: { graphSymbol: "graph.domain.schedule", fieldKey: "status" },
+    appointmentEntity: { graphSymbol: "graph.domain.appointment" },
+    appointmentScheduleReferenceField: { graphSymbol: "graph.domain.appointment", fieldKey: "scheduleId" },
+    appointmentCustomerNameField: { graphSymbol: "graph.domain.appointment", fieldKey: "customerName" },
+    appointmentNotesField: { graphSymbol: "graph.domain.appointment", fieldKey: "notes" },
+    appointmentCancellationReasonField: { graphSymbol: "graph.domain.appointment", fieldKey: "cancellationReason" },
+    appointmentStatusField: { graphSymbol: "graph.domain.appointment", fieldKey: "status" },
+  };
+  const selection = { lock: { key: asset.manifest.key, version: asset.manifest.version, packageRoot: asset.manifest.packageRoot, manifestDigest: asset.manifest.manifestDigest, lifecycle: asset.manifest.lifecycle }, bindings };
+  const graph = {
+    apiVersion: "factory.application-graph/v1",
+    metadata: { id: "appointment-generated", workspaceId: "local", name: "Appointment generated" },
+    page: { pages: [], navigation: [] },
+    domain: { entities: [
+      { key: "service", label: "Service", fields: [{ key: "name", type: "string", required: true }, { key: "durationMinutes", type: "integer", required: true }, { key: "active", type: "boolean", required: true }], indexes: [] },
+      { key: "schedule", label: "Schedule", fields: [{ key: "serviceId", type: "string", required: true }, { key: "start", type: "datetime", required: true }, { key: "end", type: "datetime", required: true }, { key: "timezone", type: "string", required: true }, { key: "capacity", type: "integer", required: true }, { key: "status", type: "enum", required: true }], indexes: [] },
+      { key: "appointment", label: "Appointment", fields: [{ key: "scheduleId", type: "string", required: true }, { key: "customerName", type: "string", required: true }, { key: "notes", type: "text", required: false }, { key: "cancellationReason", type: "text", required: false }, { key: "status", type: "enum", required: true }], indexes: [] },
+    ], relations: [{ from: "schedule", to: "service", kind: "many-to-one", field: "serviceId" }, { from: "appointment", to: "schedule", kind: "many-to-one", field: "scheduleId" }] },
+    policy: { roles: ["customer", "staff", "administrator"], permissions: [] },
+    flow: { flows: [] },
+    integration: { providers: [], capabilities: [] },
+    experience: { theme: { mode: "light", tokens: {} }, locales: ["en"] },
+  } as unknown as ApplicationGraphV1;
+  return generateApplicationBundle({ publishedRevisionId: "appointment-generated-1", graph, compositionLock: createCapabilityCompositionLock({ graphChecksum: hashApplicationGraph(graph), selections: [selection] }) } as PublishedGraphInput);
+}
 
 function snapshot(store: TestStore) {
   return structuredClone({
@@ -149,8 +191,22 @@ class TestStore implements AppointmentCommandStore {
 }
 
 describe("appointment booking compiler runtime", () => {
+  it("renders a type-complete appointment profile bundle with durable retry and safe API errors", () => {
+    const files = new Map(generatedAppointmentBundle().files.map((file) => [file.path, file.content]));
+    const runtime = files.get("api/src/application-runtime.ts")!;
+    const prisma = files.get("api/src/prisma-record-store.ts")!;
+    const api = files.get("api/src/main.ts")!;
+    expect(prisma).toContain('import type { AppointmentMutationReceipt, AppointmentHistoryEntry } from "./application-runtime.js";');
+    expect(prisma).toContain("code === 'P2002'");
+    expect(runtime).toContain("appointmentEligibility");
+    expect(runtime).toContain("appointmentSnapshot");
+    expect(runtime).toContain("appointmentScopeDigest");
+    expect(runtime).toContain("Buffer.byteLength(value,'utf8')");
+    expect(api).toContain("AppointmentDomainError");
+    expect(api).toContain("HttpStatus.CONFLICT");
+  });
   it("injects server-derived entity routes and serializable appointment stores", () => {
-    const api = renderAppointmentApiDispatch("function rejected(error: unknown): HttpException {}\n@Controller('api')\nclass GeneratedController { create(){ return await applicationRuntime.create( } transition(){ return await applicationRuntime.transition( } }", profile);
+    const api = renderAppointmentApiDispatch("import { ApplicationRuntime } from \"./application-runtime.js\";\nfunction rejected(error: unknown): HttpException {\n  return new HttpException(error instanceof Error ? error.message : 'Request rejected.', HttpStatus.FORBIDDEN);\n}\n@Controller('api')\nclass GeneratedController { create(){ return await applicationRuntime.create( } transition(){ return await applicationRuntime.transition( } }", profile);
     expect(api).toContain("@Get(':entity/:recordId/appointment-history')");
     expect(api).toContain("appointmentCommand(appointmentServerContext(request,entity,'create')");
     expect(api).toContain("verified appointment session required");
@@ -159,7 +215,8 @@ describe("appointment booking compiler runtime", () => {
     expect(runtime).toContain("conditionalAppointmentUpdate");
     expect(runtime).toContain("appointmentCommand(server:{role:string;scope:string;graphHash:string}");
     expect(runtime).toContain("createHash('sha256')");
-    expect(runtime).toContain("appointmentSlot(store");
+    expect(runtime).toContain("appointmentEligibility(store");
+    expect(runtime).toContain("appointmentSnapshot(store");
     const prisma = renderAppointmentPrismaStore("export class PrismaRecordStore implements RecordStore {\n  constructor(private readonly prisma: PrismaClient) {}\n  async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> { return operation(this); }\n}", profile);
     expect(prisma).toContain("isolationLevel:'Serializable'");
     expect(prisma).toContain("P2034");
