@@ -16,6 +16,16 @@ import {
 } from "../src/requirements/product-definition-data.js";
 import { createDefinitionEntry } from "../src/requirements/definition-family-registry.js";
 
+const historicalDefinitionKeys = [
+  "restaurant-ordering",
+  "expense-approval",
+  "purchase-request-approval",
+  "team-task-tracking",
+  "publication-review",
+  "training-funding-approval",
+  "equipment-procurement-approval",
+] as const;
+
 const bytes = (definitions: unknown[]) =>
   Buffer.from(
     JSON.stringify({
@@ -29,9 +39,11 @@ const report = (definitions: unknown[]) =>
   validateDefinitionBatch(bytes(definitions));
 
 describe("Product definition data", () => {
-  it("loads seven immutable data entries and admits only the shipped catalogue", () => {
+  it("loads the seven immutable historical data entries and admits only the shipped catalogue", () => {
     const data = loadProductDefinitionData();
-    expect(data.definitions).toHaveLength(7);
+    expect(
+      data.definitions.map((definition) => definition.definitionKey),
+    ).toEqual(historicalDefinitionKeys);
     expect(
       Object.isFrozen(
         data.definitions[1]!.canonical.blueprint.entities[0]!.fields,
@@ -46,7 +58,12 @@ describe("Product definition data", () => {
           ),
         ),
       ),
-    ).toMatchObject({ attempted: 7, valid: 7, distinct: 7, admitted: 7 });
+    ).toMatchObject({
+      attempted: historicalDefinitionKeys.length,
+      valid: historicalDefinitionKeys.length,
+      distinct: historicalDefinitionKeys.length,
+      admitted: historicalDefinitionKeys.length,
+    });
   });
   it("admits the distinct reviewed Publication definition with its bounded scope", () => {
     const publication = loadProductDefinitionData().definitions.find(

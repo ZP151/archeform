@@ -244,6 +244,16 @@ const appointmentBookingBrief = [
   "administrators manage services, schedules, and cancellations.",
 ].join(" ");
 
+const historicalDefinitionKeys = [
+  "restaurant-ordering",
+  "expense-approval",
+  "purchase-request-approval",
+  "team-task-tracking",
+  "publication-review",
+  "training-funding-approval",
+  "equipment-procurement-approval",
+] as const;
+
 const vagueApprovalBrief = [
   "I need an application where people can submit things for approval.",
 ].join(" ");
@@ -980,15 +990,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
   it("keeps seven coherent registrations and refuses schema, guide and projector drift", () => {
     expect(
       definitionSelectionCatalogue.map((entry) => entry.definitionKey),
-    ).toEqual([
-      "restaurant-ordering",
-      "expense-approval",
-      "purchase-request-approval",
-      "team-task-tracking",
-      "publication-review",
-      "training-funding-approval",
-      "equipment-procurement-approval",
-    ]);
+    ).toEqual(historicalDefinitionKeys);
     expect(Object.isFrozen(definitionSelectionCatalogue)).toBe(true);
     expect(() =>
       validateDefinitionCatalogue([

@@ -29,7 +29,7 @@ assert.deepEqual(
   "The built catalogue must be the exact source bytes.",
 );
 const catalogue = JSON.parse(source.toString("utf8"));
-const expectedKeys = [
+const historicalDefinitionKeys = [
   "restaurant-ordering",
   "expense-approval",
   "purchase-request-approval",
@@ -40,9 +40,9 @@ const expectedKeys = [
 ];
 assert.deepEqual(
   catalogue.definitions.map((entry) => entry.definitionKey),
-  expectedKeys,
+  historicalDefinitionKeys,
 );
-const currentCount = expectedKeys.length;
+const currentCount = historicalDefinitionKeys.length;
 const reportKeys = [
   "admitted",
   "apiVersion",
