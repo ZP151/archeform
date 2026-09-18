@@ -5821,7 +5821,7 @@ runtime evidence and final release review are complete.
 ### 2026-09-18 Appointment compiler admission evidence complete
 
 Task 4 implementation and fix rounds are complete in commit
-`dc36cd60f5a6d25d0ddad1cfe78b58c0da3fe9e57` (`Harden Appointment compiler
+`dc36cd60e91ece1962292a170155525e96d2a02b` (`Harden Appointment compiler
 admission evidence`). The exact accepted ADR-0072 amendment is
 `72ba9bfe24628f1ad01a81f77c82b14d055a5f5a804f9f596ecfb7f233df9fab`.
 Independent implementation review returned approval with P0/P1/P2 `0/0/0`.
