@@ -654,6 +654,7 @@ describe("capability catalog", () => {
       "core.files-media",
       "core.search",
       "core.scheduling",
+      "scheduling.appointment",
       "core.approvals",
       "commerce.catalog",
       "commerce.cart",
@@ -904,7 +905,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(54);
+    expect(capabilityAssets).toHaveLength(55);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
