@@ -1,4 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import ts from "typescript";
+import { afterAll, describe, expect, it } from "vitest";
 import { createCapabilityCompositionLock, getCapabilityAsset } from "@factory/capabilities";
 import { hashApplicationGraph } from "@factory/graph";
 import {
@@ -43,6 +48,85 @@ const context = (role: string, key: string) => ({
   requestHash: `hash:${key}`,
   now: "2026-10-01T00:00:00.000Z",
 });
+
+const generatedTypecheckDirectory = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  ".generated-appointment-profile-typecheck",
+);
+
+afterAll(async () => {
+  await rm(generatedTypecheckDirectory, { recursive: true, force: true });
+});
+
+async function typecheckGeneratedAppointmentProfile(): Promise<readonly string[]> {
+  await mkdir(generatedTypecheckDirectory, { recursive: true });
+  const directory = await mkdtemp(join(generatedTypecheckDirectory, "project-"));
+  try {
+    const bundle = generatedAppointmentBundle();
+    const typecheckedPaths = new Set([
+      "api/src/main.ts",
+      "api/src/application-runtime.ts",
+      "api/src/prisma-record-store.ts",
+    ]);
+    const typecheckedFiles = bundle.files.filter((file) => typecheckedPaths.has(file.path));
+    await Promise.all(typecheckedFiles.map(async (file) => {
+      const destination = resolve(directory, file.path);
+      await mkdir(dirname(destination), { recursive: true });
+      await writeFile(destination, file.content, "utf8");
+    }));
+    const stubbedPaths = new Set<string>();
+    for (const file of typecheckedFiles) {
+      for (const match of file.content.matchAll(/import\s+(?:type\s+)?(.+?)\s+from\s+["'](\.[^"']+)["'];/g)) {
+        const clause = match[1]!;
+        const specifier = match[2]!;
+        const stubPath = resolve(dirname(resolve(directory, file.path)), specifier.replace(/\.js$/, ".ts"));
+        if (typecheckedPaths.has(`api/src/${stubPath.slice(resolve(directory, "api/src").length + 1).replace(/\\/g, "/")}`) || stubbedPaths.has(stubPath)) continue;
+        const named = /^\{(.+)\}$/.exec(clause.trim());
+        const declarations = named
+          ? named[1]!.split(",").map((entry) => entry.trim().replace(/^type\s+/, "")).filter(Boolean).map((entry) => {
+            const alias = entry.split(/\s+as\s+/).at(-1)!;
+            return `export type ${alias} = any; export const ${alias}: any = undefined as any;`;
+          }).join("\n")
+          : clause.trim().startsWith("*")
+            ? "export const __stub: any = undefined as any;"
+            : "const value: any = undefined as any; export default value;";
+        await mkdir(dirname(stubPath), { recursive: true });
+        await writeFile(stubPath, declarations, "utf8");
+        stubbedPaths.add(stubPath);
+      }
+    }
+    await mkdir(resolve(directory, "types"), { recursive: true });
+    await writeFile(resolve(directory, "types/nest-common.d.ts"), `
+      export declare const Controller: (...args: any[]) => ClassDecorator;
+      export declare const Get: (...args: any[]) => MethodDecorator;
+      export declare const Post: (...args: any[]) => MethodDecorator;
+      export declare const Patch: (...args: any[]) => MethodDecorator;
+      export declare const Delete: (...args: any[]) => MethodDecorator;
+      export declare const Param: (...args: any[]) => ParameterDecorator;
+      export declare const Body: (...args: any[]) => ParameterDecorator;
+      export declare const Req: (...args: any[]) => ParameterDecorator;
+      export declare const Module: (...args: any[]) => ClassDecorator;
+      export declare const Injectable: (...args: any[]) => ClassDecorator;
+      export declare class HttpException { constructor(response: unknown, status: number); }
+      export declare const HttpStatus: { readonly BAD_REQUEST: 400; readonly FORBIDDEN: 403; readonly NOT_FOUND: 404; readonly CONFLICT: 409; };
+    `, "utf8");
+    await writeFile(resolve(directory, "types/nest-core.d.ts"), "export declare const NestFactory: { create(input: unknown): Promise<any> };", "utf8");
+    await writeFile(resolve(directory, "types/prisma-client.d.ts"), "export declare class PrismaClient { [key: string]: unknown; $transaction<T>(callback: (client: PrismaClient) => Promise<T>, options?: unknown): Promise<T>; }", "utf8");
+    await writeFile(resolve(directory, "tsconfig.json"), JSON.stringify({
+      compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true, noEmit: true, skipLibCheck: true, experimentalDecorators: true, types: ["node"], baseUrl: ".", paths: { "@nestjs/common": ["types/nest-common.d.ts"], "@nestjs/core": ["types/nest-core.d.ts"], "@prisma/client": ["types/prisma-client.d.ts"] } },
+      include: ["api/src/**/*.ts"],
+    }, null, 2), "utf8");
+    const parsed = ts.getParsedCommandLineOfConfigFile(resolve(directory, "tsconfig.json"), undefined, ts.sys as ts.ParseConfigFileHost);
+    if (!parsed) throw new Error("Generated appointment typecheck configuration was unavailable.");
+    const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram(parsed.fileNames, parsed.options));
+    return diagnostics.map((diagnostic) => {
+      const location = diagnostic.file && diagnostic.start !== undefined ? `${diagnostic.file.fileName}:${diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start).line + 1}` : "configuration";
+      return `${location} ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`;
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
 
 function generatedAppointmentBundle(): ReturnType<typeof generateApplicationBundle> {
   const asset = getCapabilityAsset("scheduling.appointment");
@@ -205,6 +289,17 @@ describe("appointment booking compiler runtime", () => {
     expect(api).toContain("AppointmentDomainError");
     expect(api).toContain("HttpStatus.CONFLICT");
   });
+
+  it("emits exact API, runtime, and Prisma sources that TypeScript accepts as one project", async () => {
+    const files = new Map(generatedAppointmentBundle().files.map((file) => [file.path, file.content]));
+    const digest = (path: string) => createHash("sha256").update(files.get(path)!, "utf8").digest("hex");
+    expect({ api: digest("api/src/main.ts"), runtime: digest("api/src/application-runtime.ts"), prisma: digest("api/src/prisma-record-store.ts") }).toEqual({
+      api: "81eae027a9733cb6b0ff8da013832065d41291a20a2e7f239227104698c0f3e5",
+      runtime: "ce89e71629f5e7e48f86aee5597f85babd1b388d0accc9ce2953bee7d4a2a2a0",
+      prisma: "371d3284fefd985a50ccb977b7e7f3b8630f8b9eb8ffbf2e63082dd59e61814b",
+    });
+    expect(await typecheckGeneratedAppointmentProfile()).toEqual([]);
+  }, 30_000);
   it("injects server-derived entity routes and serializable appointment stores", () => {
     const api = renderAppointmentApiDispatch("import { ApplicationRuntime } from \"./application-runtime.js\";\nfunction rejected(error: unknown): HttpException {\n  return new HttpException(error instanceof Error ? error.message : 'Request rejected.', HttpStatus.FORBIDDEN);\n}\n@Controller('api')\nclass GeneratedController { create(){ return await applicationRuntime.create( } transition(){ return await applicationRuntime.transition( } }", profile);
     expect(api).toContain("@Get(':entity/:recordId/appointment-history')");
@@ -306,6 +401,42 @@ describe("appointment booking compiler runtime", () => {
     const before = snapshot(store);
     await expect(runtime.confirm(store, context("staff", "confirm"), { appointmentId: requested.id, expectedVersion: 0 })).rejects.toMatchObject({ code: "appointment.schedule_invalid", status: 400 });
     expect(snapshot(store)).toEqual(before);
+  });
+
+  it("rejects unsafe cancellation reasons without any partial appointment effects", async () => {
+    const runtime = createAppointmentCommandRuntime(profile);
+    for (const cancellationReason of ["   ", "x".repeat(501), "bad\u0000reason", "bad\u007freason", "bad\u0001reason", 42]) {
+      const store = new TestStore();
+      const requested = await runtime.request(store, context("customer", `request-${String(cancellationReason)}`), { scheduleId: "slot-1", customerName: "Ada" });
+      const before = snapshot(store);
+      await expect(runtime.cancel(store, context("customer", `cancel-${String(cancellationReason)}`), { appointmentId: requested.id, expectedVersion: 0, cancellationReason })).rejects.toMatchObject({ code: "appointment.invalid_request", status: 400 });
+      expect(snapshot(store)).toEqual(before);
+    }
+  });
+
+  it("uses the same complete slot integrity rules for private confirmation and cancellation", async () => {
+    const runtime = createAppointmentCommandRuntime(profile);
+    const confirmStore = new TestStore();
+    const requested = await runtime.request(confirmStore, context("customer", "confirm-request"), { scheduleId: "slot-1", customerName: "Ada" });
+    confirmStore.records.get("schedule")!.get("slot-1")!.end = "2026-10-01T09:00:00Z";
+    const invalidInterval = snapshot(confirmStore);
+    await expect(runtime.confirm(confirmStore, context("staff", "confirm-invalid-interval"), { appointmentId: requested.id, expectedVersion: 0 })).rejects.toMatchObject({ code: "appointment.schedule_invalid", status: 400 });
+    expect(snapshot(confirmStore)).toEqual(invalidInterval);
+
+    const cancelStore = new TestStore();
+    const cancellable = await runtime.request(cancelStore, context("customer", "cancel-request"), { scheduleId: "slot-1", customerName: "Bea" });
+    const schedule = cancelStore.records.get("schedule")!.get("slot-1")!;
+    schedule.status = "closed";
+    schedule.capacity = 0;
+    cancelStore.records.get("service")!.get("service-1")!.active = false;
+    await expect(runtime.cancel(cancelStore, context("customer", "cancel-closed"), { appointmentId: cancellable.id, expectedVersion: 0, cancellationReason: "No longer available" })).resolves.toMatchObject({ status: "cancelled" });
+
+    const missingServiceStore = new TestStore();
+    const withoutService = await runtime.request(missingServiceStore, context("customer", "missing-service-request"), { scheduleId: "slot-1", customerName: "Cleo" });
+    missingServiceStore.records.get("service")!.delete("service-1");
+    const missingService = snapshot(missingServiceStore);
+    await expect(runtime.cancel(missingServiceStore, context("customer", "missing-service-cancel"), { appointmentId: withoutService.id, expectedVersion: 0, cancellationReason: "No service remains" })).rejects.toMatchObject({ code: "appointment.schedule_invalid", status: 400 });
+    expect(snapshot(missingServiceStore)).toEqual(missingService);
   });
 
   it("replays an identical command and rejects stale, forbidden, invalid, and forged commands unchanged", async () => {
