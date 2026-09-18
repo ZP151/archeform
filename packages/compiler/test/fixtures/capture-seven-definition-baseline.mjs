@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import {
-  copyFileSync,
   existsSync,
   mkdtempSync,
   mkdirSync,
@@ -92,13 +91,14 @@ function linkDependencies(checkout) {
 }
 
 function captureTest(outputPath) {
-  return `import { writeFileSync } from "node:fs";
+  return `import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { currentDefinitionDataCompilationEvidence } from "./fixtures/definition-data-compatibility.js";
+import { currentDefinitionDataCompatibility } from "./fixtures/definition-data-compatibility.js";
 
 describe("frozen seven-definition capture", () => {
   it("captures the immutable parent definitions", () => {
-    const entries = currentDefinitionDataCompilationEvidence([
+    const keys = [
       "restaurant-ordering",
       "expense-approval",
       "purchase-request-approval",
@@ -106,7 +106,16 @@ describe("frozen seven-definition capture", () => {
       "publication-review",
       "training-funding-approval",
       "equipment-procurement-approval",
-    ]);
+    ];
+    const prior = JSON.parse(readFileSync(${JSON.stringify(outputPath)}, "utf8"));
+    const captured = new Map();
+    currentDefinitionDataCompatibility(keys, (key, files) => {
+      captured.set(key, {
+        files: files.map(({ path, content }) => ({ path, sha256: createHash("sha256").update(content).digest("hex") })),
+        bundleSha256: createHash("sha256").update(JSON.stringify(files.map(({ path, content }) => [path, content]))).digest("hex"),
+      });
+    }, "current");
+    const entries = prior.entries.map((entry) => ({ ...entry, ...captured.get(entry.definitionKey) }));
     expect(entries).toHaveLength(7);
     writeFileSync(${JSON.stringify(outputPath)}, JSON.stringify({ base: ${JSON.stringify(parent)}, comparison: "current-generated-bytes", entries }, null, 2) + "\\n", "utf8");
   });
@@ -127,22 +136,11 @@ function main() {
     checkout,
     "packages/compiler/test/.capture-seven-definition-baseline.test.ts",
   );
-  const temporaryHelper = resolve(
-    checkout,
-    "packages/compiler/test/fixtures/definition-data-compatibility.ts",
-  );
   try {
     run("git", ["worktree", "add", "--detach", checkout, parent]);
     if (status(checkout) !== "")
       throw new Error("The isolated parent checkout was not clean.");
     linkDependencies(checkout);
-    copyFileSync(
-      resolve(
-        root,
-        "packages/compiler/test/fixtures/definition-data-compatibility.ts",
-      ),
-      temporaryHelper,
-    );
     writeFileSync(temporaryTest, captureTest(fixture), "utf8");
     run(process.platform === "win32" ? "pnpm.cmd" : "pnpm", [
       "--dir",
@@ -155,16 +153,6 @@ function main() {
       relative(resolve(checkout, "packages/compiler"), temporaryTest),
     ]);
     unlinkSync(temporaryTest);
-    execFileSync(
-      "git",
-      [
-        "restore",
-        "--source=HEAD",
-        "--",
-        "packages/compiler/test/fixtures/definition-data-compatibility.ts",
-      ],
-      { cwd: checkout, stdio: "pipe" },
-    );
     if (status(checkout) !== "")
       throw new Error("The isolated parent checkout was modified by capture.");
     const captured = JSON.parse(readFileSync(fixture, "utf8"));

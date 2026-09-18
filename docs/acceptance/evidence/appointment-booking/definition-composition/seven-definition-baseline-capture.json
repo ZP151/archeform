@@ -5,7 +5,7 @@
   "pnpmVersion": "9.0.0",
   "command": "node packages/compiler/test/fixtures/capture-seven-definition-baseline.mjs --parent b8d796961b1ff68c7d5efa1a12fe353aa370eee8 --fixture packages/compiler/test/fixtures/seven-definition-baseline.json --receipt docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json",
   "captureScriptPath": "packages/compiler/test/fixtures/capture-seven-definition-baseline.mjs",
-  "captureScriptSha256": "sha256:ff849601bc04a8afd8e7d13c1750d6f50a475722a8e2337f17ae8a94b142bd41",
+  "captureScriptSha256": "sha256:48130b24b383f32afc8ee7bd265cbf000d02bf7cc481d8b09ff39644fd1e7c42",
   "fixturePath": "packages/compiler/test/fixtures/seven-definition-baseline.json",
   "fixtureSha256": "sha256:104e9d2525ce55b2bfddf263096c5132b36b79f40bbfd344154c37c4e3139b16"
 }

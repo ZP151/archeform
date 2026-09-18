@@ -2923,6 +2923,106 @@ function exactAppointmentNumericWitness(
     !numeric.includes(capacity)
   )
     return fail();
+  const same = (actual: unknown, expected: readonly string[]) =>
+    Array.isArray(actual) &&
+    actual.length === expected.length &&
+    actual.every((value, index) => value === expected[index]);
+  const exactField = (
+    inputKey: string,
+    owner: string,
+    type: string,
+    required: boolean,
+    values?: readonly string[],
+  ) => {
+    const field = fieldFor(owner, inputKey);
+    return (
+      field.type === type &&
+      field.required === required &&
+      field.calculation === undefined &&
+      (values === undefined
+        ? field.values === undefined
+        : same(field.values, values))
+    );
+  };
+  const service = graph.domain.entities.find(
+    ({ key }) => key === profile.serviceEntity,
+  );
+  const schedule = graph.domain.entities.find(
+    ({ key }) => key === profile.scheduleEntity,
+  );
+  const appointment = graph.domain.entities.find(
+    ({ key }) => key === profile.appointmentEntity,
+  );
+  if (
+    service?.fields.length !== 3 ||
+    schedule?.fields.length !== 6 ||
+    appointment?.fields.length !== 5 ||
+    !exactField("serviceNameField", profile.serviceEntity, "string", true) ||
+    !exactField("serviceDurationMinutesField", profile.serviceEntity, "integer", true) ||
+    !exactField("serviceActiveField", profile.serviceEntity, "boolean", true) ||
+    !exactField("scheduleServiceReferenceField", profile.scheduleEntity, "string", true) ||
+    !exactField("scheduleStartField", profile.scheduleEntity, "datetime", true) ||
+    !exactField("scheduleEndField", profile.scheduleEntity, "datetime", true) ||
+    !exactField("scheduleTimezoneField", profile.scheduleEntity, "string", true) ||
+    !exactField("scheduleCapacityField", profile.scheduleEntity, "integer", true) ||
+    !exactField("scheduleStatusField", profile.scheduleEntity, "enum", true, ["open", "closed"]) ||
+    !exactField("appointmentScheduleReferenceField", profile.appointmentEntity, "string", true) ||
+    !exactField("appointmentCustomerNameField", profile.appointmentEntity, "string", true) ||
+    !exactField("appointmentNotesField", profile.appointmentEntity, "text", false) ||
+    !exactField("appointmentCancellationReasonField", profile.appointmentEntity, "text", false) ||
+    !exactField("appointmentStatusField", profile.appointmentEntity, "enum", true, ["requested", "confirmed", "cancelled"]) ||
+    fieldFor(profile.scheduleEntity, "scheduleStartField").key !== "startUtc" ||
+    fieldFor(profile.scheduleEntity, "scheduleEndField").key !== "endUtc" ||
+    fieldFor(profile.appointmentEntity, "appointmentNotesField").key !== "notes" ||
+    fieldFor(profile.appointmentEntity, "appointmentCancellationReasonField").key !== "cancellationReason"
+  )
+    return fail();
+  const relations = graph.domain.relations.filter(
+    ({ from, to }) =>
+      [profile.serviceEntity, profile.scheduleEntity, profile.appointmentEntity].includes(from) ||
+      [profile.serviceEntity, profile.scheduleEntity, profile.appointmentEntity].includes(to),
+  );
+  if (
+    relations.length !== 2 ||
+    !relations.some((relation) => relation.from === profile.scheduleEntity && relation.to === profile.serviceEntity && relation.kind === "many-to-one" && relation.field === fieldFor(profile.scheduleEntity, "scheduleServiceReferenceField").key) ||
+    !relations.some((relation) => relation.from === profile.appointmentEntity && relation.to === profile.scheduleEntity && relation.kind === "many-to-one" && relation.field === fieldFor(profile.appointmentEntity, "appointmentScheduleReferenceField").key)
+  )
+    return fail();
+  const permission = graph.policy.permissions
+    .filter(({ resource }) => [profile.serviceEntity, profile.scheduleEntity, profile.appointmentEntity].includes(resource))
+    .map(({ role, resource, actions }) => `${role}:${resource}:${actions.join(",")}`);
+  if (
+    !same(graph.policy.roles, ["customer", "staff", "administrator"]) ||
+    !same(permission, [
+      `customer:${profile.appointmentEntity}:create,read,cancel`,
+      `staff:${profile.appointmentEntity}:read,confirm,reschedule,cancel`,
+      `administrator:${profile.serviceEntity}:create,read,update,manage`,
+      `administrator:${profile.scheduleEntity}:create,read,update,manage`,
+      `administrator:${profile.appointmentEntity}:read,cancel`,
+    ])
+  )
+    return fail();
+  const flow = graph.flow.flows.find(({ entity }) => entity === profile.appointmentEntity);
+  if (
+    graph.flow.flows.length !== 1 ||
+    !flow ||
+    flow.initialState !== "requested" ||
+    !same(flow.states, ["requested", "confirmed", "cancelled"]) ||
+    !same(flow.events, ["confirm", "cancel", "reschedule"]) ||
+    flow.transitions.length !== 3 ||
+    !same(
+      flow.transitions.map(
+        ({ from, event, to, roles }) =>
+          `${from}:${event}:${to}:${(roles ?? []).join(",")}`,
+      ),
+      [
+        "requested:confirm:confirmed:staff",
+        "requested:cancel:cancelled:customer",
+        "confirmed:reschedule:requested:staff",
+      ],
+    )
+  )
+    return fail();
   return true;
 }
 
@@ -3591,6 +3691,22 @@ function renderPageRuntime(
   return calculatedIdentity
     ? renderCalculatedPage(correctedSource)
     : correctedSource;
+}
+
+/** @internal Exercises the page-runtime compiler facade without bundle assembly. */
+export function renderAppointmentPageRuntimeForTest(
+  graph: ApplicationGraphV1,
+  compositionLock: CapabilityCompositionLockV1,
+): string {
+  return renderPageRuntime(
+    graph,
+    undefined,
+    false,
+    "legacy",
+    undefined,
+    selectAppointmentRuntimeProfile(graph, compositionLock),
+    compositionLock,
+  );
 }
 
 function renderWebProxyRoute(
