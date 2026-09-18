@@ -1,0 +1,1838 @@
+{
+  "base": "b8d796961b1ff68c7d5efa1a12fe353aa370eee8",
+  "comparison": "current-generated-bytes",
+  "entries": [
+    {
+      "definitionKey": "restaurant-ordering",
+      "planSha256": "d740f44cd80635caffb8f809bea0c4da5d401dedd4ff4521a3ba831d2b5705f3",
+      "graphSha256": "sha256:d0af504987b6cf6ef8debc987a2e773dd5e003718291a335574a2004c2678e69",
+      "files": [
+        {
+          "path": "package.json",
+          "sha256": "93259ca597aa87c08a87ebada6c6376cf8030bdf039df7784cac8a248757fa88"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "sha256": "f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+        },
+        {
+          "path": "capability-lock.json",
+          "sha256": "df50e1b59ed9a5c2ec7d3910c0fb8bf82b437c7a0657d127075c2d0f6e83735d"
+        },
+        {
+          "path": "composition-lock.json",
+          "sha256": "533c3bf5a87cfb2b1de4b9a93698765d210d8f50ee2043cd6bbc4c619f4c561f"
+        },
+        {
+          "path": "capability-template-lock.json",
+          "sha256": "5f259ef24401fdefa5d77fecc89da74448d13dae0e66799aa2477d9a9b878a46"
+        },
+        {
+          "path": "simulator/index.html",
+          "sha256": "f51ac89c3c632ea460346634b1f0aeb8bd21fb23480c72c601b0a87f56db1899"
+        },
+        {
+          "path": "web/package.json",
+          "sha256": "c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+        },
+        {
+          "path": "web/tsconfig.json",
+          "sha256": "2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+        },
+        {
+          "path": "web/next-env.d.ts",
+          "sha256": "bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+        },
+        {
+          "path": "web/app/layout.tsx",
+          "sha256": "315e32e0c74c71e1ecd4444a961b771e11da6a4fc6d4f0a2614d02db4c719607"
+        },
+        {
+          "path": "web/app/page-runtime.tsx",
+          "sha256": "6e4172f60049212b106f17c75fdb588f4d0cf8ecaf8b145294a714e10b12c46c"
+        },
+        {
+          "path": "web/app/page.tsx",
+          "sha256": "25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+        },
+        {
+          "path": "web/app/[...path]/page.tsx",
+          "sha256": "511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+        },
+        {
+          "path": "web/app/favicon.ico/route.ts",
+          "sha256": "3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+        },
+        {
+          "path": "web/app/api/[...path]/route.ts",
+          "sha256": "4d29a822fa47f5fd28a708fd2300d9e9bb8bb7ed7e93d7c9b9dc521171ef5d93"
+        },
+        {
+          "path": "web/app/globals.css",
+          "sha256": "c7a735c7a208480e24a8ff41b8b139e740826f147cbbd406ff547c14422ea2ca"
+        },
+        {
+          "path": "api/package.json",
+          "sha256": "f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+        },
+        {
+          "path": "api/tsconfig.json",
+          "sha256": "ba06ca0caffb054b4c1128d1a43e9ba8d40d97993b41e6fe621dd4cfc19b1f70"
+        },
+        {
+          "path": "api/Dockerfile",
+          "sha256": "620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+        },
+        {
+          "path": "api/.dockerignore",
+          "sha256": "51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+        },
+        {
+          "path": "api/src/main.ts",
+          "sha256": "f7078f08fa2d8d48cacf20cf997c523b1a59c55db27b7d7bdd3aa309c2b79ade"
+        },
+        {
+          "path": "api/src/capabilities/contract.ts",
+          "sha256": "b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+        },
+        {
+          "path": "api/src/capabilities/core.audit.ts",
+          "sha256": "bc0b38c48f733b7cfc8c2e71309b7ff1e552b0f081f2b3824291d20568c57008"
+        },
+        {
+          "path": "api/src/capabilities/core.crud.ts",
+          "sha256": "80fec2128d6533093d3738d9b9a72d3bf175cf76a136f87e4ab4bff0d1f88b47"
+        },
+        {
+          "path": "api/src/capabilities/core.identity-policy.ts",
+          "sha256": "c4b19e92ce95f0e8c723fa836499a63f01e4cb289fc2e2db7ef30e2d67e498aa"
+        },
+        {
+          "path": "api/src/capabilities/core.notification.ts",
+          "sha256": "6f798b3a4d2ea30643440468b8935a28c3884bf1a5be32399f68afab28f66d17"
+        },
+        {
+          "path": "api/src/capabilities/core.policy-declarations.ts",
+          "sha256": "1029aadc53e4e679bdbc2c3f83f1d5b89c9c90e58c9170e33075ecab26f0cfe3"
+        },
+        {
+          "path": "api/src/capabilities/core.workflow.ts",
+          "sha256": "0ec631d11ba004b968a069537a07c37648b8b0fc0bffc8b361f05d8a97caebf0"
+        },
+        {
+          "path": "database/prisma/fragments/order.prisma",
+          "sha256": "e523ef6fb5dd3e43ef1bddce9bd6da263a2c13b419744be2c5bef42754c475c4"
+        },
+        {
+          "path": "web/src/app/customer-orders/page.tsx",
+          "sha256": "5a7eb0fe050d82e7f731542af94a37fb0931d40bb711427c6ca949e6b0a791c1"
+        },
+        {
+          "path": "api/policy/fragments/resource-action.conf",
+          "sha256": "05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+        },
+        {
+          "path": "api/policy/fragments/identity-policy.conf",
+          "sha256": "e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+        },
+        {
+          "path": "api/src/services/identity-policy-local.service.ts",
+          "sha256": "8c9ffd348abbf0e7c6ca24342970a6eee88d6e78362764023a88f04a28a79654"
+        },
+        {
+          "path": "api/test/fixtures/identity-policy.json",
+          "sha256": "6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+        },
+        {
+          "path": "api/src/capabilities/registry.ts",
+          "sha256": "3eb1e2e47663b179f6fc54bf9182afd4aa295c54e51ba60e1186afe8b3f0dd05"
+        },
+        {
+          "path": "api/src/application-runtime.ts",
+          "sha256": "68aeb2c8dc76f8c7351a5a69ff86bb8038f3da400eb9e1a03b861b864cfca6d5"
+        },
+        {
+          "path": "api/src/prisma-record-store.ts",
+          "sha256": "d878794eae2e366dc5a83505b64ef9e5b3a5e0a7282fb952bb2eda829603bf2f"
+        },
+        {
+          "path": "api/src/notification-outbox-worker.ts",
+          "sha256": "02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+        },
+        {
+          "path": "api/src/notification-outbox-drain.ts",
+          "sha256": "439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+        },
+        {
+          "path": "api/README.md",
+          "sha256": "c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+        },
+        {
+          "path": "api/policy/model.conf",
+          "sha256": "10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+        },
+        {
+          "path": "api/policy/policy.csv",
+          "sha256": "cc93ab4759fd4a96ddbb47e68b1d1af6266c31e3a31c873d9bc6f288648ee2b3"
+        },
+        {
+          "path": "api/src/policy.ts",
+          "sha256": "a064fcc1c05b3f824681835e82ede8d83dc93f4a580da7c3ea8d90750d712b3e"
+        },
+        {
+          "path": "database/prisma/schema.prisma",
+          "sha256": "1da41701c845a6e641eee9ed3c851395e7647e90409da66f788337dd3e557847"
+        },
+        {
+          "path": "api/prisma/schema.prisma",
+          "sha256": "1da41701c845a6e641eee9ed3c851395e7647e90409da66f788337dd3e557847"
+        },
+        {
+          "path": "database/prisma/migrations/0001_initial/migration.sql",
+          "sha256": "7c1b3283e30ed3d562a712ddad72498cdad5fb1a482b3228067a5d83c6a2cb63"
+        },
+        {
+          "path": "database/prisma/seed.ts",
+          "sha256": "d534c707924d28f0f926a75a98f66b50b1dc8f5cbb12fe7ff7086d989e4a0aee"
+        },
+        {
+          "path": "database/package.json",
+          "sha256": "e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+        },
+        {
+          "path": "database/Dockerfile",
+          "sha256": "3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+        },
+        {
+          "path": "database/.dockerignore",
+          "sha256": "1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+        },
+        {
+          "path": "api/src/flows/definitions.ts",
+          "sha256": "8b349b67d7f44adebf4e94081bd57057c7dbcf5a3edbadf45bd9ceecd9286067"
+        },
+        {
+          "path": "api/src/flows/machines.ts",
+          "sha256": "86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+        },
+        {
+          "path": "api/test/journey.generated.test.ts",
+          "sha256": "14441415db99a2f15661e6170f737c97481cd1a6ac29fa36e0dfa14229cef7a7"
+        },
+        {
+          "path": "tests/journeys.generated.md",
+          "sha256": "dc62132671dcd0d400ead318a07601203f0d41d770400367b6522c0c20c4a311"
+        },
+        {
+          "path": "docs/api-reference.md",
+          "sha256": "cece93ca957bf22786ee61f7e51a83a2e55554d73a53ed000ecd161b46a18234"
+        },
+        {
+          "path": "docs/entity-relationship.md",
+          "sha256": "15012e1a3dd1218fbd84ce792f3b5e02f285ea3d2d830214b790c9c8fce6247d"
+        },
+        {
+          "path": "docs/permission-matrix.md",
+          "sha256": "67daa117676de23e062cb5ae72ee3df4507ed0d3cfd92f56c2f405acfe5b72c3"
+        },
+        {
+          "path": "docs/application.md",
+          "sha256": "3f1318286f354d0ce6a876bd7449b34e1f05d7820b255df3d48e9b7443a5e438"
+        },
+        {
+          "path": "web/Dockerfile",
+          "sha256": "98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+        },
+        {
+          "path": "web/.dockerignore",
+          "sha256": "b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+        },
+        {
+          "path": "docker-compose.yml",
+          "sha256": "07bb3d1a74960d202df0515f27a1df385a4c15a00bde28b8bd44c4f0c5019d5e"
+        },
+        {
+          "path": "README.md",
+          "sha256": "f1e162a986664c4305e9d50ec7df56a00cf88f8157a1b6c1ced39f8ed5b0c6aa"
+        }
+      ],
+      "bundleSha256": "7d1c7f29c6dce3f77fa6a3608792b640adc8b0e5f8b20e528d6da1ea0502b050"
+    },
+    {
+      "definitionKey": "expense-approval",
+      "planSha256": "112b53028bbb824ced611fd0280317b9c2a3e1a299a53fb5d475887bcdb3f4f8",
+      "graphSha256": "sha256:4ca7339f7b971c5c636f60052491c9a2e2ca13e028e23f07490355129dc428bc",
+      "files": [
+        {
+          "path": "THIRD_PARTY_NOTICES.md",
+          "sha256": "8dac8d5c476c101d05d4a2b2b9350ae29685271fa2a8641f9210b9189789013b"
+        },
+        {
+          "path": "package.json",
+          "sha256": "4eacb036a8ae4e1b46b45d8fb671e58c4f671e51567e879792a709c458036b38"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "sha256": "f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+        },
+        {
+          "path": "capability-lock.json",
+          "sha256": "f773733eb29db9521fb49585c464a31c9128a24d98fa2ab2c20aa3cd6cc87e34"
+        },
+        {
+          "path": "composition-lock.json",
+          "sha256": "9c7d669439791e63c14e774f834b5ba8ac3b39875e884f44ffb5b0df62e93b8f"
+        },
+        {
+          "path": "capability-template-lock.json",
+          "sha256": "8fe3dd256c8ddaa057db671e9bcfa7aa0db05b994ecaf3d81d46e753667b5b1a"
+        },
+        {
+          "path": "simulator/index.html",
+          "sha256": "5b71c287dfb51f22912f9c8da8713646e19ef4877814d3f26b6c46ed04b2a880"
+        },
+        {
+          "path": "web/package.json",
+          "sha256": "c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+        },
+        {
+          "path": "web/tsconfig.json",
+          "sha256": "2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+        },
+        {
+          "path": "web/next-env.d.ts",
+          "sha256": "bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+        },
+        {
+          "path": "web/app/layout.tsx",
+          "sha256": "315e32e0c74c71e1ecd4444a961b771e11da6a4fc6d4f0a2614d02db4c719607"
+        },
+        {
+          "path": "web/app/page-runtime.tsx",
+          "sha256": "fb2564556af1f1618f5e5fc27933ccb6809e67531003ee49f188ae136e6398f0"
+        },
+        {
+          "path": "web/app/page.tsx",
+          "sha256": "25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+        },
+        {
+          "path": "web/app/[...path]/page.tsx",
+          "sha256": "511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+        },
+        {
+          "path": "web/app/favicon.ico/route.ts",
+          "sha256": "3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+        },
+        {
+          "path": "web/app/api/[...path]/route.ts",
+          "sha256": "73a62385c825071371d17a450554e2554d36fca9c457309d8a8047c33bcae9c8"
+        },
+        {
+          "path": "web/app/globals.css",
+          "sha256": "c25ad29f04f39d0be06130c55b7e4c7d9f60ae0c7d05af1516b668c49ffc417c"
+        },
+        {
+          "path": "api/package.json",
+          "sha256": "f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+        },
+        {
+          "path": "api/tsconfig.json",
+          "sha256": "ba06ca0caffb054b4c1128d1a43e9ba8d40d97993b41e6fe621dd4cfc19b1f70"
+        },
+        {
+          "path": "api/Dockerfile",
+          "sha256": "620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+        },
+        {
+          "path": "api/.dockerignore",
+          "sha256": "51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+        },
+        {
+          "path": "api/src/main.ts",
+          "sha256": "9efc7bb7f00cba4892a14173dcc1e42d3955309afa2bf0f8fbee1c95c2717a87"
+        },
+        {
+          "path": "api/src/capabilities/contract.ts",
+          "sha256": "b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+        },
+        {
+          "path": "api/src/capabilities/core.audit.ts",
+          "sha256": "9c60377bc898526ea259bb1f50fa96fba2a2fa66d4de5707db2216ccdf57aebf"
+        },
+        {
+          "path": "api/src/capabilities/core.crud.ts",
+          "sha256": "a6d318324e6396b61dbf1b06786508bb710436378ce21ff897ec5dc6b25ad72c"
+        },
+        {
+          "path": "api/src/capabilities/core.identity-policy.ts",
+          "sha256": "d86842ab6bebb3f62d03b896738f735f869628e21d464b30c8e47781dffc1a7d"
+        },
+        {
+          "path": "api/src/capabilities/core.notification.ts",
+          "sha256": "151a60175749f7f373bf5ff84a8e8ffbb444fbeb38525f5b54d70a4817314c77"
+        },
+        {
+          "path": "api/src/capabilities/core.policy-declarations.ts",
+          "sha256": "09876e323cb3840ad5305b199ed77ae10d122322a3444667743c9e838455f790"
+        },
+        {
+          "path": "api/src/capabilities/core.workflow.ts",
+          "sha256": "c60633549598a3a867ceb00cf06fdeb3521bd5c75db6113aeef0f8732c483556"
+        },
+        {
+          "path": "database/prisma/fragments/expense.prisma",
+          "sha256": "bd3276507771a650224872f280122073da5bfdedf82fd0e2c00578722a309911"
+        },
+        {
+          "path": "web/src/app/expense-list/page.tsx",
+          "sha256": "9fe4f32b57efe436ca27df002a195ae15a12b78c5859065d482aeaff0b4b0b83"
+        },
+        {
+          "path": "api/policy/fragments/resource-action.conf",
+          "sha256": "05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+        },
+        {
+          "path": "api/policy/fragments/identity-policy.conf",
+          "sha256": "e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+        },
+        {
+          "path": "api/src/services/identity-policy-local.service.ts",
+          "sha256": "0437ace51faf042878d94e9a160f451e682ed06c392ad5077f829b9dbc188ca2"
+        },
+        {
+          "path": "api/test/fixtures/identity-policy.json",
+          "sha256": "6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+        },
+        {
+          "path": "api/src/capabilities/registry.ts",
+          "sha256": "f56c988a988b277e41b73769711287b2b89b90acbec98abff2e7976c53ea36c9"
+        },
+        {
+          "path": "api/src/application-runtime.ts",
+          "sha256": "206f474dd456c94413f1c812a0337106b19ee2525aadc54d1b992b0ae968c7db"
+        },
+        {
+          "path": "api/src/prisma-record-store.ts",
+          "sha256": "29506f3d72d5c56d5b67360229bd30d971f8b3be54bb02f10ca5d4f036ca2190"
+        },
+        {
+          "path": "api/src/notification-outbox-worker.ts",
+          "sha256": "02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+        },
+        {
+          "path": "api/src/notification-outbox-drain.ts",
+          "sha256": "439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+        },
+        {
+          "path": "api/README.md",
+          "sha256": "c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+        },
+        {
+          "path": "api/policy/model.conf",
+          "sha256": "10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+        },
+        {
+          "path": "api/policy/policy.csv",
+          "sha256": "bb48ec39b7d65b7545ee498b7ea5e40ad3bd52024ca29aed6eaf11a31cae5c19"
+        },
+        {
+          "path": "api/src/policy.ts",
+          "sha256": "a2a55a729339dc15fdde1421112bb8454a2f5dc41d4c0b2f44032bf5e98fd5e8"
+        },
+        {
+          "path": "database/prisma/schema.prisma",
+          "sha256": "e9b4dc42d2c50f11b8854715ef0512732ea82cffd964ddf7aaf2546c852352d2"
+        },
+        {
+          "path": "api/prisma/schema.prisma",
+          "sha256": "e9b4dc42d2c50f11b8854715ef0512732ea82cffd964ddf7aaf2546c852352d2"
+        },
+        {
+          "path": "database/prisma/migrations/0001_initial/migration.sql",
+          "sha256": "901d12c9be3f0f8acedc9d5d3da7d279a29baaddb75b9a5d6f708dedd590f2d7"
+        },
+        {
+          "path": "database/prisma/seed.ts",
+          "sha256": "ea1a85699912f29808c306e002ad448edcc42868c6c819dcc568826d5936bc83"
+        },
+        {
+          "path": "database/package.json",
+          "sha256": "e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+        },
+        {
+          "path": "database/Dockerfile",
+          "sha256": "3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+        },
+        {
+          "path": "database/.dockerignore",
+          "sha256": "1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+        },
+        {
+          "path": "api/src/flows/definitions.ts",
+          "sha256": "407507f9e654cd6d0298010586531042d13ed0ae6f82cfecb50192dd4a9255f6"
+        },
+        {
+          "path": "api/src/flows/machines.ts",
+          "sha256": "86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+        },
+        {
+          "path": "api/test/journey.generated.test.ts",
+          "sha256": "a89bbfa82e8efddd3be7c85697b0231bf4085eb8c35b3fecb3dfc0a5ea8e828e"
+        },
+        {
+          "path": "tests/journeys.generated.md",
+          "sha256": "ac363c48a4aa814e76dcb40b8477ce99f2d056be64f86607269b8030e4a435d9"
+        },
+        {
+          "path": "docs/api-reference.md",
+          "sha256": "0fa114acd5d68f62ee62390d5afe7632789e693902be6c92844d183fd4ab951f"
+        },
+        {
+          "path": "docs/entity-relationship.md",
+          "sha256": "5f2845138f8ce91273723fee60db9ee49ad3602c7b1be7e1d6f795708fc965ac"
+        },
+        {
+          "path": "docs/permission-matrix.md",
+          "sha256": "ab47fac4eb3060a36821751dab0cdc80e3eb664f722e8f5d80a123ecc9d83b6e"
+        },
+        {
+          "path": "docs/application.md",
+          "sha256": "cab55dec9c90bd97eb3c2bf6f5204704e9c70443fe26e608ce4425955dbbd520"
+        },
+        {
+          "path": "web/Dockerfile",
+          "sha256": "98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+        },
+        {
+          "path": "web/.dockerignore",
+          "sha256": "b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+        },
+        {
+          "path": "docker-compose.yml",
+          "sha256": "14e0250819ee1913f439664c96f80c9787575b972ad548e470faee91b72ec435"
+        },
+        {
+          "path": "README.md",
+          "sha256": "70166b42648623d6978ea9e3c63fb8e6adf113d827ae12c55c14efac365f4a8f"
+        }
+      ],
+      "bundleSha256": "4b9d05aaabdaee99a089d4db07416c1c140711a070815f7b67dbdf177112555a"
+    },
+    {
+      "definitionKey": "purchase-request-approval",
+      "planSha256": "8c45e221da131ce0fd7da6c13a05b801c7243f6b57ecd78f1f3d874a79b7b3a0",
+      "graphSha256": "sha256:7850e241eef17ddee8ce1bc54e5fe0466ea3120d81880c0ff359542146d0ff0f",
+      "files": [
+        {
+          "path": "THIRD_PARTY_NOTICES.md",
+          "sha256": "8dac8d5c476c101d05d4a2b2b9350ae29685271fa2a8641f9210b9189789013b"
+        },
+        {
+          "path": "package.json",
+          "sha256": "3257d2e0a467a4a9f3aa0c4cd6b4ec9378be28b21e86547e5554a6ab62982485"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "sha256": "f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+        },
+        {
+          "path": "capability-lock.json",
+          "sha256": "5280587a947d8fcf4f214a55f8683982f4dc8341969741eb19cbd0afc9528372"
+        },
+        {
+          "path": "composition-lock.json",
+          "sha256": "501a51f37cd7fc7e9ab4e4b4e41e0b4faf294a165d36d1850e266aa67c973acf"
+        },
+        {
+          "path": "capability-template-lock.json",
+          "sha256": "49cd54e35fa3e2413b67d69de5be7639d152b1286a1af499fd9f5f1aef281ccf"
+        },
+        {
+          "path": "simulator/index.html",
+          "sha256": "1a56094973c2b458abb6eaf8319d1c6901ee518f1e0da1c355c7805f54626609"
+        },
+        {
+          "path": "web/package.json",
+          "sha256": "c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+        },
+        {
+          "path": "web/tsconfig.json",
+          "sha256": "2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+        },
+        {
+          "path": "web/next-env.d.ts",
+          "sha256": "bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+        },
+        {
+          "path": "web/app/layout.tsx",
+          "sha256": "315e32e0c74c71e1ecd4444a961b771e11da6a4fc6d4f0a2614d02db4c719607"
+        },
+        {
+          "path": "web/app/page-runtime.tsx",
+          "sha256": "e654c15bd257d0974be01dcf072c3a74a5bed6b7e85244dab4902ec5b8eeb7fc"
+        },
+        {
+          "path": "web/app/page.tsx",
+          "sha256": "25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+        },
+        {
+          "path": "web/app/[...path]/page.tsx",
+          "sha256": "511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+        },
+        {
+          "path": "web/app/favicon.ico/route.ts",
+          "sha256": "3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+        },
+        {
+          "path": "web/app/api/[...path]/route.ts",
+          "sha256": "73a62385c825071371d17a450554e2554d36fca9c457309d8a8047c33bcae9c8"
+        },
+        {
+          "path": "web/app/globals.css",
+          "sha256": "c25ad29f04f39d0be06130c55b7e4c7d9f60ae0c7d05af1516b668c49ffc417c"
+        },
+        {
+          "path": "api/package.json",
+          "sha256": "f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+        },
+        {
+          "path": "api/tsconfig.json",
+          "sha256": "ba06ca0caffb054b4c1128d1a43e9ba8d40d97993b41e6fe621dd4cfc19b1f70"
+        },
+        {
+          "path": "api/Dockerfile",
+          "sha256": "620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+        },
+        {
+          "path": "api/.dockerignore",
+          "sha256": "51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+        },
+        {
+          "path": "api/src/main.ts",
+          "sha256": "1fab368ee1a6928f1f6400c2ae35c619a0f4c45571e2b15aaf8b42ab8b15abc0"
+        },
+        {
+          "path": "api/src/capabilities/contract.ts",
+          "sha256": "b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+        },
+        {
+          "path": "api/src/capabilities/core.audit.ts",
+          "sha256": "ed2bca17b22ffb849aeaba3ebcf161afc14f35e89134bb3e7d49a83628b7b813"
+        },
+        {
+          "path": "api/src/capabilities/core.crud.ts",
+          "sha256": "9ff7841f08450c4838244d13c43111c0e5d96fd7e3be5c2196e3129fcb978984"
+        },
+        {
+          "path": "api/src/capabilities/core.identity-policy.ts",
+          "sha256": "b731a505d8cd5b7ac0570d35d5e4a74464802ee26276ea803a5b2d101cbe6d26"
+        },
+        {
+          "path": "api/src/capabilities/core.notification.ts",
+          "sha256": "3137df2716cbb22c7a89e7ed7468ea8276bd6a982ccd13c8f994a6b1991aa88d"
+        },
+        {
+          "path": "api/src/capabilities/core.policy-declarations.ts",
+          "sha256": "4ea2de41d5ac462c61391d85d858556b3d3db53acecde2e17f2203bcb1aa8fc5"
+        },
+        {
+          "path": "api/src/capabilities/core.workflow.ts",
+          "sha256": "0f5a19f6b58d590b325b1f54b93523e86111498652a9332013ec27d727cfac73"
+        },
+        {
+          "path": "database/prisma/fragments/purchase-request.prisma",
+          "sha256": "8b2e9f3859a208e3c726a97c36cdeaceef5fde8b8661eed55f976aa4f2c45ae0"
+        },
+        {
+          "path": "web/src/app/purchase-request-list/page.tsx",
+          "sha256": "5f5a87be88845647d719a3661a21ba7897d27ca0f0b279cc7153d340e9ca4608"
+        },
+        {
+          "path": "api/policy/fragments/resource-action.conf",
+          "sha256": "05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+        },
+        {
+          "path": "api/policy/fragments/identity-policy.conf",
+          "sha256": "e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+        },
+        {
+          "path": "api/src/services/identity-policy-local.service.ts",
+          "sha256": "37d0f9fcbe5e7878161fff501e534fc22c7ca9f84417ab918acd7e8addd6c992"
+        },
+        {
+          "path": "api/test/fixtures/identity-policy.json",
+          "sha256": "6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+        },
+        {
+          "path": "api/src/capabilities/registry.ts",
+          "sha256": "f56c988a988b277e41b73769711287b2b89b90acbec98abff2e7976c53ea36c9"
+        },
+        {
+          "path": "api/src/application-runtime.ts",
+          "sha256": "14d06558924f5a13bf7817c2bcad2e55e0d194012c77208de51bf89d922a2a66"
+        },
+        {
+          "path": "api/src/prisma-record-store.ts",
+          "sha256": "900f9d672bd7a0fb32383fab031a04c6d80db8c7b62ea2622c05d5d4af6c4965"
+        },
+        {
+          "path": "api/src/notification-outbox-worker.ts",
+          "sha256": "02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+        },
+        {
+          "path": "api/src/notification-outbox-drain.ts",
+          "sha256": "439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+        },
+        {
+          "path": "api/README.md",
+          "sha256": "c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+        },
+        {
+          "path": "api/policy/model.conf",
+          "sha256": "10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+        },
+        {
+          "path": "api/policy/policy.csv",
+          "sha256": "eb15aa97c8bfd579ac41a9d50d3bbfdb1935171a5e203d9c3ad51a5adeb19e64"
+        },
+        {
+          "path": "api/src/policy.ts",
+          "sha256": "696c6b9c1da4e1f6042a8b742e87ae7bba4ffd18c80018bbf0ed7486a694ff91"
+        },
+        {
+          "path": "database/prisma/schema.prisma",
+          "sha256": "9d9570f3413657047c4e6b351565f0d74faeb7555ca4ab6fc0bae2f1969057a4"
+        },
+        {
+          "path": "api/prisma/schema.prisma",
+          "sha256": "9d9570f3413657047c4e6b351565f0d74faeb7555ca4ab6fc0bae2f1969057a4"
+        },
+        {
+          "path": "database/prisma/migrations/0001_initial/migration.sql",
+          "sha256": "5faf32235e5c9b6841c8013a6b55c858709f33416c19fcf31f0da4ea43cdcd43"
+        },
+        {
+          "path": "database/prisma/seed.ts",
+          "sha256": "4011b5c1f3e3d6140d4e974a4a9ce162c10b43fc1f829d5e4bd2e865bd96c74a"
+        },
+        {
+          "path": "database/package.json",
+          "sha256": "e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+        },
+        {
+          "path": "database/Dockerfile",
+          "sha256": "3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+        },
+        {
+          "path": "database/.dockerignore",
+          "sha256": "1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+        },
+        {
+          "path": "api/src/flows/definitions.ts",
+          "sha256": "5f76f6753bac99f0118f6510fd0e46256a66de22eef55df419ba41a779062873"
+        },
+        {
+          "path": "api/src/flows/machines.ts",
+          "sha256": "86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+        },
+        {
+          "path": "api/test/journey.generated.test.ts",
+          "sha256": "9bdec3310d86b3cc92bfe50dc50ab26c546a59d499f63749c627189451e0ca7d"
+        },
+        {
+          "path": "tests/journeys.generated.md",
+          "sha256": "fde6002531c9b22c65b5bbfbed3c3777597e1f4def5ce2b7be85a0683b1eb4dd"
+        },
+        {
+          "path": "docs/api-reference.md",
+          "sha256": "59a3f8eec91494f6d923f1d5a6de0cc7dfda8e370f72d7e80548f574e4b61837"
+        },
+        {
+          "path": "docs/entity-relationship.md",
+          "sha256": "964a388079967da7c31b2d36e045425b4c26779ae496a45f19986df0d3786e2a"
+        },
+        {
+          "path": "docs/permission-matrix.md",
+          "sha256": "36cb82cc82104d73434a766da38e35959acab956426b69e64f93703986ba298b"
+        },
+        {
+          "path": "docs/application.md",
+          "sha256": "72733ef5b3d7dfc274e94d27f4fd13ecf613e2223d5c95330dba4fee8791d3f9"
+        },
+        {
+          "path": "web/Dockerfile",
+          "sha256": "98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+        },
+        {
+          "path": "web/.dockerignore",
+          "sha256": "b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+        },
+        {
+          "path": "docker-compose.yml",
+          "sha256": "daeddcfeb2bc7ca10a5796108b436deaa6f276159b005784997f7f4a84576dbd"
+        },
+        {
+          "path": "README.md",
+          "sha256": "fcdbeeeaeac3d9308f9e7ceab80c416738dd6a76e444b06c544c1677b8c489fe"
+        }
+      ],
+      "bundleSha256": "39878e185e07af80160fc2fca6898749bb849c6afaa4abd28fcadba213bb6f78"
+    },
+    {
+      "definitionKey": "team-task-tracking",
+      "planSha256": "eb391b1ec7e69509d5b5cd966f883468e853a5d25ca2faa3e852e472a55b2155",
+      "graphSha256": "sha256:589e0aaa4db89b22cd6271ec62fcd9f8190f07cdf31dfd5de631a2516d8998d5",
+      "files": [
+        {
+          "path": "THIRD_PARTY_NOTICES.md",
+          "sha256": "8dac8d5c476c101d05d4a2b2b9350ae29685271fa2a8641f9210b9189789013b"
+        },
+        {
+          "path": "package.json",
+          "sha256": "cc66be13a7b0696eab4ee341a2996ded8560a992bbb7d201591262f8235a32a0"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "sha256": "f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+        },
+        {
+          "path": "capability-lock.json",
+          "sha256": "3311b83d79ed5f8d3435c55c71b01fbe28ffb9c553f875db05754dabdfb07086"
+        },
+        {
+          "path": "composition-lock.json",
+          "sha256": "2ee6beca985204c9094426354444136d2c6083f040470b17b926e69f9c51dbac"
+        },
+        {
+          "path": "capability-template-lock.json",
+          "sha256": "a3e77cd84f7604c9c4b25334bd4115fe2ad77b5c09084044f4d898afa19a57dc"
+        },
+        {
+          "path": "simulator/index.html",
+          "sha256": "88a2220c39eab38ae19253e372c66888b9869dd84d5d426b05880c267a2f4b7d"
+        },
+        {
+          "path": "web/package.json",
+          "sha256": "c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+        },
+        {
+          "path": "web/tsconfig.json",
+          "sha256": "2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+        },
+        {
+          "path": "web/next-env.d.ts",
+          "sha256": "bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+        },
+        {
+          "path": "web/app/layout.tsx",
+          "sha256": "315e32e0c74c71e1ecd4444a961b771e11da6a4fc6d4f0a2614d02db4c719607"
+        },
+        {
+          "path": "web/app/page-runtime.tsx",
+          "sha256": "6018cb55f61869f99768a30f0cbf46a975daf8eda428e20fc8bb46b7aa6faa9a"
+        },
+        {
+          "path": "web/app/page.tsx",
+          "sha256": "25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+        },
+        {
+          "path": "web/app/[...path]/page.tsx",
+          "sha256": "511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+        },
+        {
+          "path": "web/app/favicon.ico/route.ts",
+          "sha256": "3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+        },
+        {
+          "path": "web/app/api/[...path]/route.ts",
+          "sha256": "73a62385c825071371d17a450554e2554d36fca9c457309d8a8047c33bcae9c8"
+        },
+        {
+          "path": "web/app/globals.css",
+          "sha256": "a3e44e9b3d122940aeae8ac11515f6a91239bc79c2f791dfc4ccb2a2d8a00f98"
+        },
+        {
+          "path": "api/package.json",
+          "sha256": "f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+        },
+        {
+          "path": "api/tsconfig.json",
+          "sha256": "ba06ca0caffb054b4c1128d1a43e9ba8d40d97993b41e6fe621dd4cfc19b1f70"
+        },
+        {
+          "path": "api/Dockerfile",
+          "sha256": "620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+        },
+        {
+          "path": "api/.dockerignore",
+          "sha256": "51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+        },
+        {
+          "path": "api/src/main.ts",
+          "sha256": "a8f7a4a757eb0c919f020d3261b9af56340999333c26b65eefe4f4bcc9a58b4a"
+        },
+        {
+          "path": "api/src/capabilities/contract.ts",
+          "sha256": "b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+        },
+        {
+          "path": "api/src/capabilities/core.audit.ts",
+          "sha256": "cb203de2c265abac3fd857ee866e1cd513bc03c0ab80bc48b945829a9a79f8af"
+        },
+        {
+          "path": "api/src/capabilities/core.crud.ts",
+          "sha256": "e07f1b3aec0ef92932a7187f2d2960533c14ec4e7d7be4019350e3eef690a8d3"
+        },
+        {
+          "path": "api/src/capabilities/core.identity-policy.ts",
+          "sha256": "a6378f7aa7f4d5ec34a541b964348a065e828a40b01216652357898662f1ddb7"
+        },
+        {
+          "path": "api/src/capabilities/core.notification.ts",
+          "sha256": "35c39cbc57950ecc31559352db14b5d25c915d70efdc6509cf752536bcf04ca3"
+        },
+        {
+          "path": "api/src/capabilities/core.policy-declarations.ts",
+          "sha256": "b7ec3ac2405777ade89d07f1c9f3ee9c25261ba07e8f4148c88b34cde95b84a7"
+        },
+        {
+          "path": "api/src/capabilities/core.workflow.ts",
+          "sha256": "ce4f843ab706d791f2dad0a4896f16b0d53de705aafe8b5aa5322cc3f9982455"
+        },
+        {
+          "path": "database/prisma/fragments/task.prisma",
+          "sha256": "3ec77e3bea2380cefcb158f957bf62126fff89f0f8e09322886a739db0ae2e4a"
+        },
+        {
+          "path": "web/src/app/task-list/page.tsx",
+          "sha256": "896122f648ca0d8b7158795593d42110fa067adaec3e7fd56d6f55a0ec956c2d"
+        },
+        {
+          "path": "api/policy/fragments/resource-action.conf",
+          "sha256": "05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+        },
+        {
+          "path": "api/policy/fragments/identity-policy.conf",
+          "sha256": "e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+        },
+        {
+          "path": "api/src/services/identity-policy-local.service.ts",
+          "sha256": "9940a73111db4b13111d2520efdba57b8995a70c0acbe1679a8b51c31dcdbba4"
+        },
+        {
+          "path": "api/test/fixtures/identity-policy.json",
+          "sha256": "6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+        },
+        {
+          "path": "api/src/capabilities/registry.ts",
+          "sha256": "3eb1e2e47663b179f6fc54bf9182afd4aa295c54e51ba60e1186afe8b3f0dd05"
+        },
+        {
+          "path": "api/src/application-runtime.ts",
+          "sha256": "a1c32223e639f10867f350858f62c92cc92a710a08fc6b2f5d9c954f0420b66b"
+        },
+        {
+          "path": "api/src/prisma-record-store.ts",
+          "sha256": "1d390649e5babadc4452b15634b917a4edbad63831c2c6858a24a8082a71050e"
+        },
+        {
+          "path": "api/src/notification-outbox-worker.ts",
+          "sha256": "02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+        },
+        {
+          "path": "api/src/notification-outbox-drain.ts",
+          "sha256": "439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+        },
+        {
+          "path": "api/README.md",
+          "sha256": "c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+        },
+        {
+          "path": "api/policy/model.conf",
+          "sha256": "10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+        },
+        {
+          "path": "api/policy/policy.csv",
+          "sha256": "caed3f7cd9a7b1e9ce3ddfa568b44064a55b0b1d676dc51afe42621aae06089f"
+        },
+        {
+          "path": "api/src/policy.ts",
+          "sha256": "4b61f6b631afccfbffb13acac3cb62ce3eddd80f8fca962c0014dc774a7a9432"
+        },
+        {
+          "path": "database/prisma/schema.prisma",
+          "sha256": "4b28110f73d5cefe22bef782a78006f2d6e60d5d341bc950659edbd412979475"
+        },
+        {
+          "path": "api/prisma/schema.prisma",
+          "sha256": "4b28110f73d5cefe22bef782a78006f2d6e60d5d341bc950659edbd412979475"
+        },
+        {
+          "path": "database/prisma/migrations/0001_initial/migration.sql",
+          "sha256": "351a5e3cb92497ad5ee523cce8d79c1aecbe4ba02ce21f8fdbe8ac5e896b5e3c"
+        },
+        {
+          "path": "database/prisma/seed.ts",
+          "sha256": "8018c17ac8a51a35201deb9536eb342dd2c89eaed4020b6c4eacc1cda6d0096e"
+        },
+        {
+          "path": "database/package.json",
+          "sha256": "e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+        },
+        {
+          "path": "database/Dockerfile",
+          "sha256": "3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+        },
+        {
+          "path": "database/.dockerignore",
+          "sha256": "1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+        },
+        {
+          "path": "api/src/flows/definitions.ts",
+          "sha256": "ed8d641fdd9779a5ca7fcac045bf8bbbce3afb6f296874ff9af9898f09c487af"
+        },
+        {
+          "path": "api/src/flows/machines.ts",
+          "sha256": "86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+        },
+        {
+          "path": "api/test/journey.generated.test.ts",
+          "sha256": "508ac1f86667c450f552d29ada460a26d64f9801367feff84e45528f8ac98985"
+        },
+        {
+          "path": "tests/journeys.generated.md",
+          "sha256": "aaa9aa657f2f532523dd1dba7bd48b2a5d49881dc75b2bf2b12aaa990fda8323"
+        },
+        {
+          "path": "docs/api-reference.md",
+          "sha256": "c8d3e6e8bacd546958fcb38e3c5bb8e6392a720e6251cfe11a9f0f5d78bd6645"
+        },
+        {
+          "path": "docs/entity-relationship.md",
+          "sha256": "d4ac0d3989b84e0996bc51519b2ee2192bfc3c1175acc5dce10871c6fc8c148b"
+        },
+        {
+          "path": "docs/permission-matrix.md",
+          "sha256": "86cc6183b2572a8aec57f6bb275431df7ddc90055030154939caa3e099518525"
+        },
+        {
+          "path": "docs/application.md",
+          "sha256": "52d0eca2a9ce579d5479a99459c6e04d671ce32ea54aaa27a35f43cfb555a9f8"
+        },
+        {
+          "path": "web/Dockerfile",
+          "sha256": "98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+        },
+        {
+          "path": "web/.dockerignore",
+          "sha256": "b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+        },
+        {
+          "path": "docker-compose.yml",
+          "sha256": "0a8507e4c235d513b8e5b9422a530a4074932692e7b23ba4e701681c3ba9c2d6"
+        },
+        {
+          "path": "README.md",
+          "sha256": "9e179cb3337ef5c79ba916ff7f025c19fb61fcd8b4950b9fe738d09b7556d573"
+        }
+      ],
+      "bundleSha256": "d3ab37f01acd0e243ab070d60b1ba4d9642a6440a50764c003af44dabbe53c15"
+    },
+    {
+      "definitionKey": "publication-review",
+      "planSha256": "48cd04c9fea39c9f38ca6b6c4e5e82b95f282584a9c8637d230f31c78dfffe50",
+      "graphSha256": "sha256:f9450ab4d486964f600de9d410256254e306bc4464026a1952d319179f51f2ad",
+      "files": [
+        {
+          "path": "THIRD_PARTY_NOTICES.md",
+          "sha256": "8dac8d5c476c101d05d4a2b2b9350ae29685271fa2a8641f9210b9189789013b"
+        },
+        {
+          "path": "package.json",
+          "sha256": "f87dce2c1be0aa2fba78527c40d03610267ab4ad1d85d2615dfba61a3c234b91"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "sha256": "f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+        },
+        {
+          "path": "capability-lock.json",
+          "sha256": "f8f1e679c35cdb80a837047ff743357c50d0fd075dc60dd0619518998c3798b4"
+        },
+        {
+          "path": "composition-lock.json",
+          "sha256": "e78c669d90b6bdd75ab3a6838cc35048248c7b31e90e82246292bc95c885401a"
+        },
+        {
+          "path": "capability-template-lock.json",
+          "sha256": "4fdc9e605c1f549947696cad8fb3a5be29b52575c2bbc8212db624929d2bb6e5"
+        },
+        {
+          "path": "simulator/index.html",
+          "sha256": "5262ab137bac668814f2885f3a2029a293e22e54151376056f6bbfa529a1dd62"
+        },
+        {
+          "path": "web/package.json",
+          "sha256": "c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+        },
+        {
+          "path": "web/tsconfig.json",
+          "sha256": "2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+        },
+        {
+          "path": "web/next-env.d.ts",
+          "sha256": "bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+        },
+        {
+          "path": "web/app/layout.tsx",
+          "sha256": "315e32e0c74c71e1ecd4444a961b771e11da6a4fc6d4f0a2614d02db4c719607"
+        },
+        {
+          "path": "web/app/page-runtime.tsx",
+          "sha256": "741d5bfe759e8701f06482333d4e2eb3c4b7b7b4160bb5e1db76b61e8a71c061"
+        },
+        {
+          "path": "web/app/page.tsx",
+          "sha256": "25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+        },
+        {
+          "path": "web/app/[...path]/page.tsx",
+          "sha256": "511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+        },
+        {
+          "path": "web/app/favicon.ico/route.ts",
+          "sha256": "3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+        },
+        {
+          "path": "web/app/api/[...path]/route.ts",
+          "sha256": "73a62385c825071371d17a450554e2554d36fca9c457309d8a8047c33bcae9c8"
+        },
+        {
+          "path": "web/app/globals.css",
+          "sha256": "c25ad29f04f39d0be06130c55b7e4c7d9f60ae0c7d05af1516b668c49ffc417c"
+        },
+        {
+          "path": "api/package.json",
+          "sha256": "f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+        },
+        {
+          "path": "api/tsconfig.json",
+          "sha256": "ba06ca0caffb054b4c1128d1a43e9ba8d40d97993b41e6fe621dd4cfc19b1f70"
+        },
+        {
+          "path": "api/Dockerfile",
+          "sha256": "620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+        },
+        {
+          "path": "api/.dockerignore",
+          "sha256": "51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+        },
+        {
+          "path": "api/src/main.ts",
+          "sha256": "463b646260cca7227553a2ebb750adc4d153758ad62ad20e34f20f68787087b5"
+        },
+        {
+          "path": "api/src/capabilities/contract.ts",
+          "sha256": "b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+        },
+        {
+          "path": "api/src/capabilities/core.audit.ts",
+          "sha256": "32086022690165813e51d7ecc32585b3304507f004f7a854cade3f447cfc4082"
+        },
+        {
+          "path": "api/src/capabilities/core.crud.ts",
+          "sha256": "f5e0c4417d000b225adf941cb95243bb8da6d3a15019149e6f753a5fa0fa2252"
+        },
+        {
+          "path": "api/src/capabilities/core.identity-policy.ts",
+          "sha256": "691edc14eb5dc94da1387ba7790d22384b8688a7a8d9bfe0125c5acf00242d34"
+        },
+        {
+          "path": "api/src/capabilities/core.notification.ts",
+          "sha256": "5ec76993faaed63e8200c7e6852e4d90d3a050446a6294e479802e4123cb58b1"
+        },
+        {
+          "path": "api/src/capabilities/core.policy-declarations.ts",
+          "sha256": "816518ef75f7cdd9228a14d866420461de5ca49136f13e5e203bbf3286bdf2a4"
+        },
+        {
+          "path": "api/src/capabilities/core.workflow.ts",
+          "sha256": "c2f1d3bde5e1e3f448361fb5d5389f4a63a9c0cf60aea5644e915e81cabaa845"
+        },
+        {
+          "path": "database/prisma/fragments/submission.prisma",
+          "sha256": "82e9021e4a5516f8f5121feb160342fbcbcde88cd1b50eefe2d1a01151dba037"
+        },
+        {
+          "path": "web/src/app/submission-list/page.tsx",
+          "sha256": "588e699b3446ee243cbaac3d86d1958fcda5b113eb44dbb39b2933e2ea389e22"
+        },
+        {
+          "path": "api/policy/fragments/resource-action.conf",
+          "sha256": "05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+        },
+        {
+          "path": "api/policy/fragments/identity-policy.conf",
+          "sha256": "e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+        },
+        {
+          "path": "api/src/services/identity-policy-local.service.ts",
+          "sha256": "3f5994df541fac53fd9b6b4cc39e82883dce24aafe31fb3645629c56345d5495"
+        },
+        {
+          "path": "api/test/fixtures/identity-policy.json",
+          "sha256": "6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+        },
+        {
+          "path": "api/src/capabilities/registry.ts",
+          "sha256": "f56c988a988b277e41b73769711287b2b89b90acbec98abff2e7976c53ea36c9"
+        },
+        {
+          "path": "api/src/application-runtime.ts",
+          "sha256": "4b31df8240176a5a2ed6d2b97355d293e7c5e10d633d1181f8f4cad070a9666b"
+        },
+        {
+          "path": "api/src/prisma-record-store.ts",
+          "sha256": "3ea18b9615d165756896520b239dab734495f4d847af69a8eb929402b4d791e0"
+        },
+        {
+          "path": "api/src/notification-outbox-worker.ts",
+          "sha256": "02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+        },
+        {
+          "path": "api/src/notification-outbox-drain.ts",
+          "sha256": "439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+        },
+        {
+          "path": "api/README.md",
+          "sha256": "c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+        },
+        {
+          "path": "api/policy/model.conf",
+          "sha256": "10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+        },
+        {
+          "path": "api/policy/policy.csv",
+          "sha256": "39e329b38926ef3e34d29cab9c51ca889e3ffbcad4aaa42593c4ef4c7552f684"
+        },
+        {
+          "path": "api/src/policy.ts",
+          "sha256": "d6086943a069dc3c51d9fce136d07942b7addc5b102408f2b617186d926c0f79"
+        },
+        {
+          "path": "database/prisma/schema.prisma",
+          "sha256": "fd913942cb3d2d19d21e4c4232a36c9c9e7568cd95f8ff3e574c9ae80a494e62"
+        },
+        {
+          "path": "api/prisma/schema.prisma",
+          "sha256": "fd913942cb3d2d19d21e4c4232a36c9c9e7568cd95f8ff3e574c9ae80a494e62"
+        },
+        {
+          "path": "database/prisma/migrations/0001_initial/migration.sql",
+          "sha256": "d12096fdfaad1297c349af522e637809bd41d8ed588cc4b7c9729486f56533a3"
+        },
+        {
+          "path": "database/prisma/seed.ts",
+          "sha256": "19f8dded97b1c181a1434037611574bb39eacd97a96d12ddc29816e8f3ef5f42"
+        },
+        {
+          "path": "database/package.json",
+          "sha256": "e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+        },
+        {
+          "path": "database/Dockerfile",
+          "sha256": "3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+        },
+        {
+          "path": "database/.dockerignore",
+          "sha256": "1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+        },
+        {
+          "path": "api/src/flows/definitions.ts",
+          "sha256": "67d423b834271da032b7639fde3ed7e09e0e2bc4a0fa27209595dc5cc9558fcf"
+        },
+        {
+          "path": "api/src/flows/machines.ts",
+          "sha256": "86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+        },
+        {
+          "path": "api/test/journey.generated.test.ts",
+          "sha256": "26ed5ebf523dd276a5e8428e9b11942dac1f1722712a6a4e169eeddfcd6669af"
+        },
+        {
+          "path": "tests/journeys.generated.md",
+          "sha256": "2df22b253436bfa3260f4ef41206acdfb33392769a3013366ecb8558b0cc8999"
+        },
+        {
+          "path": "docs/api-reference.md",
+          "sha256": "4b162f54059e065ae6f74689c02e769b8882b2d9ea3c76aea3391e530cbb811c"
+        },
+        {
+          "path": "docs/entity-relationship.md",
+          "sha256": "e5f6f169aa961a1b383095f400bdbcb407cf8fdc4202b3a43792d51a00089bad"
+        },
+        {
+          "path": "docs/permission-matrix.md",
+          "sha256": "517acad9e84122611c331c62c07643032ea0e03d0b46b2189fce0d194bf2d645"
+        },
+        {
+          "path": "docs/application.md",
+          "sha256": "c925ffa06da9b915ccef0aa1ed2dec1c8167518f7b13b40d6048753a7f2e0bc2"
+        },
+        {
+          "path": "web/Dockerfile",
+          "sha256": "98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+        },
+        {
+          "path": "web/.dockerignore",
+          "sha256": "b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+        },
+        {
+          "path": "docker-compose.yml",
+          "sha256": "fecba3f7c3c4cd0e8d3e4ce3e3a35e2bf67b28a3ac8c30dc0c589fd1d5a9d490"
+        },
+        {
+          "path": "README.md",
+          "sha256": "8971555eedf9ca8de9f8e0fa1445cdd6f4cc764051e602efcca84ce4bd0cdf1e"
+        }
+      ],
+      "bundleSha256": "62a7ff35fa7103bf2e7cff1f885a1d714597ab8764d91fa269cd2f45a7299f27"
+    },
+    {
+      "definitionKey": "training-funding-approval",
+      "planSha256": "296ba832ffc4c71e9c9d555769bd032362510d76a69eebe62cc37ea50d3bfa14",
+      "graphSha256": "sha256:cbbb3d497bbb535a509fb40d52a616cbb396f613de7b9498bf8995f487bf3ade",
+      "files": [
+        {
+          "path": "THIRD_PARTY_NOTICES.md",
+          "sha256": "8dac8d5c476c101d05d4a2b2b9350ae29685271fa2a8641f9210b9189789013b"
+        },
+        {
+          "path": "package.json",
+          "sha256": "d3896f15bb615f51f0a39e365bffa27302c204c5343ef5887b532fd643dac381"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "sha256": "f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+        },
+        {
+          "path": "capability-lock.json",
+          "sha256": "e907ecc980c4791e1588beeb11642b334b5c4142445080f2fc8f31c4a7962f71"
+        },
+        {
+          "path": "composition-lock.json",
+          "sha256": "0128b1f34941a3d8905eb9a01b8539bba974cb26cba8ea09ea2ef71df460c8c2"
+        },
+        {
+          "path": "capability-template-lock.json",
+          "sha256": "ad010fb7b5351addf99c9a939d477b0eff2bd56e3afb66647f660d69e7cc1512"
+        },
+        {
+          "path": "simulator/index.html",
+          "sha256": "878ab44bc488bf2abcac80f7c1b1df864f18e97f6b4cc97e06560b2b9b316104"
+        },
+        {
+          "path": "web/package.json",
+          "sha256": "c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+        },
+        {
+          "path": "web/tsconfig.json",
+          "sha256": "2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+        },
+        {
+          "path": "web/next-env.d.ts",
+          "sha256": "bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+        },
+        {
+          "path": "web/app/layout.tsx",
+          "sha256": "315e32e0c74c71e1ecd4444a961b771e11da6a4fc6d4f0a2614d02db4c719607"
+        },
+        {
+          "path": "web/app/page-runtime.tsx",
+          "sha256": "4b12a5704905bf81ad83642881202a0b1c034959997ffb4ddb7577ee608410f2"
+        },
+        {
+          "path": "web/app/page.tsx",
+          "sha256": "25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+        },
+        {
+          "path": "web/app/[...path]/page.tsx",
+          "sha256": "511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+        },
+        {
+          "path": "web/app/favicon.ico/route.ts",
+          "sha256": "3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+        },
+        {
+          "path": "web/app/api/[...path]/route.ts",
+          "sha256": "73a62385c825071371d17a450554e2554d36fca9c457309d8a8047c33bcae9c8"
+        },
+        {
+          "path": "web/app/globals.css",
+          "sha256": "c25ad29f04f39d0be06130c55b7e4c7d9f60ae0c7d05af1516b668c49ffc417c"
+        },
+        {
+          "path": "api/package.json",
+          "sha256": "f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+        },
+        {
+          "path": "api/tsconfig.json",
+          "sha256": "ba06ca0caffb054b4c1128d1a43e9ba8d40d97993b41e6fe621dd4cfc19b1f70"
+        },
+        {
+          "path": "api/Dockerfile",
+          "sha256": "620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+        },
+        {
+          "path": "api/.dockerignore",
+          "sha256": "51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+        },
+        {
+          "path": "api/src/main.ts",
+          "sha256": "033e92411a2431cf6cb93c8bd87ee7c482cb84e92a187ca820b419e201aa4cb5"
+        },
+        {
+          "path": "api/src/capabilities/contract.ts",
+          "sha256": "b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+        },
+        {
+          "path": "api/src/capabilities/core.audit.ts",
+          "sha256": "1ee9345c064f83c6d6031c4f90cbd5da7a61939ee1fceed1554d79f97c71d39b"
+        },
+        {
+          "path": "api/src/capabilities/core.crud.ts",
+          "sha256": "98f28a8f3390064e8ddb394a1231115766f75fc74b3e61a528523d06d8de95b1"
+        },
+        {
+          "path": "api/src/capabilities/core.identity-policy.ts",
+          "sha256": "8d407b013a5eb7f1cdf23abcc537d860ae768e79b6c086f35a8726cdf8fa276b"
+        },
+        {
+          "path": "api/src/capabilities/core.notification.ts",
+          "sha256": "30a6d943a4316c75413b218f9ee43d2ef1654aad16c9a98140964d1a969f5abe"
+        },
+        {
+          "path": "api/src/capabilities/core.policy-declarations.ts",
+          "sha256": "6466f1cd9a28c6a8081f6036dff0942dac02d2c31da5af65428cb135cda9e215"
+        },
+        {
+          "path": "api/src/capabilities/core.workflow.ts",
+          "sha256": "1ecc558f1975506dd4b677f2ae1dadb48a21f4e33c7ff116d1323f75bb3de354"
+        },
+        {
+          "path": "database/prisma/fragments/training-request.prisma",
+          "sha256": "8ffbe2737fbeab9d27dc0849d7e874270cee740d5ce6ce69fc62a0ee410939bc"
+        },
+        {
+          "path": "web/src/app/training-request-list/page.tsx",
+          "sha256": "c345e1f636c6fa26d744d34ff47db9f099b04bbd5772e3ef97b2a3b7c9352d09"
+        },
+        {
+          "path": "api/policy/fragments/resource-action.conf",
+          "sha256": "05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+        },
+        {
+          "path": "api/policy/fragments/identity-policy.conf",
+          "sha256": "e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+        },
+        {
+          "path": "api/src/services/identity-policy-local.service.ts",
+          "sha256": "3f369d63bb62aee76f8a519283fba901a05255644529cfecc2bb2c514386c591"
+        },
+        {
+          "path": "api/test/fixtures/identity-policy.json",
+          "sha256": "6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+        },
+        {
+          "path": "api/src/capabilities/registry.ts",
+          "sha256": "f56c988a988b277e41b73769711287b2b89b90acbec98abff2e7976c53ea36c9"
+        },
+        {
+          "path": "api/src/application-runtime.ts",
+          "sha256": "2ab1195f65914d4fcb1eb4606b16f435f2061cbaaa1e25aa2e30405a78a96f05"
+        },
+        {
+          "path": "api/src/prisma-record-store.ts",
+          "sha256": "39aa6b001e7a4e58f86df54ac8ed14731360e76d8ff53ad5b5bc3a764c4123be"
+        },
+        {
+          "path": "api/src/notification-outbox-worker.ts",
+          "sha256": "02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+        },
+        {
+          "path": "api/src/notification-outbox-drain.ts",
+          "sha256": "439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+        },
+        {
+          "path": "api/README.md",
+          "sha256": "c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+        },
+        {
+          "path": "api/policy/model.conf",
+          "sha256": "10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+        },
+        {
+          "path": "api/policy/policy.csv",
+          "sha256": "da0cae8c78bcffc58477c35b1a5c524a44a44cee5ff958e1ba52b98493f4d311"
+        },
+        {
+          "path": "api/src/policy.ts",
+          "sha256": "72af199a3683f974bff9e2bf94b2e5aec6ef3e1722e28dbf12002984a03014a7"
+        },
+        {
+          "path": "database/prisma/schema.prisma",
+          "sha256": "3c8ae3672456c4837b9c3a5de59d6a708079ba3d1681165b524d61791c4e4d9f"
+        },
+        {
+          "path": "api/prisma/schema.prisma",
+          "sha256": "3c8ae3672456c4837b9c3a5de59d6a708079ba3d1681165b524d61791c4e4d9f"
+        },
+        {
+          "path": "database/prisma/migrations/0001_initial/migration.sql",
+          "sha256": "2c0c74ea20284fdb4e0acb88be4b7fdb412debd6c160d4dc97998aaa7d8c39f5"
+        },
+        {
+          "path": "database/prisma/seed.ts",
+          "sha256": "d69e8e17b4a4e279f0a06c100f7d1dbff6aa0495a922bdfd37a64623e947c5d9"
+        },
+        {
+          "path": "database/package.json",
+          "sha256": "e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+        },
+        {
+          "path": "database/Dockerfile",
+          "sha256": "3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+        },
+        {
+          "path": "database/.dockerignore",
+          "sha256": "1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+        },
+        {
+          "path": "api/src/flows/definitions.ts",
+          "sha256": "10d5b0494d0d0cf028d19700279808f84c74a399e6998e6893000f5cc3aacb18"
+        },
+        {
+          "path": "api/src/flows/machines.ts",
+          "sha256": "86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+        },
+        {
+          "path": "api/test/journey.generated.test.ts",
+          "sha256": "8c528ea04f8b6dfc4e9e82942b525342f8681f84c53736c2257556ec8ee46946"
+        },
+        {
+          "path": "tests/journeys.generated.md",
+          "sha256": "8ecc080c5fccecead35c508636cbdb65b9dab221abd2a16984386ca621f1e297"
+        },
+        {
+          "path": "docs/api-reference.md",
+          "sha256": "1172c5ba977146265b92010800ad9b6b7a7a01d7bc4e6138a93487f3f9f11f3d"
+        },
+        {
+          "path": "docs/entity-relationship.md",
+          "sha256": "e0c6f2389d5cd4cbccd035fa578a9df49943b9717188ee5fee8d06dcd0108e20"
+        },
+        {
+          "path": "docs/permission-matrix.md",
+          "sha256": "bffb573f5b0fa08f8d0fc250c23889e3e17030bd9ccdda9ce4df0e8fd1af959d"
+        },
+        {
+          "path": "docs/application.md",
+          "sha256": "36f30c2ad6b8893a23a35ed14c4ccbca1b76e95bce339128e99638e43702e786"
+        },
+        {
+          "path": "web/Dockerfile",
+          "sha256": "98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+        },
+        {
+          "path": "web/.dockerignore",
+          "sha256": "b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+        },
+        {
+          "path": "docker-compose.yml",
+          "sha256": "cb3642001d3697c249ea6c2fe9c6d9a371c8ef64c1afce7068199932a4009ace"
+        },
+        {
+          "path": "README.md",
+          "sha256": "6f1b16e883434602dace2710ef4c2c2ce1c88e7fc25792cbea2f4f9416b8b9e4"
+        }
+      ],
+      "bundleSha256": "d4b302f7cda6a5483d13a73f56e6e8b95b51fe44c79352a078a1b467f0f94053"
+    },
+    {
+      "definitionKey": "equipment-procurement-approval",
+      "planSha256": "a4822567565715aeadab333b9286cff4ed8f8e94ef123c83685f21ca798571ca",
+      "graphSha256": "sha256:fa5fb19f2345a4700774e49a7f6eafdf65397892dc77a3febb5f4f286ad8bfdf",
+      "files": [
+        {
+          "path": "THIRD_PARTY_NOTICES.md",
+          "sha256": "8dac8d5c476c101d05d4a2b2b9350ae29685271fa2a8641f9210b9189789013b"
+        },
+        {
+          "path": "package.json",
+          "sha256": "37646184fd85c698e9d58be87d86ad3d57388ce0e3f5a87ce8cc55fb06e2aa51"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "sha256": "f0473b2f758a8a4f74f6d1eca80f35fe546a0e6ed9af0f41fbc276e7dafa51c2"
+        },
+        {
+          "path": "capability-lock.json",
+          "sha256": "38e787051793665bf232adfb19fc077c121c76ceb45c792760ef616aefcfa903"
+        },
+        {
+          "path": "composition-lock.json",
+          "sha256": "394b1a94a2c357e1fce747b1be997615e11a2c2f74c34d9d5186ef15d07284e2"
+        },
+        {
+          "path": "capability-template-lock.json",
+          "sha256": "76e5ad048a21e8bdec018044ea090d0467d2db33c7fd47b049851355eee57e83"
+        },
+        {
+          "path": "simulator/index.html",
+          "sha256": "3479e68414ef2da7e55d56a95d6c824def917c61451fce009288d9524bf6202b"
+        },
+        {
+          "path": "web/package.json",
+          "sha256": "c13604a1355604db3a1ae2d55a8ed1b4963e2a2be5a558748091ee50b56d13ea"
+        },
+        {
+          "path": "web/tsconfig.json",
+          "sha256": "2e5e91cdf839359ad69bab84cbfea405bc70b5243251a8e5ce33b8d0b070ed6a"
+        },
+        {
+          "path": "web/next-env.d.ts",
+          "sha256": "bc460da01d99074c5173c5e2943bb6f39a7537533c28b837571ccf8bda616ccf"
+        },
+        {
+          "path": "web/app/layout.tsx",
+          "sha256": "315e32e0c74c71e1ecd4444a961b771e11da6a4fc6d4f0a2614d02db4c719607"
+        },
+        {
+          "path": "web/app/page-runtime.tsx",
+          "sha256": "fcb463bfcef3b59f19711a8fffb8ebd824618133706a8227ceed053fad123c55"
+        },
+        {
+          "path": "web/app/page.tsx",
+          "sha256": "25cdd881f063770b2931e20ad68d5aec072cadad43f92d4b8b8a7003227a6d65"
+        },
+        {
+          "path": "web/app/[...path]/page.tsx",
+          "sha256": "511cdd8e42c187897360be87b6835a09f7ed2bcc0819e8781ab798f340ebecdb"
+        },
+        {
+          "path": "web/app/favicon.ico/route.ts",
+          "sha256": "3011528d42efd01c9c7605520699b67a4cb8908697257e81b11503fffd4c8e76"
+        },
+        {
+          "path": "web/app/api/[...path]/route.ts",
+          "sha256": "73a62385c825071371d17a450554e2554d36fca9c457309d8a8047c33bcae9c8"
+        },
+        {
+          "path": "web/app/globals.css",
+          "sha256": "b2e93b31a55c48c5a196820acb60a5e225fec524d11ffc64a5a3eeda4d82504c"
+        },
+        {
+          "path": "api/package.json",
+          "sha256": "f758b1daaecedeab6f65f4f251d03f2fd8147de1f2b8a86747e116a0fb5d068e"
+        },
+        {
+          "path": "api/tsconfig.json",
+          "sha256": "9a9f5028e0d3200d87ee1cd6d541d45643016eb77c18179c220ebcc9c1117821"
+        },
+        {
+          "path": "api/Dockerfile",
+          "sha256": "620b0eed690c3df5de947bd580a2bf99255cc22409c8a834ff4e5c831dc340bb"
+        },
+        {
+          "path": "api/.dockerignore",
+          "sha256": "51b683467baace87247effed923b8aaecc559168ba0efbb43fd4714a8dc19362"
+        },
+        {
+          "path": "api/src/main.ts",
+          "sha256": "e7232b08b06f21bcd623227ff9ef9a336b7a8ccb0f4281e088aef09fd797eeac"
+        },
+        {
+          "path": "api/src/calculated-request-total.js",
+          "sha256": "8d6671fbb14319ea0141eb09885b1321cffdfed02df4da4183c5de7f756ba52c"
+        },
+        {
+          "path": "api/src/calculated-request-total.d.ts",
+          "sha256": "20ab277afbfc568ee06c86ec0d6ff3bf310b5d69e5749c0fecbe1d0c30b414ab"
+        },
+        {
+          "path": "web/app/calculated-request-total.js",
+          "sha256": "8d6671fbb14319ea0141eb09885b1321cffdfed02df4da4183c5de7f756ba52c"
+        },
+        {
+          "path": "web/app/calculated-request-total.d.ts",
+          "sha256": "20ab277afbfc568ee06c86ec0d6ff3bf310b5d69e5749c0fecbe1d0c30b414ab"
+        },
+        {
+          "path": "api/src/capabilities/contract.ts",
+          "sha256": "b13c886fc22acbcc4f3d9754867525e31b12f6dfb3d964bea0daf17ad2f2a64c"
+        },
+        {
+          "path": "api/src/capabilities/core.audit.ts",
+          "sha256": "e00dcff8377f12db3785008649bc45f8810cf7b53b047330d9064fac967960b5"
+        },
+        {
+          "path": "api/src/capabilities/core.crud.ts",
+          "sha256": "d8372ad195f763e95d1268bed861bce309bb7ab592f94c2a3a4e1b60e53c034f"
+        },
+        {
+          "path": "api/src/capabilities/core.identity-policy.ts",
+          "sha256": "886df67c42a122b112af8a63f6dd65534249536f11e6796145d62d97e27b2650"
+        },
+        {
+          "path": "api/src/capabilities/core.notification.ts",
+          "sha256": "50cbffbf68814dbf260ab4a643cc8353f6daa8f92f2db464a9b7934479398d2d"
+        },
+        {
+          "path": "api/src/capabilities/core.policy-declarations.ts",
+          "sha256": "b85e5dbddf2165b623cf77e1248589e9bf278e940affacf9875dbe53db3f884b"
+        },
+        {
+          "path": "api/src/capabilities/core.workflow.ts",
+          "sha256": "8bf9b0da4cdbe55944868c78bbb01afe8216a4a9b070e5148e7826246c6265d8"
+        },
+        {
+          "path": "database/prisma/fragments/equipment-request.prisma",
+          "sha256": "cf081950f9d8cf51fec49d45841c67906f49bbfeb07337f3d1f9ef1074db6e52"
+        },
+        {
+          "path": "web/src/app/equipment-request-list/page.tsx",
+          "sha256": "10e380c1657900308e33406d7287e584c65c80765a2e2752314780a0489b0711"
+        },
+        {
+          "path": "api/policy/fragments/resource-action.conf",
+          "sha256": "05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+        },
+        {
+          "path": "api/policy/fragments/identity-policy.conf",
+          "sha256": "e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+        },
+        {
+          "path": "api/src/services/identity-policy-local.service.ts",
+          "sha256": "c231a7d5545609dd827d0d2a7cc40022a94f2933b58cc3a9affaa11eab1b34ec"
+        },
+        {
+          "path": "api/test/fixtures/identity-policy.json",
+          "sha256": "6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+        },
+        {
+          "path": "api/src/capabilities/registry.ts",
+          "sha256": "f56c988a988b277e41b73769711287b2b89b90acbec98abff2e7976c53ea36c9"
+        },
+        {
+          "path": "api/src/application-runtime.ts",
+          "sha256": "267358ec31d519a2a927b6a27910fd7737265a0226f7fe9f464c1350ff8a9852"
+        },
+        {
+          "path": "api/src/prisma-record-store.ts",
+          "sha256": "cc942902e7f5168a5f45f5e3fbf42e0919904709d30c398297120f27e65a8fa1"
+        },
+        {
+          "path": "api/src/notification-outbox-worker.ts",
+          "sha256": "02989ed0a878af1daf8cbc968ff1e0e0746f660258c95e6bc215eae4b4818e6f"
+        },
+        {
+          "path": "api/src/notification-outbox-drain.ts",
+          "sha256": "439d0bb92af9bbee554c4f14653b7a4686108cf1f9b4af34a24be1145269306a"
+        },
+        {
+          "path": "api/README.md",
+          "sha256": "c909240a419da5fd9eeb8bdf49f0287c604b6e694d2b6d6e18922a37d9b4075b"
+        },
+        {
+          "path": "api/policy/model.conf",
+          "sha256": "10f281d006f6e3b3210e56fa0ffc1771993156fdc5e131f8bdc975b03ef0ef26"
+        },
+        {
+          "path": "api/policy/policy.csv",
+          "sha256": "92bc92a2b893ccba35898b19118e8a39e685d110963fd65e81042541e4384567"
+        },
+        {
+          "path": "api/src/policy.ts",
+          "sha256": "07fddc592891497c2884388d2ac78e971c371c2ec255e01f9d4333041f33d5c8"
+        },
+        {
+          "path": "database/prisma/schema.prisma",
+          "sha256": "9bfe7fadf81e147d667d3bf0280b68d8507510e3c0ba0f7f3b0d25cc308e318d"
+        },
+        {
+          "path": "api/prisma/schema.prisma",
+          "sha256": "9bfe7fadf81e147d667d3bf0280b68d8507510e3c0ba0f7f3b0d25cc308e318d"
+        },
+        {
+          "path": "database/prisma/migrations/0001_initial/migration.sql",
+          "sha256": "9fecd2efa79871f3cf1e451f11e4da4c55d1ba0d9861ce503c4d0cfc7d4d7e48"
+        },
+        {
+          "path": "database/prisma/seed.ts",
+          "sha256": "e79c26abf476fc940940a52689d4807792d49d99c0e95d4ae4aec8b1d0f2bba5"
+        },
+        {
+          "path": "database/package.json",
+          "sha256": "e1637d8e1356472a6f331b35110004f8b7e82209a03e05b4b16a293dd4ae7dc0"
+        },
+        {
+          "path": "database/Dockerfile",
+          "sha256": "3226c780acb59a88e1ace066c2639fdaedf394b409d561b7f0496de6aefd9f27"
+        },
+        {
+          "path": "database/.dockerignore",
+          "sha256": "1d1e0e64dd7d274f2bff103d50536f8d98d5705fc1bc51ebd7447dd06827864e"
+        },
+        {
+          "path": "api/src/flows/definitions.ts",
+          "sha256": "212ed071090a2c4fe123227209044a8c76130183d6379395161c26d3212c8aa9"
+        },
+        {
+          "path": "api/src/flows/machines.ts",
+          "sha256": "86f9aaef38d6e150e3e9299209e6c8e48c22b3b65529013578ee624d88ec81e5"
+        },
+        {
+          "path": "api/test/journey.generated.test.ts",
+          "sha256": "1edb0863a0c2dfc1698fa50ceb596ef84cebe1a105ceb971d1b0bd1d903ad476"
+        },
+        {
+          "path": "tests/journeys.generated.md",
+          "sha256": "5c6929db6e42c96ae906f14cdcd2a91487578741a12cee901fb3fa3fb5452a55"
+        },
+        {
+          "path": "docs/api-reference.md",
+          "sha256": "15cd60f22885dd01ebd9bd3f6cdd1d82e620157ca1e62c2050f62abe95956be9"
+        },
+        {
+          "path": "docs/entity-relationship.md",
+          "sha256": "ca51f9f8dd1cb6c81d0b9ee7ab00a00bc9a23990bd8b0d93d470dd82b6b8fc4d"
+        },
+        {
+          "path": "docs/permission-matrix.md",
+          "sha256": "59178fe20c98167f43b295095303e64e50729e7f019b4e3a1d19ebe72c307916"
+        },
+        {
+          "path": "docs/application.md",
+          "sha256": "66a43a03e9d2ad26a353f5896d9e3effdcdc0af2a9e9b9b1e6f8eafa34f0d8d4"
+        },
+        {
+          "path": "web/Dockerfile",
+          "sha256": "98b6a4233a02d430750ad058ddaa88394ce4f109c26906a4045ab6cf49d0b7d0"
+        },
+        {
+          "path": "web/.dockerignore",
+          "sha256": "b48855493dc2f402291313f76096909a8962ed4ca1350956138259e071fce13d"
+        },
+        {
+          "path": "docker-compose.yml",
+          "sha256": "0514cbe669f2a0055c73cec455991a55eddc444b919ed6d6e7914b9703e31333"
+        },
+        {
+          "path": "README.md",
+          "sha256": "6e813ed1266b8d81be3469c3dad6b226768338f5d8b6fd92bd3052a693033fef"
+        }
+      ],
+      "bundleSha256": "b6db1d968268a8ede9821f15396897c49efbd83b92a1ffabc9af827ecb5415a1"
+    }
+  ]
+}

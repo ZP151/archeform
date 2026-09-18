@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
-import { currentDefinitionDataCompatibility } from "./fixtures/definition-data-compatibility.js";
+import {
+  currentDefinitionDataCompatibility,
+  currentDefinitionDataCompilationEvidence,
+} from "./fixtures/definition-data-compatibility.js";
 import type { GeneratedFile } from "../src/core/generated-files.js";
 import {
   definitionDatabaseIdentifierComparison,
@@ -24,10 +27,18 @@ describe("Product definition data compatibility", () => {
       ownership: "factory-authored",
       license: "UNLICENSED",
     });
-    expect(appointmentPrismaSchema).toContain("model Factory_AppointmentMutationReceipt");
-    expect(appointmentPrismaSchema).toContain("@@unique([scope, idempotencyKey])");
-    expect(appointmentPrismaSchema).toContain("model Factory_AppointmentHistoryEntry");
-    expect(appointmentPrismaMigration).toContain('CREATE UNIQUE INDEX "Factory_AppointmentMutationReceipt_scope_idempotencyKey_key"');
+    expect(appointmentPrismaSchema).toContain(
+      "model Factory_AppointmentMutationReceipt",
+    );
+    expect(appointmentPrismaSchema).toContain(
+      "@@unique([scope, idempotencyKey])",
+    );
+    expect(appointmentPrismaSchema).toContain(
+      "model Factory_AppointmentHistoryEntry",
+    );
+    expect(appointmentPrismaMigration).toContain(
+      'CREATE UNIQUE INDEX "Factory_AppointmentMutationReceipt_scope_idempotencyKey_key"',
+    );
   });
 
   it("preserves all six delivered definitions and current Published bytes from 436484fc", () => {
@@ -49,6 +60,47 @@ describe("Product definition data compatibility", () => {
         ),
         undefined,
         "current",
+      ),
+    ).toEqual(expected.entries);
+  });
+
+  it("compiles Appointment from one immutable input twice with identical Graph and byte evidence", () => {
+    const definitionKeys = ["appointment-booking-v1"];
+    const first = currentDefinitionDataCompilationEvidence(definitionKeys);
+    const second = currentDefinitionDataCompilationEvidence(definitionKeys);
+    expect(first).toEqual(second);
+    expect(first[0]).toMatchObject({
+      definitionKey: "appointment-booking-v1",
+      planSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      graphSha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      bundleSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+    expect(first[0]!.files).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "api/src/capabilities/scheduling.appointment.ts",
+          sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        }),
+      ]),
+    );
+  });
+
+  it("preserves all seven pre-Appointment definitions from immutable b8d79696", () => {
+    const baselineBytes = readFileSync(
+      new URL("./fixtures/seven-definition-baseline.json", import.meta.url),
+      "utf8",
+    );
+    expect(createHash("sha256").update(baselineBytes).digest("hex")).toBe(
+      "d53444468b17d871e4729371543959a908cad0b83079a558b41ae9a5318e7dd0",
+    );
+    const expected = JSON.parse(baselineBytes);
+    expect(expected.base).toBe("b8d796961b1ff68c7d5efa1a12fe353aa370eee8");
+    expect(expected.entries).toHaveLength(7);
+    expect(
+      currentDefinitionDataCompilationEvidence(
+        expected.entries.map(
+          (entry: { definitionKey: string }) => entry.definitionKey,
+        ),
       ),
     ).toEqual(expected.entries);
   });

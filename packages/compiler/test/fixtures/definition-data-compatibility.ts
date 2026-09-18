@@ -113,3 +113,68 @@ export function currentDefinitionDataCompatibility(
     };
   });
 }
+
+/**
+ * Immutable byte-level evidence for definition outputs. This intentionally
+ * retains every generated path and content digest rather than normalizing the
+ * database identifiers used by the older historical compatibility fixtures.
+ */
+export function currentDefinitionDataCompilationEvidence(
+  definitionKeys: readonly string[],
+) {
+  return definitionKeys.map((key) => {
+    const entry = definitionSelectionCatalogue.find(
+      (candidate) => candidate.definitionKey === key,
+    );
+    if (!entry) throw new Error(`Historical definition missing: ${key}`);
+    const selection = {
+      definitionKey: entry.definitionKey,
+      disposition: "supported-default" as const,
+      requirementId: `data-baseline-${entry.definitionKey}`,
+      title: "Definition Data Baseline",
+      outcome: "Complete the reviewed local business workflow.",
+      materialQuestions: [],
+      businessParameters: null,
+    };
+    const interpretation = projectDefinitionSelection(selection);
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: interpretation.spec.requirementId,
+      workspaceId: "local-workspace",
+      name: "Definition Data Baseline",
+    });
+    const [standard] = planProductAlternatives({
+      requirement: interpretation.spec,
+      blueprint: interpretation.blueprint,
+      baseDraft,
+    });
+    if (!standard) throw new Error("Baseline has no standard assembly plan.");
+    const { diff } = composeProductDraft({
+      plan: standard.plan,
+      blueprint: interpretation.blueprint,
+      baseDraft,
+    });
+    const graph = applyGraphDiffToDraft(baseDraft, diff).graph;
+    const inputGraph = structuredClone(graph);
+    delete inputGraph.integration.compositionSelections;
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(inputGraph),
+      selections: graph.integration.compositionSelections ?? [],
+    });
+    const files = generateApplicationBundle({
+      publishedRevisionId: selection.requirementId,
+      graph: inputGraph,
+      compositionLock,
+    }).files;
+    const orderedFiles = files.map(({ path, content }) => ({
+      path,
+      sha256: createHash("sha256").update(content).digest("hex"),
+    }));
+    return {
+      definitionKey: entry.definitionKey,
+      planSha256: digest(standard.plan),
+      graphSha256: hashApplicationGraph(graph),
+      files: orderedFiles,
+      bundleSha256: digest(files.map(({ path, content }) => [path, content])),
+    };
+  });
+}

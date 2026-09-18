@@ -2823,9 +2823,10 @@ function renderPageRuntime(
       ),
     );
   const calculatedIdentity = selectCalculatedApproval(graph, correctionEntity);
-  const numericIdentity = calculatedIdentity
-    ? undefined
-    : selectNumericApproval(graph, correctionEntity);
+  const numericIdentity =
+    calculatedIdentity || appointmentProfile
+      ? undefined
+      : selectNumericApproval(graph, correctionEntity);
   const recordIdentity =
     calculatedIdentity ??
     numericIdentity ??
@@ -3958,12 +3959,13 @@ export function generateApplicationBundle(
   const graph = compilationInput.graph;
   const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
   const calculatedApproval = selectCalculatedApproval(graph, approvalEntity);
-  if (!calculatedApproval) selectNumericApproval(graph, approvalEntity);
   const taskEntity = selectTaskContract(graph, input.compositionLock);
   const appointmentProfile = selectAppointmentRuntimeProfile(
     graph,
     input.compositionLock,
   );
+  if (!calculatedApproval && !appointmentProfile)
+    selectNumericApproval(graph, approvalEntity);
   const rendererGraph = compilationInput.rendererGraph;
   const presentationProfile = taskEntity
     ? "task-v1"
