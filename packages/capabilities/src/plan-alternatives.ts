@@ -23,6 +23,8 @@ import {
   composeProductIntegration,
   deriveProductOperations,
   hasApprovalDecision,
+  appointmentBookingGraphBindings,
+  isAppointmentBookingBlueprint,
   primaryListPage,
 } from "./product-composer.js";
 
@@ -191,6 +193,14 @@ function bindingsForKeys(
       graphSymbol: `graph.policy.${blueprint.actors[0].key}`,
     });
   }
+  if (keys.has("scheduling.appointment")) {
+    for (const binding of appointmentBookingGraphBindings(blueprint)) {
+      bindings.push({
+        capabilityKey: "scheduling.appointment",
+        ...binding,
+      });
+    }
+  }
   return bindings;
 }
 
@@ -200,6 +210,15 @@ function selectedKeysFor(
   key: ProductPlanAlternativeKey,
 ): readonly string[] {
   const required = catalogue.required.map((asset) => asset.key);
+  if (isAppointmentBookingBlueprint(blueprint)) {
+    const mandatory = [
+      ...required,
+      "core.notification",
+      "scheduling.appointment",
+    ];
+    assertSelectionClosure(catalogue, mandatory);
+    return mandatory;
+  }
   const selected =
     key === "minimal"
       ? [...required]
@@ -210,7 +229,9 @@ function selectedKeysFor(
               entry.triggers.some((trigger) =>
                 trigger === "approval-decision"
                   ? hasApprovalDecision(blueprint)
-                  : blueprint.workflows.length > 0,
+                  : trigger === "workflow-driven"
+                    ? blueprint.workflows.length > 0
+                    : false,
               ),
             )
             .map((entry) => entry.asset.key),
@@ -351,15 +372,18 @@ export function planProductAlternatives(
       ? currentCapabilityCatalogue()
       : assertProductCapabilityCatalogue(input.catalogue);
 
+  const exactAppointment = isAppointmentBookingBlueprint(blueprint);
   const keys = [
     selectedKeysFor(catalogue, blueprint, "standard"),
     selectedKeysFor(catalogue, blueprint, "minimal"),
   ];
-  const distinct = keys.filter(
-    (candidate, index) =>
-      keys.findIndex((other) => candidate.join(",") === other.join(",")) ===
-      index,
-  );
+  const distinct = exactAppointment
+    ? keys
+    : keys.filter(
+        (candidate, index) =>
+          keys.findIndex((other) => candidate.join(",") === other.join(",")) ===
+          index,
+      );
   return distinct.map((_, index): ProductPlanAlternative => {
     const key: ProductPlanAlternativeKey = index === 0 ? "standard" : "minimal";
     return {

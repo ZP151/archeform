@@ -8,7 +8,7 @@ import { createDefinitionEntry } from "./definition-family-registry.js";
 
 type DefinitionEntry = {
   readonly definitionKey: string;
-  readonly family: "restaurant" | "approval" | "task";
+  readonly family: "restaurant" | "approval" | "task" | "appointment";
   readonly parameterPolicy: "restaurant-menu" | "none";
   readonly selectionSchema: z.ZodEffects<z.AnyZodObject>;
   readonly jsonSchema: object;

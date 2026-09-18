@@ -667,11 +667,11 @@ describe("Appointment Booking definition admission", () => {
     ]);
   });
 
-  it("does not make an unregistered appointment definition selectable", () => {
+  it("makes the reviewed appointment definition selectable after append-only admission", () => {
     expect(
       definitionSelectionCatalogue.some(
         (definition) => definition.definitionKey === definitionKey,
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 });

@@ -38,11 +38,21 @@ const historicalDefinitionKeys = [
   "training-funding-approval",
   "equipment-procurement-approval",
 ];
+const admittedDefinitionKeys = [
+  ...historicalDefinitionKeys,
+  "appointment-booking-v1",
+];
 assert.deepEqual(
   catalogue.definitions.map((entry) => entry.definitionKey),
+  admittedDefinitionKeys,
+);
+assert.deepEqual(
+  catalogue.definitions
+    .slice(0, historicalDefinitionKeys.length)
+    .map((entry) => entry.definitionKey),
   historicalDefinitionKeys,
 );
-const currentCount = historicalDefinitionKeys.length;
+const currentCount = admittedDefinitionKeys.length;
 const reportKeys = [
   "admitted",
   "apiVersion",

@@ -4242,6 +4242,662 @@
         "reviewedOn": "2026-09-17",
         "decision": "ADR-0065"
       }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "appointment-booking-v1",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "appointment",
+        "version": "appointment-booking/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "customer",
+        "operation": "create",
+        "entityKey": "appointment",
+        "successState": null
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "appointment-booking-v1",
+          "outcome": "Customers request open service schedules and staff manage appointments.",
+          "actors": [
+            {
+              "key": "customer",
+              "label": "Customer",
+              "description": "Requests appointments."
+            },
+            {
+              "key": "staff",
+              "label": "Staff",
+              "description": "Manages appointment state."
+            },
+            {
+              "key": "administrator",
+              "label": "Administrator",
+              "description": "Manages services and schedules."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "service",
+              "label": "Service",
+              "description": "A bookable offer."
+            },
+            {
+              "key": "schedule",
+              "label": "Schedule",
+              "description": "A server-owned bookable interval."
+            },
+            {
+              "key": "appointment",
+              "label": "Appointment",
+              "description": "A requested, confirmed, or cancelled booking."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "appointment-booking",
+              "label": "Appointment booking",
+              "description": "A customer request is confirmed, rescheduled, or cancelled."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "customer-requests-open-schedule",
+              "given": "an open schedule with positive capacity",
+              "when": "a customer requests an appointment",
+              "then": "the appointment is requested"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:bd0246f6c64ebe6fcd7ff336b7ba2b08700c97f95d21f8d850c6fac59cba4fc0",
+          "title": "Appointment Booking",
+          "actors": [
+            {
+              "key": "customer",
+              "label": "Customer",
+              "permissions": [
+                {
+                  "entityKey": "appointment",
+                  "actions": ["create", "read", "cancel"]
+                }
+              ]
+            },
+            {
+              "key": "staff",
+              "label": "Staff",
+              "permissions": [
+                {
+                  "entityKey": "appointment",
+                  "actions": ["read", "confirm", "reschedule", "cancel"]
+                }
+              ]
+            },
+            {
+              "key": "administrator",
+              "label": "Administrator",
+              "permissions": [
+                {
+                  "entityKey": "service",
+                  "actions": ["create", "read", "update", "manage"]
+                },
+                {
+                  "entityKey": "schedule",
+                  "actions": ["create", "read", "update", "manage"]
+                },
+                { "entityKey": "appointment", "actions": ["read", "cancel"] }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "service",
+              "label": "Service",
+              "description": "A bookable offer.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "durationMinutes",
+                  "label": "Duration minutes",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": false }
+                  }
+                },
+                {
+                  "key": "active",
+                  "label": "Active",
+                  "type": "boolean",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "schedule",
+              "label": "Schedule",
+              "description": "A server-owned bookable interval.",
+              "fields": [
+                {
+                  "key": "serviceId",
+                  "label": "Service",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "service"
+                },
+                {
+                  "key": "startUtc",
+                  "label": "Start UTC",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "endUtc",
+                  "label": "End UTC",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "timezone",
+                  "label": "Timezone",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "capacity",
+                  "label": "Capacity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": false }
+                  }
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "closed"]
+                }
+              ]
+            },
+            {
+              "key": "appointment",
+              "label": "Appointment",
+              "description": "A requested, confirmed, or cancelled booking.",
+              "fields": [
+                {
+                  "key": "scheduleId",
+                  "label": "Schedule",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "schedule"
+                },
+                {
+                  "key": "customerName",
+                  "label": "Customer name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "notes",
+                  "label": "Notes",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "cancellationReason",
+                  "label": "Cancellation reason",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["requested", "confirmed", "cancelled"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "schedule-picker",
+              "label": "Schedule picker",
+              "intent": "calendar",
+              "entityKey": "schedule"
+            },
+            {
+              "key": "appointment-list",
+              "label": "Appointments",
+              "intent": "list",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "appointment-form",
+              "label": "New appointment",
+              "intent": "form",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "appointment-detail",
+              "label": "Appointment detail",
+              "intent": "detail",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "service-management",
+              "label": "Services",
+              "intent": "settings"
+            },
+            {
+              "key": "schedule-management",
+              "label": "Schedules",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "appointment-booking",
+              "label": "Appointment booking",
+              "entityKey": "appointment",
+              "states": [
+                { "key": "requested", "label": "Requested" },
+                { "key": "confirmed", "label": "Confirmed" },
+                { "key": "cancelled", "label": "Cancelled" }
+              ],
+              "transitions": [
+                {
+                  "key": "confirm",
+                  "from": "requested",
+                  "to": "confirmed",
+                  "label": "Confirm",
+                  "actorKey": "staff"
+                },
+                {
+                  "key": "cancel",
+                  "from": "requested",
+                  "to": "cancelled",
+                  "label": "Cancel",
+                  "actorKey": "customer"
+                },
+                {
+                  "key": "reschedule",
+                  "from": "confirmed",
+                  "to": "requested",
+                  "label": "Reschedule",
+                  "actorKey": "staff"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "customer-requests-and-staff-confirms",
+              "description": "A customer requests an appointment and staff confirm it.",
+              "steps": [
+                { "actorKey": "customer", "action": "requests an appointment" },
+                { "actorKey": "staff", "action": "confirms the appointment" }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "definitionKey": "appointment-booking-v1",
+          "identity": "Use only the reviewed local Appointment Booking V1 structure.",
+          "requirementChecksum": "sha256:bd0246f6c64ebe6fcd7ff336b7ba2b08700c97f95d21f8d850c6fac59cba4fc0",
+          "title": "Appointment Booking",
+          "actors": [
+            {
+              "key": "customer",
+              "label": "Customer",
+              "permissions": [
+                {
+                  "entityKey": "appointment",
+                  "actions": ["create", "read", "cancel"]
+                }
+              ]
+            },
+            {
+              "key": "staff",
+              "label": "Staff",
+              "permissions": [
+                {
+                  "entityKey": "appointment",
+                  "actions": ["read", "confirm", "reschedule", "cancel"]
+                }
+              ]
+            },
+            {
+              "key": "administrator",
+              "label": "Administrator",
+              "permissions": [
+                {
+                  "entityKey": "service",
+                  "actions": ["create", "read", "update", "manage"]
+                },
+                {
+                  "entityKey": "schedule",
+                  "actions": ["create", "read", "update", "manage"]
+                },
+                { "entityKey": "appointment", "actions": ["read", "cancel"] }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "service",
+              "label": "Service",
+              "description": "A bookable offer.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "durationMinutes",
+                  "label": "Duration minutes",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": false }
+                  }
+                },
+                {
+                  "key": "active",
+                  "label": "Active",
+                  "type": "boolean",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "schedule",
+              "label": "Schedule",
+              "description": "A server-owned bookable interval.",
+              "fields": [
+                {
+                  "key": "serviceId",
+                  "label": "Service",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "service"
+                },
+                {
+                  "key": "startUtc",
+                  "label": "Start UTC",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "endUtc",
+                  "label": "End UTC",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "timezone",
+                  "label": "Timezone",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "capacity",
+                  "label": "Capacity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": false }
+                  }
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "closed"]
+                }
+              ]
+            },
+            {
+              "key": "appointment",
+              "label": "Appointment",
+              "description": "A requested, confirmed, or cancelled booking.",
+              "fields": [
+                {
+                  "key": "scheduleId",
+                  "label": "Schedule",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "schedule"
+                },
+                {
+                  "key": "customerName",
+                  "label": "Customer name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "notes",
+                  "label": "Notes",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "cancellationReason",
+                  "label": "Cancellation reason",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["requested", "confirmed", "cancelled"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "schedule-picker",
+              "label": "Schedule picker",
+              "intent": "calendar",
+              "entityKey": "schedule"
+            },
+            {
+              "key": "appointment-list",
+              "label": "Appointments",
+              "intent": "list",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "appointment-form",
+              "label": "New appointment",
+              "intent": "form",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "appointment-detail",
+              "label": "Appointment detail",
+              "intent": "detail",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "service-management",
+              "label": "Services",
+              "intent": "settings"
+            },
+            {
+              "key": "schedule-management",
+              "label": "Schedules",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "appointment-booking",
+              "label": "Appointment booking",
+              "entityKey": "appointment",
+              "states": [
+                { "key": "requested", "label": "Requested" },
+                { "key": "confirmed", "label": "Confirmed" },
+                { "key": "cancelled", "label": "Cancelled" }
+              ],
+              "transitions": [
+                {
+                  "key": "confirm",
+                  "from": "requested",
+                  "to": "confirmed",
+                  "label": "Confirm",
+                  "actorKey": "staff"
+                },
+                {
+                  "key": "cancel",
+                  "from": "requested",
+                  "to": "cancelled",
+                  "label": "Cancel",
+                  "actorKey": "customer"
+                },
+                {
+                  "key": "reschedule",
+                  "from": "confirmed",
+                  "to": "requested",
+                  "label": "Reschedule",
+                  "actorKey": "staff"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "customer-requests-and-staff-confirms",
+              "description": "A customer requests an appointment and staff confirm it.",
+              "steps": [
+                { "actorKey": "customer", "action": "requests an appointment" },
+                { "actorKey": "staff", "action": "confirms the appointment" }
+              ]
+            }
+          ]
+        },
+        "providerInstruction": "Select only the reviewed local Appointment Booking V1 definition. Ask material questions for recurring appointments, external calendar synchronization, payment, or unreviewed roles, entities, routes, and capabilities."
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "customer-cancels-request",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "appointment",
+                "operation": "cancel",
+                "fromState": "requested",
+                "toState": "cancelled",
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "customer-cancel-replay",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "appointment",
+                "operation": "cancel",
+                "fromState": "requested",
+                "toState": "cancelled",
+                "expectation": "retry-replay"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "staff-cannot-use-customer-transition",
+            "steps": [
+              {
+                "actorKey": "staff",
+                "entityKey": "appointment",
+                "operation": "cancel",
+                "fromState": "requested",
+                "toState": "cancelled",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          },
+          {
+            "key": "scheduling.appointment",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b"
+          }
+        ],
+        "presentation": { "key": "appointment-booking", "version": "1.0.0" },
+        "compilerProfile": "appointment-booking@1.0.0"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-18",
+        "decision": "ADR-0065"
+      }
     }
   ]
 }

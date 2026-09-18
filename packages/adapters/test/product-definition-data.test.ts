@@ -25,6 +25,10 @@ const historicalDefinitionKeys = [
   "training-funding-approval",
   "equipment-procurement-approval",
 ] as const;
+const admittedDefinitionKeys = [
+  ...historicalDefinitionKeys,
+  "appointment-booking-v1",
+] as const;
 
 const bytes = (definitions: unknown[]) =>
   Buffer.from(
@@ -39,10 +43,15 @@ const report = (definitions: unknown[]) =>
   validateDefinitionBatch(bytes(definitions));
 
 describe("Product definition data", () => {
-  it("loads the seven immutable historical data entries and admits only the shipped catalogue", () => {
+  it("preserves seven immutable historical entries and admits the append-only Appointment definition", () => {
     const data = loadProductDefinitionData();
     expect(
       data.definitions.map((definition) => definition.definitionKey),
+    ).toEqual(admittedDefinitionKeys);
+    expect(
+      data.definitions
+        .slice(0, historicalDefinitionKeys.length)
+        .map((definition) => definition.definitionKey),
     ).toEqual(historicalDefinitionKeys);
     expect(
       Object.isFrozen(
@@ -59,10 +68,10 @@ describe("Product definition data", () => {
         ),
       ),
     ).toMatchObject({
-      attempted: historicalDefinitionKeys.length,
-      valid: historicalDefinitionKeys.length,
-      distinct: historicalDefinitionKeys.length,
-      admitted: historicalDefinitionKeys.length,
+      attempted: admittedDefinitionKeys.length,
+      valid: admittedDefinitionKeys.length,
+      distinct: admittedDefinitionKeys.length,
+      admitted: admittedDefinitionKeys.length,
     });
   });
   it("admits the distinct reviewed Publication definition with its bounded scope", () => {
@@ -335,7 +344,7 @@ describe("Product definition data", () => {
       distinct: 1,
       admitted: 0,
     });
-    expect(loadProductDefinitionData().definitions).toHaveLength(7);
+    expect(loadProductDefinitionData().definitions).toHaveLength(8);
   });
   it.each([
     '{"apiVersion":"x","apiVersion":"y"}',

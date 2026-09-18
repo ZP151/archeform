@@ -24,6 +24,7 @@ import type {
   CapabilityBindingValueV1,
   CapabilitySelectionV1,
 } from "./composition.js";
+import { currentCapabilityAssets } from "./assets/index.js";
 import { copyStrictOwnDataEnvelope } from "./commerce/product-recipe.js";
 import {
   assertProductCapabilityCatalogue,
@@ -391,6 +392,218 @@ function referenceScalarKey(fieldKey: string): string {
   return /(?:id|key)$/i.test(fieldKey) ? fieldKey : `${fieldKey}Id`;
 }
 
+const positiveAppointmentInteger = {
+  apiVersion: "factory.numeric-field-domain/v1",
+  minimum: { value: 0, inclusive: false },
+} as const;
+
+const appointmentLockKeys = [
+  "core.crud",
+  "core.workflow",
+  "core.identity-policy",
+  "core.policy-declarations",
+  "core.audit",
+  "core.notification",
+  "scheduling.appointment",
+] as const;
+
+const sameArray = <T>(actual: readonly T[], expected: readonly T[]) =>
+  actual.length === expected.length &&
+  actual.every((value, index) => value === expected[index]);
+
+const exactPositiveAppointmentInteger = (
+  value: ProductBlueprintV1["entities"][number]["fields"][number]["numericDomain"],
+) => JSON.stringify(value) === JSON.stringify(positiveAppointmentInteger);
+
+type AppointmentBindingSlot = readonly [
+  inputKey: string,
+  entityIndex: number,
+  fieldIndex?: number,
+];
+
+const appointmentBindingSlots: readonly AppointmentBindingSlot[] = [
+  ["serviceEntity", 0],
+  ["serviceNameField", 0, 0],
+  ["serviceDurationMinutesField", 0, 1],
+  ["serviceActiveField", 0, 2],
+  ["scheduleEntity", 1],
+  ["scheduleServiceReferenceField", 1, 0],
+  ["scheduleStartField", 1, 1],
+  ["scheduleEndField", 1, 2],
+  ["scheduleTimezoneField", 1, 3],
+  ["scheduleCapacityField", 1, 4],
+  ["scheduleStatusField", 1, 5],
+  ["appointmentEntity", 2],
+  ["appointmentScheduleReferenceField", 2, 0],
+  ["appointmentCustomerNameField", 2, 1],
+  ["appointmentNotesField", 2, 2],
+  ["appointmentCancellationReasonField", 2, 3],
+  ["appointmentStatusField", 2, 4],
+];
+
+/**
+ * ADR-0072's closed Appointment V1 witness. It uses only typed structure and
+ * ordered slots: entity and field keys may change, but labels and prose never
+ * influence eligibility.
+ */
+export function isAppointmentBookingBlueprint(
+  blueprint: ProductBlueprintV1,
+  selectedKeys?: readonly string[],
+): boolean {
+  if (
+    blueprint.entities.length !== 3 ||
+    blueprint.actors.length !== 3 ||
+    blueprint.workflows.length !== 1 ||
+    (selectedKeys !== undefined &&
+      !sameArray(selectedKeys, appointmentLockKeys))
+  )
+    return false;
+  const [service, schedule, appointment] = blueprint.entities;
+  const [customer, staff, administrator] = blueprint.actors;
+  const workflow = blueprint.workflows[0];
+  if (
+    !service ||
+    !schedule ||
+    !appointment ||
+    !customer ||
+    !staff ||
+    !administrator ||
+    !workflow
+  )
+    return false;
+  const exactField = (
+    field: ProductBlueprintV1["entities"][number]["fields"][number] | undefined,
+    type: string,
+    required: boolean,
+    options?: readonly string[],
+  ) =>
+    field !== undefined &&
+    field.type === type &&
+    field.required === required &&
+    field.calculation === undefined &&
+    (options === undefined
+      ? field.options === undefined
+      : sameArray(field.options ?? [], options));
+  const serviceFields = service.fields;
+  const scheduleFields = schedule.fields;
+  const appointmentFields = appointment.fields;
+  const constrained = blueprint.entities.flatMap((entity) =>
+    entity.fields.filter((field) => field.numericDomain),
+  );
+  if (
+    serviceFields.length !== 3 ||
+    scheduleFields.length !== 6 ||
+    appointmentFields.length !== 5 ||
+    !exactField(serviceFields[0], "text", true) ||
+    !exactField(serviceFields[1], "number", true) ||
+    !exactPositiveAppointmentInteger(serviceFields[1]?.numericDomain) ||
+    !exactField(serviceFields[2], "boolean", true) ||
+    !exactField(scheduleFields[0], "reference", true) ||
+    scheduleFields[0]?.referenceTo !== service.key ||
+    !exactField(scheduleFields[1], "datetime", true) ||
+    !exactField(scheduleFields[2], "datetime", true) ||
+    !exactField(scheduleFields[3], "text", true) ||
+    !exactField(scheduleFields[4], "number", true) ||
+    !exactPositiveAppointmentInteger(scheduleFields[4]?.numericDomain) ||
+    !exactField(scheduleFields[5], "enum", true, ["open", "closed"]) ||
+    scheduleFields[1]?.key !== "startUtc" ||
+    scheduleFields[2]?.key !== "endUtc" ||
+    !exactField(appointmentFields[0], "reference", true) ||
+    appointmentFields[0]?.referenceTo !== schedule.key ||
+    !exactField(appointmentFields[1], "text", true) ||
+    !exactField(appointmentFields[2], "long-text", false) ||
+    !exactField(appointmentFields[3], "long-text", false) ||
+    !exactField(appointmentFields[4], "enum", true, [
+      "requested",
+      "confirmed",
+      "cancelled",
+    ]) ||
+    appointmentFields[2]?.key !== "notes" ||
+    appointmentFields[3]?.key !== "cancellationReason" ||
+    constrained.length !== 2 ||
+    constrained[0] !== serviceFields[1] ||
+    constrained[1] !== scheduleFields[4]
+  )
+    return false;
+  if (
+    !sameArray(
+      blueprint.actors.map(({ key }) => key),
+      ["customer", "staff", "administrator"],
+    ) ||
+    !sameArray(
+      customer.permissions.map(
+        ({ entityKey, actions }) => `${entityKey}:${actions.join(",")}`,
+      ),
+      [`${appointment.key}:create,read,cancel`],
+    ) ||
+    !sameArray(
+      staff.permissions.map(
+        ({ entityKey, actions }) => `${entityKey}:${actions.join(",")}`,
+      ),
+      [`${appointment.key}:read,confirm,reschedule,cancel`],
+    ) ||
+    !sameArray(
+      administrator.permissions.map(
+        ({ entityKey, actions }) => `${entityKey}:${actions.join(",")}`,
+      ),
+      [
+        `${service.key}:create,read,update,manage`,
+        `${schedule.key}:create,read,update,manage`,
+        `${appointment.key}:read,cancel`,
+      ],
+    ) ||
+    workflow.entityKey !== appointment.key ||
+    !sameArray(
+      workflow.states.map(({ key }) => key),
+      ["requested", "confirmed", "cancelled"],
+    ) ||
+    !sameArray(
+      workflow.transitions.map(
+        ({ key, from, to, actorKey }) => `${key}:${from}:${to}:${actorKey}`,
+      ),
+      [
+        "confirm:requested:confirmed:staff",
+        "cancel:requested:cancelled:customer",
+        "reschedule:confirmed:requested:staff",
+      ],
+    ) ||
+    blueprint.pageIntents.length !== 6 ||
+    !sameArray(
+      blueprint.pageIntents.map(
+        ({ intent, entityKey }) => `${intent}:${entityKey ?? ""}`,
+      ),
+      [
+        `calendar:${schedule.key}`,
+        `list:${appointment.key}`,
+        `form:${appointment.key}`,
+        `detail:${appointment.key}`,
+        "settings:",
+        "settings:",
+      ],
+    )
+  )
+    return false;
+  return true;
+}
+
+export function appointmentBookingGraphBindings(
+  blueprint: ProductBlueprintV1,
+): readonly { readonly inputKey: string; readonly graphSymbol: string }[] {
+  if (!isAppointmentBookingBlueprint(blueprint))
+    throw new CompositionError(
+      "Appointment Booking requires the closed V1 structural witness.",
+    );
+  return appointmentBindingSlots.map(([inputKey, entityIndex, fieldIndex]) => {
+    const entity = blueprint.entities[entityIndex]!;
+    if (fieldIndex === undefined)
+      return { inputKey, graphSymbol: `graph.domain.${entity.key}` };
+    const field = entity.fields[fieldIndex]!;
+    const emitted =
+      field.type === "reference" ? referenceScalarKey(field.key) : field.key;
+    return { inputKey, graphSymbol: `graph.domain.${entity.key}.${emitted}` };
+  });
+}
+
 function derivedRelations(
   blueprint: ProductBlueprintV1,
   applicationId: string,
@@ -486,6 +699,50 @@ function derivedFlows(
 function derivedSeedData(
   blueprint: ProductBlueprintV1,
 ): ApplicationGraphV1["domain"]["seedData"] {
+  if (isAppointmentBookingBlueprint(blueprint)) {
+    const [service, schedule, appointment] = blueprint.entities;
+    const field = (
+      entity: ProductBlueprintV1["entities"][number],
+      index: number,
+    ) =>
+      entity.fields[index]!.type === "reference"
+        ? referenceScalarKey(entity.fields[index]!.key)
+        : entity.fields[index]!.key;
+    return [
+      {
+        entity: service!.key,
+        id: `sample-${service!.key}`,
+        values: {
+          [field(service!, 0)]: "Sample service",
+          [field(service!, 1)]: 30,
+          [field(service!, 2)]: true,
+        },
+      },
+      {
+        entity: schedule!.key,
+        id: `sample-${schedule!.key}`,
+        values: {
+          [field(schedule!, 0)]: `sample-${service!.key}`,
+          [field(schedule!, 1)]: "2026-10-01T09:00:00Z",
+          [field(schedule!, 2)]: "2026-10-01T09:30:00Z",
+          [field(schedule!, 3)]: "UTC",
+          [field(schedule!, 4)]: 1,
+          [field(schedule!, 5)]: "open",
+        },
+      },
+      {
+        entity: appointment!.key,
+        id: `sample-${appointment!.key}`,
+        values: {
+          [field(appointment!, 0)]: `sample-${schedule!.key}`,
+          [field(appointment!, 1)]: "Sample customer",
+          [field(appointment!, 2)]: "Synthetic fixture note",
+          [field(appointment!, 3)]: "Synthetic fixture cancellation reason",
+          [field(appointment!, 4)]: "requested",
+        },
+      },
+    ];
+  }
   return blueprint.entities.map((entity) => {
     const workflow = blueprint.workflows.find(
       (candidate) => candidate.entityKey === entity.key,
@@ -671,7 +928,11 @@ export function deriveProductOperations(
   const constrained = blueprint.entities.flatMap((entity) =>
     entity.fields.filter((field) => field.numericDomain),
   );
-  if (constrained.length && !supportsNumericApprovalBlueprint(blueprint))
+  if (
+    constrained.length &&
+    !supportsNumericApprovalBlueprint(blueprint) &&
+    !isAppointmentBookingBlueprint(blueprint, input.selectedKeys)
+  )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",
     );
@@ -782,6 +1043,48 @@ function catalogueAssetFor(
   return asset;
 }
 
+function registeredCapabilityAssetFor(
+  asset: ProductCapabilityCatalogueV1["required"][number],
+) {
+  const registered = currentCapabilityAssets.find(
+    (candidate) =>
+      candidate.manifest.key === asset.key &&
+      candidate.manifest.version === asset.version &&
+      candidate.manifest.packageRoot === asset.packageRoot &&
+      candidate.manifest.manifestDigest === asset.manifestDigest &&
+      candidate.manifest.lifecycle === asset.lifecycle,
+  );
+  if (!registered)
+    throw new CompositionError(
+      `Catalogue asset '${asset.key}@${asset.version}' is not an exact registered capability manifest.`,
+    );
+  return registered;
+}
+
+function capabilityBindingValue(
+  asset: ReturnType<typeof registeredCapabilityAssetFor>,
+  inputKey: string,
+  graphSymbol: string,
+): CapabilityBindingValueV1 {
+  const input = asset.manifest.inputSchema.find(
+    (candidate) => candidate.key === inputKey,
+  );
+  if (!input)
+    throw new CompositionError(
+      `Capability '${asset.manifest.key}' has no input '${inputKey}'.`,
+    );
+  if (input.type !== "domain.field") return { graphSymbol };
+  const parts = graphSymbol.split(".");
+  if (parts.length !== 4 || parts[0] !== "graph" || parts[1] !== "domain")
+    throw new CompositionError(
+      `Capability '${asset.manifest.key}' field '${inputKey}' requires a qualified domain field symbol.`,
+    );
+  return {
+    graphSymbol: `graph.domain.${parts[2]!}`,
+    fieldKey: parts[3]!,
+  };
+}
+
 /**
  * The capability selection record the composed product must carry: every
  * plan lock materialized against the approved catalogue, with its plan
@@ -810,17 +1113,10 @@ export function composeProductIntegration(
     string,
     CapabilitySelectionV1["bindings"]
   >();
-  for (const binding of plan.graphBindings) {
-    if (!seenLockKeys.has(binding.capabilityKey)) {
-      throw new CompositionError(
-        `Plan binds input '${binding.inputKey}' of capability '${binding.capabilityKey}' that is not locked.`,
-      );
-    }
-    const current = bindingsByCapability.get(binding.capabilityKey) ?? {};
-    const next: Record<string, CapabilityBindingValueV1> = { ...current };
-    next[binding.inputKey] = { graphSymbol: binding.graphSymbol };
-    bindingsByCapability.set(binding.capabilityKey, next);
-  }
+  const registeredAssets = new Map<
+    string,
+    ReturnType<typeof registeredCapabilityAssetFor>
+  >();
   for (const lock of plan.capabilityLocks) {
     const asset = catalogueAssetFor(catalogue, lock.key, lock.version);
     if (asset.manifestDigest !== lock.manifestDigest) {
@@ -828,8 +1124,33 @@ export function composeProductIntegration(
         `Plan lock for '${lock.key}@${lock.version}' has a stale manifest digest.`,
       );
     }
+    registeredAssets.set(lock.key, registeredCapabilityAssetFor(asset));
+  }
+  for (const binding of plan.graphBindings) {
+    if (!seenLockKeys.has(binding.capabilityKey)) {
+      throw new CompositionError(
+        `Plan binds input '${binding.inputKey}' of capability '${binding.capabilityKey}' that is not locked.`,
+      );
+    }
+    const current = bindingsByCapability.get(binding.capabilityKey) ?? {};
+    if (binding.inputKey in current) {
+      throw new CompositionError(
+        `Plan binds input '${binding.inputKey}' of capability '${binding.capabilityKey}' more than once.`,
+      );
+    }
+    const next: Record<string, CapabilityBindingValueV1> = { ...current };
+    next[binding.inputKey] = capabilityBindingValue(
+      registeredAssets.get(binding.capabilityKey)!,
+      binding.inputKey,
+      binding.graphSymbol,
+    );
+    bindingsByCapability.set(binding.capabilityKey, next);
+  }
+  for (const lock of plan.capabilityLocks) {
+    const asset = catalogueAssetFor(catalogue, lock.key, lock.version);
+    const registered = registeredAssets.get(lock.key)!;
     const bindings = bindingsByCapability.get(lock.key) ?? {};
-    for (const input of asset.inputs) {
+    for (const input of registered.manifest.inputSchema) {
       if (input.required && !(input.key in bindings)) {
         throw new CompositionError(
           `Plan leaves required binding '${input.key}' of '${lock.key}' unbound.`,
@@ -905,7 +1226,8 @@ export function composeProductDraft(input: {
     blueprint.entities.some((entity) =>
       entity.fields.some((field) => field.numericDomain),
     ) &&
-    !supportsNumericApprovalBlueprint(blueprint, selectedKeys)
+    !supportsNumericApprovalBlueprint(blueprint, selectedKeys) &&
+    !isAppointmentBookingBlueprint(blueprint, selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",

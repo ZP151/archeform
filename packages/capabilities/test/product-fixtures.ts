@@ -365,3 +365,248 @@ export function appointmentBookingPrompt(): PromptFixtures {
   };
   return { requirement, blueprint };
 }
+
+/** The closed Appointment V1 witness admitted by ADR-0072. */
+export function appointmentBookingV1Prompt(): PromptFixtures {
+  const requirement: RequirementSpecV1 = {
+    apiVersion: "factory.requirement-spec/v1",
+    requirementId: "appointment-booking-v1",
+    outcome:
+      "Customers request open service schedules and staff manage appointments.",
+    actors: [
+      {
+        key: "customer",
+        label: "Customer",
+        description: "Requests appointments.",
+      },
+      {
+        key: "staff",
+        label: "Staff",
+        description: "Manages appointment state.",
+      },
+      {
+        key: "administrator",
+        label: "Administrator",
+        description: "Manages services and schedules.",
+      },
+    ],
+    domainConcepts: [
+      { key: "service", label: "Service" },
+      { key: "schedule", label: "Schedule" },
+      { key: "appointment", label: "Appointment" },
+    ],
+    workflows: [{ key: "appointment-booking", label: "Appointment booking" }],
+    constraints: [],
+    openQuestions: [],
+    acceptanceScenarios: [
+      {
+        key: "request-confirm",
+        given: "an open schedule with capacity",
+        when: "a customer requests an appointment and staff confirm it",
+        then: "the appointment is confirmed",
+      },
+    ],
+  };
+  const positive = {
+    apiVersion: "factory.numeric-field-domain/v1" as const,
+    minimum: { value: 0, inclusive: false },
+  };
+  const blueprint: ProductBlueprintV1 = {
+    apiVersion: "factory.product-blueprint/v1",
+    requirementChecksum: hashRequirementSpec(requirement),
+    title: "Appointment Booking",
+    actors: [
+      {
+        key: "customer",
+        label: "Customer",
+        permissions: [
+          { entityKey: "appointment", actions: ["create", "read", "cancel"] },
+        ],
+      },
+      {
+        key: "staff",
+        label: "Staff",
+        permissions: [
+          {
+            entityKey: "appointment",
+            actions: ["read", "confirm", "reschedule", "cancel"],
+          },
+        ],
+      },
+      {
+        key: "administrator",
+        label: "Administrator",
+        permissions: [
+          {
+            entityKey: "service",
+            actions: ["create", "read", "update", "manage"],
+          },
+          {
+            entityKey: "schedule",
+            actions: ["create", "read", "update", "manage"],
+          },
+          { entityKey: "appointment", actions: ["read", "cancel"] },
+        ],
+      },
+    ],
+    entities: [
+      {
+        key: "service",
+        label: "Service",
+        fields: [
+          { key: "name", label: "Name", type: "text", required: true },
+          {
+            key: "durationMinutes",
+            label: "Duration minutes",
+            type: "number",
+            required: true,
+            numericDomain: positive,
+          },
+          { key: "active", label: "Active", type: "boolean", required: true },
+        ],
+      },
+      {
+        key: "schedule",
+        label: "Schedule",
+        fields: [
+          {
+            key: "serviceId",
+            label: "Service",
+            type: "reference",
+            required: true,
+            referenceTo: "service",
+          },
+          {
+            key: "startUtc",
+            label: "Start UTC",
+            type: "datetime",
+            required: true,
+          },
+          { key: "endUtc", label: "End UTC", type: "datetime", required: true },
+          { key: "timezone", label: "Timezone", type: "text", required: true },
+          {
+            key: "capacity",
+            label: "Capacity",
+            type: "number",
+            required: true,
+            numericDomain: positive,
+          },
+          {
+            key: "status",
+            label: "Status",
+            type: "enum",
+            required: true,
+            options: ["open", "closed"],
+          },
+        ],
+      },
+      {
+        key: "appointment",
+        label: "Appointment",
+        fields: [
+          {
+            key: "scheduleId",
+            label: "Schedule",
+            type: "reference",
+            required: true,
+            referenceTo: "schedule",
+          },
+          {
+            key: "customerName",
+            label: "Customer name",
+            type: "text",
+            required: true,
+          },
+          { key: "notes", label: "Notes", type: "long-text", required: false },
+          {
+            key: "cancellationReason",
+            label: "Cancellation reason",
+            type: "long-text",
+            required: false,
+          },
+          {
+            key: "status",
+            label: "Status",
+            type: "enum",
+            required: true,
+            options: ["requested", "confirmed", "cancelled"],
+          },
+        ],
+      },
+    ],
+    pageIntents: [
+      {
+        key: "schedule-picker",
+        label: "Schedule picker",
+        intent: "calendar",
+        entityKey: "schedule",
+      },
+      {
+        key: "appointment-list",
+        label: "Appointments",
+        intent: "list",
+        entityKey: "appointment",
+      },
+      {
+        key: "appointment-form",
+        label: "New appointment",
+        intent: "form",
+        entityKey: "appointment",
+      },
+      {
+        key: "appointment-detail",
+        label: "Appointment detail",
+        intent: "detail",
+        entityKey: "appointment",
+      },
+      { key: "service-management", label: "Services", intent: "settings" },
+      { key: "schedule-management", label: "Schedules", intent: "settings" },
+    ],
+    workflows: [
+      {
+        key: "appointment-booking",
+        label: "Appointment booking",
+        entityKey: "appointment",
+        states: [
+          { key: "requested", label: "Requested" },
+          { key: "confirmed", label: "Confirmed" },
+          { key: "cancelled", label: "Cancelled" },
+        ],
+        transitions: [
+          {
+            key: "confirm",
+            from: "requested",
+            to: "confirmed",
+            label: "Confirm",
+            actorKey: "staff",
+          },
+          {
+            key: "cancel",
+            from: "requested",
+            to: "cancelled",
+            label: "Cancel",
+            actorKey: "customer",
+          },
+          {
+            key: "reschedule",
+            from: "confirmed",
+            to: "requested",
+            label: "Reschedule",
+            actorKey: "staff",
+          },
+        ],
+      },
+    ],
+    acceptanceJourneys: [
+      {
+        key: "customer-requests-and-staff-confirms",
+        description: "A customer requests an appointment and staff confirm it.",
+        steps: [
+          { actorKey: "customer", action: "requests an appointment" },
+          { actorKey: "staff", action: "confirms the appointment" },
+        ],
+      },
+    ],
+  };
+  return { requirement, blueprint };
+}

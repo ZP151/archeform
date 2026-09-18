@@ -62,6 +62,7 @@ export type CatalogueAssetRefV1 = z.infer<typeof catalogueAssetSchema>;
 export const capabilityTriggerSchema = z.enum([
   "approval-decision",
   "workflow-driven",
+  "appointment-booking",
 ]);
 
 export type CapabilityTrigger = z.infer<typeof capabilityTriggerSchema>;
@@ -151,6 +152,10 @@ export function currentCapabilityCatalogue(): ProductCapabilityCatalogueV1 {
       {
         asset: lookup("core.notification@1.1.1"),
         triggers: ["workflow-driven"],
+      },
+      {
+        asset: lookup("scheduling.appointment@1.0.0"),
+        triggers: ["appointment-booking"],
       },
     ],
   });

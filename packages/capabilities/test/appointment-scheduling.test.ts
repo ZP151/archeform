@@ -228,6 +228,66 @@ describe("appointment scheduling capability package", () => {
     ).toThrow();
   });
 
+  it("rejects extra, cross-owner, and wrong-type appointment bindings", () => {
+    const asset = getCapabilityAsset("scheduling.appointment");
+    expect(() =>
+      resolveCapabilityCompositionForAssets(
+        {
+          selections: [
+            {
+              lock: lockCapabilityAsset(asset),
+              bindings: {
+                ...bindings,
+                unknown: { graphSymbol: "graph.domain.service" },
+              },
+            },
+          ],
+        },
+        [asset],
+      ),
+    ).toThrow();
+    expect(() =>
+      resolveCapabilityCompositionForPublishedGraph(
+        appointmentGraph(),
+        {
+          selections: [
+            {
+              lock: lockCapabilityAsset(asset),
+              bindings: {
+                ...bindings,
+                serviceNameField: {
+                  graphSymbol: "graph.domain.schedule",
+                  fieldKey: "timezone",
+                },
+              },
+            },
+          ],
+        },
+        [asset],
+      ),
+    ).toThrow();
+    expect(() =>
+      resolveCapabilityCompositionForPublishedGraph(
+        appointmentGraph(),
+        {
+          selections: [
+            {
+              lock: lockCapabilityAsset(asset),
+              bindings: {
+                ...bindings,
+                serviceNameField: {
+                  graphSymbol: "graph.domain.service",
+                  fieldKey: "durationMinutes",
+                },
+              },
+            },
+          ],
+        },
+        [asset],
+      ),
+    ).toThrow();
+  });
+
   it("admits only the exact appointment relation witness on a Published Graph", () => {
     const asset = getCapabilityAsset("scheduling.appointment");
     const input = {

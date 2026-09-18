@@ -13,10 +13,12 @@ import {
   composeProductDraft,
   composeProductIntegration,
   composeProductRecipe,
+  currentCapabilityCatalogue,
   planProductAlternatives,
 } from "../src/index.js";
 import {
   appointmentBookingPrompt,
+  appointmentBookingV1Prompt,
   expenseApprovalPrompt,
 } from "./product-fixtures.js";
 import { restaurantProductFixture } from "./restaurant-product-fixture.js";
@@ -30,6 +32,166 @@ function blankDraft(applicationId: string, name: string): DraftRevisionV1 {
 }
 
 describe("composeProductDraft", () => {
+  it("converts every Appointment field plan symbol to a manifest-owned binding and preserves valid seed references", () => {
+    const { requirement, blueprint } = appointmentBookingV1Prompt();
+    const baseDraft = blankDraft(requirement.requirementId, blueprint.title);
+    const alternatives = planProductAlternatives({
+      requirement,
+      blueprint,
+      baseDraft,
+    });
+    for (const { plan } of alternatives) {
+      const graph = applyGraphDiffToDraft(
+        baseDraft,
+        composeProductDraft({ plan, blueprint, baseDraft }).diff,
+      ).graph;
+      const selection = graph.integration.compositionSelections?.find(
+        ({ lock }) => lock.key === "scheduling.appointment",
+      );
+      expect(selection?.bindings).toEqual({
+        serviceEntity: { graphSymbol: "graph.domain.service" },
+        serviceNameField: {
+          graphSymbol: "graph.domain.service",
+          fieldKey: "name",
+        },
+        serviceDurationMinutesField: {
+          graphSymbol: "graph.domain.service",
+          fieldKey: "durationMinutes",
+        },
+        serviceActiveField: {
+          graphSymbol: "graph.domain.service",
+          fieldKey: "active",
+        },
+        scheduleEntity: { graphSymbol: "graph.domain.schedule" },
+        scheduleServiceReferenceField: {
+          graphSymbol: "graph.domain.schedule",
+          fieldKey: "serviceId",
+        },
+        scheduleStartField: {
+          graphSymbol: "graph.domain.schedule",
+          fieldKey: "startUtc",
+        },
+        scheduleEndField: {
+          graphSymbol: "graph.domain.schedule",
+          fieldKey: "endUtc",
+        },
+        scheduleTimezoneField: {
+          graphSymbol: "graph.domain.schedule",
+          fieldKey: "timezone",
+        },
+        scheduleCapacityField: {
+          graphSymbol: "graph.domain.schedule",
+          fieldKey: "capacity",
+        },
+        scheduleStatusField: {
+          graphSymbol: "graph.domain.schedule",
+          fieldKey: "status",
+        },
+        appointmentEntity: { graphSymbol: "graph.domain.appointment" },
+        appointmentScheduleReferenceField: {
+          graphSymbol: "graph.domain.appointment",
+          fieldKey: "scheduleId",
+        },
+        appointmentCustomerNameField: {
+          graphSymbol: "graph.domain.appointment",
+          fieldKey: "customerName",
+        },
+        appointmentNotesField: {
+          graphSymbol: "graph.domain.appointment",
+          fieldKey: "notes",
+        },
+        appointmentCancellationReasonField: {
+          graphSymbol: "graph.domain.appointment",
+          fieldKey: "cancellationReason",
+        },
+        appointmentStatusField: {
+          graphSymbol: "graph.domain.appointment",
+          fieldKey: "status",
+        },
+      });
+      expect(graph.domain.seedData).toEqual([
+        {
+          entity: "service",
+          id: "sample-service",
+          values: { name: "Sample service", durationMinutes: 30, active: true },
+        },
+        {
+          entity: "schedule",
+          id: "sample-schedule",
+          values: {
+            serviceId: "sample-service",
+            startUtc: "2026-10-01T09:00:00Z",
+            endUtc: "2026-10-01T09:30:00Z",
+            timezone: "UTC",
+            capacity: 1,
+            status: "open",
+          },
+        },
+        {
+          entity: "appointment",
+          id: "sample-appointment",
+          values: {
+            scheduleId: "sample-schedule",
+            customerName: "Sample customer",
+            notes: "Synthetic fixture note",
+            cancellationReason: "Synthetic fixture cancellation reason",
+            status: "requested",
+          },
+        },
+      ]);
+    }
+  });
+
+  it("rejects stale Appointment locks, duplicate bindings, and unregistered catalogue manifests", () => {
+    const { requirement, blueprint } = appointmentBookingV1Prompt();
+    const baseDraft = blankDraft(requirement.requirementId, blueprint.title);
+    const [alternative] = planProductAlternatives({
+      requirement,
+      blueprint,
+      baseDraft,
+    });
+    const plan = alternative!.plan;
+    const appointmentLock = plan.capabilityLocks.find(
+      ({ key }) => key === "scheduling.appointment",
+    )!;
+    expect(() =>
+      composeProductIntegration({
+        ...plan,
+        capabilityLocks: plan.capabilityLocks.map((lock) =>
+          lock.key === appointmentLock.key
+            ? { ...lock, manifestDigest: `sha256:${"0".repeat(64)}` }
+            : lock,
+        ),
+      }),
+    ).toThrow("stale manifest digest");
+    expect(() =>
+      composeProductIntegration({
+        ...plan,
+        graphBindings: [
+          ...plan.graphBindings,
+          plan.graphBindings.find(
+            ({ capabilityKey, inputKey }) =>
+              capabilityKey === "scheduling.appointment" &&
+              inputKey === "serviceEntity",
+          )!,
+        ],
+      }),
+    ).toThrow();
+    const catalogue = currentCapabilityCatalogue();
+    const injected = structuredClone(catalogue);
+    injected.optional.find(
+      ({ asset }) => asset.key === "scheduling.appointment",
+    )!.asset.manifestDigest = `sha256:${"1".repeat(64)}`;
+    expect(() =>
+      planProductAlternatives({
+        requirement,
+        blueprint,
+        baseDraft,
+        catalogue: injected,
+      }),
+    ).toThrow("not an exact registered capability manifest");
+  });
+
   it("composes Task fields and role/state authority without approval effects or an extra business entity", () => {
     const { spec, blueprint } = canonicalTeamTaskInterpretation(),
       baseDraft = blankDraft("team-board", "Team board");

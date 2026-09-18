@@ -253,6 +253,10 @@ const historicalDefinitionKeys = [
   "training-funding-approval",
   "equipment-procurement-approval",
 ] as const;
+const admittedDefinitionKeys = [
+  ...historicalDefinitionKeys,
+  "appointment-booking-v1",
+] as const;
 
 const vagueApprovalBrief = [
   "I need an application where people can submit things for approval.",
@@ -987,10 +991,10 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       ).toBe(false);
     }
   });
-  it("keeps seven coherent registrations and refuses schema, guide and projector drift", () => {
+  it("keeps seven historical and one append-only coherent registrations", () => {
     expect(
       definitionSelectionCatalogue.map((entry) => entry.definitionKey),
-    ).toEqual(historicalDefinitionKeys);
+    ).toEqual(admittedDefinitionKeys);
     expect(Object.isFrozen(definitionSelectionCatalogue)).toBe(true);
     expect(() =>
       validateDefinitionCatalogue([
@@ -2073,7 +2077,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         generatedInterpretation: { anyOf: unknown[] };
       };
     };
-    expect(schema.properties.definitionSelection.anyOf).toHaveLength(8);
+    expect(schema.properties.definitionSelection.anyOf).toHaveLength(9);
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({
       requirement: interpretation.spec,

@@ -16,6 +16,7 @@ import { currentCapabilityCatalogue } from "../src/index.js";
 import { planProductAlternatives } from "../src/index.js";
 import {
   appointmentBookingPrompt,
+  appointmentBookingV1Prompt,
   expenseApprovalPrompt,
 } from "./product-fixtures.js";
 
@@ -31,7 +32,286 @@ function planKeys(plan: CompositionPlanV1): readonly string[] {
   return plan.capabilityLocks.map((lock) => lock.key);
 }
 
+function safelyRenamedAppointmentV1() {
+  const source = appointmentBookingV1Prompt();
+  const requirement = structuredClone(source.requirement) as any;
+  const blueprint = structuredClone(source.blueprint) as any;
+  const entityKeys = ["offering", "slot", "booking"];
+  const fieldKeys = [
+    ["displayName", "minuteSpan", "published"],
+    ["offeringRef", "startUtc", "endUtc", "zone", "seats", "availability"],
+    ["slotRef", "personName", "notes", "cancellationReason", "state"],
+  ];
+  const oldEntityKeys = blueprint.entities.map((entity: any) => entity.key);
+  const byOldEntity = new Map(
+    oldEntityKeys.map((key: string, index: number) => [
+      key,
+      entityKeys[index]!,
+    ]),
+  );
+  blueprint.entities.forEach((entity: any, entityIndex: number) => {
+    entity.key = entityKeys[entityIndex]!;
+    entity.fields.forEach((field: any, fieldIndex: number) => {
+      field.key = fieldKeys[entityIndex]![fieldIndex]!;
+      if (field.referenceTo)
+        field.referenceTo = byOldEntity.get(field.referenceTo);
+    });
+  });
+  blueprint.actors.forEach((actor: any) =>
+    actor.permissions.forEach(
+      (permission: any) =>
+        (permission.entityKey = byOldEntity.get(permission.entityKey)),
+    ),
+  );
+  blueprint.workflows[0].entityKey = "booking";
+  blueprint.pageIntents.forEach((page: any) => {
+    if (page.entityKey) page.entityKey = byOldEntity.get(page.entityKey);
+  });
+  requirement.domainConcepts.forEach(
+    (concept: any, index: number) => (concept.key = entityKeys[index]!),
+  );
+  blueprint.title = "Arbitrary renamed product";
+  blueprint.requirementChecksum = hashRequirementSpec(requirement);
+  return { requirement, blueprint };
+}
+
 describe("planProductAlternatives", () => {
+  it("selects the exact seven locks and all Appointment V1 bindings in both alternatives", () => {
+    const { requirement, blueprint } = appointmentBookingV1Prompt();
+    const alternatives = planProductAlternatives({
+      requirement,
+      blueprint,
+      baseDraft: blankDraft(requirement.requirementId, blueprint.title),
+    });
+
+    expect(alternatives.map(({ key }) => key)).toEqual(["standard", "minimal"]);
+    for (const { plan } of alternatives) {
+      expect(
+        plan.capabilityLocks.map(({ key, version, manifestDigest }) => ({
+          key,
+          version,
+          manifestDigest,
+        })),
+      ).toEqual([
+        {
+          key: "core.crud",
+          version: "1.0.1",
+          manifestDigest:
+            "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1",
+        },
+        {
+          key: "core.workflow",
+          version: "1.0.1",
+          manifestDigest:
+            "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884",
+        },
+        {
+          key: "core.identity-policy",
+          version: "1.0.0",
+          manifestDigest:
+            "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82",
+        },
+        {
+          key: "core.policy-declarations",
+          version: "1.0.0",
+          manifestDigest:
+            "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54",
+        },
+        {
+          key: "core.audit",
+          version: "1.0.2",
+          manifestDigest:
+            "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8",
+        },
+        {
+          key: "core.notification",
+          version: "1.1.1",
+          manifestDigest:
+            "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
+        },
+        {
+          key: "scheduling.appointment",
+          version: "1.0.0",
+          manifestDigest:
+            "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b",
+        },
+      ]);
+      expect(
+        plan.graphBindings
+          .filter(
+            ({ capabilityKey }) => capabilityKey === "scheduling.appointment",
+          )
+          .map(({ inputKey, graphSymbol }) => [inputKey, graphSymbol]),
+      ).toEqual([
+        ["serviceEntity", "graph.domain.service"],
+        ["serviceNameField", "graph.domain.service.name"],
+        ["serviceDurationMinutesField", "graph.domain.service.durationMinutes"],
+        ["serviceActiveField", "graph.domain.service.active"],
+        ["scheduleEntity", "graph.domain.schedule"],
+        ["scheduleServiceReferenceField", "graph.domain.schedule.serviceId"],
+        ["scheduleStartField", "graph.domain.schedule.startUtc"],
+        ["scheduleEndField", "graph.domain.schedule.endUtc"],
+        ["scheduleTimezoneField", "graph.domain.schedule.timezone"],
+        ["scheduleCapacityField", "graph.domain.schedule.capacity"],
+        ["scheduleStatusField", "graph.domain.schedule.status"],
+        ["appointmentEntity", "graph.domain.appointment"],
+        [
+          "appointmentScheduleReferenceField",
+          "graph.domain.appointment.scheduleId",
+        ],
+        [
+          "appointmentCustomerNameField",
+          "graph.domain.appointment.customerName",
+        ],
+        ["appointmentNotesField", "graph.domain.appointment.notes"],
+        [
+          "appointmentCancellationReasonField",
+          "graph.domain.appointment.cancellationReason",
+        ],
+        ["appointmentStatusField", "graph.domain.appointment.status"],
+      ]);
+    }
+  });
+
+  it("selects Appointment from the complete structural witness after safe entity and field renames", () => {
+    const { requirement, blueprint } = safelyRenamedAppointmentV1();
+    const alternatives = planProductAlternatives({
+      requirement,
+      blueprint,
+      baseDraft: blankDraft(requirement.requirementId, blueprint.title),
+    });
+    for (const { plan } of alternatives) {
+      expect(planKeys(plan)).toContain("scheduling.appointment");
+      expect(
+        plan.graphBindings
+          .filter(
+            ({ capabilityKey }) => capabilityKey === "scheduling.appointment",
+          )
+          .map(({ inputKey, graphSymbol }) => [inputKey, graphSymbol]),
+      ).toContainEqual([
+        "scheduleServiceReferenceField",
+        "graph.domain.slot.offeringRefId",
+      ]);
+      expect(
+        plan.graphBindings
+          .filter(
+            ({ capabilityKey }) => capabilityKey === "scheduling.appointment",
+          )
+          .map(({ inputKey, graphSymbol }) => [inputKey, graphSymbol]),
+      ).toContainEqual([
+        "appointmentScheduleReferenceField",
+        "graph.domain.booking.slotRefId",
+      ]);
+    }
+  });
+
+  it.each([
+    [
+      "reversed service relation",
+      (blueprint: any) =>
+        (blueprint.entities[1].fields[0].referenceTo =
+          blueprint.entities[2].key),
+    ],
+    [
+      "an extra business entity",
+      (blueprint: any) =>
+        blueprint.entities.push(structuredClone(blueprint.entities[0])),
+    ],
+    [
+      "workflow drift",
+      (blueprint: any) =>
+        (blueprint.workflows[0].transitions[0].to = "cancelled"),
+    ],
+    [
+      "permission drift",
+      (blueprint: any) => blueprint.actors[1].permissions[0].actions.pop(),
+    ],
+    [
+      "missing positive duration domain",
+      (blueprint: any) => delete blueprint.entities[0].fields[1].numericDomain,
+    ],
+    [
+      "an extra numeric domain",
+      (blueprint: any) =>
+        (blueprint.entities[0].fields[0].numericDomain = {
+          apiVersion: "factory.numeric-field-domain/v1",
+          minimum: { value: 0, inclusive: false },
+        }),
+    ],
+    [
+      "a numeric calculation",
+      (blueprint: any) =>
+        (blueprint.entities[0].fields[1].calculation = {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+          quantityFieldKey: "durationMinutes",
+          unitPriceFieldKey: "durationMinutes",
+        }),
+    ],
+    [
+      "changed optional-field requiredness",
+      (blueprint: any) => (blueprint.entities[2].fields[2].required = true),
+    ],
+  ] as const)("fails closed for %s", (_label, mutate) => {
+    const { requirement, blueprint } = appointmentBookingV1Prompt();
+    const candidate = structuredClone(blueprint) as any;
+    mutate(candidate);
+    expect(() =>
+      planProductAlternatives({
+        requirement,
+        blueprint: candidate,
+        baseDraft: blankDraft(requirement.requirementId, candidate.title),
+      }),
+    ).toThrow();
+  });
+
+  it.each([
+    [
+      "renamed schedule start",
+      (blueprint: any) => (blueprint.entities[1].fields[1].key = "beginsAt"),
+    ],
+    [
+      "renamed schedule end",
+      (blueprint: any) => (blueprint.entities[1].fields[2].key = "endsAt"),
+    ],
+    [
+      "renamed appointment notes",
+      (blueprint: any) =>
+        (blueprint.entities[2].fields[2].key = "requestNotes"),
+    ],
+    [
+      "renamed appointment cancellation reason",
+      (blueprint: any) =>
+        (blueprint.entities[2].fields[3].key = "cancellationText"),
+    ],
+    [
+      "reordered schedule timestamps",
+      (blueprint: any) =>
+        ([blueprint.entities[1].fields[1], blueprint.entities[1].fields[2]] = [
+          blueprint.entities[1].fields[2],
+          blueprint.entities[1].fields[1],
+        ]),
+    ],
+    [
+      "reordered appointment optional text",
+      (blueprint: any) =>
+        ([blueprint.entities[2].fields[2], blueprint.entities[2].fields[3]] = [
+          blueprint.entities[2].fields[3],
+          blueprint.entities[2].fields[2],
+        ]),
+    ],
+  ] as const)("rejects a fixed ambiguous slot with %s", (_label, mutate) => {
+    const { requirement, blueprint } = appointmentBookingV1Prompt();
+    const candidate = structuredClone(blueprint) as any;
+    mutate(candidate);
+    expect(() =>
+      planProductAlternatives({
+        requirement,
+        blueprint: candidate,
+        baseDraft: blankDraft(requirement.requirementId, candidate.title),
+      }),
+    ).toThrow();
+  });
+
   it("assembles the canonical Task with the six existing locks and nine exact bindings", () => {
     const { spec, blueprint } = canonicalTeamTaskInterpretation();
     const [standard] = planProductAlternatives({

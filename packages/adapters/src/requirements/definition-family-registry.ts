@@ -234,6 +234,9 @@ const categories = [
 const text = z.string().min(1).max(24000);
 const bp = productBlueprintSchema.shape;
 export const familyGuideSchemas = {
+  appointment: productBlueprintSchema
+    .extend({ definitionKey: graphKeySchema, identity: text })
+    .strict(),
   approval: z
     .object({
       definitionKey: graphKeySchema,
@@ -318,6 +321,15 @@ const fixedLocks = [
   version: version!,
   manifestDigest: "sha256:" + digest,
 }));
+const appointmentLocks = [
+  ...fixedLocks,
+  {
+    key: "scheduling.appointment",
+    version: "1.0.0",
+    manifestDigest:
+      "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b",
+  },
+];
 const restaurantLocks = [
   {
     key: "commerce.cart",
@@ -441,6 +453,12 @@ const restaurantLocks = [
   },
 ];
 export const definitionFamilyRegistry = Object.freeze({
+  appointment: Object.freeze({
+    version: "appointment-booking/v1",
+    parameterPolicy: "none/v1",
+    presentation: { key: "appointment-booking", version: "1.0.0" },
+    compilerProfile: "appointment-booking@1.0.0",
+  }),
   restaurant: Object.freeze({
     version: "restaurant-ordering/v3",
     parameterPolicy: "restaurant-menu/v1",
@@ -494,17 +512,23 @@ function slotsFor(entry: ProductDefinitionData): Slots {
   const b = entry.canonical.blueprint,
     f = b.workflows[0]!;
   const roleNames =
-    entry.familyBinding.key === "approval"
-      ? ["requester", "reviewer", "auditor"]
-      : entry.familyBinding.key === "task"
-        ? ["member", "viewer"]
-        : ["customer"];
+    entry.familyBinding.key === "appointment"
+      ? ["customer", "staff", "administrator"]
+      : entry.familyBinding.key === "approval"
+        ? ["requester", "reviewer", "auditor"]
+        : entry.familyBinding.key === "task"
+          ? ["member", "viewer"]
+          : ["customer"];
   return {
     roles: new Map(b.actors.map((a, i) => [a.key, roleNames[i]!])),
     entities: new Map(
       b.entities.map((e, i) => [
         e.key,
-        i === 0 ? "primary" : "requester-profile",
+        entry.familyBinding.key === "appointment"
+          ? ["service", "schedule", "appointment"][i]!
+          : i === 0
+            ? "primary"
+            : "requester-profile",
       ]),
     ),
     workflows: new Map([[f.key, "lifecycle"]]),
@@ -572,6 +596,169 @@ function semanticBlueprint(
       })),
     })),
   };
+}
+
+const appointmentPositiveInteger = {
+  apiVersion: "factory.numeric-field-domain/v1",
+  minimum: { value: 0, inclusive: false },
+};
+const sameOrdered = <T>(actual: readonly T[], expected: readonly T[]) =>
+  actual.length === expected.length &&
+  actual.every((value, index) => value === expected[index]);
+const appointmentReferenceScalar = (key: string) =>
+  /(?:id|key)$/i.test(key) ? key : `${key}Id`;
+
+/** ADR-0072's local family witness; keys may be renamed but ordered slots may not. */
+function appointmentPlanningSemantics(entry: ProductDefinitionData): boolean {
+  const { spec, blueprint } = entry.canonical;
+  if (
+    spec.productType !== undefined ||
+    spec.constraints.length !== 0 ||
+    spec.openQuestions.length !== 0 ||
+    spec.workflows.length !== 1 ||
+    blueprint.entities.length !== 3 ||
+    blueprint.actors.length !== 3 ||
+    blueprint.workflows.length !== 1
+  )
+    return false;
+  const [service, schedule, appointment] = blueprint.entities;
+  const [customer, staff, administrator] = blueprint.actors;
+  const workflow = blueprint.workflows[0];
+  if (
+    !service ||
+    !schedule ||
+    !appointment ||
+    !customer ||
+    !staff ||
+    !administrator ||
+    !workflow
+  )
+    return false;
+  const exactDomain = (value: unknown) =>
+    equal(value, appointmentPositiveInteger);
+  const field = (
+    value: (typeof service.fields)[number] | undefined,
+    type: string,
+    required: boolean,
+    options?: readonly string[],
+  ) =>
+    value !== undefined &&
+    value.type === type &&
+    value.required === required &&
+    value.calculation === undefined &&
+    (options === undefined
+      ? value.options === undefined
+      : sameOrdered(value.options ?? [], options));
+  const constrained = blueprint.entities.flatMap((entity) =>
+    entity.fields.filter((candidate) => candidate.numericDomain),
+  );
+  if (
+    service.fields.length !== 3 ||
+    schedule.fields.length !== 6 ||
+    appointment.fields.length !== 5 ||
+    !field(service.fields[0], "text", true) ||
+    !field(service.fields[1], "number", true) ||
+    !exactDomain(service.fields[1]?.numericDomain) ||
+    !field(service.fields[2], "boolean", true) ||
+    !field(schedule.fields[0], "reference", true) ||
+    schedule.fields[0]?.referenceTo !== service.key ||
+    !field(schedule.fields[1], "datetime", true) ||
+    !field(schedule.fields[2], "datetime", true) ||
+    !field(schedule.fields[3], "text", true) ||
+    !field(schedule.fields[4], "number", true) ||
+    !exactDomain(schedule.fields[4]?.numericDomain) ||
+    !field(schedule.fields[5], "enum", true, ["open", "closed"]) ||
+    schedule.fields[1]?.key !== "startUtc" ||
+    schedule.fields[2]?.key !== "endUtc" ||
+    !field(appointment.fields[0], "reference", true) ||
+    appointment.fields[0]?.referenceTo !== schedule.key ||
+    !field(appointment.fields[1], "text", true) ||
+    !field(appointment.fields[2], "long-text", false) ||
+    !field(appointment.fields[3], "long-text", false) ||
+    !field(appointment.fields[4], "enum", true, [
+      "requested",
+      "confirmed",
+      "cancelled",
+    ]) ||
+    appointment.fields[2]?.key !== "notes" ||
+    appointment.fields[3]?.key !== "cancellationReason" ||
+    constrained.length !== 2 ||
+    constrained[0] !== service.fields[1] ||
+    constrained[1] !== schedule.fields[4]
+  )
+    return false;
+  if (
+    !sameOrdered(
+      blueprint.actors.map((actor) => actor.key),
+      ["customer", "staff", "administrator"],
+    ) ||
+    !sameOrdered(
+      customer.permissions.map(
+        (permission) =>
+          `${permission.entityKey}:${permission.actions.join(",")}`,
+      ),
+      [`${appointment.key}:create,read,cancel`],
+    ) ||
+    !sameOrdered(
+      staff.permissions.map(
+        (permission) =>
+          `${permission.entityKey}:${permission.actions.join(",")}`,
+      ),
+      [`${appointment.key}:read,confirm,reschedule,cancel`],
+    ) ||
+    !sameOrdered(
+      administrator.permissions.map(
+        (permission) =>
+          `${permission.entityKey}:${permission.actions.join(",")}`,
+      ),
+      [
+        `${service.key}:create,read,update,manage`,
+        `${schedule.key}:create,read,update,manage`,
+        `${appointment.key}:read,cancel`,
+      ],
+    ) ||
+    workflow.entityKey !== appointment.key ||
+    !sameOrdered(
+      workflow.states.map((state) => state.key),
+      ["requested", "confirmed", "cancelled"],
+    ) ||
+    !sameOrdered(
+      workflow.transitions.map(
+        (transition) =>
+          `${transition.key}:${transition.from}:${transition.to}:${transition.actorKey}`,
+      ),
+      [
+        "confirm:requested:confirmed:staff",
+        "cancel:requested:cancelled:customer",
+        "reschedule:confirmed:requested:staff",
+      ],
+    ) ||
+    blueprint.pageIntents.length !== 6 ||
+    !sameOrdered(
+      blueprint.pageIntents.map(
+        (page) => `${page.intent}:${page.entityKey ?? ""}`,
+      ),
+      [
+        `calendar:${schedule.key}`,
+        `list:${appointment.key}`,
+        `form:${appointment.key}`,
+        `detail:${appointment.key}`,
+        "settings:",
+        "settings:",
+      ],
+    ) ||
+    !sameOrdered(
+      spec.actors.map((actor) => actor.key),
+      blueprint.actors.map((actor) => actor.key),
+    ) ||
+    !sameOrdered(
+      spec.domainConcepts.map((concept) => concept.key),
+      blueprint.entities.map((entity) => entity.key),
+    ) ||
+    spec.workflows[0]?.key !== workflow.key
+  )
+    return false;
+  return true;
 }
 function validatePlanningSemantics(entry: ProductDefinitionData): boolean {
   const { spec, blueprint: b } = entry.canonical,
@@ -684,6 +871,8 @@ function validatePlanningSemantics(entry: ProductDefinitionData): boolean {
       spec.domainConcepts[0]!.key === flow.entity
     );
   }
+  if (entry.familyBinding.key === "appointment")
+    return appointmentPlanningSemantics(entry);
   if (
     spec.productType !== undefined ||
     !equal(
@@ -993,14 +1182,19 @@ function executionMatches(entry: ProductDefinitionData): boolean {
       entry.familyBinding.key as keyof typeof definitionFamilyRegistry
     ];
   const expectedLocks =
-    entry.familyBinding.key === "restaurant" ? restaurantLocks : fixedLocks;
+    entry.familyBinding.key === "restaurant"
+      ? restaurantLocks
+      : entry.familyBinding.key === "appointment"
+        ? appointmentLocks
+        : fixedLocks;
   if (
     !equal(
       sortSet(entry.admissionExpectations.capabilityLocks),
       sortSet(expectedLocks),
     ) ||
     !equal(entry.admissionExpectations.presentation, row.presentation) ||
-    entry.admissionExpectations.compilerProfile !== row.version
+    entry.admissionExpectations.compilerProfile !==
+      ("compilerProfile" in row ? row.compilerProfile : row.version)
   )
     return false;
   if (entry.familyBinding.key === "restaurant") {
@@ -1072,10 +1266,98 @@ function executionMatches(entry: ProductDefinitionData): boolean {
           manifestDigest: s.lock.manifestDigest,
         })),
       ),
-      sortSet(fixedLocks),
+      sortSet(expectedLocks),
     )
   )
     return false;
+  if (entry.familyBinding.key === "appointment") {
+    const [service, schedule, appointment] = blueprint.entities;
+    if (!service || !schedule || !appointment) return false;
+    const binding = (
+      entity: typeof service,
+      field?: (typeof service.fields)[number],
+    ) =>
+      field
+        ? {
+            graphSymbol: `graph.domain.${entity.key}`,
+            fieldKey:
+              field.type === "reference"
+                ? appointmentReferenceScalar(field.key)
+                : field.key,
+          }
+        : { graphSymbol: `graph.domain.${entity.key}` };
+    const expectedBindings = {
+      serviceEntity: binding(service),
+      serviceNameField: binding(service, service.fields[0]),
+      serviceDurationMinutesField: binding(service, service.fields[1]),
+      serviceActiveField: binding(service, service.fields[2]),
+      scheduleEntity: binding(schedule),
+      scheduleServiceReferenceField: binding(schedule, schedule.fields[0]),
+      scheduleStartField: binding(schedule, schedule.fields[1]),
+      scheduleEndField: binding(schedule, schedule.fields[2]),
+      scheduleTimezoneField: binding(schedule, schedule.fields[3]),
+      scheduleCapacityField: binding(schedule, schedule.fields[4]),
+      scheduleStatusField: binding(schedule, schedule.fields[5]),
+      appointmentEntity: binding(appointment),
+      appointmentScheduleReferenceField: binding(
+        appointment,
+        appointment.fields[0],
+      ),
+      appointmentCustomerNameField: binding(appointment, appointment.fields[1]),
+      appointmentNotesField: binding(appointment, appointment.fields[2]),
+      appointmentCancellationReasonField: binding(
+        appointment,
+        appointment.fields[3],
+      ),
+      appointmentStatusField: binding(appointment, appointment.fields[4]),
+    };
+    const selection = actual.find(
+      ({ lock }) => lock.key === "scheduling.appointment",
+    );
+    const expectedSeeds = [
+      {
+        entity: service.key,
+        id: `sample-${service.key}`,
+        values: {
+          [service.fields[0]!.key]: "Sample service",
+          [service.fields[1]!.key]: 30,
+          [service.fields[2]!.key]: true,
+        },
+      },
+      {
+        entity: schedule.key,
+        id: `sample-${schedule.key}`,
+        values: {
+          [appointmentReferenceScalar(schedule.fields[0]!.key)]:
+            `sample-${service.key}`,
+          [schedule.fields[1]!.key]: "2026-10-01T09:00:00Z",
+          [schedule.fields[2]!.key]: "2026-10-01T09:30:00Z",
+          [schedule.fields[3]!.key]: "UTC",
+          [schedule.fields[4]!.key]: 1,
+          [schedule.fields[5]!.key]: "open",
+        },
+      },
+      {
+        entity: appointment.key,
+        id: `sample-${appointment.key}`,
+        values: {
+          [appointmentReferenceScalar(appointment.fields[0]!.key)]:
+            `sample-${schedule.key}`,
+          [appointment.fields[1]!.key]: "Sample customer",
+          [appointment.fields[2]!.key]: "Synthetic fixture note",
+          [appointment.fields[3]!.key]: "Synthetic fixture cancellation reason",
+          [appointment.fields[4]!.key]: "requested",
+        },
+      },
+    ];
+    return (
+      equal(selection?.bindings, expectedBindings) &&
+      graph.domain.entities.length === 5 &&
+      graph.page.pages.length === 8 &&
+      graph.flow.flows.length === 1 &&
+      equal(graph.domain.seedData, expectedSeeds)
+    );
+  }
   // Lock binding resolution is performed by the existing composer, never by input claims.
   const flow = graph.flow.flows[0],
     primary = entry.canonical.blueprint.entities[0]!.key;
@@ -1229,6 +1511,7 @@ export function validateFamilyDefinition(
   const reasons: DefinitionReason[] = [];
   if (
     entry.familyBinding.key !== "approval" &&
+    entry.familyBinding.key !== "appointment" &&
     entry.canonical.blueprint.entities.some((e) =>
       e.fields.some((f) => f.numericDomain || f.calculation),
     )
