@@ -40,7 +40,9 @@ export type {
 
 export {
   createCapabilityCompositionLock,
+  createCapabilityCompositionLockForPublishedGraph,
   resolveCapabilityComposition,
+  resolveCapabilityCompositionForPublishedGraph,
 } from "./composition.js";
 export {
   evaluateFoundryAdmission,

@@ -68,7 +68,7 @@ export const appointmentSchedulingAssetV1_0_0: CapabilityAssetV1 = {
       "Claims, releases, and moves appointments against server-owned schedule capacity.",
     packageRoot: "packages/capabilities/assets/scheduling.appointment/1.0.0",
     manifestDigest:
-      "sha256:fb3a10384db8de283390d411f6947a38b5a5fedfc2b22de3f73b3a3a1cb14795",
+      "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b",
     lifecycle: "golden",
     profiles: [],
     effects: ["appointment.booking"],
@@ -197,7 +197,7 @@ export const appointmentSchedulingAssetV1_0_0: CapabilityAssetV1 = {
         target: "api/src/capabilities/scheduling.appointment.ts",
         outputSlot: "api.runtime",
         digest:
-          "sha256:5626806299a20d3ad856da1b1ac7d9a22e680e5deee98f13dcc0e323b817c66b",
+          "sha256:fb6eee400b408249e8054696176e21e6bc2580b393d5e8153da81587100083fd",
       },
     ],
     parameters: [

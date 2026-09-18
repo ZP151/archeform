@@ -8,6 +8,10 @@ import {
   type CapabilityBindingInputV1,
   type CapabilityParameterSchemaV1,
 } from "./assets/index.js";
+import {
+  hashApplicationGraph,
+  type ApplicationGraphV1,
+} from "@factory/graph/browser";
 
 export interface GraphSymbolBindingV1 {
   readonly graphSymbol: string;
@@ -1291,6 +1295,148 @@ export function resolveCapabilityCompositionForAssets(
     captured.input,
     captured.assets,
   );
+}
+
+function appointmentBoundEntity(
+  bindings: Readonly<Record<string, CapabilityBindingValueV1>>,
+  key: string,
+): string {
+  const binding = bindings[key];
+  if (
+    !binding ||
+    typeof binding !== "object" ||
+    !binding.graphSymbol.startsWith("graph.domain.")
+  ) {
+    throw new Error(
+      `Appointment capability binding '${key}' must reference a domain entity.`,
+    );
+  }
+  return binding.graphSymbol.slice("graph.domain.".length);
+}
+
+function assertAppointmentPublishedGraphEligibility(
+  graph: ApplicationGraphV1,
+  composition: CapabilityCompositionV1,
+): void {
+  const selected = composition.packages.find(
+    ({ lock }) => lock.key === "scheduling.appointment",
+  );
+  if (!selected) return;
+  if (selected.lock.version !== "1.0.0") {
+    throw new Error("Appointment capability requires version 1.0.0.");
+  }
+  const asset = capabilityAssets.find(
+    ({ manifest }) =>
+      manifest.key === selected.lock.key &&
+      manifest.version === selected.lock.version,
+  );
+  if (!asset) throw new Error("Appointment capability asset is unavailable.");
+
+  const bindings = selected.bindings;
+  const service = appointmentBoundEntity(bindings, "serviceEntity");
+  const schedule = appointmentBoundEntity(bindings, "scheduleEntity");
+  const appointment = appointmentBoundEntity(bindings, "appointmentEntity");
+  if (new Set([service, schedule, appointment]).size !== 3) {
+    throw new Error("Appointment capability requires three distinct entities.");
+  }
+
+  for (const schema of asset.manifest.inputSchema) {
+    if (schema.type !== "domain.field" || !("ownerBinding" in schema)) {
+      continue;
+    }
+    const binding = bindings[schema.key];
+    const owner = appointmentBoundEntity(bindings, schema.ownerBinding);
+    if (
+      !binding ||
+      typeof binding !== "object" ||
+      !("fieldKey" in binding) ||
+      binding.graphSymbol !== `graph.domain.${owner}`
+    ) {
+      throw new Error(
+        `Appointment capability field '${schema.key}' must belong to '${schema.ownerBinding}'.`,
+      );
+    }
+    const entity = graph.domain.entities.find(({ key }) => key === owner);
+    const field = entity?.fields.find(({ key }) => key === binding.fieldKey);
+    if (
+      !field ||
+      !schema.fieldTypes.includes(field.type) ||
+      (schema.fieldRequired !== undefined &&
+        field.required !== schema.fieldRequired)
+    ) {
+      throw new Error(
+        `Appointment capability field '${schema.key}' does not satisfy its declared type and requiredness.`,
+      );
+    }
+  }
+
+  for (const [from, to, fieldKey] of [
+    [
+      schedule,
+      service,
+      (bindings.scheduleServiceReferenceField as GraphFieldBindingV1).fieldKey,
+    ],
+    [
+      appointment,
+      schedule,
+      (bindings.appointmentScheduleReferenceField as GraphFieldBindingV1)
+        .fieldKey,
+    ],
+  ] as const) {
+    const related = graph.domain.relations.filter(
+      (relation) =>
+        (relation.from === from && relation.to === to) ||
+        (relation.from === to && relation.to === from),
+    );
+    if (
+      related.length !== 1 ||
+      related[0]?.from !== from ||
+      related[0]?.to !== to ||
+      related[0]?.kind !== "many-to-one" ||
+      related[0]?.field !== fieldKey
+    ) {
+      throw new Error(
+        `Appointment capability requires exactly one many-to-one '${from}' to '${to}' relation owned by '${fieldKey}'.`,
+      );
+    }
+  }
+}
+
+/** Resolves an immutable Published Graph and rejects an ineligible appointment witness. */
+export function resolveCapabilityCompositionForPublishedGraph(
+  graph: ApplicationGraphV1,
+  input: ResolveCapabilityCompositionInput,
+  assets: readonly CapabilityAssetV1[] = capabilityAssets,
+): CapabilityCompositionV1 {
+  const composition = resolveCapabilityCompositionForAssets(input, assets);
+  assertAppointmentPublishedGraphEligibility(graph, composition);
+  return composition;
+}
+
+export function createCapabilityCompositionLockForPublishedGraph(
+  graph: ApplicationGraphV1,
+  input: ResolveCapabilityCompositionInput,
+  assets: readonly CapabilityAssetV1[] = capabilityAssets,
+): CapabilityCompositionLockV1 {
+  const graphChecksum = hashApplicationGraph(graph);
+  const composition = resolveCapabilityCompositionForPublishedGraph(
+    graph,
+    input,
+    assets,
+  );
+  const unsignedLock = {
+    apiVersion: "factory.composition/v1" as const,
+    applicationGraphChecksum: graphChecksum,
+    packages: composition.packages,
+    resolvedContributionDigests: composition.resolvedContributionDigests,
+    providedAndRequiredInterfaces: composition.providedAndRequiredInterfaces,
+    targetRuntimeInterfaceVersions: composition.targetRuntimeInterfaceVersions,
+    resolvedDependencyOrder: composition.resolvedDependencyOrder,
+  };
+  return deepFreeze({
+    ...unsignedLock,
+    lockDigest: sha256(canonicalJson(unsignedLock)),
+  });
 }
 
 export function captureCapabilityCompositionResolution<

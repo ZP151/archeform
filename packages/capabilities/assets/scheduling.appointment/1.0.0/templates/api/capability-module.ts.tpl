@@ -37,40 +37,51 @@ interface AppointmentStore extends RecordStore {
 }
 
 interface ClaimInput {
-  readonly bindings: AppointmentBindings;
-  readonly role: string;
-  readonly scope: string;
-  readonly idempotencyKey: string;
-  readonly requestHash: string;
   readonly scheduleId: string;
   readonly customerName: string;
   readonly notes?: string;
-  readonly now: string;
 }
 
 interface ReleaseInput {
-  readonly bindings: AppointmentBindings;
-  readonly role: string;
-  readonly scope: string;
-  readonly idempotencyKey: string;
-  readonly requestHash: string;
   readonly appointmentId: string;
   readonly expectedVersion: number;
   readonly cancellationReason: string;
-  readonly now: string;
 }
 
 interface MoveInput {
-  readonly bindings: AppointmentBindings;
+  readonly appointmentId: string;
+  readonly expectedVersion: number;
+  readonly scheduleId: string;
+}
+
+interface FactoryAuthorizedContext {
+  readonly factoryServer: true;
   readonly role: string;
   readonly scope: string;
   readonly idempotencyKey: string;
   readonly requestHash: string;
-  readonly appointmentId: string;
-  readonly expectedVersion: number;
-  readonly scheduleId: string;
   readonly now: string;
 }
+
+const appointmentBindings: Readonly<AppointmentBindings> = Object.freeze({
+  serviceEntity: {{serviceEntity}},
+  serviceNameField: {{serviceNameField}},
+  serviceDurationMinutesField: {{serviceDurationMinutesField}},
+  serviceActiveField: {{serviceActiveField}},
+  scheduleEntity: {{scheduleEntity}},
+  scheduleServiceReferenceField: {{scheduleServiceReferenceField}},
+  scheduleStartField: {{scheduleStartField}},
+  scheduleEndField: {{scheduleEndField}},
+  scheduleTimezoneField: {{scheduleTimezoneField}},
+  scheduleCapacityField: {{scheduleCapacityField}},
+  scheduleStatusField: {{scheduleStatusField}},
+  appointmentEntity: {{appointmentEntity}},
+  appointmentScheduleReferenceField: {{appointmentScheduleReferenceField}},
+  appointmentCustomerNameField: {{appointmentCustomerNameField}},
+  appointmentNotesField: {{appointmentNotesField}},
+  appointmentCancellationReasonField: {{appointmentCancellationReasonField}},
+  appointmentStatusField: {{appointmentStatusField}},
+});
 
 function reject(code: string): never {
   throw new Error(code);
@@ -93,7 +104,13 @@ function positiveInt(value: unknown, code = "appointment.schedule_invalid"): num
 
 function canonicalUtc(value: unknown): string {
   const input = requiredString(value, "appointment.schedule_invalid");
-  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(input)) reject("appointment.schedule_invalid");
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-](\d{2}):(\d{2}))$/i.exec(input);
+  if (!match) reject("appointment.schedule_invalid");
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , offset, offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText), month = Number(monthText), day = Number(dayText), hour = Number(hourText), minute = Number(minuteText), second = Number(secondText);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59 || (offset !== "Z" && (Number(offsetHourText) > 23 || Number(offsetMinuteText) > 59))) reject("appointment.schedule_invalid");
+  const calendar = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) reject("appointment.schedule_invalid");
   const instant = new Date(input);
   if (!Number.isFinite(instant.valueOf())) reject("appointment.schedule_invalid");
   return instant.toISOString();
@@ -130,6 +147,18 @@ function assertServerOwnedInput(input: object): void {
   ]) {
     if (Object.hasOwn(input, field)) reject("appointment.invalid_request");
   }
+}
+
+function assertFactoryContext(input: unknown): FactoryAuthorizedContext {
+  const context = ownRecord(input);
+  const expected = ["factoryServer", "role", "scope", "idempotencyKey", "requestHash", "now"];
+  if (
+    Object.keys(context).length !== expected.length ||
+    expected.some((key) => !Object.hasOwn(context, key)) ||
+    context.factoryServer !== true
+  ) reject("appointment.unauthorized");
+  for (const key of ["role", "scope", "idempotencyKey", "requestHash", "now"] as const) requiredString(context[key], "appointment.unauthorized");
+  return context as FactoryAuthorizedContext;
 }
 
 async function scheduleForClaim(
@@ -182,55 +211,59 @@ async function committed(
     if (replayed) return { response: replayed, replayed: true };
     const response = await operation(transaction as AppointmentStore);
     await (transaction as AppointmentStore).saveAppointmentReceipt({ scope: input.scope, idempotencyKey: input.idempotencyKey, requestHash: input.requestHash, response });
+    await transaction.appendCapabilityEvent({ actor: input.role, capability: "appointment.booking", operation: input.operation, entity: input.bindings.appointmentEntity, recordId: response.id, outcome: "completed", at: input.now });
     return { response, replayed: false };
   });
-  if (!result.replayed) {
-    await store.appendCapabilityEvent({ actor: input.role, capability: "appointment.booking", operation: input.operation, entity: input.bindings.appointmentEntity, recordId: result.response.id, outcome: "completed", at: input.now });
-  }
   return result.response;
 }
 
 export const appointmentBookingHandler = {
-  claim: async (store: AppointmentStore, input: ClaimInput): Promise<StoredRecord> =>
-    (assertServerOwnedInput(input), committed(store, { ...input, operation: "claim" }, async (transaction) => {
-      await scheduleForClaim(transaction, input.bindings, input.scheduleId);
-      return transaction.create(input.bindings.appointmentEntity, {
-        [input.bindings.appointmentScheduleReferenceField]: input.scheduleId,
-        [input.bindings.appointmentCustomerNameField]: requiredString(input.customerName),
-        [input.bindings.appointmentNotesField]: input.notes ?? null,
-        [input.bindings.appointmentCancellationReasonField]: null,
-        [input.bindings.appointmentStatusField]: "requested" satisfies AppointmentStatus,
+  claim: async (store: AppointmentStore, contextInput: unknown, input: ClaimInput): Promise<StoredRecord> => {
+    const context = assertFactoryContext(contextInput); assertServerOwnedInput(input);
+    return committed(store, { ...context, bindings: appointmentBindings, operation: "claim" }, async (transaction) => {
+      await scheduleForClaim(transaction, appointmentBindings, input.scheduleId);
+      return transaction.create(appointmentBindings.appointmentEntity, {
+        [appointmentBindings.appointmentScheduleReferenceField]: input.scheduleId,
+        [appointmentBindings.appointmentCustomerNameField]: requiredString(input.customerName),
+        [appointmentBindings.appointmentNotesField]: input.notes ?? null,
+        [appointmentBindings.appointmentCancellationReasonField]: null,
+        [appointmentBindings.appointmentStatusField]: "requested" satisfies AppointmentStatus,
         version: 0,
       });
-    })),
-  release: async (store: AppointmentStore, input: ReleaseInput): Promise<StoredRecord> =>
-    (assertServerOwnedInput(input), committed(store, { ...input, operation: "release" }, async (transaction) => {
-      const current = await transaction.find(input.bindings.appointmentEntity, requiredString(input.appointmentId));
+    });
+  },
+  release: async (store: AppointmentStore, contextInput: unknown, input: ReleaseInput): Promise<StoredRecord> => {
+    const context = assertFactoryContext(contextInput); assertServerOwnedInput(input);
+    return committed(store, { ...context, bindings: appointmentBindings, operation: "release" }, async (transaction) => {
+      const current = await transaction.find(appointmentBindings.appointmentEntity, requiredString(input.appointmentId));
       if (!current) reject("appointment.version_conflict");
       const values = ownRecord(current);
-      if (!active(values[input.bindings.appointmentStatusField])) reject("appointment.state_conflict");
+      if (!active(values[appointmentBindings.appointmentStatusField])) reject("appointment.state_conflict");
       if (asVersion(values.version) !== asVersion(input.expectedVersion)) reject("appointment.version_conflict");
-      return transaction.update(input.bindings.appointmentEntity, current.id, {
-        [input.bindings.appointmentStatusField]: "cancelled" satisfies AppointmentStatus,
-        [input.bindings.appointmentCancellationReasonField]: requiredString(input.cancellationReason),
+      return transaction.update(appointmentBindings.appointmentEntity, current.id, {
+        [appointmentBindings.appointmentStatusField]: "cancelled" satisfies AppointmentStatus,
+        [appointmentBindings.appointmentCancellationReasonField]: requiredString(input.cancellationReason),
         version: asVersion(values.version) + 1,
       });
-    })),
-  move: async (store: AppointmentStore, input: MoveInput): Promise<StoredRecord> =>
-    (assertServerOwnedInput(input), committed(store, { ...input, operation: "move" }, async (transaction) => {
-      const current = await transaction.find(input.bindings.appointmentEntity, requiredString(input.appointmentId));
+    });
+  },
+  move: async (store: AppointmentStore, contextInput: unknown, input: MoveInput): Promise<StoredRecord> => {
+    const context = assertFactoryContext(contextInput); assertServerOwnedInput(input);
+    return committed(store, { ...context, bindings: appointmentBindings, operation: "move" }, async (transaction) => {
+      const current = await transaction.find(appointmentBindings.appointmentEntity, requiredString(input.appointmentId));
       if (!current) reject("appointment.version_conflict");
       const values = ownRecord(current);
-      if (values[input.bindings.appointmentStatusField] !== "confirmed") reject("appointment.state_conflict");
+      if (values[appointmentBindings.appointmentStatusField] !== "confirmed") reject("appointment.state_conflict");
       if (asVersion(values.version) !== asVersion(input.expectedVersion)) reject("appointment.version_conflict");
-      if (values[input.bindings.appointmentScheduleReferenceField] === input.scheduleId) reject("appointment.schedule_invalid");
-      await scheduleForClaim(transaction, input.bindings, input.scheduleId, current.id);
-      return transaction.update(input.bindings.appointmentEntity, current.id, {
-        [input.bindings.appointmentScheduleReferenceField]: input.scheduleId,
-        [input.bindings.appointmentStatusField]: "requested" satisfies AppointmentStatus,
+      if (values[appointmentBindings.appointmentScheduleReferenceField] === input.scheduleId) reject("appointment.schedule_invalid");
+      await scheduleForClaim(transaction, appointmentBindings, input.scheduleId, current.id);
+      return transaction.update(appointmentBindings.appointmentEntity, current.id, {
+        [appointmentBindings.appointmentScheduleReferenceField]: input.scheduleId,
+        [appointmentBindings.appointmentStatusField]: "requested" satisfies AppointmentStatus,
         version: asVersion(values.version) + 1,
       });
-    })),
+    });
+  },
 };
 
 export const capabilityModule: CapabilityRuntimeModule & {

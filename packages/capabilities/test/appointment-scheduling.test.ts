@@ -1,14 +1,18 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
+import ts from "typescript";
 
 import { lockCapabilityAsset } from "../src/assets/index.js";
 import {
   resolveCapabilityCompositionForAssets,
+  resolveCapabilityCompositionForPublishedGraph,
   type CapabilityBindingValueV1,
 } from "../src/composition.js";
 import { getCapabilityAsset } from "../src/index.js";
+import type { ApplicationGraphV1 } from "@factory/graph/browser";
 import {
   verifyCapabilityAssetDigest,
   verifyCapabilityAssetPackage,
@@ -219,9 +223,321 @@ describe("appointment scheduling capability package", () => {
       ),
     ).toThrow();
   });
+
+  it("admits only the exact appointment relation witness on a Published Graph", () => {
+    const asset = getCapabilityAsset("scheduling.appointment");
+    const input = {
+      selections: [{ lock: lockCapabilityAsset(asset), bindings }],
+    };
+
+    expect(() =>
+      resolveCapabilityCompositionForPublishedGraph(appointmentGraph(), input, [
+        asset,
+      ]),
+    ).not.toThrow();
+
+    for (const graph of [
+      appointmentGraph({
+        relations: [
+          {
+            from: "schedule",
+            to: "service",
+            kind: "many-to-one",
+            field: "wrongId",
+          },
+        ],
+      }),
+      appointmentGraph({
+        relations: [
+          {
+            from: "service",
+            to: "schedule",
+            kind: "many-to-one",
+            field: "serviceId",
+          },
+        ],
+      }),
+      appointmentGraph({
+        relations: [
+          {
+            from: "schedule",
+            to: "service",
+            kind: "many-to-one",
+            field: "serviceId",
+          },
+          {
+            from: "schedule",
+            to: "service",
+            kind: "many-to-one",
+            field: "otherServiceId",
+          },
+          {
+            from: "appointment",
+            to: "schedule",
+            kind: "many-to-one",
+            field: "scheduleId",
+          },
+        ],
+      }),
+    ]) {
+      expect(() =>
+        resolveCapabilityCompositionForPublishedGraph(graph, input, [asset]),
+      ).toThrow("Appointment capability requires exactly one many-to-one");
+    }
+  });
+
+  it("executes the rendered handler atomically and rejects forged commands", async () => {
+    const handler = renderAppointmentHandler();
+    const store = new AppointmentStoreDouble();
+    const context = {
+      factoryServer: true,
+      role: "customer",
+      scope: "scope",
+      idempotencyKey: "claim-1",
+      requestHash: "hash-1",
+      now: "2026-10-01T00:00:00.000Z",
+    };
+    const claimed = await handler.claim(store, context, {
+      scheduleId: "schedule-1",
+      customerName: "A",
+    });
+    expect(claimed.status).toBe("requested");
+    expect(store.events).toHaveLength(1);
+    await expect(
+      handler.claim(store, context, {
+        scheduleId: "schedule-1",
+        customerName: "A",
+      }),
+    ).resolves.toEqual(claimed);
+    expect(store.events).toHaveLength(1);
+    await expect(
+      handler.claim(
+        store,
+        { ...context, idempotencyKey: "claim-2", requestHash: "hash-2" },
+        { scheduleId: "schedule-1", customerName: "B" },
+      ),
+    ).rejects.toThrow("appointment.capacity_conflict");
+    expect(store.records.get("appointment")?.size).toBe(1);
+    await expect(
+      handler.claim(store, context, {
+        scheduleId: "schedule-2",
+        customerName: "B",
+        availability: 9,
+      }),
+    ).rejects.toThrow("appointment.invalid_request");
+    await expect(
+      handler.claim(
+        store,
+        { ...context, factoryServer: false },
+        { scheduleId: "schedule-2", customerName: "B" },
+      ),
+    ).rejects.toThrow("appointment.unauthorized");
+    store.failEvent = true;
+    await expect(
+      handler.claim(
+        store,
+        { ...context, idempotencyKey: "rollback", requestHash: "rollback" },
+        { scheduleId: "schedule-2", customerName: "C" },
+      ),
+    ).rejects.toThrow("event failed");
+    expect(store.records.get("appointment")?.size).toBe(1);
+    expect(store.receipts.size).toBe(1);
+  });
 });
 
 function omit(key: keyof typeof bindings) {
   const { [key]: _omitted, ...remaining } = bindings;
   return remaining;
+}
+
+function appointmentGraph(
+  overrides: {
+    readonly relations?: readonly {
+      readonly from: string;
+      readonly to: string;
+      readonly kind: "many-to-one";
+      readonly field: string;
+    }[];
+  } = {},
+): ApplicationGraphV1 {
+  const fields = (values: readonly [string, string, boolean][]) =>
+    values.map(([key, type, required]) => ({ key, type, required }));
+  return {
+    domain: {
+      entities: [
+        {
+          key: "service",
+          label: "Service",
+          fields: fields([
+            ["name", "string", true],
+            ["durationMinutes", "integer", true],
+            ["active", "boolean", true],
+          ]),
+          indexes: [],
+        },
+        {
+          key: "schedule",
+          label: "Schedule",
+          fields: fields([
+            ["serviceId", "string", true],
+            ["start", "datetime", true],
+            ["end", "datetime", true],
+            ["timezone", "string", true],
+            ["capacity", "integer", true],
+            ["status", "enum", true],
+            ["otherServiceId", "string", true],
+          ]),
+          indexes: [],
+        },
+        {
+          key: "appointment",
+          label: "Appointment",
+          fields: fields([
+            ["scheduleId", "string", true],
+            ["customerName", "string", true],
+            ["notes", "text", false],
+            ["cancellationReason", "text", false],
+            ["status", "enum", true],
+          ]),
+          indexes: [],
+        },
+      ],
+      relations: overrides.relations ?? [
+        {
+          from: "schedule",
+          to: "service",
+          kind: "many-to-one",
+          field: "serviceId",
+        },
+        {
+          from: "appointment",
+          to: "schedule",
+          kind: "many-to-one",
+          field: "scheduleId",
+        },
+      ],
+    },
+  } as ApplicationGraphV1;
+}
+
+function renderAppointmentHandler(): any {
+  const template = readFileSync(
+    resolve(
+      repositoryRoot,
+      "packages/capabilities/assets/scheduling.appointment/1.0.0/templates/api/capability-module.ts.tpl",
+    ),
+    "utf8",
+  );
+  const values: Record<string, string> = {
+    "asset.key": "scheduling.appointment",
+    "asset.version": "1.0.0",
+    "asset.effectsJson": JSON.stringify(["appointment.booking"]),
+    "graph.metadata.id": "appointment-test",
+  };
+  for (const [key, value] of Object.entries(bindings))
+    values[key] = JSON.stringify(
+      "fieldKey" in value
+        ? value.fieldKey
+        : value.graphSymbol.slice("graph.domain.".length),
+    );
+  const source = template.replace(
+    /{{([A-Za-z.]+)}}/g,
+    (_m, key) => values[key]!,
+  );
+  const output = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const module = { exports: {} as Record<string, unknown> };
+  new Function("exports", "module", output)(module.exports, module);
+  return module.exports.appointmentBookingHandler;
+}
+
+class AppointmentStoreDouble {
+  readonly records = new Map<string, Map<string, any>>([
+    ["service", new Map([["service-1", { id: "service-1", active: true }]])],
+    [
+      "schedule",
+      new Map([
+        [
+          "schedule-1",
+          {
+            id: "schedule-1",
+            serviceId: "service-1",
+            start: "2026-10-01T01:00:00Z",
+            end: "2026-10-01T01:30:00Z",
+            timezone: "UTC",
+            capacity: 1,
+            status: "open",
+          },
+        ],
+        [
+          "schedule-2",
+          {
+            id: "schedule-2",
+            serviceId: "service-1",
+            start: "2026-10-01T02:00:00Z",
+            end: "2026-10-01T02:30:00Z",
+            timezone: "UTC",
+            capacity: 1,
+            status: "open",
+          },
+        ],
+      ]),
+    ],
+    ["appointment", new Map()],
+  ]);
+  readonly receipts = new Map<string, any>();
+  readonly events: any[] = [];
+  failEvent = false;
+  async list(entity: string) {
+    return [...(this.records.get(entity)?.values() ?? [])];
+  }
+  async find(entity: string, id: string) {
+    return this.records.get(entity)?.get(id);
+  }
+  async create(entity: string, input: any) {
+    const map = this.records.get(entity)!;
+    const record = { id: `appointment-${map.size + 1}`, ...input };
+    map.set(record.id, record);
+    return record;
+  }
+  async update(entity: string, id: string, input: any) {
+    const record = { ...(await this.find(entity, id)), ...input };
+    this.records.get(entity)!.set(id, record);
+    return record;
+  }
+  async getAppointmentReceipt(scope: string, key: string) {
+    return this.receipts.get(`${scope}:${key}`);
+  }
+  async saveAppointmentReceipt(receipt: any) {
+    this.receipts.set(`${receipt.scope}:${receipt.idempotencyKey}`, receipt);
+  }
+  async appendCapabilityEvent(event: any) {
+    if (this.failEvent) throw new Error("event failed");
+    this.events.push(event);
+  }
+  async inTransaction<T>(operation: (store: any) => Promise<T>) {
+    const snapshot = structuredClone({
+      records: [...this.records.entries()].map(([k, v]) => [
+        k,
+        [...v.entries()],
+      ]),
+      receipts: [...this.receipts.entries()],
+      events: this.events,
+    });
+    try {
+      return await operation(this);
+    } catch (error) {
+      this.records.clear();
+      for (const [k, v] of snapshot.records as any)
+        this.records.set(k, new Map(v));
+      this.receipts.clear();
+      for (const [k, v] of snapshot.receipts as any) this.receipts.set(k, v);
+      this.events.splice(0, this.events.length, ...snapshot.events);
+      throw error;
+    }
+  }
 }

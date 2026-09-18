@@ -8,7 +8,7 @@
       "source": "templates/api/capability-module.ts.tpl",
       "target": "api/src/capabilities/scheduling.appointment.ts",
       "outputSlot": "api.runtime",
-      "digest": "sha256:5626806299a20d3ad856da1b1ac7d9a22e680e5deee98f13dcc0e323b817c66b"
+      "digest": "sha256:fb6eee400b408249e8054696176e21e6bc2580b393d5e8153da81587100083fd"
     }
   ],
   "parameters": [
