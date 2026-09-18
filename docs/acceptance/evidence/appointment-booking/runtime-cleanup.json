@@ -1,0 +1,12 @@
+{
+  "previewRunId": "preview-2c9c3dad-5d82-40e2-862d-c453474ee7c6",
+  "composeProjectName": "factory-preview-preview-2c9c3dad-5d82-40e2-862d-c453474ee7c6",
+  "stopped": true,
+  "resources": {
+    "artifact": "",
+    "containers": "",
+    "networks": "",
+    "volumes": ""
+  },
+  "scope": "isolated-local-fixture-session"
+}

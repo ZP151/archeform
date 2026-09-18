@@ -2432,6 +2432,7 @@ function renderPrismaRecordStore(
   persistentOrderOperationReceipts: boolean,
   notificationOutbox: boolean,
   approvalEntity?: string,
+  appointmentProfile?: AppointmentRuntimeProfile,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
@@ -2499,7 +2500,16 @@ function renderPrismaRecordStore(
       : []),
     `const delegates: Readonly<Record<string, string>> = ${JSON.stringify(delegates, null, 2)};`,
     "",
-    "function asStoredRecord(value: unknown): StoredRecord { return value as StoredRecord; }",
+    ...(appointmentProfile
+      ? [
+          "function asStoredRecord(value: unknown): StoredRecord {",
+          "  if (!value || typeof value !== 'object' || Array.isArray(value)) return value as StoredRecord;",
+          "  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, entry instanceof Date ? entry.toISOString() : entry])) as StoredRecord;",
+          "}",
+        ]
+      : [
+          "function asStoredRecord(value: unknown): StoredRecord { return value as StoredRecord; }",
+        ]),
     ...(notificationOutbox
       ? [
           "function asNotificationOutboxEntry(value: unknown): NotificationOutboxEntry {",
@@ -3444,12 +3454,29 @@ registerAppointmentPageRuntimeForTest(renderPageRuntime);
 function renderWebProxyRoute(
   restaurant: boolean,
   useFixtureSessions: boolean,
+  resilientUpstream = false,
 ): string {
   return [
     'export const dynamic = "force-dynamic";',
     "",
     "type RouteContext = { params: Promise<{ path: string[] }> };",
     "",
+    ...(resilientUpstream
+      ? [
+          "async function fetchUpstream(input: URL, init: RequestInit): Promise<Response> {",
+          "  let lastError: unknown;",
+          "  for (let attempt = 0; attempt < 5; attempt += 1) {",
+          "    try { return await fetch(input, init); } catch (error) {",
+          "      lastError = error;",
+          "      if (attempt === 4) break;",
+          "      await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));",
+          "    }",
+          "  }",
+          "  throw lastError instanceof Error ? lastError : new Error('Upstream request failed.');",
+          "}",
+          "",
+        ]
+      : []),
     "async function proxy(request: Request, context: RouteContext): Promise<Response> {",
     "  const { path } = await context.params;",
     "  const incoming = new URL(request.url);",
@@ -3463,16 +3490,35 @@ function renderWebProxyRoute(
           "  if (sessionToken) forwardedHeaders['x-factory-table-session-token'] = sessionToken;",
           "  if (idempotencyKey) forwardedHeaders['x-factory-idempotency-key'] = idempotencyKey;",
         ]
-      : []),
-    "  const response = await fetch(upstream, {",
-    "    method: request.method,",
-    restaurant
-      ? "    headers: forwardedHeaders,"
-      : useFixtureSessions
-        ? "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-fixture-session': request.headers.get('x-factory-fixture-session') ?? '' },"
-        : "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' },",
-    "    body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text(),",
-    "  });",
+      : resilientUpstream
+        ? [
+            useFixtureSessions
+              ? "  const forwardedHeaders: Record<string, string> = { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-fixture-session': request.headers.get('x-factory-fixture-session') ?? '' };"
+              : "  const forwardedHeaders: Record<string, string> = { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' };",
+            "  const idempotencyKey = request.headers.get('x-factory-idempotency-key');",
+            "  if (idempotencyKey) forwardedHeaders['x-factory-idempotency-key'] = idempotencyKey;",
+          ]
+        : []),
+    ...(resilientUpstream
+      ? [
+          "  const requestBody = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text();",
+          "  const response = await fetchUpstream(upstream, {",
+          "    method: request.method,",
+          "    headers: forwardedHeaders,",
+          "    body: requestBody,",
+          "  });",
+        ]
+      : [
+          "  const response = await fetch(upstream, {",
+          "    method: request.method,",
+          restaurant
+            ? "    headers: forwardedHeaders,"
+            : useFixtureSessions
+              ? "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-fixture-session': request.headers.get('x-factory-fixture-session') ?? '' },"
+              : "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' },",
+          "    body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text(),",
+          "  });",
+        ]),
     "  return new Response(await response.text(), { status: response.status, headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' } });",
     "}",
     "",
@@ -4241,7 +4287,11 @@ export function generateApplicationBundle(
       path: "web/app/api/[...path]/route.ts",
       render: () =>
         approvalEntity
-          ? renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy)
+          ? renderWebProxyRoute(
+              restaurantRuntimeEnabled,
+              !!identityPolicy,
+              !!appointmentProfile,
+            )
               .replace(
                 "headers: { 'content-type':",
                 "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
@@ -4251,7 +4301,11 @@ export function generateApplicationBundle(
                 "export const POST = proxy;\nexport const PATCH = proxy;",
               )
           : taskEntity
-            ? renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy)
+            ? renderWebProxyRoute(
+                restaurantRuntimeEnabled,
+                !!identityPolicy,
+                !!appointmentProfile,
+              )
                 .replace(
                   "headers: { 'content-type':",
                   "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
@@ -4262,7 +4316,11 @@ export function generateApplicationBundle(
                     ? "export const POST = proxy;\nexport const PATCH = proxy;"
                     : "export const POST = proxy;",
                 )
-            : renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
+            : renderWebProxyRoute(
+                restaurantRuntimeEnabled,
+                !!identityPolicy,
+                !!appointmentProfile,
+              ),
     },
     {
       path: "web/app/globals.css",
@@ -4347,18 +4405,21 @@ export function generateApplicationBundle(
       path: "api/src/main.ts",
       render: () =>
         restaurantRuntime()?.main ??
-        renderAppointmentApiDispatch(renderTaskApi(
-          renderApiMain(
-            graph,
-            usePackageLineConfigurationHandler,
-            usePackageMoneyPricingHandler,
-            identityPolicy,
-            approvalEntity,
+        renderAppointmentApiDispatch(
+          renderTaskApi(
+            renderApiMain(
+              graph,
+              usePackageLineConfigurationHandler,
+              usePackageMoneyPricingHandler,
+              identityPolicy,
+              approvalEntity,
+            ),
+            !!identityPolicy,
+            taskEntity,
+            hasTaskCorrection(graph, taskEntity),
           ),
-          !!identityPolicy,
-          taskEntity,
-          hasTaskCorrection(graph, taskEntity),
-        ), appointmentProfile),
+          appointmentProfile,
+        ),
     },
     ...(calculatedApproval ? calculatedRuntimeFiles() : []),
     ...(restaurantRuntimeEnabled
@@ -4389,38 +4450,45 @@ export function generateApplicationBundle(
       path: "api/src/application-runtime.ts",
       render: () =>
         restaurantRuntime()?.applicationRuntimeContract ??
-        renderAppointmentMutationRuntime(renderTaskMutationRuntime(
-          renderApplicationRuntime(
+        renderAppointmentMutationRuntime(
+          renderTaskMutationRuntime(
+            renderApplicationRuntime(
+              graph,
+              useResolvedContributions,
+              usePackageCartHandler,
+              usePackageLineConfigurationHandler,
+              usePackageMoneyPricingHandler,
+              catalogEntityKey,
+              orderEntityKey,
+              orderOperationsEntityKey,
+              useGenericOrderOperationsPersistence,
+              notificationOutbox,
+              approvalEntity,
+            ),
             graph,
-            useResolvedContributions,
-            usePackageCartHandler,
-            usePackageLineConfigurationHandler,
-            usePackageMoneyPricingHandler,
-            catalogEntityKey,
-            orderEntityKey,
-            orderOperationsEntityKey,
-            useGenericOrderOperationsPersistence,
-            notificationOutbox,
-            approvalEntity,
+            taskEntity,
           ),
-          graph,
-          taskEntity,
-        ), appointmentProfile),
+          appointmentProfile,
+        ),
     },
     {
       path: "api/src/prisma-record-store.ts",
       render: () =>
-        renderAppointmentPrismaStore(renderTaskPrismaStore(
-          renderPrismaRecordStore(
+        renderAppointmentPrismaStore(
+          renderTaskPrismaStore(
+            renderPrismaRecordStore(
+              graph,
+              restaurantRuntimeEnabled,
+              useGenericOrderOperationsPersistence,
+              notificationOutbox !== undefined,
+              approvalEntity,
+              appointmentProfile,
+            ),
             graph,
-            restaurantRuntimeEnabled,
-            useGenericOrderOperationsPersistence,
-            notificationOutbox !== undefined,
-            approvalEntity,
+            taskEntity,
           ),
-          graph,
-          taskEntity,
-        ), appointmentProfile),
+          appointmentProfile,
+        ),
     },
     ...(notificationOutbox
       ? [

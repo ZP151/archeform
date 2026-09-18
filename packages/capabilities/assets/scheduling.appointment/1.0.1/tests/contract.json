@@ -1,0 +1,19 @@
+{
+  "status": "verified",
+  "checks": [
+    "claim-inside-one-transaction",
+    "release-inside-one-transaction",
+    "move-inside-one-transaction",
+    "capacity-one-claim",
+    "full-schedule-no-writes",
+    "cancel-release",
+    "same-record-move",
+    "stale-version-conflict",
+    "idempotency-replay",
+    "idempotency-conflict",
+    "invalid-interval",
+    "invalid-timezone",
+    "server-owned-availability",
+    "rollback-without-receipt"
+  ]
+}

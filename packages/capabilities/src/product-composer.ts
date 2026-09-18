@@ -726,6 +726,18 @@ function derivedSeedData(
           [field(schedule!, 1)]: "2026-10-01T09:00:00Z",
           [field(schedule!, 2)]: "2026-10-01T09:30:00Z",
           [field(schedule!, 3)]: "UTC",
+          [field(schedule!, 4)]: 3,
+          [field(schedule!, 5)]: "open",
+        },
+      },
+      {
+        entity: schedule!.key,
+        id: `sample-${schedule!.key}-alt`,
+        values: {
+          [field(schedule!, 0)]: `sample-${service!.key}`,
+          [field(schedule!, 1)]: "2026-10-01T10:00:00Z",
+          [field(schedule!, 2)]: "2026-10-01T10:30:00Z",
+          [field(schedule!, 3)]: "UTC",
           [field(schedule!, 4)]: 1,
           [field(schedule!, 5)]: "open",
         },

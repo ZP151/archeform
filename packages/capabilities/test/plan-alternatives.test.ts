@@ -131,9 +131,9 @@ describe("planProductAlternatives", () => {
         },
         {
           key: "scheduling.appointment",
-          version: "1.0.0",
+          version: "1.0.1",
           manifestDigest:
-            "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b",
+            "sha256:d77a8ec2a8bcaba17510b7d6a7d073b26ccc6a2857fd6644c9d80700d672a9c7",
         },
       ]);
       expect(

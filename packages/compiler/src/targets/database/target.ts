@@ -8,6 +8,7 @@ import {
   approvalReceiptSchema,
   approvalReceiptMigration,
 } from "../../approval-mutation-contract.js";
+import { selectAppointmentRuntimeProfile } from "../../appointment-mutation-contract.js";
 import {
   assertValidApplicationGraph,
   type ApplicationGraphV1,
@@ -35,6 +36,7 @@ export interface DatabasePlanV1 {
   readonly graph: ApplicationGraphV1;
   readonly approvalEntity?: string;
   readonly taskEntity?: string;
+  readonly appointmentEntity?: string;
   readonly orderOperationReceiptSchema?: string;
   readonly includeGenericCommerceLineItems: boolean;
   readonly additionalSchemaFragments: readonly string[];
@@ -383,6 +385,7 @@ function renderPrismaSchema(
   additionalSchemaFragments: readonly string[] = [],
   approvalEntity?: string,
   taskEntity?: string,
+  appointmentEntity?: string,
   names?: DatabaseNames,
 ): string {
   const duplicateRelationSuffixes = duplicateEndpointRelationSuffixes(graph);
@@ -457,7 +460,9 @@ function renderPrismaSchema(
       `model ${toPascalCase(entity.key)} {`,
       `  id String @id${prismaMap(names, objectId("pk", entity.key))} @default(cuid())`,
       ...fields,
-      ...(approvalEntity === entity.key || taskEntity === entity.key
+      ...(approvalEntity === entity.key ||
+      taskEntity === entity.key ||
+      appointmentEntity === entity.key
         ? ["  version Int @default(0)"]
         : []),
       ...relationFields(entity.key),
@@ -589,13 +594,16 @@ function renderInitialMigration(
   additionalMigrationFragments: readonly string[] = [],
   approvalEntity?: string,
   taskEntity?: string,
+  appointmentEntity?: string,
   names?: DatabaseNames,
 ): string {
   const duplicateRelationSuffixes = duplicateEndpointRelationSuffixes(graph);
   const createTables = graph.domain.entities.map((entity) => {
     const renderedNames = renderedFieldNames(graph, entity.key);
     const columns = [
-      ...(approvalEntity === entity.key || taskEntity === entity.key
+      ...(approvalEntity === entity.key ||
+      taskEntity === entity.key ||
+      appointmentEntity === entity.key
         ? ['"version" INTEGER NOT NULL DEFAULT 0']
         : []),
       `"id" TEXT NOT NULL${sqlConstraint(names, objectId("pk", entity.key))} PRIMARY KEY`,
@@ -1170,6 +1178,10 @@ function buildDatabasePlan(input: PublishedCompilationInput): DatabasePlanV1 {
   const graph = assertValidApplicationGraph(input.graph);
   const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
   const taskEntity = selectTaskContract(graph, input.compositionLock);
+  const appointmentProfile = selectAppointmentRuntimeProfile(
+    graph,
+    input.compositionLock,
+  );
   const orderOperationReceiptSchema =
     context.useGenericOrderOperationsPersistence
       ? context.orderOperationsPersistence?.schema
@@ -1184,6 +1196,9 @@ function buildDatabasePlan(input: PublishedCompilationInput): DatabasePlanV1 {
     graph,
     ...(approvalEntity ? { approvalEntity } : {}),
     ...(taskEntity ? { taskEntity } : {}),
+    ...(appointmentProfile
+      ? { appointmentEntity: appointmentProfile.appointmentEntity }
+      : {}),
     ...(orderOperationReceiptSchema === undefined
       ? {}
       : { orderOperationReceiptSchema }),
@@ -1705,6 +1720,7 @@ function allocateDatabaseNames(
       plan.additionalSchemaFragments,
       plan.approvalEntity,
       plan.taskEntity,
+      plan.appointmentEntity,
     ),
   );
   const fixedSql = sqlStorageIdentifiers(
@@ -1715,6 +1731,7 @@ function allocateDatabaseNames(
       plan.additionalMigrationFragments,
       plan.approvalEntity,
       plan.taskEntity,
+      plan.appointmentEntity,
     ),
   );
   // Implicit join objects are outside the repair surface, including their keys.
@@ -1861,6 +1878,7 @@ function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
         plan.additionalSchemaFragments,
         plan.approvalEntity,
         plan.taskEntity,
+        plan.appointmentEntity,
         names,
       );
   const migration = plan.initialMigrationOverride
@@ -1872,6 +1890,7 @@ function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
         plan.additionalMigrationFragments,
         plan.approvalEntity,
         plan.taskEntity,
+        plan.appointmentEntity,
         names,
       );
   const [prismaIdentifiers, sqlIdentifiers] = assertUniqueDatabaseStorageNames(

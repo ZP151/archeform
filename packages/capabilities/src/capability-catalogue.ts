@@ -154,7 +154,7 @@ export function currentCapabilityCatalogue(): ProductCapabilityCatalogueV1 {
         triggers: ["workflow-driven"],
       },
       {
-        asset: lookup("scheduling.appointment@1.0.0"),
+        asset: lookup("scheduling.appointment@1.0.1"),
         triggers: ["appointment-booking"],
       },
     ],

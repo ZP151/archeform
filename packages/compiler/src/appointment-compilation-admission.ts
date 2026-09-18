@@ -37,8 +37,8 @@ const exactAppointmentLocks = [
   ],
   [
     "scheduling.appointment",
-    "1.0.0",
-    "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b",
+    "1.0.1",
+    "sha256:d77a8ec2a8bcaba17510b7d6a7d073b26ccc6a2857fd6644c9d80700d672a9c7",
   ],
 ] as const;
 
@@ -85,7 +85,7 @@ export function exactAppointmentNumericWitness(
     compositionLock.applicationGraphChecksum !== hashApplicationGraph(graph) ||
     compositionLock.packages.length !== exactAppointmentLocks.length ||
     appointmentSelection === undefined ||
-    profile.capability !== "scheduling.appointment@1.0.0" ||
+    profile.capability !== "scheduling.appointment@1.0.1" ||
     profile.effect !== "appointment.booking"
   )
     return fail();

@@ -20,7 +20,7 @@ import type { ApplicationGraphV1 } from "@factory/graph";
 import { appointmentDefinitionCompilationInput } from "./fixtures/definition-data-compatibility.js";
 
 const profile: AppointmentRuntimeProfile = {
-  capability: "scheduling.appointment@1.0.0",
+  capability: "scheduling.appointment@1.0.1",
   effect: "appointment.booking",
   serviceEntity: "service",
   scheduleEntity: "schedule",
@@ -151,6 +151,7 @@ async function typecheckGeneratedAppointmentProfile(): Promise<readonly string[]
       export declare const Req: (...args: any[]) => ParameterDecorator;
       export declare const Module: (...args: any[]) => ClassDecorator;
       export declare const Injectable: (...args: any[]) => ClassDecorator;
+      export declare const HttpCode: (...args: any[]) => MethodDecorator;
       export declare class HttpException { constructor(response: unknown, status: number); }
       export declare const HttpStatus: { readonly BAD_REQUEST: 400; readonly FORBIDDEN: 403; readonly NOT_FOUND: 404; readonly CONFLICT: 409; };
     `, "utf8");
@@ -333,23 +334,38 @@ describe("appointment booking compiler runtime", () => {
     const runtime = files.get("api/src/application-runtime.ts")!;
     const prisma = files.get("api/src/prisma-record-store.ts")!;
     const api = files.get("api/src/main.ts")!;
+    const proxy = files.get("web/app/api/[...path]/route.ts")!;
+    const schema = files.get("api/prisma/schema.prisma")!;
+    const migration = files.get("database/prisma/migrations/0001_initial/migration.sql")!;
     expect(prisma).toContain('import type { AppointmentMutationReceipt, AppointmentHistoryEntry } from "./application-runtime.js";');
     expect(prisma).toContain("code === 'P2002'");
+    expect(prisma).toContain("entry instanceof Date ? entry.toISOString() : entry");
+    expect(prisma).toContain("function asStoredRecord(value: unknown): StoredRecord");
+    expect(prisma).toContain("const {apiVersion:_apiVersion,...persisted}=entry");
+    expect(prisma).toContain("apiVersion:'factory.generated.appointment-history-entry/v1'");
     expect(runtime).toContain("appointmentEligibility");
     expect(runtime).toContain("appointmentSnapshot");
+    expect(runtime).toContain("function appointmentTemporalValue");
+    expect(runtime).toContain("value instanceof Date ? value.toISOString()");
     expect(runtime).toContain("appointmentScopeDigest");
     expect(runtime).toContain("Buffer.byteLength(value,'utf8')");
     expect(api).toContain("AppointmentDomainError");
+    expect(api).toContain("@HttpCode(200)");
     expect(api).toContain("HttpStatus.CONFLICT");
+    expect(proxy).toContain("async function fetchUpstream");
+    expect(proxy).toContain("requestBody");
+    expect(proxy).toContain("setTimeout(resolve, 150 * (attempt + 1))");
+    expect(schema).toMatch(/model Appointment \{[\s\S]*version Int @default\(0\)/);
+    expect(migration).toContain('"version" INTEGER NOT NULL DEFAULT 0');
   });
 
   it("emits exact API, runtime, and Prisma sources that TypeScript accepts as one project", async () => {
     const files = new Map(generatedAppointmentBundle().files.map((file) => [file.path, file.content]));
     const digest = (path: string) => createHash("sha256").update(files.get(path)!, "utf8").digest("hex");
     expect({ api: digest("api/src/main.ts"), runtime: digest("api/src/application-runtime.ts"), prisma: digest("api/src/prisma-record-store.ts") }).toEqual({
-      api: "f520d5e01f27d8750f0daeeaec2c716a1f405c19f45991378b05486e20715fa1",
-      runtime: "5dba5e28bcbb608a4e1c90847152e6e634b10f42235e52d7e03f754522c9052f",
-      prisma: "1b7cef899385edb4fab52863884bfd449776bf5c8489aa7f99d8cc1b0ed97ff2",
+      api: "0a2adde4eb1517b7e95975b5a617db7fe2997cc9967df0b95d6957fde7dbaad5",
+      runtime: "225e832d72f1382e119b74491e742abcf09820527f39e2783c030e8a0332283e",
+      prisma: "503c5fe12eb7440e69c7f3b0b088f9022e29b3220a9e9a8ec4a19155f8573714",
     });
     expect(await typecheckGeneratedAppointmentProfile()).toEqual([]);
   }, 30_000);
@@ -362,7 +378,7 @@ describe("appointment booking compiler runtime", () => {
     const api = renderAppointmentApiDispatch("import { ApplicationRuntime } from \"./application-runtime.js\";\nfunction rejected(error: unknown): HttpException {\n  return new HttpException(error instanceof Error ? error.message : 'Request rejected.', HttpStatus.FORBIDDEN);\n}\n@Controller('api')\nclass GeneratedController { create(){ return await applicationRuntime.create( } transition(){ return await applicationRuntime.transition( } }", profile);
     expect(api).toContain("@Get(':entity/:recordId/appointment-history')");
     expect(api).toContain("appointmentCommand(appointmentServerContext(request,entity,'create')");
-    expect(api).toContain("verified appointment session required");
+    expect(api).toContain("new AppointmentDomainError(403, 'appointment.forbidden')");
     expect(api).not.toMatch(/factoryServer|requestHash|actorScope|\bnow\b/);
     const runtime = renderAppointmentMutationRuntime("export interface RecordStore {\n  inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T>;\n}\nexport class InMemoryRecordStore {\n  private readonly auditEvents: AuditEvent[] = [];\n  private collection(entityKey: string) {}\n}\nexport class ApplicationRuntime {\n}", profile);
     expect(runtime).toContain("conditionalAppointmentUpdate");

@@ -325,9 +325,9 @@ const appointmentLocks = [
   ...fixedLocks,
   {
     key: "scheduling.appointment",
-    version: "1.0.0",
+    version: "1.0.1",
     manifestDigest:
-      "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b",
+      "sha256:d77a8ec2a8bcaba17510b7d6a7d073b26ccc6a2857fd6644c9d80700d672a9c7",
   },
 ];
 const restaurantLocks = [
@@ -1332,6 +1332,19 @@ function executionMatches(entry: ProductDefinitionData): boolean {
             `sample-${service.key}`,
           [schedule.fields[1]!.key]: "2026-10-01T09:00:00Z",
           [schedule.fields[2]!.key]: "2026-10-01T09:30:00Z",
+          [schedule.fields[3]!.key]: "UTC",
+          [schedule.fields[4]!.key]: 3,
+          [schedule.fields[5]!.key]: "open",
+        },
+      },
+      {
+        entity: schedule.key,
+        id: `sample-${schedule.key}-alt`,
+        values: {
+          [appointmentReferenceScalar(schedule.fields[0]!.key)]:
+            `sample-${service.key}`,
+          [schedule.fields[1]!.key]: "2026-10-01T10:00:00Z",
+          [schedule.fields[2]!.key]: "2026-10-01T10:30:00Z",
           [schedule.fields[3]!.key]: "UTC",
           [schedule.fields[4]!.key]: 1,
           [schedule.fields[5]!.key]: "open",

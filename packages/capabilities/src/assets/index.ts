@@ -252,6 +252,28 @@ export const appointmentSchedulingAssetV1_0_0: CapabilityAssetV1 = {
   },
 };
 
+/**
+ * Corrected Appointment package for new Drafts. The 1.0.0 asset above is
+ * retained as immutable historical evidence and remains resolvable by old
+ * composition locks.
+ */
+export const appointmentSchedulingAssetV1_0_1: CapabilityAssetV1 = {
+  manifest: {
+    ...appointmentSchedulingAssetV1_0_0.manifest,
+    version: "1.0.1",
+    packageRoot: "packages/capabilities/assets/scheduling.appointment/1.0.1",
+    manifestDigest:
+      "sha256:d77a8ec2a8bcaba17510b7d6a7d073b26ccc6a2857fd6644c9d80700d672a9c7",
+    templates: appointmentSchedulingAssetV1_0_0.manifest.templates.map(
+      (template) => ({
+        ...template,
+        digest:
+          "sha256:99c497034fae967f68925a47f1e490f2f9ab0da6bd07206fb9065ea7d31b2cb7",
+      }),
+    ),
+  },
+};
+
 export {
   auditAsset,
   auditAssetV1_0_1,
@@ -322,7 +344,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     filesMediaAssetV1_0_0,
     searchAssetV1_0_0,
     schedulingAssetV1_0_0,
-    appointmentSchedulingAssetV1_0_0,
+    appointmentSchedulingAssetV1_0_1,
     approvalsAssetV1_0_0,
     catalogAssetV1_2_0,
     cartAssetV1_0_1,
@@ -343,6 +365,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
+  appointmentSchedulingAssetV1_0_0,
   auditAssetV1_0_1,
   moneyPricingAssetV1_0_0,
   orderOperationsAssetV1_0_1,

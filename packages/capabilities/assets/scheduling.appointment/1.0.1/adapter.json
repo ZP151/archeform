@@ -1,0 +1,35 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "flow.effect", "test.fixture"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/scheduling.appointment.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:99c497034fae967f68925a47f1e490f2f9ab0da6bd07206fb9065ea7d31b2cb7"
+    }
+  ],
+  "parameters": [
+    { "key": "serviceEntity", "type": "graph-symbol", "required": true },
+    { "key": "serviceNameField", "type": "graph-symbol", "required": true },
+    { "key": "serviceDurationMinutesField", "type": "graph-symbol", "required": true },
+    { "key": "serviceActiveField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleEntity", "type": "graph-symbol", "required": true },
+    { "key": "scheduleServiceReferenceField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleStartField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleEndField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleTimezoneField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleCapacityField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleStatusField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentEntity", "type": "graph-symbol", "required": true },
+    { "key": "appointmentScheduleReferenceField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentCustomerNameField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentNotesField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentCancellationReasonField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentStatusField", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": { "effects": ["appointment.booking"] },
+  "disable": { "removeIntegrationCapabilities": ["appointment.booking"] }
+}

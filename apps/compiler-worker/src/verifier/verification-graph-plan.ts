@@ -381,6 +381,214 @@ function foreignKeyValue(
   return undefined;
 }
 
+type AppointmentVerificationContext = Readonly<{
+  appointmentEntity: string;
+  appointmentScheduleField: string;
+  appointmentStatusField: string;
+  scheduleEntity: string;
+  scheduleStatusField: string;
+  scheduleCapacityField: string;
+}>;
+
+function bindingGraphEntity(
+  lock: CompositionLock,
+  bindingKey: string,
+): string | undefined {
+  const selection = lock.packages.find(
+    ({ lock: asset }) => asset.key === "scheduling.appointment",
+  );
+  const binding = selection?.bindings?.[bindingKey];
+  if (
+    !binding ||
+    typeof binding !== "object" ||
+    !("graphSymbol" in binding) ||
+    typeof binding.graphSymbol !== "string"
+  )
+    return undefined;
+  return domainEntityBinding.exec(binding.graphSymbol)?.[1];
+}
+
+function bindingGraphField(
+  lock: CompositionLock,
+  bindingKey: string,
+): string | undefined {
+  const selection = lock.packages.find(
+    ({ lock: asset }) => asset.key === "scheduling.appointment",
+  );
+  const binding = selection?.bindings?.[bindingKey];
+  if (
+    !binding ||
+    typeof binding !== "object" ||
+    !("fieldKey" in binding) ||
+    typeof binding.fieldKey !== "string"
+  )
+    return undefined;
+  return binding.fieldKey;
+}
+
+function appointmentVerificationContext(
+  lock: CompositionLock,
+): AppointmentVerificationContext | undefined {
+  if (
+    !lock.packages.some(
+      ({ lock: asset }) => asset.key === "scheduling.appointment",
+    )
+  )
+    return undefined;
+  const appointmentEntity = bindingGraphEntity(lock, "appointmentEntity");
+  const scheduleEntity = bindingGraphEntity(lock, "scheduleEntity");
+  const appointmentScheduleField = bindingGraphField(
+    lock,
+    "appointmentScheduleReferenceField",
+  );
+  const appointmentStatusField = bindingGraphField(
+    lock,
+    "appointmentStatusField",
+  );
+  const scheduleStatusField = bindingGraphField(lock, "scheduleStatusField");
+  const scheduleCapacityField = bindingGraphField(
+    lock,
+    "scheduleCapacityField",
+  );
+  if (
+    !appointmentEntity ||
+    !scheduleEntity ||
+    !appointmentScheduleField ||
+    !appointmentStatusField ||
+    !scheduleStatusField ||
+    !scheduleCapacityField
+  )
+    throw new VerificationContractError(
+      "Appointment verification requires complete schedule bindings.",
+    );
+  return {
+    appointmentEntity,
+    appointmentScheduleField,
+    appointmentStatusField,
+    scheduleEntity,
+    scheduleStatusField,
+    scheduleCapacityField,
+  };
+}
+
+function availableAppointmentScheduleId(
+  graph: ApplicationGraphV1,
+  context: AppointmentVerificationContext,
+  excludedId?: string,
+): string | undefined {
+  const occupied = new Map<string, number>();
+  for (const seed of graph.domain.seedData ?? []) {
+    if (seed.entity !== context.appointmentEntity) continue;
+    const status = seed.values[context.appointmentStatusField];
+    if (status !== "requested" && status !== "confirmed") continue;
+    const scheduleId = seed.values[context.appointmentScheduleField];
+    if (typeof scheduleId !== "string") continue;
+    occupied.set(scheduleId, (occupied.get(scheduleId) ?? 0) + 1);
+  }
+  for (const seed of graph.domain.seedData ?? []) {
+    if (seed.entity !== context.scheduleEntity || seed.id === excludedId)
+      continue;
+    if (seed.values[context.scheduleStatusField] !== "open") continue;
+    const capacity = seed.values[context.scheduleCapacityField];
+    if (
+      typeof seed.id === "string" &&
+      Number.isSafeInteger(capacity) &&
+      (capacity as number) > (occupied.get(seed.id) ?? 0)
+    )
+      return seed.id;
+  }
+  return undefined;
+}
+
+function appointmentOperation(action: string): string {
+  return action.slice(action.indexOf(".") + 1).replace(/-fresh$/u, "");
+}
+
+function appointmentCreateBody(
+  body: string | undefined,
+  scheduleId: string,
+  scheduleField: string,
+): string {
+  let values: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(body ?? "{}") as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      throw new Error("not an object");
+    values = parsed as Record<string, unknown>;
+  } catch {
+    throw new VerificationContractError(
+      "Appointment verification create fixtures must be JSON objects.",
+    );
+  }
+  values[scheduleField] = scheduleId;
+  return JSON.stringify({ values });
+}
+
+function appointmentMutationBody(
+  action: string,
+  expectedVersion: number,
+  alternateScheduleId: string,
+): string {
+  switch (appointmentOperation(action)) {
+    case "confirm":
+      return JSON.stringify({ expectedVersion });
+    case "reschedule":
+      return JSON.stringify({
+        expectedVersion,
+        scheduleId: alternateScheduleId,
+      });
+    case "cancel":
+      return JSON.stringify({
+        expectedVersion,
+        cancellationReason: "Verifier cancellation reason",
+      });
+    default:
+      throw new VerificationContractError(
+        `Appointment verification cannot render command '${action}'.`,
+      );
+  }
+}
+
+function appointmentMutationHeader(value: string): {
+  readonly name: string;
+  readonly value: string;
+} {
+  return { name: "x-factory-idempotency-key", value };
+}
+
+function normalizeAppointmentChain(
+  chain: readonly ChainJourneyStep[],
+  journeyId: string,
+  rawCreateBody: string,
+  createScheduleId: string,
+  scheduleField: string,
+  alternateScheduleId: string,
+): readonly ChainJourneyStep[] {
+  let expectedVersion = 0;
+  const createBody = appointmentCreateBody(
+    rawCreateBody,
+    createScheduleId,
+    scheduleField,
+  );
+  return chain.map((step, index) => {
+    const operation = appointmentOperation(step.action);
+    const body =
+      operation === "create"
+        ? createBody
+        : appointmentMutationBody(
+            step.action,
+            expectedVersion,
+            alternateScheduleId,
+          );
+    if (operation !== "create") expectedVersion += 1;
+    return {
+      ...step,
+      body,
+      idempotencyKeyOverride: `${journeyId}-step-${index}`,
+    };
+  });
+}
+
 /**
  * A required create field that owns a foreign-key relation whose target
  * cannot bind leaves the create journey undrivable: the generated handler
@@ -870,6 +1078,105 @@ export function deriveVerificationProfile(
           ? {}
           : { chain: firstTransitionJourney.chain },
       );
+    }
+  }
+
+  const appointmentContext = appointmentVerificationContext(lock);
+  if (appointmentContext) {
+    const appointmentEntity = graph.domain.entities.find(
+      (entity) => entity.key === appointmentContext.appointmentEntity,
+    );
+    const rawCreateBody = appointmentEntity
+      ? createBodyFor(graph, appointmentEntity, true, false)
+      : undefined;
+    const createScheduleId = availableAppointmentScheduleId(
+      graph,
+      appointmentContext,
+    );
+    const alternateScheduleId = availableAppointmentScheduleId(
+      graph,
+      appointmentContext,
+      createScheduleId,
+    );
+    if (!rawCreateBody || !createScheduleId || !alternateScheduleId)
+      throw new VerificationContractError(
+        "Appointment verification requires two available seeded schedules.",
+      );
+
+    // Appointment transitions are generated as command endpoints returning
+    // the updated record with HTTP 200. Keep the verifier registry aligned
+    // with that runtime contract while preserving 201 for create.
+    for (let index = 0; index < apiRegistry.length; index += 1) {
+      const registration = apiRegistry[index]!;
+      if (
+        !registration.action.startsWith(
+          `${appointmentContext.appointmentEntity}.`,
+        )
+      )
+        continue;
+      const operation = appointmentOperation(registration.action);
+      if (
+        operation === "create" ||
+        operation === "read" ||
+        operation === "list"
+      )
+        continue;
+      apiRegistry[index] = { ...registration, expectedStatus: 200 };
+    }
+
+    for (const [journeyId, journey] of Object.entries(journeys)) {
+      if (
+        !journey.action.startsWith(`${appointmentContext.appointmentEntity}.`)
+      )
+        continue;
+      const operation = appointmentOperation(journey.action);
+      if (operation === "read" || operation === "list") continue;
+      const headers = [appointmentMutationHeader(`verify-${journeyId}`)];
+      if (journey.chain !== undefined) {
+        const chain = normalizeAppointmentChain(
+          journey.chain,
+          journeyId,
+          rawCreateBody,
+          createScheduleId,
+          appointmentContext.appointmentScheduleField,
+          alternateScheduleId,
+        );
+        journeys[journeyId] = {
+          ...journey,
+          chain,
+          body: appointmentMutationBody(
+            journey.action,
+            chain.length - 1,
+            alternateScheduleId,
+          ),
+          headers,
+        };
+        continue;
+      }
+      if (operation === "create") {
+        journeys[journeyId] = {
+          ...journey,
+          body: appointmentCreateBody(
+            rawCreateBody,
+            createScheduleId,
+            appointmentContext.appointmentScheduleField,
+          ),
+          headers,
+        };
+        continue;
+      }
+      journeys[journeyId] = {
+        ...journey,
+        body: appointmentMutationBody(
+          journey.action,
+          "expectedVersion" in journey ? journey.expectedVersion : 0,
+          alternateScheduleId,
+        ),
+        headers,
+        ...("idempotencyKey" in journey
+          ? { replayExpectation: "stored-success" as const }
+          : {}),
+      };
     }
   }
 

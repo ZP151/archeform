@@ -1,0 +1,70 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
+  "key": "scheduling.appointment",
+  "version": "1.0.1",
+  "category": "core",
+  "name": "Atomic appointment booking",
+  "description": "Claims, releases, and moves appointments against server-owned schedule capacity.",
+  "packageRoot": "packages/capabilities/assets/scheduling.appointment/1.0.1",
+  "manifestDigest": "sha256:d77a8ec2a8bcaba17510b7d6a7d073b26ccc6a2857fd6644c9d80700d672a9c7",
+  "lifecycle": "golden",
+  "profiles": [],
+  "effects": ["appointment.booking"],
+  "inputSchema": [
+    { "key": "serviceEntity", "type": "domain.entity", "required": true },
+    { "key": "serviceNameField", "type": "domain.field", "ownerBinding": "serviceEntity", "fieldTypes": ["string"], "fieldRequired": true, "required": true },
+    { "key": "serviceDurationMinutesField", "type": "domain.field", "ownerBinding": "serviceEntity", "fieldTypes": ["integer"], "fieldRequired": true, "required": true },
+    { "key": "serviceActiveField", "type": "domain.field", "ownerBinding": "serviceEntity", "fieldTypes": ["boolean"], "fieldRequired": true, "required": true },
+    { "key": "scheduleEntity", "type": "domain.entity", "required": true },
+    { "key": "scheduleServiceReferenceField", "type": "domain.field", "ownerBinding": "scheduleEntity", "fieldTypes": ["string"], "fieldRequired": true, "required": true },
+    { "key": "scheduleStartField", "type": "domain.field", "ownerBinding": "scheduleEntity", "fieldTypes": ["datetime"], "fieldRequired": true, "required": true },
+    { "key": "scheduleEndField", "type": "domain.field", "ownerBinding": "scheduleEntity", "fieldTypes": ["datetime"], "fieldRequired": true, "required": true },
+    { "key": "scheduleTimezoneField", "type": "domain.field", "ownerBinding": "scheduleEntity", "fieldTypes": ["string"], "fieldRequired": true, "required": true },
+    { "key": "scheduleCapacityField", "type": "domain.field", "ownerBinding": "scheduleEntity", "fieldTypes": ["integer"], "fieldRequired": true, "required": true },
+    { "key": "scheduleStatusField", "type": "domain.field", "ownerBinding": "scheduleEntity", "fieldTypes": ["enum"], "fieldRequired": true, "required": true },
+    { "key": "appointmentEntity", "type": "domain.entity", "required": true },
+    { "key": "appointmentScheduleReferenceField", "type": "domain.field", "ownerBinding": "appointmentEntity", "fieldTypes": ["string"], "fieldRequired": true, "required": true },
+    { "key": "appointmentCustomerNameField", "type": "domain.field", "ownerBinding": "appointmentEntity", "fieldTypes": ["string"], "fieldRequired": true, "required": true },
+    { "key": "appointmentNotesField", "type": "domain.field", "ownerBinding": "appointmentEntity", "fieldTypes": ["text"], "fieldRequired": false, "required": true },
+    { "key": "appointmentCancellationReasonField", "type": "domain.field", "ownerBinding": "appointmentEntity", "fieldTypes": ["text"], "fieldRequired": false, "required": true },
+    { "key": "appointmentStatusField", "type": "domain.field", "ownerBinding": "appointmentEntity", "fieldTypes": ["enum"], "fieldRequired": true, "required": true }
+  ],
+  "outputSlots": ["api.runtime", "flow.effect", "test.fixture"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/scheduling.appointment.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:99c497034fae967f68925a47f1e490f2f9ab0da6bd07206fb9065ea7d31b2cb7"
+    }
+  ],
+  "parameters": [
+    { "key": "serviceEntity", "type": "graph-symbol", "required": true },
+    { "key": "serviceNameField", "type": "graph-symbol", "required": true },
+    { "key": "serviceDurationMinutesField", "type": "graph-symbol", "required": true },
+    { "key": "serviceActiveField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleEntity", "type": "graph-symbol", "required": true },
+    { "key": "scheduleServiceReferenceField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleStartField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleEndField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleTimezoneField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleCapacityField", "type": "graph-symbol", "required": true },
+    { "key": "scheduleStatusField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentEntity", "type": "graph-symbol", "required": true },
+    { "key": "appointmentScheduleReferenceField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentCustomerNameField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentNotesField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentCancellationReasonField", "type": "graph-symbol", "required": true },
+    { "key": "appointmentStatusField", "type": "graph-symbol", "required": true }
+  ],
+  "provides": [{ "interfaceKey": "appointment.booking", "version": "v1" }],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:22720a4bbbb1a230f1f71bce3be10c842d1c78083af6fbd4f19882cd8116edd1",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:8930291b7ba1f36706aea913846a3fd5a056d67574d1eceaa4d143535731fba9",
+    "status": "verified"
+  }
+}

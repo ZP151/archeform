@@ -1323,8 +1323,8 @@ function assertAppointmentPublishedGraphEligibility(
     ({ lock }) => lock.key === "scheduling.appointment",
   );
   if (!selected) return;
-  if (selected.lock.version !== "1.0.0") {
-    throw new Error("Appointment capability requires version 1.0.0.");
+  if (selected.lock.version !== "1.0.1") {
+    throw new Error("Appointment capability requires version 1.0.1.");
   }
   const asset = assets.find(
     ({ manifest }) =>

@@ -1,0 +1,22 @@
+{
+  "definitionKey": "appointment-booking-v1",
+  "authoredSelections": 1,
+  "modelCalls": 0,
+  "technicalHandoffs": 0,
+  "inRunManualRescues": 0,
+  "scope": "isolated-local-fixture-session",
+  "publishedRevisionId": "cmu7dig4u002amf4tru0m01dx",
+  "inputGraphHash": "sha256:00419df8c42a579039c39f7b4d92d99dfae3006f1dcdf89bee02161e9a782b5e",
+  "compositionLockHash": "sha256:660dc9c6ec54e40ab79373af9282f69bd64e492e430ca1c0013b8879dfa9df4c",
+  "compilationId": "cmu7dig7d002cmf4tj8cmkz40",
+  "previewRunId": "preview-2c9c3dad-5d82-40e2-862d-c453474ee7c6",
+  "lifecycle": [
+    "publish",
+    "compile",
+    "verify",
+    "preview"
+  ],
+  "immutableCompilationPreserved": true,
+  "compilationArtifactManifestHash": "sha256:c8970d84c9501e7c0ae87b0a33dda6321a3809a08a066b17df477c1e248d7322",
+  "elapsedMs": 215335
+}

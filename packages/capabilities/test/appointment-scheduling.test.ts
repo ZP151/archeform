@@ -89,7 +89,7 @@ describe("appointment scheduling capability package", () => {
 
     expect(asset.manifest).toMatchObject({
       key: "scheduling.appointment",
-      version: "1.0.0",
+      version: "1.0.1",
       category: "core",
       lifecycle: "golden",
       bindingContract: "factory.capability-binding/v1",
@@ -405,7 +405,7 @@ describe("appointment scheduling capability package", () => {
       operation: "claim",
       recordId: claimed.id,
     });
-    expect(store.receipts.get("scope:claim-1")?.response).toEqual(claimed);
+    expect(store.receipts.get("scope:claim-1")?.responseBody).toEqual(claimed);
     expect(claimed.status).toBe("requested");
     expect(store.events).toHaveLength(1);
     const replaySnapshot = snapshotStore(store);
@@ -464,7 +464,7 @@ describe("appointment scheduling capability package", () => {
       operation: "move",
       recordId: claimed.id,
     });
-    expect(store.receipts.get("scope:move")?.response).toEqual(moved);
+    expect(store.receipts.get("scope:move")?.responseBody).toEqual(moved);
     expect(moved.scheduleId).toBe("schedule-2");
     const staleSnapshot = snapshotStore(store);
     await expect(
@@ -498,7 +498,7 @@ describe("appointment scheduling capability package", () => {
       operation: "release",
       recordId: claimed.id,
     });
-    expect(store.receipts.get("scope:release")?.response).toEqual(released);
+    expect(store.receipts.get("scope:release")?.responseBody).toEqual(released);
     const reclaimTransactions = store.transactions;
     const reclaimReceipts = store.receipts.size;
     const reclaimEvents = store.events.length;
@@ -514,7 +514,9 @@ describe("appointment scheduling capability package", () => {
       operation: "claim",
       recordId: reclaimed.id,
     });
-    expect(store.receipts.get("scope:reclaim")?.response).toEqual(reclaimed);
+    expect(store.receipts.get("scope:reclaim")?.responseBody).toEqual(
+      reclaimed,
+    );
     for (const [field, value] of [
       ["end", "2026-10-01T02:00:00Z"],
       ["start", "2026-02-30T01:00:00Z"],
@@ -654,13 +656,13 @@ function renderAppointmentHandler(): any {
   const template = readFileSync(
     resolve(
       repositoryRoot,
-      "packages/capabilities/assets/scheduling.appointment/1.0.0/templates/api/capability-module.ts.tpl",
+      "packages/capabilities/assets/scheduling.appointment/1.0.1/templates/api/capability-module.ts.tpl",
     ),
     "utf8",
   );
   const values: Record<string, string> = {
     "asset.key": "scheduling.appointment",
-    "asset.version": "1.0.0",
+    "asset.version": "1.0.1",
     "asset.effectsJson": JSON.stringify(["appointment.booking"]),
     "graph.metadata.id": "appointment-test",
   };
@@ -669,7 +671,7 @@ function renderAppointmentHandler(): any {
       "fieldKey" in value
         ? value.fieldKey
         : value.graphSymbol.slice("graph.domain.".length),
-    );
+    ).slice(1, -1);
   const source = template.replace(
     /{{([A-Za-z.]+)}}/g,
     (_m, key) => values[key]!,

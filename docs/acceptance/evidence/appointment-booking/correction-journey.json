@@ -1,0 +1,39 @@
+{
+  "recordId": "sha256:4192d6c9eacdec07ff589cc82b0c667594cdcca859409cb7d1a9ef7181f29369",
+  "requestVersion": 0,
+  "confirmVersion": 1,
+  "moveVersion": 2,
+  "cancelVersion": 3,
+  "statuses": [
+    "requested",
+    "confirmed",
+    "requested",
+    "cancelled"
+  ],
+  "historyActions": [
+    "claim",
+    "confirm",
+    "move",
+    "cancel"
+  ],
+  "slotTimezones": [
+    "Asia/Singapore",
+    "America/Los_Angeles"
+  ],
+  "capacityConflict": {
+    "status": 409,
+    "code": "appointment.capacity_conflict",
+    "unchanged": true
+  },
+  "replay": {
+    "afterApiRestart": true,
+    "identical": true,
+    "noAdditionalEffects": true
+  },
+  "denied": {
+    "status": 403,
+    "code": "appointment.forbidden"
+  },
+  "modelCalls": 0,
+  "scope": "isolated-local-fixture-session"
+}

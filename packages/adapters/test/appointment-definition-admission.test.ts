@@ -234,7 +234,7 @@ const selection = {
 
 const pendingAppointmentComposition = {
   compilerProfile: "appointment-booking@1.0.0",
-  capabilitySelection: { key: "scheduling.appointment", version: "1.0.0" },
+  capabilitySelection: { key: "scheduling.appointment", version: "1.0.1" },
   bindings: {
     serviceEntity: "service",
     scheduleEntity: "schedule",

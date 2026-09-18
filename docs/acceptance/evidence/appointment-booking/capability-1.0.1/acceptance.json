@@ -1,0 +1,60 @@
+{
+  "apiVersion": "factory.acceptance-evidence/v1",
+  "acceptedAt": "2026-09-19",
+  "founderAcceptance": "Accepted in the controlling conversation for this exact ADR hash.",
+  "adrPath": "docs/adr/adr-0073-appointment-capability-patch-migration.md",
+  "adrSha256": "4ccc8f627d62486975808df0438ae692c31236d0840ac32d3a602be88ee9a387",
+  "decision": "migrate",
+  "capability": "scheduling.appointment@1.0.1",
+  "preservedCapability": "scheduling.appointment@1.0.0",
+  "declaredDigests": {
+    "newManifest": "sha256:d77a8ec2a8bcaba17510b7d6a7d073b26ccc6a2857fd6644c9d80700d672a9c7",
+    "newTemplate": "sha256:99c497034fae967f68925a47f1e490f2f9ab0da6bd07206fb9065ea7d31b2cb7",
+    "oldManifest": "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b",
+    "oldTemplate": "sha256:fb6eee400b408249e8054696176e21e6bc2580b393d5e8153da81587100083fd"
+  },
+  "recomputedFileSha256": {
+    "oldComponent": "2abd3ffac568d809619cda92f71c98db71a9a61d6d7b81c34f40e2967324d8d6",
+    "oldTemplate": "fb6eee400b408249e8054696176e21e6bc2580b393d5e8153da81587100083fd",
+    "newComponent": "791f6299ac5b413cdfdcf176dce117fd06ce4b8f38a36bcc454477226d85b472",
+    "newTemplate": "99c497034fae967f68925a47f1e490f2f9ab0da6bd07206fb9065ea7d31b2cb7"
+  },
+  "oldVersionBytePreserved": true,
+  "productPublishSearch": {
+    "oldVersionPublishedRevisionCount": 0,
+    "oldVersionCompilationCount": 0,
+    "appointmentBookingPublishedRevisionCount": 0,
+    "appointmentBookingCompilationCount": 0,
+    "result": "No Appointment 1.0.0 Product Publish, Compilation, or database was found in the isolated local fixture."
+  },
+  "verification": {
+    "verificationRunId": "verify-1c3333c1-3e19-44e1-b099-e8848c4ef1bd",
+    "compilationId": "cmu7dig7d002cmf4tj8cmkz40",
+    "previewRunId": "preview-2c9c3dad-5d82-40e2-862d-c453474ee7c6",
+    "allStepsPassed": true,
+    "e2e": "1 passed (3.9m)",
+    "lifecycle": [
+      "publish",
+      "compile",
+      "verify",
+      "preview",
+      "restart-and-replay",
+      "cleanup"
+    ]
+  },
+  "focusedTests": [
+    "@factory/capabilities: 142 passed",
+    "@factory/adapters: 193 passed",
+    "@factory/compiler-worker: 130 passed",
+    "@factory/compiler: 129 passed",
+    "product-definition-data: 16 cases passed",
+    "compiler, compiler-worker, and control-plane builds passed"
+  ],
+  "evidenceFiles": [
+    "docs/acceptance/evidence/appointment-booking/delivery-journey.json",
+    "docs/acceptance/evidence/appointment-booking/correction-journey.json",
+    "docs/acceptance/evidence/appointment-booking/runtime-cleanup.json",
+    "docs/acceptance/evidence/appointment-booking/source-identity.json"
+  ],
+  "scope": "isolated-local-fixture-session"
+}

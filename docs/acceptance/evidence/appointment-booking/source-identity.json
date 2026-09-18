@@ -1,0 +1,13 @@
+{
+  "gitHead": "087d42f2a677f54dfc12785b1fbeb71aa104e404",
+  "publishedGraphHash": "sha256:00419df8c42a579039c39f7b4d92d99dfae3006f1dcdf89bee02161e9a782b5e",
+  "compositionLockHash": "sha256:660dc9c6ec54e40ab79373af9282f69bd64e492e430ca1c0013b8879dfa9df4c",
+  "compilationId": "cmu7dig7d002cmf4tj8cmkz40",
+  "taskSources": {
+    "appointmentContract": "sha256:7f7bd79fbd99e8ee45eac797822e90fe2c544ab78d7ac0229c850d57bd930bca",
+    "admission": "sha256:8a4bb3792e1bf73f54b1a93ae195ed9b698a8a0aa2e55cca039648c1889d671a",
+    "definitionCatalogue": "sha256:277734982a3f110b21a1ae91d49595b117679c396cdafe3aa1727c3ad5af2cc9",
+    "capability": "sha256:791f6299ac5b413cdfdcf176dce117fd06ce4b8f38a36bcc454477226d85b472"
+  },
+  "scope": "isolated-local-fixture-session"
+}

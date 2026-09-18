@@ -123,6 +123,18 @@ describe("composeProductDraft", () => {
             startUtc: "2026-10-01T09:00:00Z",
             endUtc: "2026-10-01T09:30:00Z",
             timezone: "UTC",
+            capacity: 3,
+            status: "open",
+          },
+        },
+        {
+          entity: "schedule",
+          id: "sample-schedule-alt",
+          values: {
+            serviceId: "sample-service",
+            startUtc: "2026-10-01T10:00:00Z",
+            endUtc: "2026-10-01T10:30:00Z",
+            timezone: "UTC",
             capacity: 1,
             status: "open",
           },

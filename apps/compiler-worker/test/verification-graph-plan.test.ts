@@ -1056,3 +1056,283 @@ describe("exact correction verification protocol", () => {
     },
   );
 });
+
+function currentAppointmentRuntimeGraph(): ApplicationGraphV1 {
+  return {
+    apiVersion: "factory.application-graph/v1",
+    metadata: {
+      id: "appointment-runtime",
+      workspaceId: "test",
+      name: "Appointment Runtime",
+    },
+    page: { pages: [], navigation: [] },
+    integration: { providers: [], capabilities: [] },
+    experience: { theme: { mode: "light", tokens: {} }, locales: ["en"] },
+    domain: {
+      entities: [
+        {
+          key: "service",
+          label: "Service",
+          fields: [
+            { key: "name", type: "string", required: true },
+            { key: "durationMinutes", type: "integer", required: true },
+            { key: "active", type: "boolean", required: true },
+          ],
+          indexes: [],
+        },
+        {
+          key: "schedule",
+          label: "Schedule",
+          fields: [
+            { key: "serviceId", type: "string", required: true },
+            { key: "startUtc", type: "datetime", required: true },
+            { key: "endUtc", type: "datetime", required: true },
+            { key: "timezone", type: "string", required: true },
+            { key: "capacity", type: "integer", required: true },
+            {
+              key: "status",
+              type: "enum",
+              values: ["open", "closed"],
+              required: true,
+            },
+          ],
+          indexes: [],
+        },
+        {
+          key: "appointment",
+          label: "Appointment",
+          fields: [
+            { key: "scheduleId", type: "string", required: true },
+            { key: "customerName", type: "string", required: true },
+            { key: "notes", type: "text", required: false },
+            { key: "cancellationReason", type: "text", required: false },
+            {
+              key: "status",
+              type: "enum",
+              values: ["requested", "confirmed", "cancelled"],
+              required: true,
+            },
+          ],
+          indexes: [],
+        },
+      ],
+      relations: [
+        {
+          from: "schedule",
+          to: "service",
+          kind: "many-to-one",
+          field: "serviceId",
+        },
+        {
+          from: "appointment",
+          to: "schedule",
+          kind: "many-to-one",
+          field: "scheduleId",
+        },
+      ],
+      seedData: [
+        {
+          entity: "service",
+          id: "sample-service",
+          values: { name: "Sample service", durationMinutes: 30, active: true },
+        },
+        {
+          entity: "schedule",
+          id: "sample-schedule",
+          values: {
+            serviceId: "sample-service",
+            startUtc: "2026-10-01T09:00:00Z",
+            endUtc: "2026-10-01T09:30:00Z",
+            timezone: "UTC",
+            capacity: 3,
+            status: "open",
+          },
+        },
+        {
+          entity: "schedule",
+          id: "sample-schedule-alt",
+          values: {
+            serviceId: "sample-service",
+            startUtc: "2026-10-01T10:00:00Z",
+            endUtc: "2026-10-01T10:30:00Z",
+            timezone: "UTC",
+            capacity: 1,
+            status: "open",
+          },
+        },
+        {
+          entity: "appointment",
+          id: "sample-appointment",
+          values: {
+            scheduleId: "sample-schedule",
+            customerName: "Sample customer",
+            notes: "Synthetic fixture note",
+            cancellationReason: "Synthetic fixture cancellation reason",
+            status: "requested",
+          },
+        },
+      ],
+    },
+    policy: {
+      roles: ["customer", "staff", "administrator"],
+      permissions: [
+        {
+          role: "customer",
+          resource: "appointment",
+          actions: ["create", "read", "cancel"],
+        },
+        {
+          role: "staff",
+          resource: "appointment",
+          actions: ["read", "confirm", "reschedule", "cancel"],
+        },
+        {
+          role: "administrator",
+          resource: "service",
+          actions: ["create", "read", "update", "manage"],
+        },
+        {
+          role: "administrator",
+          resource: "schedule",
+          actions: ["create", "read", "update", "manage"],
+        },
+        {
+          role: "administrator",
+          resource: "appointment",
+          actions: ["read", "cancel"],
+        },
+      ],
+    },
+    flow: {
+      flows: [
+        {
+          id: "appointment-booking",
+          entity: "appointment",
+          initialState: "requested",
+          states: ["requested", "confirmed", "cancelled"],
+          events: ["confirm", "cancel", "reschedule"],
+          transitions: [
+            {
+              from: "requested",
+              event: "confirm",
+              to: "confirmed",
+              roles: ["staff"],
+            },
+            {
+              from: "confirmed",
+              event: "reschedule",
+              to: "requested",
+              roles: ["staff"],
+            },
+            {
+              from: "requested",
+              event: "cancel",
+              to: "cancelled",
+              roles: ["customer"],
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+describe("appointment command verification protocol", () => {
+  it("derives command-shaped bodies, idempotency headers and an alternate reschedule slot", () => {
+    const graph = currentAppointmentRuntimeGraph();
+    const lock = graphLock([
+      { key: "core.identity-policy" },
+      { key: "scheduling.appointment", version: "1.0.1" },
+    ]);
+    lock.packages.find(
+      ({ lock: asset }) => asset.key === "scheduling.appointment",
+    )!.bindings = {
+      appointmentEntity: { graphSymbol: "graph.domain.appointment" },
+      appointmentScheduleReferenceField: {
+        graphSymbol: "graph.domain.appointment",
+        fieldKey: "scheduleId",
+      },
+      appointmentStatusField: {
+        graphSymbol: "graph.domain.appointment",
+        fieldKey: "status",
+      },
+      scheduleEntity: { graphSymbol: "graph.domain.schedule" },
+      scheduleStatusField: {
+        graphSymbol: "graph.domain.schedule",
+        fieldKey: "status",
+      },
+      scheduleCapacityField: {
+        graphSymbol: "graph.domain.schedule",
+        fieldKey: "capacity",
+      },
+    };
+    const profile = deriveVerificationProfile(graph, lock);
+
+    expect(profile.journeys["appointment-create"]).toMatchObject({
+      body: '{"values":{"scheduleId":"sample-schedule","customerName":"Verifier customerName"}}',
+      headers: [
+        {
+          name: "x-factory-idempotency-key",
+          value: "verify-appointment-create",
+        },
+      ],
+    });
+    expect(profile.journeys["appointment-confirm"]).toMatchObject({
+      body: '{"expectedVersion":0}',
+      replayExpectation: "stored-success",
+      headers: [
+        {
+          name: "x-factory-idempotency-key",
+          value: "verify-appointment-confirm",
+        },
+      ],
+    });
+    expect(profile.journeys["appointment-reschedule"]!.chain).toEqual([
+      {
+        action: "appointment.create",
+        body: '{"values":{"scheduleId":"sample-schedule","customerName":"Verifier customerName"}}',
+        idempotencyKeyOverride: "appointment-reschedule-step-0",
+        sessionId: "fixture-session-customer",
+      },
+      {
+        action: "appointment.confirm-fresh",
+        body: '{"expectedVersion":0}',
+        idempotencyKeyOverride: "appointment-reschedule-step-1",
+        sessionId: "fixture-session-staff",
+      },
+    ]);
+    expect(profile.journeys["appointment-reschedule"]).toMatchObject({
+      body: '{"expectedVersion":1,"scheduleId":"sample-schedule-alt"}',
+    });
+    expect(profile.journeys["appointment-cancel"]!.chain).toEqual([
+      {
+        action: "appointment.create",
+        body: '{"values":{"scheduleId":"sample-schedule","customerName":"Verifier customerName"}}',
+        idempotencyKeyOverride: "appointment-cancel-step-0",
+        sessionId: "fixture-session-customer",
+      },
+    ]);
+    expect(profile.journeys["appointment-cancel"]).toMatchObject({
+      body: '{"expectedVersion":0,"cancellationReason":"Verifier cancellation reason"}',
+    });
+    expect(profile.journeys["appointment-denied-confirm"]!.chain).toEqual(
+      profile.journeys["appointment-confirm"]!.chain,
+    );
+    expect(
+      profile.apiRegistry.find(
+        (action) => action.action === "appointment.create",
+      )?.expectedStatus,
+    ).toBe(201);
+    for (const action of [
+      "appointment.confirm",
+      "appointment.confirm-fresh",
+      "appointment.reschedule",
+      "appointment.cancel",
+    ]) {
+      expect(
+        profile.apiRegistry.find((entry) => entry.action === action)
+          ?.expectedStatus,
+      ).toBe(200);
+    }
+  });
+});
