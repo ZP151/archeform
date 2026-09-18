@@ -363,16 +363,47 @@ export function exactAppointmentNumericWitness(
   return true;
 }
 /**
- * Internal test seam for the guard that the page-runtime facade shares with
- * bundle generation. This module is intentionally not re-exported publicly.
+ * Private test seam for the actual local page-runtime function. This module
+ * is intentionally not re-exported from the compiler package root.
  */
-export function assertAppointmentPageRuntimeAdmission(
+type AppointmentPageRuntimeRenderer = (
   graph: ApplicationGraphV1,
+  orderEntityKey: string | undefined,
+  useFixtureSessions: boolean,
+  profile: "legacy" | "approval-v1" | "task-v1",
+  correctionEntity?: string,
+  appointmentProfile?: AppointmentRuntimeProfile,
+  compositionLock?: CapabilityCompositionLockV1,
+) => string;
+
+let appointmentPageRuntimeRenderer: AppointmentPageRuntimeRenderer | undefined;
+
+export function registerAppointmentPageRuntimeForTest(
+  renderer: AppointmentPageRuntimeRenderer,
+): void {
+  if (appointmentPageRuntimeRenderer !== undefined)
+    throw new Error("Appointment page-runtime facade is already registered.");
+  appointmentPageRuntimeRenderer = renderer;
+}
+
+export function renderAppointmentPageRuntimeForTest(
+  graph: ApplicationGraphV1,
+  orderEntityKey: string | undefined,
+  useFixtureSessions: boolean,
+  profile: "legacy" | "approval-v1" | "task-v1",
+  correctionEntity: string | undefined,
+  appointmentProfile: AppointmentRuntimeProfile | undefined,
   compositionLock: CapabilityCompositionLockV1,
-): boolean {
-  return exactAppointmentNumericWitness(
+): string {
+  if (appointmentPageRuntimeRenderer === undefined)
+    throw new Error("Appointment page-runtime facade is unavailable.");
+  return appointmentPageRuntimeRenderer(
     graph,
+    orderEntityKey,
+    useFixtureSessions,
+    profile,
+    correctionEntity,
+    appointmentProfile,
     compositionLock,
-    selectAppointmentRuntimeProfile(graph, compositionLock),
   );
 }

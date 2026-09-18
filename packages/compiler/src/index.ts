@@ -103,7 +103,10 @@ import { documentationTargetPlugin } from "./targets/documentation/target.js";
 import { policyTargetPlugin } from "./targets/policy/target.js";
 import { getCustomerIconAssets } from "./targets/restaurant-v3/customer-icons.js";
 import { generateRestaurantProductApplicationBundle } from "./targets/restaurant-v3/product-target.js";
-import { exactAppointmentNumericWitness } from "./appointment-compilation-admission.js";
+import {
+  exactAppointmentNumericWitness,
+  registerAppointmentPageRuntimeForTest,
+} from "./appointment-compilation-admission.js";
 
 /**
  * The facade-owned deterministic target registry. Migrated targets register
@@ -3429,6 +3432,8 @@ function renderPageRuntime(
     ? renderCalculatedPage(correctedSource)
     : correctedSource;
 }
+
+registerAppointmentPageRuntimeForTest(renderPageRuntime);
 
 function renderWebProxyRoute(
   restaurant: boolean,

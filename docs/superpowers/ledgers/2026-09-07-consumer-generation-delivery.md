@@ -5630,3 +5630,190 @@ scale. Appointment remains the next new family. Paths, owners, authority,
 acceptance metrics and rollback are explicit. Cache/refactor/retrieval changes
 remain future work. No real-model/user/private-identity/cloud claim is made.
 Controller owns final normal commit/push and remote equality/clean-tree check.
+
+## 2026-09-18 Appointment capability governance accepted
+
+Tech Lead `/root/appointment_tech_governance` reviewed the Appointment Booking
+v1 proposal against `docs/tech-governance.md` and `docs/threat-model.md` and
+recommended `experiment`. The proposed ADR is
+`docs/adr/adr-0071-atomic-appointment-booking.md` with SHA-256
+`0a30989f5211fe688a3230331a3069a1ee06c2848c86cb8ce4b98cdd7c50a447`.
+
+Founder acceptance was explicitly received on 2026-09-18. The accepted scope
+is one additive `scheduling.appointment@1.0.0` capability with the frozen
+`appointment.booking/v1` binding, server-owned interval/timezone/capacity,
+serializable claim/release/move transactions, idempotent receipts, safe
+conflicts, append-only appointment history, and a conditional generated
+Appointment profile. `core.scheduling@1.0.0`, Graph V1, the seven accepted
+products, existing manifests, and immutable Draft -> Publish -> Compilation
+behavior remain unchanged. No dependency, database, identity, tenant,
+calendar, payment, cloud, deployment, or release authority is granted.
+
+Root PM authorizes implementation only within the reviewed Appointment plan.
+The capability is not counted as an eighth accepted product until provider-free
+regression, actual local PostgreSQL/API/browser evidence, compatibility checks,
+independent review, source identity, and exact cleanup are all green. If any
+load-bearing contract or atomicity condition fails, keep the seven-product
+baseline and roll back only the unaccepted Appointment artifacts.
+
+Task 1 review resolution: the frozen business cancellation semantics are kept,
+but the unchanged Product Blueprint serializes only its unique customer-owned
+`requested -> cancelled` transition. Staff and administrator cancellation
+authorization is part of the Appointment capability command contract and is
+validated by the generated `/events/cancel` path. This avoids a duplicate
+transition key and avoids a Graph schema migration; no other Appointment
+contract or accepted product changes.
+
+### 2026-09-18 Appointment runtime integration accepted
+
+Task 3 is complete at `b8d79696` after independent re-review with P0/P1/P2
+0/0/0. The generated appointment profile now has server-derived API-002 scope
+digests, durable receipt/history persistence with bounded Serializable retries,
+safe 400/403/404/409 errors, immutable slot history, and equivalent private and
+generated cancellation/snapshot validation. Exact API, ApplicationRuntime, and
+Prisma output hashes are locked, and a temporary project typechecks the three
+emitted sources together. The focused compiler and compatibility suite passes
+27 tests and the compiler build passes.
+
+Real PostgreSQL concurrent serialization and receipt-replay evidence remains the
+explicit Task 6 environment gate. The appointment capability is still not an
+accepted eighth product until definition admission, provider-free browser
+regression, local lifecycle/API/browser evidence, database contention proof,
+cleanup, and final release review are complete.
+
+### 2026-09-18 Appointment definition composition governance accepted
+
+Tech Lead `/root/appointment_tech_governance` proposed ADR-0072 for the
+additive Appointment definition-family, catalogue trigger, deterministic
+owner-aware bindings, and narrowly scoped numeric-domain admission. The final
+ADR SHA-256 is
+`d06a1a7ed04ae77f578331c724e895ba6cd7aecf4c9438fb5b8be83fd01963e9`.
+ADR-0071 remains unchanged at
+`0a30989f5211fe688a3230331a3069a1ee06c2848c86cb8ce4b98cdd7c50a447`.
+
+Independent read-only reviewer `/root/appointment_definition_review` verified
+the exact ADR hash, all governance decision gates, the threat-model boundary,
+the bounded pre-Publish rollback, and the executable VER-001..007 commands.
+The reviewer returned
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes` with P0/P1/P2 `0/0/0` and no
+uncertainty. Under the founder standing independent-review authorization in
+`docs/tech-governance.md` (2026-09-01), PM accepts this exact ADR and
+authorizes Task 4 implementation within its stated paths and stop conditions.
+This authorization grants no Product Publish, Compilation, deployment, cloud,
+provider, credential, or repository-release authority. Task 4 must still pass
+its focused tests, old-seven byte compatibility, independent implementation
+review, and later Task 6 runtime evidence before Appointment counts as an
+eighth accepted product.
+
+### 2026-09-18 Appointment definition admission contract amendment accepted
+
+During Task 4 implementation, PM stopped before commit when the original
+ADR-0072 contract could not distinguish same-type ambiguous field-slot swaps
+without violating its no-name-guessing boundary. Tech Lead amended the ADR to
+allow renames only for entity keys and fields structurally unique within their
+owner. The four same-type slots are now a deliberately narrower V1 contract:
+`startUtc`, `endUtc`, `notes`, and `cancellationReason` keep their canonical
+keys and order; any rename, duplicate, missing slot, or reordering is rejected.
+The amended ADR explicitly treats a byte-identical Blueprint as unable to
+express a hidden semantic exchange and makes no claim to detect it.
+
+The amended ADR-0072 SHA-256 is
+`6f99354b1f85d4495ca627552ec221cd2b7ae04c799684e13d014decc457b084`.
+The earlier `d06a1a7ed04ae77f578331c724e895ba6cd7aecf4c9438fb5b8be83fd01963e9`
+standing acceptance is superseded and grants no implementation authority.
+Independent read-only reviewer `/root/appointment_definition_review` verified
+the exact amended hash, decision gates, executable verification commands,
+threat-model consistency, bounded rollback, and no-extra-authority boundary.
+The reviewer returned
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes` with P0/P1/P2 `0/0/0` and no
+uncertainty. Under the founder standing independent-review authorization in
+`docs/tech-governance.md` (2026-09-01), PM accepts the amended ADR and resumes
+Task 4 only within this narrower contract and its recorded stop conditions.
+
+### 2026-09-18 Appointment compiler-facade governance amendment accepted
+
+Task 4 review found that activating the already accepted Appointment compiler
+profile required two bounded facade seams and a closed numeric witness, and
+that the evidence fixture needed stronger provenance. Tech Lead amended
+ADR-0072 again. The final SHA-256 is
+`89c5af483a6c8829653595b64b82a5a9062b33ebc0f3d660d666ead5d364c527`.
+The earlier `fcd07baefd2ae5218a9e479d164409e232f358a3f80d07af36ed99ffe4a0f1ea`
+acceptance, as well as the earlier ADR-0072 hashes, is superseded.
+
+The amendment authorizes only `packages/compiler/src/index.ts` and focused
+compiler tests/fixtures for this integration. Both facade seams must use one
+private predicate that verifies the exact seven Appointment locks and digests,
+profile, owner-aware duration/capacity integer fields, exact exclusive-minimum
+zero domains, no other numeric domains, and no `calculation` on any Graph
+field; invalid or injected fields fail before rendering. It adds no template,
+generated runtime, API, database, Graph schema, migration, dependency,
+deployment, or release authority.
+
+The amendment also freezes the retained baseline capture script and literal
+invocation, full parent commit
+`b8d796961b1ff68c7d5efa1a12fe353aa370eee8`, clean status, tool versions,
+script/fixture hashes, and compiler-input graph hash/lock checksum. Independent
+read-only reviewer `/root/appointment_definition_review` verified the exact
+hash and all decision gates, returning
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes` with P0/P1/P2 `0/0/0` and no
+uncertainty. Under the founder standing authorization in
+`docs/tech-governance.md` (2026-09-01), PM accepts this exact ADR and authorizes
+the bounded compiler evidence fix round. Task 4 remains incomplete until the
+script, receipt, numeric adversarial tests, and final independent review pass.
+
+### 2026-09-18 Appointment compiler-private witness amendment accepted
+
+The second independent Task 4 review found that the accepted compiler-facade
+scope could not add a page-seam test harness through the public compiler entry
+point, and that the old-seven capture still inherited plan and Graph hashes from
+the prior fixture. Tech Lead amended ADR-0072 to authorize exactly one private
+implementation module, `packages/compiler/src/appointment-compilation-admission.ts`.
+`packages/compiler/src/index.ts` remains the sole production importer and must
+invoke the one shared witness only at the bundle-generation and page-runtime
+facade seams. The witness, its private subpath, and any new symbol remain absent
+from the public JavaScript/type exports and package export map. No generated
+template, runtime behavior, API, schema, migration, dependency, or stable
+identifier authority was added.
+
+The amended ADR-0072 SHA-256 is
+`93b4eea347b6b6298f803aeddbda317c2b6da8ecdfd699fc08adb0c251f55b8b`.
+The previous `89c5af483a6c8829653595b64b82a5a9062b33ebc0f3d660d666ead5d364c527`
+acceptance is superseded and grants no implementation authority. Independent
+read-only reviewer `/root/appointment_definition_review` verified this exact
+hash, the sole-importer/public-export boundary, TST-013/VER-003, STP-006, and
+the rollback/security limits, returning
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes` with P0/P1/P2 `0/0/0` and no
+uncertainty. Under the founder standing authorization in
+`docs/tech-governance.md` (2026-09-01), PM accepts this exact amendment and
+authorizes the next bounded Task 4 fix round. The task remains incomplete until
+all old-seven evidence fields are recomputed from the immutable parent, the
+full numeric/calculation/lock matrix passes both seams, public export identity
+is proven unchanged, and the independent implementation review is clean.
+
+### 2026-09-18 Appointment compiler export-boundary and real-renderer amendment accepted
+
+The third independent Task 4 review found three implementation gaps: the
+retained seven-definition capture linked current workspace dependencies, the
+compiled private witness subpath was importable by a dependent consumer, and
+the page-runtime adversarial proof called only the predicate rather than the
+actual renderer. Tech Lead amended ADR-0072 with a root-only compiler export
+map (PRO-005) and a single-assignment private seam that registers the actual
+local `renderPageRuntime` function (FAC-008). The amendment keeps `main` and
+`types`, exposes only `.` and rejects every `@factory/compiler/*` subpath with
+`ERR_PACKAGE_PATH_NOT_EXPORTED`; it freezes `pnpm-lock.yaml`, dependencies,
+templates, generated bytes, runtime/API/schema/migrations, and stable
+identifiers.
+
+The exact ADR-0072 SHA-256 is
+`72ba9bfe24628f1ad01a81f77c82b14d055a5f5a804f9f596ecfb7f233df9fab`.
+Independent read-only reviewer `/root/appointment_definition_review` returned
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes` with P0/P1/P2 `0/0/0` and no material
+uncertainty. Under the founder standing independent-review authorization in
+`docs/tech-governance.md` (2026-09-01), PM accepts this exact amendment and
+authorizes implementation only in `packages/compiler/package.json`, the two
+compiler source paths, and focused tests/fixtures/evidence. The implementation
+must prove detached-parent dependency realpaths, consumer root success/deep
+import failure, exact manifest/lockfile identity, actual renderer registration,
+valid-byte equality, and the complete adversarial mutation matrix through both
+real seams. Appointment remains unaccepted as an eighth product until Task 6
+runtime evidence and final release review are complete.

@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { createCapabilityCompositionLock } from "@factory/capabilities";
 import { hashApplicationGraph } from "@factory/graph";
 import { generateApplicationBundle } from "../src/index.js";
-import { assertAppointmentPageRuntimeAdmission } from "../src/appointment-compilation-admission.js";
+import { renderAppointmentPageRuntimeForTest } from "../src/appointment-compilation-admission.js";
 import {
   currentDefinitionDataCompatibility,
   currentDefinitionDataCompilationEvidence,
@@ -19,6 +19,7 @@ import {
 import {
   appointmentMutationContract,
   appointmentPrismaMigration,
+  selectAppointmentRuntimeProfile,
   appointmentPrismaSchema,
 } from "../src/appointment-mutation-contract.js";
 
@@ -38,15 +39,34 @@ describe("Product definition data compatibility", () => {
       : lock;
     return () => generateApplicationBundle({ publishedRevisionId: "appointment-adversarial", graph, compositionLock } as never);
   }
-  function renderAppointmentMutation(mutate: (graph: any, lock: any) => void, refreshChecksum = true) {
+  function renderAppointmentMutation(
+    mutate: (graph: any, lock: any) => void,
+    refreshChecksum = true,
+  ) {
     const input = appointmentDefinitionCompilationInput();
+    const appointmentProfile = selectAppointmentRuntimeProfile(
+      input.graph,
+      input.compositionLock,
+    );
     const graph = structuredClone(input.graph);
     const lock = structuredClone(input.compositionLock);
     mutate(graph, lock);
     const compositionLock = refreshChecksum
-      ? createCapabilityCompositionLock({ graphChecksum: hashApplicationGraph(graph), selections: lock.packages })
+      ? createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(graph),
+          selections: lock.packages,
+        })
       : lock;
-    return () => assertAppointmentPageRuntimeAdmission(graph, compositionLock);
+    return () =>
+      renderAppointmentPageRuntimeForTest(
+        graph,
+        undefined,
+        true,
+        "legacy",
+        undefined,
+        appointmentProfile,
+        compositionLock,
+      );
   }
   function addValidCalculation(graph: any, entityKey: string) {
     const entity = graph.domain.entities.find((candidate: any) => candidate.key === entityKey);
@@ -154,6 +174,28 @@ describe("Product definition data compatibility", () => {
   it("rejects a non-exact Appointment lock before emitting a bundle", () => {
     expect(() => compileAppointmentMutation((_graph, lock) => { lock.packages.find((entry: any) => entry.lock.key === "core.crud").lock.version = "9.9.9"; }, false)()).toThrow();
   });
+  it("renders admitted Appointment page-runtime bytes identically to the bundle", () => {
+    const input = appointmentDefinitionCompilationInput();
+    const profile = selectAppointmentRuntimeProfile(
+      input.graph,
+      input.compositionLock,
+    );
+    const rendered = renderAppointmentPageRuntimeForTest(
+      input.graph,
+      undefined,
+      true,
+      "legacy",
+      undefined,
+      profile,
+      input.compositionLock,
+    );
+    const bundled = generateApplicationBundle({
+      publishedRevisionId: "appointment-page-runtime",
+      graph: input.graph,
+      compositionLock: input.compositionLock,
+    } as never).files.find((file) => file.path === "web/app/page-runtime.tsx");
+    expect(rendered).toBe(bundled?.content);
+  });
   it.each([
     ["bound duration slot", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").required = false; }],
     ["unbound capacity slot", (_graph: any, lock: any) => { lock.packages.find((entry: any) => entry.lock.key === "scheduling.appointment").bindings.scheduleCapacityField.graphSymbol = "graph.domain.service"; }],
@@ -184,6 +226,118 @@ describe("Product definition data compatibility", () => {
     expect(() => renderAppointmentMutation(mutate, false)()).toThrow();
   });
 
+  const canonicalAppointmentRejections = [
+    [
+      "missing duration domain",
+      (graph: any, lock: any) => {
+        delete appointmentField(
+          graph,
+          lock,
+          "serviceDurationMinutesField",
+        ).numericDomain;
+      },
+      true,
+    ],
+    [
+      "nonzero numeric minimum",
+      (graph: any, lock: any) => {
+        appointmentField(
+          graph,
+          lock,
+          "serviceDurationMinutesField",
+        ).numericDomain.minimum.value = 1;
+      },
+      true,
+    ],
+    [
+      "unknown numeric step",
+      (graph: any, lock: any) => {
+        appointmentField(
+          graph,
+          lock,
+          "scheduleCapacityField",
+        ).numericDomain.step = 1;
+      },
+      true,
+    ],
+    [
+      "non-Golden lock",
+      (_graph: any, lock: any) => {
+        lock.packages.find(
+          (entry: any) => entry.lock.key === "core.crud",
+        ).lock.lifecycle = "draft";
+      },
+      false,
+    ],
+    [
+      "incomplete binding",
+      (_graph: any, lock: any) => {
+        delete lock.packages.find(
+          (entry: any) => entry.lock.key === "scheduling.appointment",
+        ).bindings.serviceNameField;
+      },
+      true,
+    ],
+    [
+      "stale lock digest",
+      (_graph: any, lock: any) => {
+        lock.packages.find(
+          (entry: any) => entry.lock.key === "core.crud",
+        ).lock.manifestDigest = "sha256:" + "0".repeat(64);
+      },
+      false,
+    ],
+    [
+      "missing lock",
+      (_graph: any, lock: any) => {
+        lock.packages.pop();
+      },
+      false,
+    ],
+    [
+      "extra lock",
+      (_graph: any, lock: any) => {
+        lock.packages.push({
+          lock: {
+            ...structuredClone(lock.packages[0]).lock,
+            key: "unreviewed.capability",
+          },
+          bindings: {},
+        });
+      },
+      false,
+    ],
+    [
+      "duplicate lock",
+      (_graph: any, lock: any) => {
+        lock.packages.push(structuredClone(lock.packages[0]));
+      },
+      false,
+    ],
+    [
+      "checksum mismatch",
+      (graph: any) => {
+        graph.domain.entities[0].fields[0].required = false;
+      },
+      false,
+    ],
+  ] as const;
+  it.each(canonicalAppointmentRejections)(
+    "rejects canonical Appointment %s before bundle output",
+    (_label, mutate, refreshChecksum) => {
+      expect(() =>
+        compileAppointmentMutation(mutate, refreshChecksum)(),
+      ).toThrow();
+    },
+  );
+  it.each(canonicalAppointmentRejections)(
+    "rejects canonical Appointment %s before page-runtime output",
+    (_label, mutate, refreshChecksum) => {
+      expect(() =>
+        renderAppointmentMutation(mutate, refreshChecksum)(),
+      ).toThrow();
+    },
+  );
   it("preserves all seven pre-Appointment definitions from immutable b8d79696", () => {
     const baselineBytes = readFileSync(
       new URL("./fixtures/seven-definition-baseline.json", import.meta.url),
@@ -210,6 +364,11 @@ describe("Product definition data compatibility", () => {
     const receipt = new URL("../../../docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json", import.meta.url);
     expect(existsSync(script)).toBe(true);
     expect(existsSync(receipt)).toBe(true);
+    const scriptContents = readFileSync(script, "utf8");
+    expect(scriptContents).toContain("--offline");
+    expect(scriptContents).toContain("--frozen-lockfile");
+    expect(scriptContents).toContain("realpathSync");
+    expect(scriptContents).not.toContain("symlinkSync");
     const parsed = JSON.parse(readFileSync(receipt, "utf8"));
     expect(Object.keys(parsed)).toEqual(["parentHead", "statusPorcelainV1", "nodeVersion", "pnpmVersion", "command", "captureScriptPath", "captureScriptSha256", "fixturePath", "fixtureSha256"]);
     expect(parsed.parentHead).toBe("b8d796961b1ff68c7d5efa1a12fe353aa370eee8");

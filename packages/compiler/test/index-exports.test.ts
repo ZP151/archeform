@@ -1,5 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolve } from "node:path";
+import * as ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -63,6 +66,42 @@ function publicExportSurface(source: string) {
     .sort();
 }
 
+function runtimeExportSurface(source: string) {
+  const sourceFile = ts.createSourceFile(
+    "index.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TS,
+  );
+  const values: string[] = [];
+  for (const statement of sourceFile.statements) {
+    if (ts.isExportDeclaration(statement)) {
+      if (statement.exportClause && ts.isNamedExports(statement.exportClause)) {
+        for (const element of statement.exportClause.elements) {
+          if (!element.isTypeOnly) values.push(element.name.text);
+        }
+      }
+      continue;
+    }
+    if (
+      !statement.modifiers?.some(
+        ({ kind }) => kind === ts.SyntaxKind.ExportKeyword,
+      )
+    )
+      continue;
+    if (
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement)) &&
+      statement.name
+    ) {
+      values.push(statement.name.text);
+      continue;
+    }
+  }
+  return values.sort();
+}
+
 describe("Appointment compiler admission exports", () => {
   it("keeps the immutable public index surface and the admission module private", () => {
     const current = readFileSync(compilerIndexPath, "utf8");
@@ -74,8 +113,8 @@ describe("Appointment compiler admission exports", () => {
     expect(publicExportSurface(current)).toEqual(
       publicExportSurface(historical),
     );
-    expect(current).toContain(
-      'import { exactAppointmentNumericWitness } from "./appointment-compilation-admission.js";',
+    expect(current).toMatch(
+      /import\s*\{[\s\S]*exactAppointmentNumericWitness,[\s\S]*registerAppointmentPageRuntimeForTest,[\s\S]*\}\s*from "\.\/appointment-compilation-admission\.js";/,
     );
     expect(current).not.toMatch(
       /export\s+(?:\*|\{[^}]*appointment-compilation-admission)/,
@@ -83,11 +122,155 @@ describe("Appointment compiler admission exports", () => {
     expect(
       execFileSync(
         "git",
-        ["grep", "-l", "appointment-compilation-admission", "--", "src"],
+        [
+          "grep",
+          "-l",
+          'from "./appointment-compilation-admission.js"',
+          "--",
+          "src",
+        ],
         { encoding: "utf8" },
       )
         .trim()
         .split("\n"),
     ).toEqual(["src/index.ts"]);
+  });
+});
+
+const consumerWorkerDirectory = resolve(
+  fileURLToPath(new URL("../../../apps/compiler-worker/", import.meta.url)),
+);
+
+function consumerImport(specifier: string) {
+  return execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      "const specifier = process.argv[1]; try { await import(specifier); console.log('ok'); } catch (error) { console.log(error.code); }",
+      specifier,
+    ],
+    { cwd: consumerWorkerDirectory, encoding: "utf8" },
+  ).trim();
+}
+
+function consumerRuntimeExportKeys() {
+  return JSON.parse(
+    execFileSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        "const mod = await import(process.argv[1]); console.log(JSON.stringify(Object.keys(mod).sort()));",
+        "@factory/compiler",
+      ],
+      { cwd: consumerWorkerDirectory, encoding: "utf8" },
+    ),
+  ) as string[];
+}
+
+function privateSeamProbe() {
+  const admissionUrl = pathToFileURL(
+    fileURLToPath(
+      new URL("../dist/appointment-compilation-admission.js", import.meta.url),
+    ),
+  ).href;
+  const compilerUrl = pathToFileURL(
+    fileURLToPath(new URL("../dist/index.js", import.meta.url)),
+  ).href;
+  return execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `const admission = await import(process.argv[1]);
+try {
+  admission.renderAppointmentPageRuntimeForTest({}, undefined, true, "legacy", undefined, undefined, undefined);
+} catch (error) {
+  console.log("missing:" + error.message);
+}
+await import(process.argv[2]);
+try {
+  admission.registerAppointmentPageRuntimeForTest(() => "duplicate");
+} catch (error) {
+  console.log("repeat:" + error.message);
+}`,
+      admissionUrl,
+      compilerUrl,
+    ],
+    { cwd: consumerWorkerDirectory, encoding: "utf8" },
+  )
+    .trim()
+    .split(/\r?\n/);
+}
+
+describe("compiler consumer package boundary", () => {
+  it("allows the root import and rejects private deep imports", () => {
+    const historical = execFileSync(
+      "git",
+      ["show", `${immutableCompilerParent}:packages/compiler/src/index.ts`],
+      { encoding: "utf8" },
+    );
+    expect(consumerRuntimeExportKeys()).toEqual(
+      runtimeExportSurface(historical),
+    );
+    for (const specifier of [
+      "@factory/compiler/dist/appointment-compilation-admission.js",
+      "@factory/compiler/package.json",
+      "@factory/compiler/src/index.ts",
+      "@factory/compiler/src/appointment-compilation-admission.ts",
+      "@factory/compiler/appointment-compilation-admission",
+    ]) {
+      expect(consumerImport(specifier)).toBe("ERR_PACKAGE_PATH_NOT_EXPORTED");
+    }
+  });
+
+  it("fails closed for missing and repeated private renderer registration", () => {
+    expect(privateSeamProbe()).toEqual([
+      "missing:Appointment page-runtime facade is unavailable.",
+      "repeat:Appointment page-runtime facade is already registered.",
+    ]);
+  });
+
+  it("registers the actual page-runtime reference exactly once", () => {
+    const source = readFileSync(
+      new URL("../src/index.ts", import.meta.url),
+      "utf8",
+    );
+    expect(
+      source.match(
+        /registerAppointmentPageRuntimeForTest\(renderPageRuntime\);/g,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("preserves the immutable lockfile and only adds the root package export", () => {
+    const historicalLock = execFileSync(
+      "git",
+      ["show", `${immutableCompilerParent}:pnpm-lock.yaml`],
+      { encoding: "utf8" },
+    );
+    expect(
+      readFileSync(new URL("../../../pnpm-lock.yaml", import.meta.url), "utf8"),
+    ).toBe(historicalLock);
+    const currentManifest = JSON.parse(
+      readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+    ) as Record<string, unknown>;
+    const historicalManifest = JSON.parse(
+      execFileSync(
+        "git",
+        ["show", `${immutableCompilerParent}:packages/compiler/package.json`],
+        { encoding: "utf8" },
+      ),
+    ) as Record<string, unknown>;
+    const { exports: currentExports, ...currentWithoutExports } =
+      currentManifest;
+    expect(currentWithoutExports).toEqual(historicalManifest);
+    expect(currentExports).toEqual({
+      ".": {
+        types: "./dist/index.d.ts",
+        default: "./dist/index.js",
+      },
+    });
   });
 });

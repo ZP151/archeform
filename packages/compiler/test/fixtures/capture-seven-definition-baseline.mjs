@@ -6,12 +6,12 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
-  symlinkSync,
+  realpathSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, relative, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const parent = "b8d796961b1ff68c7d5efa1a12fe353aa370eee8";
@@ -64,32 +64,51 @@ function ensureExactInvocation() {
   }
 }
 
-function linkDependencies(checkout) {
-  const link = (source, destination) => {
-    if (!existsSync(source) || existsSync(destination)) return;
-    mkdirSync(dirname(destination), { recursive: true });
-    symlinkSync(
-      source,
-      destination,
-      process.platform === "win32" ? "junction" : "dir",
-    );
-  };
-  link(resolve(root, "node_modules"), resolve(checkout, "node_modules"));
+function installDetachedDependencies(checkout) {
+  const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+  run(pnpm, [
+    "--dir",
+    checkout,
+    "install",
+    "--offline",
+    "--frozen-lockfile",
+    "--ignore-scripts",
+    "--prod=false",
+  ]);
   for (const packageName of [
-    "adapters",
-    "capabilities",
-    "compiler",
-    "experience-recipes",
-    "graph",
-    "screen-recipes",
+    "@factory/graph",
+    "@factory/ui-primitives",
+    "@factory/ui-patterns",
+    "@factory/generated-ui",
+    "@factory/experience-recipes",
+    "@factory/screen-recipes",
+    "@factory/capabilities",
+    "@factory/adapters",
   ]) {
-    link(
-      resolve(root, "packages", packageName, "node_modules"),
-      resolve(checkout, "packages", packageName, "node_modules"),
-    );
+    run(pnpm, ["--dir", checkout, "--filter", packageName, "build"]);
   }
 }
+function resolutionDriver(checkout) {
+  return `import { realpathSync } from "node:fs";
+import { relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
+const detachedRoot = realpathSync(
+  fileURLToPath(new URL("../../../", import.meta.url)),
+);
+for (const specifier of [
+  "@factory/capabilities",
+  "@factory/capabilities/node",
+  "@factory/graph",
+  "@factory/adapters",
+]) {
+  const resolved = realpathSync(fileURLToPath(import.meta.resolve(specifier)));
+  const outside = relative(detachedRoot, resolved);
+  if (outside === "" || outside.startsWith(".."))
+    throw new Error("Detached capture resolved outside parent: " + specifier);
+}
+`;
+}
 function captureTest(outputPath, checkout) {
   const source = (relativePath) =>
     pathToFileURL(resolve(checkout, relativePath)).href;
@@ -111,7 +130,6 @@ import {
   hashApplicationGraph,
 } from "@factory/graph";
 import { generateApplicationBundle } from "${source("packages/compiler/src/index.ts")}";
-
 const digest = (value) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
@@ -230,6 +248,10 @@ function main() {
     resolve(tmpdir(), "archeform-seven-definition-"),
   );
   const checkout = resolve(temporary, "checkout");
+  const temporaryResolution = resolve(
+    checkout,
+    "packages/compiler/test/.capture-seven-definition-resolution.mjs",
+  );
   const temporaryTest = resolve(
     checkout,
     "packages/compiler/test/.capture-seven-definition-baseline.test.ts",
@@ -238,23 +260,25 @@ function main() {
     run("git", ["worktree", "add", "--detach", checkout, parent]);
     if (status(checkout) !== "")
       throw new Error("The isolated parent checkout was not clean.");
-    linkDependencies(checkout);
+    installDetachedDependencies(checkout);
     if (status(checkout) !== "")
       throw new Error(
         "The isolated parent checkout changed before driver creation.",
       );
+    writeFileSync(temporaryResolution, resolutionDriver(checkout), "utf8");
+    run("node", [temporaryResolution], { cwd: checkout });
     writeFileSync(temporaryTest, captureTest(fixture, checkout), "utf8");
     run(process.platform === "win32" ? "pnpm.cmd" : "pnpm", [
       "--dir",
       checkout,
       "--filter",
       "@factory/compiler",
-      "exec",
       "vitest",
       "run",
       relative(resolve(checkout, "packages/compiler"), temporaryTest),
     ]);
     unlinkSync(temporaryTest);
+    unlinkSync(temporaryResolution);
     if (status(checkout) !== "")
       throw new Error("The isolated parent checkout was modified by capture.");
     const captured = JSON.parse(readFileSync(fixture, "utf8"));
