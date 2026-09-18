@@ -5,9 +5,9 @@ import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 export const appointmentMutationContract = {
   key: "appointment-mutation",
   version: "1.0.0",
-  mutation: "factory.generated.appointment-mutation/v1",
-  receipt: "factory.generated.appointment-mutation-receipt/v1",
-  history: "factory.generated.appointment-history/v1",
+  mutation: "factory.generated.appointment-command/v1",
+  receipt: "factory.generated.appointment-receipt/v1",
+  history: "factory.generated.appointment-history-entry/v1",
   ownership: "factory-authored",
   license: "UNLICENSED",
 } as const;
@@ -153,6 +153,16 @@ function active(value: unknown): boolean {
   return value === "requested" || value === "confirmed";
 }
 
+function slot(profile: AppointmentRuntimeProfile, schedule: Record<string, unknown>) {
+  return {
+    scheduleId: nonEmpty(schedule.id, "appointment.schedule_invalid"),
+    serviceId: nonEmpty(schedule[profile.fields.scheduleService], "appointment.schedule_invalid"),
+    startUtc: canonicalUtc(schedule[profile.fields.scheduleStart]),
+    endUtc: canonicalUtc(schedule[profile.fields.scheduleEnd]),
+    timezone: nonEmpty(schedule[profile.fields.scheduleTimezone], "appointment.schedule_invalid"),
+  };
+}
+
 function record(profile: AppointmentRuntimeProfile, value: Record<string, unknown>): AppointmentRecord {
   const id = nonEmpty(value.id, "appointment.version_conflict");
   const status = value[profile.fields.appointmentStatus];
@@ -270,7 +280,7 @@ export function createAppointmentCommandRuntime(profile: AppointmentRuntimeProfi
         return record(profile, plain(replay.response, "appointment.idempotency_conflict"));
       }
       const result = await mutate(transaction);
-      await transaction.appendAppointmentHistory({ ...result.history, appointmentId: result.record.id, at: input.now, actor: input.role });
+      await transaction.appendAppointmentHistory({ apiVersion: appointmentMutationContract.history, ...result.history, appointmentId: result.record.id, at: input.now, actorRole: input.role });
       await transaction.appendCapabilityEvent({ actor: input.role, capability: profile.effect, operation: result.capabilityOperation, entity: profile.appointmentEntity, recordId: result.record.id, outcome: "completed", at: input.now });
       await transaction.saveAppointmentReceipt({ scope: input.scope, idempotencyKey: input.idempotencyKey, requestHash: input.requestHash, operation, response: result.record });
       return result.record;
@@ -285,7 +295,7 @@ export function createAppointmentCommandRuntime(profile: AppointmentRuntimeProfi
         fail(400, "appointment.invalid_request");
       if (input.notes !== undefined && (typeof input.notes !== "string" || input.notes.length > 2000)) fail(400, "appointment.invalid_request");
       return commit(store, actor, "request", async (transaction) => {
-        await scheduleForClaim(transaction, nonEmpty(input.scheduleId));
+        const selected = await scheduleForClaim(transaction, nonEmpty(input.scheduleId));
         const created = await transaction.create(profile.appointmentEntity, {
           [profile.fields.appointmentSchedule]: nonEmpty(input.scheduleId),
           [profile.fields.appointmentCustomer]: nonEmpty(input.customerName),
@@ -295,7 +305,7 @@ export function createAppointmentCommandRuntime(profile: AppointmentRuntimeProfi
           version: 0,
         });
         const result = record(profile, created);
-        return { record: result, history: { operation: "request", scheduleId: result.scheduleId }, capabilityOperation: "claim" };
+        return { record: result, history: { action: "claim", fromStatus: null, toStatus: "requested", fromSlot: null, toSlot: slot(profile, selected), cancellationReason: null }, capabilityOperation: "claim" };
       });
     },
     async confirm(store: AppointmentCommandStore, contextInput: unknown, body: unknown): Promise<AppointmentRecord> {
@@ -307,10 +317,13 @@ export function createAppointmentCommandRuntime(profile: AppointmentRuntimeProfi
         const prior = record(profile, current);
         if (prior.version !== version(input.expectedVersion)) fail(409, "appointment.version_conflict");
         if (prior.status !== "requested") fail(409, "appointment.state_conflict");
+        const selected = await transaction.find(profile.scheduleEntity, prior.scheduleId);
+        if (!selected) fail(409, "appointment.schedule_invalid");
+        const unchangedSlot = slot(profile, selected);
         const changed = await transaction.conditionalUpdate(profile.appointmentEntity, prior.id, prior.version, { [profile.fields.appointmentStatus]: "confirmed", version: prior.version + 1 });
         if (!changed) fail(409, "appointment.version_conflict");
         const updated = record(profile, changed);
-        return { record: updated, history: { operation: "confirm", scheduleId: prior.scheduleId }, capabilityOperation: "confirm" };
+        return { record: updated, history: { action: "confirm", fromStatus: "requested", toStatus: "confirmed", fromSlot: unchangedSlot, toSlot: unchangedSlot, cancellationReason: null }, capabilityOperation: "confirm" };
       });
     },
     async reschedule(store: AppointmentCommandStore, contextInput: unknown, body: unknown): Promise<AppointmentRecord> {
@@ -324,11 +337,13 @@ export function createAppointmentCommandRuntime(profile: AppointmentRuntimeProfi
         if (prior.status !== "confirmed") fail(409, "appointment.state_conflict");
         const nextSchedule = nonEmpty(input.scheduleId);
         if (nextSchedule === prior.scheduleId) fail(400, "appointment.schedule_invalid");
-        await scheduleForClaim(transaction, nextSchedule, prior.id);
+        const previous = await transaction.find(profile.scheduleEntity, prior.scheduleId);
+        if (!previous) fail(409, "appointment.schedule_invalid");
+        const target = await scheduleForClaim(transaction, nextSchedule, prior.id);
         const changed = await transaction.conditionalUpdate(profile.appointmentEntity, prior.id, prior.version, { [profile.fields.appointmentSchedule]: nextSchedule, [profile.fields.appointmentStatus]: "requested", version: prior.version + 1 });
         if (!changed) fail(409, "appointment.version_conflict");
         const updated = record(profile, changed);
-        return { record: updated, history: { operation: "reschedule", fromScheduleId: prior.scheduleId, scheduleId: nextSchedule }, capabilityOperation: "move" };
+        return { record: updated, history: { action: "move", fromStatus: "confirmed", toStatus: "requested", fromSlot: slot(profile, previous), toSlot: slot(profile, target), cancellationReason: null }, capabilityOperation: "move" };
       });
     },
     async cancel(store: AppointmentCommandStore, contextInput: unknown, body: unknown): Promise<AppointmentRecord> {
@@ -341,16 +356,20 @@ export function createAppointmentCommandRuntime(profile: AppointmentRuntimeProfi
         if (prior.version !== version(input.expectedVersion)) fail(409, "appointment.version_conflict");
         if (!active(prior.status)) fail(409, "appointment.state_conflict");
         const reason = nonEmpty(input.cancellationReason);
+        const previous = await transaction.find(profile.scheduleEntity, prior.scheduleId);
+        if (!previous) fail(409, "appointment.schedule_invalid");
         const changed = await transaction.conditionalUpdate(profile.appointmentEntity, prior.id, prior.version, { [profile.fields.appointmentStatus]: "cancelled", [profile.fields.appointmentCancellationReason]: reason, version: prior.version + 1 });
         if (!changed) fail(409, "appointment.version_conflict");
         const updated = record(profile, changed);
-        return { record: updated, history: { operation: "cancel", scheduleId: prior.scheduleId, cancellationReason: reason }, capabilityOperation: "release" };
+        return { record: updated, history: { action: "cancel", fromStatus: prior.status, toStatus: "cancelled", fromSlot: slot(profile, previous), toSlot: null, cancellationReason: reason }, capabilityOperation: "release" };
       });
     },
     async history(store: AppointmentCommandStore & { listAppointmentHistory?: (appointmentId: string) => Promise<readonly Record<string, unknown>[]> }, contextInput: unknown, appointmentId: string): Promise<readonly Record<string, unknown>[]> {
       const actor = context(contextInput); role(actor, ["customer", "staff", "administrator"]);
       if (!store.listAppointmentHistory) fail(404, "appointment.history_unavailable");
-      return store.listAppointmentHistory(nonEmpty(appointmentId));
+      const id = nonEmpty(appointmentId);
+      if (!await store.find(profile.appointmentEntity, id)) fail(404, "appointment.not_found");
+      return (await store.listAppointmentHistory(id)).slice(0, 100);
     },
   };
 }

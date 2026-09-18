@@ -14,9 +14,9 @@ describe("Product definition data compatibility", () => {
     expect(appointmentMutationContract).toEqual({
       key: "appointment-mutation",
       version: "1.0.0",
-      mutation: "factory.generated.appointment-mutation/v1",
-      receipt: "factory.generated.appointment-mutation-receipt/v1",
-      history: "factory.generated.appointment-history/v1",
+      mutation: "factory.generated.appointment-command/v1",
+      receipt: "factory.generated.appointment-receipt/v1",
+      history: "factory.generated.appointment-history-entry/v1",
       ownership: "factory-authored",
       license: "UNLICENSED",
     });

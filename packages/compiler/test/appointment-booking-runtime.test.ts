@@ -192,10 +192,10 @@ describe("appointment booking compiler runtime", () => {
     ]);
     expect(cancelled.cancellationReason).toBe("Changed plans");
     expect(await runtime.history(store, context("staff", "history"), requested.id)).toEqual([
-      expect.objectContaining({ operation: "request", scheduleId: "slot-1" }),
-      expect.objectContaining({ operation: "confirm", scheduleId: "slot-1" }),
-      expect.objectContaining({ operation: "reschedule", fromScheduleId: "slot-1", scheduleId: "slot-2" }),
-      expect.objectContaining({ operation: "cancel", cancellationReason: "Changed plans" }),
+      expect.objectContaining({ apiVersion: "factory.generated.appointment-history-entry/v1", action: "claim", fromStatus: null, toStatus: "requested", toSlot: { scheduleId: "slot-1", serviceId: "service-1", startUtc: "2026-10-01T09:00:00.000Z", endUtc: "2026-10-01T09:30:00.000Z", timezone: "Asia/Singapore" } }),
+      expect.objectContaining({ action: "confirm", fromStatus: "requested", toStatus: "confirmed" }),
+      expect.objectContaining({ action: "move", fromStatus: "confirmed", toStatus: "requested", fromSlot: expect.objectContaining({ scheduleId: "slot-1" }), toSlot: expect.objectContaining({ scheduleId: "slot-2" }) }),
+      expect.objectContaining({ action: "cancel", fromStatus: "requested", toStatus: "cancelled", cancellationReason: "Changed plans", fromSlot: expect.objectContaining({ scheduleId: "slot-2" }), toSlot: null }),
     ]);
     expect(store.events.map((entry) => entry.operation)).toEqual(["claim", "confirm", "move", "release"]);
   });
@@ -243,5 +243,11 @@ describe("appointment booking compiler runtime", () => {
     const beforeInvalid = snapshot(store);
     await expect(runtime.request(store, context("customer", "invalid"), { scheduleId: "slot-2", customerName: "Bea" })).rejects.toMatchObject({ code: "appointment.schedule_invalid", status: 400 });
     expect(snapshot(store)).toEqual(beforeInvalid);
+
+    store.records.get("schedule")!.get("slot-2")!.timezone = "Mars/Olympus";
+    const beforeTimezone = snapshot(store);
+    await expect(runtime.request(store, context("customer", "timezone"), { scheduleId: "slot-2", customerName: "Bea" })).rejects.toMatchObject({ code: "appointment.schedule_invalid", status: 400 });
+    expect(snapshot(store)).toEqual(beforeTimezone);
+    await expect(runtime.history(store, context("staff", "missing-history"), "missing")).rejects.toMatchObject({ code: "appointment.not_found", status: 404 });
   });
 });
