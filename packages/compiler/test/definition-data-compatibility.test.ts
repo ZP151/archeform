@@ -1,9 +1,13 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
+import { createCapabilityCompositionLock } from "@factory/capabilities";
+import { hashApplicationGraph } from "@factory/graph";
+import { generateApplicationBundle } from "../src/index.js";
 import {
   currentDefinitionDataCompatibility,
   currentDefinitionDataCompilationEvidence,
+  appointmentDefinitionCompilationInput,
 } from "./fixtures/definition-data-compatibility.js";
 import type { GeneratedFile } from "../src/core/generated-files.js";
 import {
@@ -17,6 +21,34 @@ import {
 } from "../src/appointment-mutation-contract.js";
 
 describe("Product definition data compatibility", () => {
+  function appointmentField(graph: any, lock: any, bindingKey: "serviceDurationMinutesField" | "scheduleCapacityField") {
+    const binding = lock.packages.find((entry: any) => entry.lock.key === "scheduling.appointment").bindings[bindingKey];
+    const entity = graph.domain.entities.find((candidate: any) => candidate.key === binding.graphSymbol.replace("graph.domain.", ""));
+    return entity.fields.find((field: any) => field.key === binding.fieldKey);
+  }
+  function compileAppointmentMutation(mutate: (graph: any, lock: any) => void, refreshChecksum = true) {
+    const input = appointmentDefinitionCompilationInput();
+    const graph = structuredClone(input.graph);
+    const lock = structuredClone(input.compositionLock);
+    mutate(graph, lock);
+    const compositionLock = refreshChecksum
+      ? createCapabilityCompositionLock({ graphChecksum: hashApplicationGraph(graph), selections: lock.packages })
+      : lock;
+    return () => generateApplicationBundle({ publishedRevisionId: "appointment-adversarial", graph, compositionLock } as never);
+  }
+  function addValidCalculation(graph: any, entityKey: string) {
+    const entity = graph.domain.entities.find((candidate: any) => candidate.key === entityKey);
+    const domain = { apiVersion: "factory.numeric-field-domain/v1", minimum: { value: 0, inclusive: false } };
+    entity.fields.push(
+      { key: "unreviewedQuantity", type: "integer", required: true, numericDomain: domain },
+      { key: "unreviewedUnitPrice", type: "decimal", required: true, numericDomain: domain },
+      { key: "unreviewedTotal", type: "decimal", required: true, calculation: { apiVersion: "factory.quantity-unit-price-total/v1", quantityFieldKey: "unreviewedQuantity", unitPriceFieldKey: "unreviewedUnitPrice" } },
+    );
+    const values = { unreviewedQuantity: 2, unreviewedUnitPrice: 10, unreviewedTotal: 20 };
+    const seed = graph.domain.seedData.find((candidate: any) => candidate.entity === entityKey);
+    if (seed) Object.assign(seed.values, values);
+    else graph.domain.seedData.push({ entity: entityKey, id: "unreviewed-calculation", values: { subjectRef: "unreviewed-subject", status: "active", expiresAt: "2026-10-01T00:00:00Z", ...values } });
+  }
   it("keeps the additive appointment runtime profile separate from protected definition bundles", () => {
     expect(appointmentMutationContract).toEqual({
       key: "appointment-mutation",
@@ -73,8 +105,11 @@ describe("Product definition data compatibility", () => {
       definitionKey: "appointment-booking-v1",
       planSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       graphSha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      compositionLockGraphSha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       bundleSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
+    expect(first[0]!.graphSha256).toBe(first[0]!.compositionLockGraphSha256);
+    expect(first[0]!.graphSha256).not.toBe(first[0]!.composedGraphSha256);
     expect(first[0]!.files).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -85,17 +120,34 @@ describe("Product definition data compatibility", () => {
     );
   });
 
+  it.each([
+    ["bound duration slot", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").required = false; }],
+    ["unbound capacity slot", (_graph: any, lock: any) => { lock.packages.find((entry: any) => entry.lock.key === "scheduling.appointment").bindings.scheduleCapacityField.graphSymbol = "graph.domain.service"; }],
+    ["injected business calculation", (graph: any) => addValidCalculation(graph, "service")],
+    ["injected Factory session calculation", (graph: any) => addValidCalculation(graph, "data-baseline-appointment-booking-v1-session")],
+    ["extra numeric domain", (graph: any) => { graph.domain.entities[0].fields.push({ key: "unreviewedNumeric", type: "integer", required: false, numericDomain: { apiVersion: "factory.numeric-field-domain/v1", minimum: { value: 0, inclusive: false } } }); }],
+    ["altered numeric domain", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").numericDomain.maximum = { value: 60, inclusive: true }; }],
+    ["missing numeric domain", (graph: any, lock: any) => { delete appointmentField(graph, lock, "scheduleCapacityField").numericDomain; }],
+    ["altered numeric boundary", (graph: any, lock: any) => { appointmentField(graph, lock, "scheduleCapacityField").numericDomain.minimum.inclusive = true; }],
+  ])("rejects Appointment %s before emitting a bundle", (_label, mutate) => {
+    expect(() => compileAppointmentMutation(mutate)()).toThrow();
+  });
+  it("rejects a non-exact Appointment lock before emitting a bundle", () => {
+    expect(() => compileAppointmentMutation((_graph, lock) => { lock.packages.find((entry: any) => entry.lock.key === "core.crud").lock.version = "9.9.9"; }, false)()).toThrow();
+  });
+
   it("preserves all seven pre-Appointment definitions from immutable b8d79696", () => {
     const baselineBytes = readFileSync(
       new URL("./fixtures/seven-definition-baseline.json", import.meta.url),
       "utf8",
     );
     expect(createHash("sha256").update(baselineBytes).digest("hex")).toBe(
-      "d53444468b17d871e4729371543959a908cad0b83079a558b41ae9a5318e7dd0",
+      "104e9d2525ce55b2bfddf263096c5132b36b79f40bbfd344154c37c4e3139b16",
     );
     const expected = JSON.parse(baselineBytes);
     expect(expected.base).toBe("b8d796961b1ff68c7d5efa1a12fe353aa370eee8");
     expect(expected.entries).toHaveLength(7);
+    expect(expected.entries.every((entry: { graphSha256: string; compositionLockGraphSha256: string }) => entry.graphSha256 === entry.compositionLockGraphSha256)).toBe(true);
     expect(
       currentDefinitionDataCompilationEvidence(
         expected.entries.map(
@@ -103,6 +155,20 @@ describe("Product definition data compatibility", () => {
         ),
       ),
     ).toEqual(expected.entries);
+  });
+
+  it("retains a closed receipt for the isolated seven-definition baseline capture", () => {
+    const script = new URL("./fixtures/capture-seven-definition-baseline.mjs", import.meta.url);
+    const receipt = new URL("../../../docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json", import.meta.url);
+    expect(existsSync(script)).toBe(true);
+    expect(existsSync(receipt)).toBe(true);
+    const parsed = JSON.parse(readFileSync(receipt, "utf8"));
+    expect(Object.keys(parsed)).toEqual(["parentHead", "statusPorcelainV1", "nodeVersion", "pnpmVersion", "command", "captureScriptPath", "captureScriptSha256", "fixturePath", "fixtureSha256"]);
+    expect(parsed.parentHead).toBe("b8d796961b1ff68c7d5efa1a12fe353aa370eee8");
+    expect(parsed.statusPorcelainV1).toBe("");
+    expect(parsed.command).toBe("node packages/compiler/test/fixtures/capture-seven-definition-baseline.mjs --parent b8d796961b1ff68c7d5efa1a12fe353aa370eee8 --fixture packages/compiler/test/fixtures/seven-definition-baseline.json --receipt docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json");
+    expect(parsed.captureScriptSha256).toBe(`sha256:${createHash("sha256").update(readFileSync(script)).digest("hex")}`);
+    expect(parsed.fixtureSha256).toBe(`sha256:${createHash("sha256").update(readFileSync(new URL("./fixtures/seven-definition-baseline.json", import.meta.url))).digest("hex")}`);
   });
 
   it("preserves all five delivered definitions and complete Published bundles from bbb1e23c", () => {

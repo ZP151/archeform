@@ -17,6 +17,7 @@ import {
 import { createGeneratedPageRuntimeProjection } from "../src/page-runtime-projection.js";
 import { generateApplicationBundle, type PublishedGraphInput } from "../src/index.js";
 import type { ApplicationGraphV1 } from "@factory/graph";
+import { appointmentDefinitionCompilationInput } from "./fixtures/definition-data-compatibility.js";
 
 const profile: AppointmentRuntimeProfile = {
   capability: "scheduling.appointment@1.0.0",
@@ -82,7 +83,13 @@ async function typecheckGeneratedAppointmentProfile(): Promise<readonly string[]
         const stubPath = resolve(dirname(resolve(directory, file.path)), specifier.replace(/\.js$/, ".ts"));
         if (typecheckedPaths.has(`api/src/${stubPath.slice(resolve(directory, "api/src").length + 1).replace(/\\/g, "/")}`) || stubbedPaths.has(stubPath)) continue;
         const named = /^\{(.+)\}$/.exec(clause.trim());
-        const declarations = named
+        const declarations = specifier.endsWith("core.identity-policy.js")
+          ? [
+              "export type LocalPrincipalContext = { sessionId: string; roles: readonly string[]; [key: string]: unknown };",
+              "export function resolveFixturePrincipal(..._args: unknown[]): LocalPrincipalContext | undefined { return undefined; }",
+              "export function authorizeDeclaredAction(..._args: unknown[]): { allowed: boolean; reason: string } { return { allowed: false, reason: \"stub\" }; }",
+            ].join("\n")
+          : named
           ? named[1]!.split(",").map((entry) => entry.trim().replace(/^type\s+/, "")).filter(Boolean).map((entry) => {
             const alias = entry.split(/\s+as\s+/).at(-1)!;
             return `export type ${alias} = any; export const ${alias}: any = undefined as any;`;
@@ -128,7 +135,7 @@ async function typecheckGeneratedAppointmentProfile(): Promise<readonly string[]
   }
 }
 
-function generatedAppointmentBundle(): ReturnType<typeof generateApplicationBundle> {
+function legacyGeneratedAppointmentBundle(): ReturnType<typeof generateApplicationBundle> {
   const asset = getCapabilityAsset("scheduling.appointment");
   const bindings = {
     serviceEntity: { graphSymbol: "graph.domain.service" },
@@ -165,6 +172,15 @@ function generatedAppointmentBundle(): ReturnType<typeof generateApplicationBund
     experience: { theme: { mode: "light", tokens: {} }, locales: ["en"] },
   } as unknown as ApplicationGraphV1;
   return generateApplicationBundle({ publishedRevisionId: "appointment-generated-1", graph, compositionLock: createCapabilityCompositionLock({ graphChecksum: hashApplicationGraph(graph), selections: [selection] }) } as PublishedGraphInput);
+}
+
+function generatedAppointmentBundle(): ReturnType<typeof generateApplicationBundle> {
+  const { graph, compositionLock } = appointmentDefinitionCompilationInput();
+  return generateApplicationBundle({
+    publishedRevisionId: "appointment-generated-1",
+    graph,
+    compositionLock,
+  } as PublishedGraphInput);
 }
 
 function snapshot(store: TestStore) {
@@ -294,9 +310,9 @@ describe("appointment booking compiler runtime", () => {
     const files = new Map(generatedAppointmentBundle().files.map((file) => [file.path, file.content]));
     const digest = (path: string) => createHash("sha256").update(files.get(path)!, "utf8").digest("hex");
     expect({ api: digest("api/src/main.ts"), runtime: digest("api/src/application-runtime.ts"), prisma: digest("api/src/prisma-record-store.ts") }).toEqual({
-      api: "81eae027a9733cb6b0ff8da013832065d41291a20a2e7f239227104698c0f3e5",
-      runtime: "ce89e71629f5e7e48f86aee5597f85babd1b388d0accc9ce2953bee7d4a2a2a0",
-      prisma: "371d3284fefd985a50ccb977b7e7f3b8630f8b9eb8ffbf2e63082dd59e61814b",
+      api: "f520d5e01f27d8750f0daeeaec2c716a1f405c19f45991378b05486e20715fa1",
+      runtime: "5dba5e28bcbb608a4e1c90847152e6e634b10f42235e52d7e03f754522c9052f",
+      prisma: "1b7cef899385edb4fab52863884bfd449776bf5c8489aa7f99d8cc1b0ed97ff2",
     });
     expect(await typecheckGeneratedAppointmentProfile()).toEqual([]);
   }, 30_000);

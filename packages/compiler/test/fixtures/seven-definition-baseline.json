@@ -5,7 +5,9 @@
     {
       "definitionKey": "restaurant-ordering",
       "planSha256": "d740f44cd80635caffb8f809bea0c4da5d401dedd4ff4521a3ba831d2b5705f3",
-      "graphSha256": "sha256:d0af504987b6cf6ef8debc987a2e773dd5e003718291a335574a2004c2678e69",
+      "graphSha256": "sha256:5b0869cac405d963f0ce775cdffbd43e26b5452cf0eda4b5a5be039e6809cfea",
+      "compositionLockGraphSha256": "sha256:5b0869cac405d963f0ce775cdffbd43e26b5452cf0eda4b5a5be039e6809cfea",
+      "composedGraphSha256": "sha256:d0af504987b6cf6ef8debc987a2e773dd5e003718291a335574a2004c2678e69",
       "files": [
         {
           "path": "package.json",
@@ -261,7 +263,9 @@
     {
       "definitionKey": "expense-approval",
       "planSha256": "112b53028bbb824ced611fd0280317b9c2a3e1a299a53fb5d475887bcdb3f4f8",
-      "graphSha256": "sha256:4ca7339f7b971c5c636f60052491c9a2e2ca13e028e23f07490355129dc428bc",
+      "graphSha256": "sha256:2c709937e1c3d40785558518d4af4b85482a16c13c1dc801a01f24a5208d0fa6",
+      "compositionLockGraphSha256": "sha256:2c709937e1c3d40785558518d4af4b85482a16c13c1dc801a01f24a5208d0fa6",
+      "composedGraphSha256": "sha256:4ca7339f7b971c5c636f60052491c9a2e2ca13e028e23f07490355129dc428bc",
       "files": [
         {
           "path": "THIRD_PARTY_NOTICES.md",
@@ -521,7 +525,9 @@
     {
       "definitionKey": "purchase-request-approval",
       "planSha256": "8c45e221da131ce0fd7da6c13a05b801c7243f6b57ecd78f1f3d874a79b7b3a0",
-      "graphSha256": "sha256:7850e241eef17ddee8ce1bc54e5fe0466ea3120d81880c0ff359542146d0ff0f",
+      "graphSha256": "sha256:efba844e7715b8a19f9e546eb3c952b203733656b3fb47f514c1ac52d022a041",
+      "compositionLockGraphSha256": "sha256:efba844e7715b8a19f9e546eb3c952b203733656b3fb47f514c1ac52d022a041",
+      "composedGraphSha256": "sha256:7850e241eef17ddee8ce1bc54e5fe0466ea3120d81880c0ff359542146d0ff0f",
       "files": [
         {
           "path": "THIRD_PARTY_NOTICES.md",
@@ -781,7 +787,9 @@
     {
       "definitionKey": "team-task-tracking",
       "planSha256": "eb391b1ec7e69509d5b5cd966f883468e853a5d25ca2faa3e852e472a55b2155",
-      "graphSha256": "sha256:589e0aaa4db89b22cd6271ec62fcd9f8190f07cdf31dfd5de631a2516d8998d5",
+      "graphSha256": "sha256:144fb26de365f0132bae5dde2ea79e48691f11df559bbb6e850a9a2b604527f6",
+      "compositionLockGraphSha256": "sha256:144fb26de365f0132bae5dde2ea79e48691f11df559bbb6e850a9a2b604527f6",
+      "composedGraphSha256": "sha256:589e0aaa4db89b22cd6271ec62fcd9f8190f07cdf31dfd5de631a2516d8998d5",
       "files": [
         {
           "path": "THIRD_PARTY_NOTICES.md",
@@ -1041,7 +1049,9 @@
     {
       "definitionKey": "publication-review",
       "planSha256": "48cd04c9fea39c9f38ca6b6c4e5e82b95f282584a9c8637d230f31c78dfffe50",
-      "graphSha256": "sha256:f9450ab4d486964f600de9d410256254e306bc4464026a1952d319179f51f2ad",
+      "graphSha256": "sha256:7435eea4654120befeca5711d6f58027a875cc29a79a54320c9dd00aee65975f",
+      "compositionLockGraphSha256": "sha256:7435eea4654120befeca5711d6f58027a875cc29a79a54320c9dd00aee65975f",
+      "composedGraphSha256": "sha256:f9450ab4d486964f600de9d410256254e306bc4464026a1952d319179f51f2ad",
       "files": [
         {
           "path": "THIRD_PARTY_NOTICES.md",
@@ -1301,7 +1311,9 @@
     {
       "definitionKey": "training-funding-approval",
       "planSha256": "296ba832ffc4c71e9c9d555769bd032362510d76a69eebe62cc37ea50d3bfa14",
-      "graphSha256": "sha256:cbbb3d497bbb535a509fb40d52a616cbb396f613de7b9498bf8995f487bf3ade",
+      "graphSha256": "sha256:3fc4cf517ed01ef4b3c8b6b02de43557b59032efc1e8692d4d55fd257713583f",
+      "compositionLockGraphSha256": "sha256:3fc4cf517ed01ef4b3c8b6b02de43557b59032efc1e8692d4d55fd257713583f",
+      "composedGraphSha256": "sha256:cbbb3d497bbb535a509fb40d52a616cbb396f613de7b9498bf8995f487bf3ade",
       "files": [
         {
           "path": "THIRD_PARTY_NOTICES.md",
@@ -1561,7 +1573,9 @@
     {
       "definitionKey": "equipment-procurement-approval",
       "planSha256": "a4822567565715aeadab333b9286cff4ed8f8e94ef123c83685f21ca798571ca",
-      "graphSha256": "sha256:fa5fb19f2345a4700774e49a7f6eafdf65397892dc77a3febb5f4f286ad8bfdf",
+      "graphSha256": "sha256:72cc7664a73f57dc6df60ad9871e82922a545be8af17d7281a76dc255720cb4a",
+      "compositionLockGraphSha256": "sha256:72cc7664a73f57dc6df60ad9871e82922a545be8af17d7281a76dc255720cb4a",
+      "composedGraphSha256": "sha256:fa5fb19f2345a4700774e49a7f6eafdf65397892dc77a3febb5f4f286ad8bfdf",
       "files": [
         {
           "path": "THIRD_PARTY_NOTICES.md",

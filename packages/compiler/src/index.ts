@@ -26,6 +26,7 @@ import {
   renderAppointmentMutationRuntime,
   renderAppointmentPrismaStore,
   selectAppointmentRuntimeProfile,
+  type AppointmentRuntimeProfile,
 } from "./appointment-mutation-contract.js";
 import {
   selectApprovalCorrection,
@@ -2761,13 +2762,178 @@ function needsApprovalSummaryExtension(graph: ApplicationGraphV1): boolean {
   );
 }
 
+const exactAppointmentLocks = [
+  [
+    "core.crud",
+    "1.0.1",
+    "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1",
+  ],
+  [
+    "core.workflow",
+    "1.0.1",
+    "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884",
+  ],
+  [
+    "core.identity-policy",
+    "1.0.0",
+    "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82",
+  ],
+  [
+    "core.policy-declarations",
+    "1.0.0",
+    "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54",
+  ],
+  [
+    "core.audit",
+    "1.0.2",
+    "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8",
+  ],
+  [
+    "core.notification",
+    "1.1.1",
+    "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
+  ],
+  [
+    "scheduling.appointment",
+    "1.0.0",
+    "sha256:eb3f409908e2f4708a3523767a27a0d30ad4277f2c89827b97f9e379dc82738b",
+  ],
+] as const;
+
+const appointmentBindingKeys = [
+  "serviceEntity",
+  "serviceNameField",
+  "serviceDurationMinutesField",
+  "serviceActiveField",
+  "scheduleEntity",
+  "scheduleServiceReferenceField",
+  "scheduleStartField",
+  "scheduleEndField",
+  "scheduleTimezoneField",
+  "scheduleCapacityField",
+  "scheduleStatusField",
+  "appointmentEntity",
+  "appointmentScheduleReferenceField",
+  "appointmentCustomerNameField",
+  "appointmentNotesField",
+  "appointmentCancellationReasonField",
+  "appointmentStatusField",
+] as const;
+
+function exactAppointmentNumericWitness(
+  graph: ApplicationGraphV1,
+  compositionLock: CapabilityCompositionLockV1,
+  profile: AppointmentRuntimeProfile | undefined,
+): boolean {
+  const appointmentSelection = compositionLock.packages.find(
+    ({ lock }) => lock.key === "scheduling.appointment",
+  );
+  if (profile === undefined) {
+    if (appointmentSelection !== undefined)
+      throw new Error("Appointment compiler profile is unsupported.");
+    return false;
+  }
+  const fail = (): never => {
+    throw new Error("Appointment compiler profile is unsupported.");
+  };
+  if (
+    compositionLock.applicationGraphChecksum !== hashApplicationGraph(graph) ||
+    compositionLock.packages.length !== exactAppointmentLocks.length ||
+    appointmentSelection === undefined ||
+    profile.capability !== "scheduling.appointment@1.0.0" ||
+    profile.effect !== "appointment.booking"
+  )
+    return fail();
+  const locks = new Map(
+    compositionLock.packages.map(({ lock }) => [lock.key, lock]),
+  );
+  if (locks.size !== exactAppointmentLocks.length) return fail();
+  for (const [key, version, manifestDigest] of exactAppointmentLocks) {
+    const lock = locks.get(key);
+    if (
+      lock?.version !== version ||
+      lock.manifestDigest !== manifestDigest ||
+      lock.lifecycle !== "golden"
+    )
+      return fail();
+  }
+  const bindingKeys = Object.keys(appointmentSelection.bindings).sort();
+  if (
+    bindingKeys.length !== appointmentBindingKeys.length ||
+    bindingKeys.some(
+      (key, index) => key !== [...appointmentBindingKeys].sort()[index],
+    )
+  )
+    return fail();
+  const fieldFor = (owner: string, inputKey: string) => {
+    const binding = appointmentSelection.bindings[inputKey];
+    if (
+      !binding ||
+      typeof binding !== "object" ||
+      Array.isArray(binding) ||
+      (binding as { graphSymbol?: unknown }).graphSymbol !==
+        `graph.domain.${owner}` ||
+      typeof (binding as { fieldKey?: unknown }).fieldKey !== "string"
+    )
+      return fail();
+    const fieldKey = (binding as { fieldKey: string }).fieldKey;
+    const entity = graph.domain.entities.filter(({ key }) => key === owner);
+    if (entity.length !== 1) return fail();
+    const fields = entity[0]!.fields.filter(({ key }) => key === fieldKey);
+    if (fields.length !== 1) return fail();
+    return fields[0]!;
+  };
+  const duration = fieldFor(
+    profile.serviceEntity,
+    "serviceDurationMinutesField",
+  );
+  const capacity = fieldFor(profile.scheduleEntity, "scheduleCapacityField");
+  const exactDomain = (value: unknown): boolean =>
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).sort().join(",") === "apiVersion,minimum" &&
+    (value as { apiVersion?: unknown }).apiVersion ===
+      "factory.numeric-field-domain/v1" &&
+    !!(value as { minimum?: unknown }).minimum &&
+    typeof (value as { minimum: unknown }).minimum === "object" &&
+    Object.keys((value as { minimum: object }).minimum)
+      .sort()
+      .join(",") === "inclusive,value" &&
+    (value as { minimum: { value?: unknown } }).minimum.value === 0 &&
+    (value as { minimum: { inclusive?: unknown } }).minimum.inclusive === false;
+  if (
+    [duration, capacity].some(
+      (field) =>
+        field.type !== "integer" ||
+        field.required !== true ||
+        field.calculation !== undefined ||
+        !exactDomain(field.numericDomain),
+    )
+  )
+    return fail();
+  const allFields = graph.domain.entities.flatMap(({ fields }) => fields);
+  if (allFields.some((field) => field.calculation !== undefined)) return fail();
+  const numeric = allFields.filter(
+    (field) => field.numericDomain !== undefined,
+  );
+  if (
+    numeric.length !== 2 ||
+    !numeric.includes(duration) ||
+    !numeric.includes(capacity)
+  )
+    return fail();
+  return true;
+}
+
 function renderPageRuntime(
   graph: ApplicationGraphV1,
   orderEntityKey: string | undefined,
   useFixtureSessions: boolean,
   profile: GeneratedPresentationProfile,
   correctionEntity?: string,
-  appointmentProfile?: import("./appointment-mutation-contract.js").AppointmentRuntimeProfile,
+  appointmentProfile?: AppointmentRuntimeProfile,
+  compositionLock?: CapabilityCompositionLockV1,
 ): string {
   const approval = profile === "approval-v1";
   const extendedSummary = approval && needsApprovalSummaryExtension(graph);
@@ -2823,8 +2989,11 @@ function renderPageRuntime(
       ),
     );
   const calculatedIdentity = selectCalculatedApproval(graph, correctionEntity);
+  const appointmentNumeric =
+    compositionLock !== undefined &&
+    exactAppointmentNumericWitness(graph, compositionLock, appointmentProfile);
   const numericIdentity =
-    calculatedIdentity || appointmentProfile
+    calculatedIdentity || appointmentNumeric
       ? undefined
       : selectNumericApproval(graph, correctionEntity);
   const recordIdentity =
@@ -3964,7 +4133,12 @@ export function generateApplicationBundle(
     graph,
     input.compositionLock,
   );
-  if (!calculatedApproval && !appointmentProfile)
+  const appointmentNumeric = exactAppointmentNumericWitness(
+    graph,
+    input.compositionLock,
+    appointmentProfile,
+  );
+  if (!calculatedApproval && !appointmentNumeric)
     selectNumericApproval(graph, approvalEntity);
   const rendererGraph = compilationInput.rendererGraph;
   const presentationProfile = taskEntity
@@ -4191,6 +4365,7 @@ export function generateApplicationBundle(
                 presentationProfile,
                 approvalEntity,
                 appointmentProfile,
+                input.compositionLock,
               ),
     },
     ...(restaurantRuntimeEnabled

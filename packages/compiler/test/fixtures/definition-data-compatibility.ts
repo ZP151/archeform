@@ -172,9 +172,52 @@ export function currentDefinitionDataCompilationEvidence(
     return {
       definitionKey: entry.definitionKey,
       planSha256: digest(standard.plan),
-      graphSha256: hashApplicationGraph(graph),
+      graphSha256: hashApplicationGraph(inputGraph),
+      compositionLockGraphSha256: compositionLock.applicationGraphChecksum,
+      composedGraphSha256: hashApplicationGraph(graph),
       files: orderedFiles,
       bundleSha256: digest(files.map(({ path, content }) => [path, content])),
     };
   });
+}
+
+export function appointmentDefinitionCompilationInput() {
+  const entry = definitionSelectionCatalogue.find(
+    (candidate) => candidate.definitionKey === "appointment-booking-v1",
+  );
+  if (!entry) throw new Error("Appointment definition missing.");
+  const selection = {
+    definitionKey: entry.definitionKey,
+    disposition: "supported-default" as const,
+    requirementId: "data-baseline-appointment-booking-v1",
+    title: "Definition Data Baseline",
+    outcome: "Complete the reviewed local business workflow.",
+    materialQuestions: [],
+    businessParameters: null,
+  };
+  const interpretation = projectDefinitionSelection(selection);
+  const baseDraft = createBlankApplicationDraft({
+    applicationId: interpretation.spec.requirementId,
+    workspaceId: "local-workspace",
+    name: "Definition Data Baseline",
+  });
+  const [standard] = planProductAlternatives({
+    requirement: interpretation.spec,
+    blueprint: interpretation.blueprint,
+    baseDraft,
+  });
+  if (!standard) throw new Error("Appointment has no standard assembly plan.");
+  const { diff } = composeProductDraft({
+    plan: standard.plan,
+    blueprint: interpretation.blueprint,
+    baseDraft,
+  });
+  const composedGraph = applyGraphDiffToDraft(baseDraft, diff).graph;
+  const graph = structuredClone(composedGraph);
+  delete graph.integration.compositionSelections;
+  const compositionLock = createCapabilityCompositionLock({
+    graphChecksum: hashApplicationGraph(graph),
+    selections: composedGraph.integration.compositionSelections ?? [],
+  });
+  return { graph, compositionLock, composedGraph };
 }
