@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const parent = "b8d796961b1ff68c7d5efa1a12fe353aa370eee8";
 const expectedArguments = [
@@ -90,15 +90,111 @@ function linkDependencies(checkout) {
   }
 }
 
-function captureTest(outputPath) {
+function captureTest(outputPath, checkout) {
+  const source = (relativePath) =>
+    pathToFileURL(resolve(checkout, relativePath)).href;
   return `import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { currentDefinitionDataCompatibility } from "./fixtures/definition-data-compatibility.js";
+import {
+  definitionSelectionCatalogue,
+  projectDefinitionSelection,
+} from "${source("packages/adapters/src/requirements/definition-selection-catalogue.ts")}";
+import { createCapabilityCompositionLock } from "@factory/capabilities";
+import {
+  composeProductDraft,
+  planProductAlternatives,
+} from "@factory/capabilities/node";
+import {
+  applyGraphDiffToDraft,
+  createBlankApplicationDraft,
+  hashApplicationGraph,
+} from "@factory/graph";
+import { generateApplicationBundle } from "${source("packages/compiler/src/index.ts")}";
+
+const digest = (value) =>
+  createHash("sha256").update(JSON.stringify(value)).digest("hex");
+
+function captureEntry(key) {
+  const entry = definitionSelectionCatalogue.find(
+    (candidate) => candidate.definitionKey === key,
+  );
+  if (!entry) throw new Error("Historical definition missing: " + key);
+  const selection = {
+    definitionKey: entry.definitionKey,
+    disposition: "supported-default",
+    requirementId: "data-baseline-" + entry.definitionKey,
+    title: "Definition Data Baseline",
+    outcome: "Complete the reviewed local business workflow.",
+    materialQuestions: [],
+    businessParameters: null,
+  };
+  const interpretation = projectDefinitionSelection(selection);
+  const clarification = projectDefinitionSelection({
+    ...selection,
+    disposition: "needs-clarification",
+    materialQuestions: [
+      {
+        category: "integration",
+        question: "Is local demo access acceptable?",
+      },
+    ],
+  });
+  const baseDraft = createBlankApplicationDraft({
+    applicationId: interpretation.spec.requirementId,
+    workspaceId: "local-workspace",
+    name: "Definition Data Baseline",
+  });
+  const [standard] = planProductAlternatives({
+    requirement: interpretation.spec,
+    blueprint: interpretation.blueprint,
+    baseDraft,
+  });
+  if (!standard) throw new Error("Baseline has no standard assembly plan.");
+  const { diff } = composeProductDraft({
+    plan: standard.plan,
+    blueprint: interpretation.blueprint,
+    baseDraft,
+  });
+  const composedGraph = applyGraphDiffToDraft(baseDraft, diff).graph;
+  const inputGraph = structuredClone(composedGraph);
+  delete inputGraph.integration.compositionSelections;
+  const compositionLock = createCapabilityCompositionLock({
+    graphChecksum: hashApplicationGraph(inputGraph),
+    selections: composedGraph.integration.compositionSelections ?? [],
+  });
+  const files = generateApplicationBundle({
+    publishedRevisionId: selection.requirementId,
+    graph: inputGraph,
+    compositionLock,
+  }).files;
+  return {
+    definitionKey: entry.definitionKey,
+    canonicalSha256: digest(entry.structure),
+    guideSha256: digest(entry.guide),
+    instructionSha256: digest(entry.instruction),
+    selectionSchemaSha256: digest(entry.jsonSchema),
+    supportedProjectionSha256: digest(interpretation),
+    clarificationProjectionSha256: digest(clarification),
+    separatePublishedLockBundle: {
+      fileCount: files.length,
+      sha256: digest(files.map(({ path, content }) => [path, content])),
+    },
+    planSha256: digest(standard.plan),
+    graphSha256: hashApplicationGraph(inputGraph),
+    compositionLockGraphSha256: compositionLock.applicationGraphChecksum,
+    composedGraphSha256: hashApplicationGraph(composedGraph),
+    files: files.map(({ path, content }) => ({
+      path,
+      sha256: createHash("sha256").update(content).digest("hex"),
+    })),
+    bundleSha256: digest(files.map(({ path, content }) => [path, content])),
+  };
+}
 
 describe("frozen seven-definition capture", () => {
-  it("captures the immutable parent definitions", () => {
-    const keys = [
+  it("freshly composes the immutable parent definitions", () => {
+    const entries = [
       "restaurant-ordering",
       "expense-approval",
       "purchase-request-approval",
@@ -106,23 +202,25 @@ describe("frozen seven-definition capture", () => {
       "publication-review",
       "training-funding-approval",
       "equipment-procurement-approval",
-    ];
-    const prior = JSON.parse(readFileSync(${JSON.stringify(outputPath)}, "utf8"));
-    const captured = new Map();
-    currentDefinitionDataCompatibility(keys, (key, files) => {
-      captured.set(key, {
-        files: files.map(({ path, content }) => ({ path, sha256: createHash("sha256").update(content).digest("hex") })),
-        bundleSha256: createHash("sha256").update(JSON.stringify(files.map(({ path, content }) => [path, content]))).digest("hex"),
-      });
-    }, "current");
-    const entries = prior.entries.map((entry) => ({ ...entry, ...captured.get(entry.definitionKey) }));
+    ].map(captureEntry);
     expect(entries).toHaveLength(7);
-    writeFileSync(${JSON.stringify(outputPath)}, JSON.stringify({ base: ${JSON.stringify(parent)}, comparison: "current-generated-bytes", entries }, null, 2) + "\\n", "utf8");
+    writeFileSync(
+      ${JSON.stringify(outputPath)},
+      JSON.stringify(
+        {
+          base: ${JSON.stringify(parent)},
+          comparison: "current-generated-bytes",
+          entries,
+        },
+        null,
+        2,
+      ) + "\\n",
+      "utf8",
+    );
   });
 });
 `;
 }
-
 function main() {
   ensureExactInvocation();
   const fixture = resolve(root, expectedArguments[3]);
@@ -141,7 +239,11 @@ function main() {
     if (status(checkout) !== "")
       throw new Error("The isolated parent checkout was not clean.");
     linkDependencies(checkout);
-    writeFileSync(temporaryTest, captureTest(fixture), "utf8");
+    if (status(checkout) !== "")
+      throw new Error(
+        "The isolated parent checkout changed before driver creation.",
+      );
+    writeFileSync(temporaryTest, captureTest(fixture, checkout), "utf8");
     run(process.platform === "win32" ? "pnpm.cmd" : "pnpm", [
       "--dir",
       checkout,

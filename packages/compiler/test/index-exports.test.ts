@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -35,5 +37,57 @@ describe("source target facade re-exports", () => {
     });
     expect(git.commitId).toMatch(/^[a-f0-9]{40}$/);
     expect(git.objects.size).toBeGreaterThan(0);
+  });
+});
+
+const immutableCompilerParent = "b8d796961b1ff68c7d5efa1a12fe353aa370eee8";
+const compilerIndexPath = new URL("../src/index.ts", import.meta.url);
+
+function publicExportSurface(source: string) {
+  return [
+    ...source.matchAll(
+      /^export\s+(?:function|class|interface|type)\s+(\w+)|^export\s*\{([\s\S]*?)\};/gm,
+    ),
+  ]
+    .flatMap((match) => {
+      if (match[1]) return [match[1]];
+      return match[2]!
+        .split(",")
+        .map((value) => value.replace(/\/\/.*$/, "").trim())
+        .filter(Boolean)
+        .map(
+          (value) =>
+            value.replace(/^type\s+/, "").split(/\s+as\s+/)[1] ?? value,
+        );
+    })
+    .sort();
+}
+
+describe("Appointment compiler admission exports", () => {
+  it("keeps the immutable public index surface and the admission module private", () => {
+    const current = readFileSync(compilerIndexPath, "utf8");
+    const historical = execFileSync(
+      "git",
+      ["show", `${immutableCompilerParent}:packages/compiler/src/index.ts`],
+      { encoding: "utf8" },
+    );
+    expect(publicExportSurface(current)).toEqual(
+      publicExportSurface(historical),
+    );
+    expect(current).toContain(
+      'import { exactAppointmentNumericWitness } from "./appointment-compilation-admission.js";',
+    );
+    expect(current).not.toMatch(
+      /export\s+(?:\*|\{[^}]*appointment-compilation-admission)/,
+    );
+    expect(
+      execFileSync(
+        "git",
+        ["grep", "-l", "appointment-compilation-admission", "--", "src"],
+        { encoding: "utf8" },
+      )
+        .trim()
+        .split("\n"),
+    ).toEqual(["src/index.ts"]);
   });
 });

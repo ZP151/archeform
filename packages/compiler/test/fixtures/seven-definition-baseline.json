@@ -4,6 +4,16 @@
   "entries": [
     {
       "definitionKey": "restaurant-ordering",
+      "canonicalSha256": "45d5ffc8af3adee3d8eb11b1971fc85b97268691e7de9cef8745e50823985df0",
+      "guideSha256": "f3a2db0df4a225266d8a96a586e1c0cbeb05c829be8a5fbd0632f77626e5ebc4",
+      "instructionSha256": "e71d571dbb283288e862a0199b70d90d3bfd589e6128b9329ff8980574322916",
+      "selectionSchemaSha256": "55a58118bd6d343c5109f0998d14911269b2846900d4a6d0373b0467310e545f",
+      "supportedProjectionSha256": "5af3d1d80044bf76761ad7cd03364b474d2b2ed8ddcd76b6f7058ff639974d46",
+      "clarificationProjectionSha256": "6db544c70909fd30e91937f0c1de6be5f886af760fd5ea9fc0c2047110841828",
+      "separatePublishedLockBundle": {
+        "fileCount": 62,
+        "sha256": "7d1c7f29c6dce3f77fa6a3608792b640adc8b0e5f8b20e528d6da1ea0502b050"
+      },
       "planSha256": "d740f44cd80635caffb8f809bea0c4da5d401dedd4ff4521a3ba831d2b5705f3",
       "graphSha256": "sha256:5b0869cac405d963f0ce775cdffbd43e26b5452cf0eda4b5a5be039e6809cfea",
       "compositionLockGraphSha256": "sha256:5b0869cac405d963f0ce775cdffbd43e26b5452cf0eda4b5a5be039e6809cfea",
@@ -262,6 +272,16 @@
     },
     {
       "definitionKey": "expense-approval",
+      "canonicalSha256": "7078a1632e6f5436b27c3f92f2531f0ac9f9d5dd97a337106fc11694aa88ad65",
+      "guideSha256": "b3fdca68da012e1b72e3c25cc5841bd1d1c4e2621040a090471cd22c65bdf078",
+      "instructionSha256": "679b585ee2833ff21a3b0ce6c418827fb1b89d1f525298cf32d7b6f54337a5b8",
+      "selectionSchemaSha256": "ad64203844a790ce379e28077ac65b1f1aef6042d3d6311b23a7448e1c10077b",
+      "supportedProjectionSha256": "3be87059c9d4026b575e7747f848b0d2f6f1fa5a47563626c233f077a8d1faf9",
+      "clarificationProjectionSha256": "fcc8c10c308aeac2c5c740f2fc55a319bcce57da1fd96fd6efb364021bcc1b49",
+      "separatePublishedLockBundle": {
+        "fileCount": 63,
+        "sha256": "4b9d05aaabdaee99a089d4db07416c1c140711a070815f7b67dbdf177112555a"
+      },
       "planSha256": "112b53028bbb824ced611fd0280317b9c2a3e1a299a53fb5d475887bcdb3f4f8",
       "graphSha256": "sha256:2c709937e1c3d40785558518d4af4b85482a16c13c1dc801a01f24a5208d0fa6",
       "compositionLockGraphSha256": "sha256:2c709937e1c3d40785558518d4af4b85482a16c13c1dc801a01f24a5208d0fa6",
@@ -524,6 +544,16 @@
     },
     {
       "definitionKey": "purchase-request-approval",
+      "canonicalSha256": "0e9eb78ce0597d72f741a37271a8e909bd67a2f9c10f11a514e1cd8d05af9e6e",
+      "guideSha256": "180853986dbf923db6e1bce97f7fb81c5338d80b0abc8e247cab0b7662094fd7",
+      "instructionSha256": "bf11a81819e19d8b8eb6d023428bef5a08a2debec2be3cdd21b36ea3b28df9ea",
+      "selectionSchemaSha256": "cb6e737d0e3305057011941b3654d367a5e61f82a5b4675ea446cacbe495ea60",
+      "supportedProjectionSha256": "8df26524c8227a484b534c85b24ffbfd84650a2353258078b1a41015ec83a761",
+      "clarificationProjectionSha256": "9bab92631dc16e866d5acc68e1ccd0f6af76ec4269e1e696c4e8e038e98e7410",
+      "separatePublishedLockBundle": {
+        "fileCount": 63,
+        "sha256": "39878e185e07af80160fc2fca6898749bb849c6afaa4abd28fcadba213bb6f78"
+      },
       "planSha256": "8c45e221da131ce0fd7da6c13a05b801c7243f6b57ecd78f1f3d874a79b7b3a0",
       "graphSha256": "sha256:efba844e7715b8a19f9e546eb3c952b203733656b3fb47f514c1ac52d022a041",
       "compositionLockGraphSha256": "sha256:efba844e7715b8a19f9e546eb3c952b203733656b3fb47f514c1ac52d022a041",
@@ -786,6 +816,16 @@
     },
     {
       "definitionKey": "team-task-tracking",
+      "canonicalSha256": "dfde00aef43ad869b6fac65aeac85d641779bee07372a9a2c58d48406e63a7de",
+      "guideSha256": "40d92941ef8f12de9a9856d2648dad1018ebd346125aaf83dc2cc4d76d877434",
+      "instructionSha256": "c008fbaa8a78dfaf6d955cd3b70050250a226b4471a7c9f2b7fc111d59579bdd",
+      "selectionSchemaSha256": "f20c441cb4b984c11e71b26bf5bb1c7116e93b94090f36443ec6a6111a280597",
+      "supportedProjectionSha256": "f388edb71c9da952e1ce13ac612a619363a2e84f78fc2e21ce82db34a0f8ad71",
+      "clarificationProjectionSha256": "31717bbfc515f701c8ea1e03feed0629fa2b8f0111956327240fd23c8500beea",
+      "separatePublishedLockBundle": {
+        "fileCount": 63,
+        "sha256": "d3ab37f01acd0e243ab070d60b1ba4d9642a6440a50764c003af44dabbe53c15"
+      },
       "planSha256": "eb391b1ec7e69509d5b5cd966f883468e853a5d25ca2faa3e852e472a55b2155",
       "graphSha256": "sha256:144fb26de365f0132bae5dde2ea79e48691f11df559bbb6e850a9a2b604527f6",
       "compositionLockGraphSha256": "sha256:144fb26de365f0132bae5dde2ea79e48691f11df559bbb6e850a9a2b604527f6",
@@ -1048,6 +1088,16 @@
     },
     {
       "definitionKey": "publication-review",
+      "canonicalSha256": "9a8a78a17f29a5db2278632f656b41acce42edf6ad8630fd87ddc6d087c3f673",
+      "guideSha256": "7695cffc182a39b92429d006490146bbae02e77d31f1ca04c9cac1ac7be8260e",
+      "instructionSha256": "8711e3cb9a02eb81e1d30d0ce8257161a5078533902f59f7a370e76e10822048",
+      "selectionSchemaSha256": "cd742f82def49a28403a48ec704bb1a694640fc051fa25e74e0f7d7a542796ba",
+      "supportedProjectionSha256": "59e16b3f7e795dcf78228e2afb865155e6468017fa358a4df7e609f2282c9bb7",
+      "clarificationProjectionSha256": "36bfb5c8e8798f2fab84e5cb4a96f77f892a4400f8370afd2df63272852b6d91",
+      "separatePublishedLockBundle": {
+        "fileCount": 63,
+        "sha256": "62a7ff35fa7103bf2e7cff1f885a1d714597ab8764d91fa269cd2f45a7299f27"
+      },
       "planSha256": "48cd04c9fea39c9f38ca6b6c4e5e82b95f282584a9c8637d230f31c78dfffe50",
       "graphSha256": "sha256:7435eea4654120befeca5711d6f58027a875cc29a79a54320c9dd00aee65975f",
       "compositionLockGraphSha256": "sha256:7435eea4654120befeca5711d6f58027a875cc29a79a54320c9dd00aee65975f",
@@ -1310,6 +1360,16 @@
     },
     {
       "definitionKey": "training-funding-approval",
+      "canonicalSha256": "080f38fd2ae81f71d743ed0977ad051f3c858c588168aac7360d03fc808121ac",
+      "guideSha256": "f67193243494f02131295a7b5be05bc25da959a9791338349a62dfbd85e16131",
+      "instructionSha256": "e832ead24ffdecc53a4d8b5f67b1633bbcd8c005b06cc08c5a0deb405f5028c4",
+      "selectionSchemaSha256": "596477ee6d951033f82d8fdb0f7e718ee05772074ee40ab0d7eb3383a9c31232",
+      "supportedProjectionSha256": "3ff16365e043f23eea24c245c486912b776177385085007cc4a85edff56eb2e6",
+      "clarificationProjectionSha256": "175f03d59f6e1eaee0aeba160c9f1e927123213eda748943e8d0ca56ff85e1b5",
+      "separatePublishedLockBundle": {
+        "fileCount": 63,
+        "sha256": "d4b302f7cda6a5483d13a73f56e6e8b95b51fe44c79352a078a1b467f0f94053"
+      },
       "planSha256": "296ba832ffc4c71e9c9d555769bd032362510d76a69eebe62cc37ea50d3bfa14",
       "graphSha256": "sha256:3fc4cf517ed01ef4b3c8b6b02de43557b59032efc1e8692d4d55fd257713583f",
       "compositionLockGraphSha256": "sha256:3fc4cf517ed01ef4b3c8b6b02de43557b59032efc1e8692d4d55fd257713583f",
@@ -1572,6 +1632,16 @@
     },
     {
       "definitionKey": "equipment-procurement-approval",
+      "canonicalSha256": "5ca49f3fae80b11ac2ec0cc1f127b95456353997f799c4d78765a0e4cf238e6f",
+      "guideSha256": "1fb7cbfafe885657becf266c464916fbfb8d0d168690eabff560f59e21c0d013",
+      "instructionSha256": "0f3ee06c5af41c4de8aa418594fb1461be4237f38ee0405cf191fe35dabf0fa3",
+      "selectionSchemaSha256": "8ca25955d1bd33d8372b60f35cba21ec546d1b276c5406cdfc87e0dd24e517f7",
+      "supportedProjectionSha256": "35d84dc46ae2e6424d79bcfbbbb6e0dc5373b72702e200a987ebb7599535af2b",
+      "clarificationProjectionSha256": "37911041f01e43d481e8c0bdfe864d76b69fa4a82527beea48891edae76d7185",
+      "separatePublishedLockBundle": {
+        "fileCount": 67,
+        "sha256": "b6db1d968268a8ede9821f15396897c49efbd83b92a1ffabc9af827ecb5415a1"
+      },
       "planSha256": "a4822567565715aeadab333b9286cff4ed8f8e94ef123c83685f21ca798571ca",
       "graphSha256": "sha256:72cc7664a73f57dc6df60ad9871e82922a545be8af17d7281a76dc255720cb4a",
       "compositionLockGraphSha256": "sha256:72cc7664a73f57dc6df60ad9871e82922a545be8af17d7281a76dc255720cb4a",

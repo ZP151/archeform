@@ -137,6 +137,16 @@ export function currentDefinitionDataCompilationEvidence(
       businessParameters: null,
     };
     const interpretation = projectDefinitionSelection(selection);
+    const clarification = projectDefinitionSelection({
+      ...selection,
+      disposition: "needs-clarification",
+      materialQuestions: [
+        {
+          category: "integration",
+          question: "Is local demo access acceptable?",
+        },
+      ],
+    });
     const baseDraft = createBlankApplicationDraft({
       applicationId: interpretation.spec.requirementId,
       workspaceId: "local-workspace",
@@ -171,6 +181,16 @@ export function currentDefinitionDataCompilationEvidence(
     }));
     return {
       definitionKey: entry.definitionKey,
+      canonicalSha256: digest(entry.structure),
+      guideSha256: digest(entry.guide),
+      instructionSha256: digest(entry.instruction),
+      selectionSchemaSha256: digest(entry.jsonSchema),
+      supportedProjectionSha256: digest(interpretation),
+      clarificationProjectionSha256: digest(clarification),
+      separatePublishedLockBundle: {
+        fileCount: files.length,
+        sha256: digest(files.map(({ path, content }) => [path, content])),
+      },
       planSha256: digest(standard.plan),
       graphSha256: hashApplicationGraph(inputGraph),
       compositionLockGraphSha256: compositionLock.applicationGraphChecksum,
