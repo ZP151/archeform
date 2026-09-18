@@ -19,6 +19,7 @@ import {
   renderTaskPrismaStore,
   renderTaskApi,
 } from "./task-mutation-contract.js";
+import { selectAppointmentRuntimeProfile } from "./appointment-mutation-contract.js";
 import {
   selectApprovalCorrection,
   renderApprovalJourney,
@@ -118,6 +119,13 @@ export {
   type GeneratedPageRuntimeRouteFallbackV1,
   type GeneratedPageRuntimeSafePropV1,
 } from "./page-runtime-projection.js";
+export {
+  appointmentMutationContract,
+  createAppointmentCommandRuntime,
+  selectAppointmentRuntimeProfile,
+  type AppointmentCommandStore,
+  type AppointmentRuntimeProfile,
+} from "./appointment-mutation-contract.js";
 export {
   projectRestaurantReceiptModifiers,
   renderRestaurantCustomerCommandRuntime,
@@ -2752,6 +2760,7 @@ function renderPageRuntime(
   useFixtureSessions: boolean,
   profile: GeneratedPresentationProfile,
   correctionEntity?: string,
+  appointmentProfile?: import("./appointment-mutation-contract.js").AppointmentRuntimeProfile,
 ): string {
   const approval = profile === "approval-v1";
   const extendedSummary = approval && needsApprovalSummaryExtension(graph);
@@ -2828,6 +2837,7 @@ function renderPageRuntime(
       : undefined);
   const projection = createGeneratedPageRuntimeProjection(graph, {
     ...(orderEntityKey ? { orderEntity: orderEntityKey } : {}),
+    ...(appointmentProfile ? { appointment: appointmentProfile } : {}),
   });
   const runtimeDefinition = {
     applicationName: graph.metadata.name,
@@ -3937,6 +3947,10 @@ export function generateApplicationBundle(
   const calculatedApproval = selectCalculatedApproval(graph, approvalEntity);
   if (!calculatedApproval) selectNumericApproval(graph, approvalEntity);
   const taskEntity = selectTaskContract(graph, input.compositionLock);
+  const appointmentProfile = selectAppointmentRuntimeProfile(
+    graph,
+    input.compositionLock,
+  );
   const rendererGraph = compilationInput.rendererGraph;
   const presentationProfile = taskEntity
     ? "task-v1"
@@ -4161,6 +4175,7 @@ export function generateApplicationBundle(
                 !!identityPolicy,
                 presentationProfile,
                 approvalEntity,
+                appointmentProfile,
               ),
     },
     ...(restaurantRuntimeEnabled

@@ -1,5 +1,6 @@
 import { hasRestaurantOrderingComposition } from "@factory/capabilities";
 import type { ApplicationGraphV1 } from "@factory/graph";
+import type { AppointmentRuntimeProfile } from "./appointment-mutation-contract.js";
 
 export const generatedPageRuntimeApiVersion =
   "factory.generated-page-runtime/v1" as const;
@@ -68,9 +69,17 @@ export interface GeneratedPageRuntimeCommerceV1 {
   readonly paymentEvent: string | null;
 }
 
+/** A browser-safe projection: command names only, never capacity or slot-write bindings. */
+export interface GeneratedPageRuntimeAppointmentV1 {
+  readonly appointmentEntity: string;
+  readonly commands: readonly ["request", "confirm", "reschedule", "cancel", "history"];
+}
+
 export interface GeneratedPageRuntimeBindingsV1 {
   /** Resolved only from the immutable composition lock by the compiler. */
   readonly orderEntity?: string;
+  /** Resolved only from the immutable composition lock by the compiler. */
+  readonly appointment?: AppointmentRuntimeProfile;
 }
 
 export interface GeneratedPageRuntimeProjectionV1 {
@@ -81,6 +90,7 @@ export interface GeneratedPageRuntimeProjectionV1 {
   readonly navigation: readonly GeneratedPageRuntimeNavigationV1[];
   readonly routeFallback: GeneratedPageRuntimeRouteFallbackV1;
   readonly commerce: GeneratedPageRuntimeCommerceV1;
+  readonly appointment?: GeneratedPageRuntimeAppointmentV1;
 }
 
 type PageBlock = ApplicationGraphV1["page"]["pages"][number]["blocks"][number];
@@ -450,5 +460,19 @@ export function createGeneratedPageRuntimeProjection(
       unknownRoute: "not-found",
     },
     commerce,
+    ...(bindings.appointment
+      ? {
+          appointment: {
+            appointmentEntity: bindings.appointment.appointmentEntity,
+            commands: [
+              "request",
+              "confirm",
+              "reschedule",
+              "cancel",
+              "history",
+            ],
+          } as GeneratedPageRuntimeAppointmentV1,
+        }
+      : {}),
   };
 }

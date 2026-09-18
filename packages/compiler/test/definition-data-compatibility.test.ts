@@ -7,8 +7,21 @@ import {
   definitionDatabaseIdentifierComparison,
   IDENTIFIER_DATABASE_PATHS,
 } from "./fixtures/legacy-database-identifiers.js";
+import { appointmentMutationContract } from "../src/appointment-mutation-contract.js";
 
 describe("Product definition data compatibility", () => {
+  it("keeps the additive appointment runtime profile separate from protected definition bundles", () => {
+    expect(appointmentMutationContract).toEqual({
+      key: "appointment-mutation",
+      version: "1.0.0",
+      mutation: "factory.generated.appointment-mutation/v1",
+      receipt: "factory.generated.appointment-mutation-receipt/v1",
+      history: "factory.generated.appointment-history/v1",
+      ownership: "factory-authored",
+      license: "UNLICENSED",
+    });
+  });
+
   it("preserves all six delivered definitions and current Published bytes from 436484fc", () => {
     const baselineBytes = readFileSync(
       new URL("./fixtures/six-definition-baseline.json", import.meta.url),
