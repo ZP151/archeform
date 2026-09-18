@@ -7,7 +7,11 @@ import {
   definitionDatabaseIdentifierComparison,
   IDENTIFIER_DATABASE_PATHS,
 } from "./fixtures/legacy-database-identifiers.js";
-import { appointmentMutationContract } from "../src/appointment-mutation-contract.js";
+import {
+  appointmentMutationContract,
+  appointmentPrismaMigration,
+  appointmentPrismaSchema,
+} from "../src/appointment-mutation-contract.js";
 
 describe("Product definition data compatibility", () => {
   it("keeps the additive appointment runtime profile separate from protected definition bundles", () => {
@@ -20,6 +24,10 @@ describe("Product definition data compatibility", () => {
       ownership: "factory-authored",
       license: "UNLICENSED",
     });
+    expect(appointmentPrismaSchema).toContain("model Factory_AppointmentMutationReceipt");
+    expect(appointmentPrismaSchema).toContain("@@unique([scope, idempotencyKey])");
+    expect(appointmentPrismaSchema).toContain("model Factory_AppointmentHistoryEntry");
+    expect(appointmentPrismaMigration).toContain('CREATE UNIQUE INDEX "Factory_AppointmentMutationReceipt_scope_idempotencyKey_key"');
   });
 
   it("preserves all six delivered definitions and current Published bytes from 436484fc", () => {

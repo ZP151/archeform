@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   createAppointmentCommandRuntime,
+  renderAppointmentApiDispatch,
+  renderAppointmentMutationRuntime,
+  renderAppointmentPrismaStore,
   type AppointmentCommandStore,
   type AppointmentRuntimeProfile,
 } from "../src/appointment-mutation-contract.js";
@@ -146,6 +149,25 @@ class TestStore implements AppointmentCommandStore {
 }
 
 describe("appointment booking compiler runtime", () => {
+  it("injects server-derived entity routes and serializable appointment stores", () => {
+    const api = renderAppointmentApiDispatch("function rejected(error: unknown): HttpException {}\n@Controller('api')\nclass GeneratedController { create(){ return await applicationRuntime.create( } transition(){ return await applicationRuntime.transition( } }", profile);
+    expect(api).toContain("@Get(':entity/:recordId/appointment-history')");
+    expect(api).toContain("appointmentCommand(appointmentServerContext(request,entity,'create')");
+    expect(api).toContain("verified appointment session required");
+    expect(api).not.toMatch(/factoryServer|requestHash|actorScope|\bnow\b/);
+    const runtime = renderAppointmentMutationRuntime("export interface RecordStore {\n  inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T>;\n}\nexport class InMemoryRecordStore {\n  private readonly auditEvents: AuditEvent[] = [];\n  private collection(entityKey: string) {}\n}\nexport class ApplicationRuntime {\n}", profile);
+    expect(runtime).toContain("conditionalAppointmentUpdate");
+    expect(runtime).toContain("appointmentCommand(server:{role:string;scope:string;graphHash:string}");
+    expect(runtime).toContain("createHash('sha256')");
+    expect(runtime).toContain("appointmentSlot(store");
+    const prisma = renderAppointmentPrismaStore("export class PrismaRecordStore implements RecordStore {\n  constructor(private readonly prisma: PrismaClient) {}\n  async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> { return operation(this); }\n}", profile);
+    expect(prisma).toContain("isolationLevel:'Serializable'");
+    expect(prisma).toContain("P2034");
+    expect(prisma).toContain("attempt < 3");
+    expect(prisma).toContain("appointmentMutationReceipt");
+    expect(prisma).toContain("appointmentHistoryEntryDelegate");
+  });
+
   it("projects only server command names for a lock-resolved appointment profile", () => {
     const graph = {
       metadata: { name: "Bookings" },
@@ -219,6 +241,16 @@ describe("appointment booking compiler runtime", () => {
     expect(snapshot(store)).toEqual(before);
   });
 
+  it("revalidates the stored canonical schedule and timezone before confirmation", async () => {
+    const store = new TestStore();
+    const runtime = createAppointmentCommandRuntime(profile);
+    const requested = await runtime.request(store, context("customer", "request"), { scheduleId: "slot-1", customerName: "Ada" });
+    store.records.get("schedule")!.get("slot-1")!.timezone = "Mars/Olympus";
+    const before = snapshot(store);
+    await expect(runtime.confirm(store, context("staff", "confirm"), { appointmentId: requested.id, expectedVersion: 0 })).rejects.toMatchObject({ code: "appointment.schedule_invalid", status: 400 });
+    expect(snapshot(store)).toEqual(before);
+  });
+
   it("replays an identical command and rejects stale, forbidden, invalid, and forged commands unchanged", async () => {
     const store = new TestStore();
     const runtime = createAppointmentCommandRuntime(profile);
@@ -248,6 +280,13 @@ describe("appointment booking compiler runtime", () => {
     const beforeTimezone = snapshot(store);
     await expect(runtime.request(store, context("customer", "timezone"), { scheduleId: "slot-2", customerName: "Bea" })).rejects.toMatchObject({ code: "appointment.schedule_invalid", status: 400 });
     expect(snapshot(store)).toEqual(beforeTimezone);
+    const slot = store.records.get("schedule")!.get("slot-2")!;
+    slot.timezone = "Asia/Singapore";
+    slot.start = "2026-02-30T10:00:00Z";
+    slot.end = "2026-02-30T10:30:00Z";
+    const beforeImpossibleDate = snapshot(store);
+    await expect(runtime.request(store, context("customer", "impossible-date"), { scheduleId: "slot-2", customerName: "Bea" })).rejects.toMatchObject({ code: "appointment.schedule_invalid", status: 400 });
+    expect(snapshot(store)).toEqual(beforeImpossibleDate);
     await expect(runtime.history(store, context("staff", "missing-history"), "missing")).rejects.toMatchObject({ code: "appointment.not_found", status: 404 });
   });
 });

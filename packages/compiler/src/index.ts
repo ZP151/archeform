@@ -19,7 +19,14 @@ import {
   renderTaskPrismaStore,
   renderTaskApi,
 } from "./task-mutation-contract.js";
-import { selectAppointmentRuntimeProfile } from "./appointment-mutation-contract.js";
+import {
+  appointmentPrismaMigration,
+  appointmentPrismaSchema,
+  renderAppointmentApiDispatch,
+  renderAppointmentMutationRuntime,
+  renderAppointmentPrismaStore,
+  selectAppointmentRuntimeProfile,
+} from "./appointment-mutation-contract.js";
 import {
   selectApprovalCorrection,
   renderApprovalJourney,
@@ -3883,6 +3890,10 @@ export function buildCompilationInput(
     !restaurantRuntimeEnabled && moneyPricingPersistence !== undefined;
   const notificationOutbox =
     resolveNotificationOutboxRuntimeContribution(input);
+  const appointmentProfile = selectAppointmentRuntimeProfile(
+    graph,
+    input.compositionLock,
+  );
   if (restaurantRuntimeEnabled && notificationOutbox) {
     throw new Error(
       "Restaurant Ordering does not support notification.outbox/v1; remove the durable notification lock before compilation.",
@@ -3893,12 +3904,14 @@ export function buildCompilationInput(
       ? [moneyPricingPersistence!.schema]
       : []),
     ...(notificationOutbox ? [notificationOutboxPrismaSchema] : []),
+    ...(appointmentProfile ? [appointmentPrismaSchema] : []),
   ];
   const additionalMigrationFragments = [
     ...(useGenericMoneyPricingPersistence
       ? [moneyPricingPersistence!.migration]
       : []),
     ...(notificationOutbox ? [notificationOutboxMigration] : []),
+    ...(appointmentProfile ? [appointmentPrismaMigration] : []),
   ];
   return {
     publishedRevisionId: input.publishedRevisionId,
@@ -4309,7 +4322,7 @@ export function generateApplicationBundle(
       path: "api/src/main.ts",
       render: () =>
         restaurantRuntime()?.main ??
-        renderTaskApi(
+        renderAppointmentApiDispatch(renderTaskApi(
           renderApiMain(
             graph,
             usePackageLineConfigurationHandler,
@@ -4320,7 +4333,7 @@ export function generateApplicationBundle(
           !!identityPolicy,
           taskEntity,
           hasTaskCorrection(graph, taskEntity),
-        ),
+        ), appointmentProfile),
     },
     ...(calculatedApproval ? calculatedRuntimeFiles() : []),
     ...(restaurantRuntimeEnabled
@@ -4351,7 +4364,7 @@ export function generateApplicationBundle(
       path: "api/src/application-runtime.ts",
       render: () =>
         restaurantRuntime()?.applicationRuntimeContract ??
-        renderTaskMutationRuntime(
+        renderAppointmentMutationRuntime(renderTaskMutationRuntime(
           renderApplicationRuntime(
             graph,
             useResolvedContributions,
@@ -4367,12 +4380,12 @@ export function generateApplicationBundle(
           ),
           graph,
           taskEntity,
-        ),
+        ), appointmentProfile),
     },
     {
       path: "api/src/prisma-record-store.ts",
       render: () =>
-        renderTaskPrismaStore(
+        renderAppointmentPrismaStore(renderTaskPrismaStore(
           renderPrismaRecordStore(
             graph,
             restaurantRuntimeEnabled,
@@ -4382,7 +4395,7 @@ export function generateApplicationBundle(
           ),
           graph,
           taskEntity,
-        ),
+        ), appointmentProfile),
     },
     ...(notificationOutbox
       ? [
