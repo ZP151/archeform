@@ -54,10 +54,44 @@ const generatedTypecheckDirectory = resolve(
   dirname(fileURLToPath(import.meta.url)),
   ".generated-appointment-profile-typecheck",
 );
+const generatedWebTypecheckDirectory = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  ".generated-appointment-web-typecheck",
+);
 
 afterAll(async () => {
   await rm(generatedTypecheckDirectory, { recursive: true, force: true });
+  await rm(generatedWebTypecheckDirectory, { recursive: true, force: true });
 });
+
+async function typecheckGeneratedAppointmentPageRuntime(): Promise<readonly string[]> {
+  await mkdir(generatedWebTypecheckDirectory, { recursive: true });
+  const directory = await mkdtemp(join(generatedWebTypecheckDirectory, "project-"));
+  try {
+    const input = appointmentDefinitionCompilationInput();
+    const pageRuntime = generateApplicationBundle({
+      publishedRevisionId: "appointment-page-runtime-typecheck",
+      graph: input.graph,
+      compositionLock: input.compositionLock,
+    } as PublishedGraphInput).files.find((file) => file.path === "web/app/page-runtime.tsx")!;
+    const blockType = pageRuntime.content.match(/^type PageRuntimeBlock = .+;$/m)?.[0];
+    const projectionType = pageRuntime.content.match(/^type PageRuntimeProjection = .+;$/m)?.[0];
+    const projectionValue = pageRuntime.content.match(/const projection: PageRuntimeProjection = [\s\S]+?(?=\nconst definition:)/)?.[0];
+    if (!blockType || !projectionType || !projectionValue) throw new Error("Generated appointment page runtime projection was unavailable.");
+    expect(projectionType).toContain("readonly appointment?: { readonly appointmentEntity: string; readonly commands: readonly ['request', 'confirm', 'reschedule', 'cancel', 'history'] }");
+    expect(projectionValue).toContain('"appointment"');
+    await writeFile(resolve(directory, "page-runtime-projection.ts"), `${blockType}\n${projectionType}\n${projectionValue}`, "utf8");
+    await writeFile(resolve(directory, "tsconfig.json"), JSON.stringify({
+      compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true, noEmit: true, skipLibCheck: true },
+      include: ["page-runtime-projection.ts"],
+    }, null, 2), "utf8");
+    const parsed = ts.getParsedCommandLineOfConfigFile(resolve(directory, "tsconfig.json"), undefined, ts.sys as ts.ParseConfigFileHost);
+    if (!parsed) throw new Error("Generated appointment page runtime typecheck configuration was unavailable.");
+    return ts.getPreEmitDiagnostics(ts.createProgram(parsed.fileNames, parsed.options)).map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
 
 async function typecheckGeneratedAppointmentProfile(): Promise<readonly string[]> {
   await mkdir(generatedTypecheckDirectory, { recursive: true });
@@ -316,6 +350,11 @@ describe("appointment booking compiler runtime", () => {
     });
     expect(await typecheckGeneratedAppointmentProfile()).toEqual([]);
   }, 30_000);
+
+  it("typechecks the emitted Appointment page runtime projection", async () => {
+    expect(await typecheckGeneratedAppointmentPageRuntime()).toEqual([]);
+  }, 30_000);
+
   it("injects server-derived entity routes and serializable appointment stores", () => {
     const api = renderAppointmentApiDispatch("import { ApplicationRuntime } from \"./application-runtime.js\";\nfunction rejected(error: unknown): HttpException {\n  return new HttpException(error instanceof Error ? error.message : 'Request rejected.', HttpStatus.FORBIDDEN);\n}\n@Controller('api')\nclass GeneratedController { create(){ return await applicationRuntime.create( } transition(){ return await applicationRuntime.transition( } }", profile);
     expect(api).toContain("@Get(':entity/:recordId/appointment-history')");
