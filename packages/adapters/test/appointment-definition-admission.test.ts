@@ -134,7 +134,6 @@ const reviewedAppointmentContract = {
       ["confirm", "requested", "confirmed", "staff"],
       ["cancel", "requested", "cancelled", "customer"],
       ["reschedule", "confirmed", "requested", "staff"],
-      ["cancel", "confirmed", "cancelled", "staff"],
     ],
   },
 };
@@ -248,17 +247,17 @@ const pendingAppointmentComposition = {
     scheduleCapacityField: "capacity",
     appointmentCancellationReasonField: "cancellationReason",
   },
+  commandAuthorization: {
+    cancel: [
+      { actorKey: "customer", fromStates: ["requested"] },
+      { actorKey: "staff", fromStates: ["requested", "confirmed"] },
+      { actorKey: "administrator", fromStates: ["requested", "confirmed"] },
+    ],
+  },
 } as const;
 
-// The current generic Blueprint schema requires unique transition keys. The
-// pending helper therefore validates the staff-owned command projection while
-// retaining the full customer-or-staff cancellation contract above for the
-// future appointment capability to enforce.
-const pendingProjectionTransitions = [
-  ["confirm", "requested", "confirmed", "staff"],
-  ["reschedule", "confirmed", "requested", "staff"],
-  ["cancel", "confirmed", "cancelled", "staff"],
-] as const;
+const pendingProjectionTransitions =
+  reviewedAppointmentContract.workflow.transitions;
 
 /**
  * Strict Task 1 stand-in for the future catalogue family. It deliberately
@@ -650,6 +649,22 @@ describe("Appointment Booking definition admission", () => {
     );
     expect(first.composition).toEqual(pendingAppointmentComposition);
     expect(JSON.stringify(first.composition)).not.toContain(definitionKey);
+    expect(
+      first.interpretation.blueprint.workflows[0]!.transitions.map(
+        ({ key, from, to, actorKey }) => [key, from, to, actorKey],
+      ),
+    ).toEqual(reviewedAppointmentContract.workflow.transitions);
+    expect(
+      first.interpretation.blueprint.actors.map(({ key, permissions }) => [
+        key,
+        permissions,
+      ]),
+    ).toEqual(reviewedAppointmentContract.roles);
+    expect(first.composition.commandAuthorization.cancel).toEqual([
+      { actorKey: "customer", fromStates: ["requested"] },
+      { actorKey: "staff", fromStates: ["requested", "confirmed"] },
+      { actorKey: "administrator", fromStates: ["requested", "confirmed"] },
+    ]);
   });
 
   it("does not make an unregistered appointment definition selectable", () => {
