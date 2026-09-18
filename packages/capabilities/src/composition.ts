@@ -1317,6 +1317,7 @@ function appointmentBoundEntity(
 function assertAppointmentPublishedGraphEligibility(
   graph: ApplicationGraphV1,
   composition: CapabilityCompositionV1,
+  assets: readonly CapabilityAssetV1[],
 ): void {
   const selected = composition.packages.find(
     ({ lock }) => lock.key === "scheduling.appointment",
@@ -1325,10 +1326,13 @@ function assertAppointmentPublishedGraphEligibility(
   if (selected.lock.version !== "1.0.0") {
     throw new Error("Appointment capability requires version 1.0.0.");
   }
-  const asset = capabilityAssets.find(
+  const asset = assets.find(
     ({ manifest }) =>
       manifest.key === selected.lock.key &&
-      manifest.version === selected.lock.version,
+      manifest.version === selected.lock.version &&
+      manifest.packageRoot === selected.lock.packageRoot &&
+      manifest.manifestDigest === selected.lock.manifestDigest &&
+      manifest.lifecycle === selected.lock.lifecycle,
   );
   if (!asset) throw new Error("Appointment capability asset is unavailable.");
 
@@ -1409,7 +1413,7 @@ export function resolveCapabilityCompositionForPublishedGraph(
   assets: readonly CapabilityAssetV1[] = capabilityAssets,
 ): CapabilityCompositionV1 {
   const composition = resolveCapabilityCompositionForAssets(input, assets);
-  assertAppointmentPublishedGraphEligibility(graph, composition);
+  assertAppointmentPublishedGraphEligibility(graph, composition, assets);
   return composition;
 }
 

@@ -5,7 +5,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
 
-import { lockCapabilityAsset } from "../src/assets/index.js";
+import {
+  lockCapabilityAsset,
+  type CapabilityAssetV1,
+} from "../src/assets/index.js";
 import {
   resolveCapabilityCompositionForAssets,
   resolveCapabilityCompositionForPublishedGraph,
@@ -16,6 +19,7 @@ import type { ApplicationGraphV1 } from "@factory/graph/browser";
 import {
   verifyCapabilityAssetDigest,
   verifyCapabilityAssetPackage,
+  capabilityManifestDigest,
 } from "../src/node.js";
 
 const repositoryRoot = resolve(
@@ -286,6 +290,36 @@ describe("appointment scheduling capability package", () => {
     }
   });
 
+  it("uses the supplied appointment asset when validating Published Graph fields", () => {
+    const registered = getCapabilityAsset("scheduling.appointment");
+    const manifest = structuredClone(registered.manifest);
+    const inputSchema = manifest.inputSchema.map((schema) =>
+      schema.key === "serviceNameField" && schema.type === "domain.field"
+        ? { ...schema, fieldTypes: ["integer"] as const }
+        : schema,
+    );
+    const custom: CapabilityAssetV1 = {
+      manifest: {
+        ...manifest,
+        inputSchema,
+        manifestDigest: "sha256:placeholder",
+      },
+    };
+    const asset: CapabilityAssetV1 = {
+      manifest: {
+        ...custom.manifest,
+        manifestDigest: capabilityManifestDigest(custom.manifest),
+      },
+    };
+    expect(() =>
+      resolveCapabilityCompositionForPublishedGraph(
+        appointmentGraph(),
+        { selections: [{ lock: lockCapabilityAsset(asset), bindings }] },
+        [asset],
+      ),
+    ).toThrow("serviceNameField");
+  });
+
   it("executes the rendered handler atomically and rejects forged commands", async () => {
     const handler = renderAppointmentHandler();
     const store = new AppointmentStoreDouble();
@@ -319,6 +353,53 @@ describe("appointment scheduling capability package", () => {
     ).rejects.toThrow("appointment.capacity_conflict");
     expect(store.records.get("appointment")?.size).toBe(1);
     await expect(
+      handler.claim(
+        store,
+        { ...context, requestHash: "changed" },
+        {
+          scheduleId: "schedule-1",
+          customerName: "A",
+        },
+      ),
+    ).rejects.toThrow("appointment.idempotency_conflict");
+    const stored = store.records.get("appointment")!.get(claimed.id)!;
+    stored.status = "confirmed";
+    const moved = await handler.move(
+      store,
+      { ...context, idempotencyKey: "move", requestHash: "move" },
+      {
+        appointmentId: claimed.id,
+        expectedVersion: 0,
+        scheduleId: "schedule-2",
+      },
+    );
+    expect(moved.scheduleId).toBe("schedule-2");
+    await expect(
+      handler.release(
+        store,
+        { ...context, idempotencyKey: "stale", requestHash: "stale" },
+        {
+          appointmentId: claimed.id,
+          expectedVersion: 0,
+          cancellationReason: "x",
+        },
+      ),
+    ).rejects.toThrow("appointment.version_conflict");
+    await handler.release(
+      store,
+      { ...context, idempotencyKey: "release", requestHash: "release" },
+      {
+        appointmentId: claimed.id,
+        expectedVersion: 1,
+        cancellationReason: "x",
+      },
+    );
+    await handler.claim(
+      store,
+      { ...context, idempotencyKey: "reclaim", requestHash: "reclaim" },
+      { scheduleId: "schedule-1", customerName: "B" },
+    );
+    await expect(
       handler.claim(store, context, {
         scheduleId: "schedule-2",
         customerName: "B",
@@ -340,8 +421,8 @@ describe("appointment scheduling capability package", () => {
         { scheduleId: "schedule-2", customerName: "C" },
       ),
     ).rejects.toThrow("event failed");
-    expect(store.records.get("appointment")?.size).toBe(1);
-    expect(store.receipts.size).toBe(1);
+    expect(store.records.get("appointment")?.size).toBe(2);
+    expect(store.receipts.size).toBe(4);
   });
 });
 
