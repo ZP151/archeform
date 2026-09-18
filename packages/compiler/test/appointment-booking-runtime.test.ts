@@ -77,10 +77,13 @@ async function typecheckGeneratedAppointmentPageRuntime(): Promise<readonly stri
     const blockType = pageRuntime.content.match(/^type PageRuntimeBlock = .+;$/m)?.[0];
     const projectionType = pageRuntime.content.match(/^type PageRuntimeProjection = .+;$/m)?.[0];
     const projectionValue = pageRuntime.content.match(/const projection: PageRuntimeProjection = [\s\S]+?(?=\nconst definition:)/)?.[0];
-    if (!blockType || !projectionType || !projectionValue) throw new Error("Generated appointment page runtime projection was unavailable.");
+    const runtimeEntityType = pageRuntime.content.match(/^type RuntimeEntity = .+;$/m)?.[0];
+    const runtimeDefinitionType = pageRuntime.content.match(/^type RuntimeDefinition = .+;$/m)?.[0];
+    const definitionValue = pageRuntime.content.match(/const definition: RuntimeDefinition = [\s\S]+?(?=\n\n)/)?.[0];
+    if (!blockType || !projectionType || !projectionValue || !runtimeEntityType || !runtimeDefinitionType || !definitionValue) throw new Error("Generated appointment page runtime declarations were unavailable.");
     expect(projectionType).toContain("readonly appointment?: { readonly appointmentEntity: string; readonly commands: readonly ['request', 'confirm', 'reschedule', 'cancel', 'history'] }");
     expect(projectionValue).toContain('"appointment"');
-    await writeFile(resolve(directory, "page-runtime-projection.ts"), `${blockType}\n${projectionType}\n${projectionValue}`, "utf8");
+    await writeFile(resolve(directory, "page-runtime-projection.ts"), `${blockType}\n${projectionType}\n${runtimeEntityType}\n${runtimeDefinitionType}\n${projectionValue}\n${definitionValue}`, "utf8");
     await writeFile(resolve(directory, "tsconfig.json"), JSON.stringify({
       compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true, noEmit: true, skipLibCheck: true },
       include: ["page-runtime-projection.ts"],

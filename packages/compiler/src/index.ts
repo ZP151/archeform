@@ -2906,6 +2906,9 @@ function renderPageRuntime(
   const appointmentProjectionType = appointmentProfile
     ? "; readonly appointment?: { readonly appointmentEntity: string; readonly commands: readonly ['request', 'confirm', 'reschedule', 'cancel', 'history'] }"
     : "";
+  const appointmentRuntimeFieldType = appointmentProfile
+    ? "; readonly calculation?: unknown; readonly numericDomain?: unknown"
+    : "";
 
   const source = [
     '"use client";',
@@ -2918,8 +2921,8 @@ function renderPageRuntime(
     "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout' | 'stats' | 'list' | 'detail' | 'calendar' | 'settings'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
     `type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null }${appointmentProjectionType} };`,
     approval
-      ? "type RuntimeField = { readonly key: string; readonly required: boolean; readonly type: string; readonly values?: readonly string[] }; type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly RuntimeField[] };"
-      : "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string }[] };",
+      ? `type RuntimeField = { readonly key: string; readonly required: boolean; readonly type: string; readonly values?: readonly string[]${appointmentRuntimeFieldType} }; type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly RuntimeField[] };`
+      : `type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string${appointmentRuntimeFieldType} }[] };`,
     approval
       ? "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly states?: readonly string[]; readonly initialState?: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };"
       : "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
