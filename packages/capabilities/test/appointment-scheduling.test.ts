@@ -332,11 +332,20 @@ describe("appointment scheduling capability package", () => {
       now: "2026-10-01T00:00:00.000Z",
     };
     const transactionsBeforeClaim = store.transactions;
+    const receiptsBeforeClaim = store.receipts.size;
+    const eventsBeforeClaim = store.events.length;
     const claimed = await handler.claim(store, context, {
       scheduleId: "schedule-1",
       customerName: "A",
     });
     expect(store.transactions).toBe(transactionsBeforeClaim + 1);
+    expect(store.receipts.size).toBe(receiptsBeforeClaim + 1);
+    expect(store.events).toHaveLength(eventsBeforeClaim + 1);
+    expect(store.events.at(-1)).toMatchObject({
+      operation: "claim",
+      recordId: claimed.id,
+    });
+    expect(store.receipts.get("scope:claim-1")?.response).toEqual(claimed);
     expect(claimed.status).toBe("requested");
     expect(store.events).toHaveLength(1);
     const replaySnapshot = snapshotStore(store);
@@ -361,6 +370,7 @@ describe("appointment scheduling capability package", () => {
     expect(snapshotStore(store)).toEqual(capacitySnapshot);
     expect(store.records.get("appointment")?.size).toBe(1);
     const idempotencySnapshot = snapshotStore(store);
+    const idempotencyTransactions = store.transactions;
     await expect(
       handler.claim(
         store,
@@ -371,10 +381,13 @@ describe("appointment scheduling capability package", () => {
         },
       ),
     ).rejects.toThrow("appointment.idempotency_conflict");
+    expect(store.transactions).toBe(idempotencyTransactions);
     expect(snapshotStore(store)).toEqual(idempotencySnapshot);
     const stored = store.records.get("appointment")!.get(claimed.id)!;
     stored.status = "confirmed";
     const moveTransactions = store.transactions;
+    const moveReceipts = store.receipts.size;
+    const moveEvents = store.events.length;
     const moved = await handler.move(
       store,
       { ...context, idempotencyKey: "move", requestHash: "move" },
@@ -385,6 +398,13 @@ describe("appointment scheduling capability package", () => {
       },
     );
     expect(store.transactions).toBe(moveTransactions + 1);
+    expect(store.receipts.size).toBe(moveReceipts + 1);
+    expect(store.events).toHaveLength(moveEvents + 1);
+    expect(store.events.at(-1)).toMatchObject({
+      operation: "move",
+      recordId: claimed.id,
+    });
+    expect(store.receipts.get("scope:move")?.response).toEqual(moved);
     expect(moved.scheduleId).toBe("schedule-2");
     const staleSnapshot = snapshotStore(store);
     await expect(
@@ -400,7 +420,9 @@ describe("appointment scheduling capability package", () => {
     ).rejects.toThrow("appointment.version_conflict");
     expect(snapshotStore(store)).toEqual(staleSnapshot);
     const releaseTransactions = store.transactions;
-    await handler.release(
+    const releaseReceipts = store.receipts.size;
+    const releaseEvents = store.events.length;
+    const released = await handler.release(
       store,
       { ...context, idempotencyKey: "release", requestHash: "release" },
       {
@@ -410,11 +432,29 @@ describe("appointment scheduling capability package", () => {
       },
     );
     expect(store.transactions).toBe(releaseTransactions + 1);
-    await handler.claim(
+    expect(store.receipts.size).toBe(releaseReceipts + 1);
+    expect(store.events).toHaveLength(releaseEvents + 1);
+    expect(store.events.at(-1)).toMatchObject({
+      operation: "release",
+      recordId: claimed.id,
+    });
+    expect(store.receipts.get("scope:release")?.response).toEqual(released);
+    const reclaimTransactions = store.transactions;
+    const reclaimReceipts = store.receipts.size;
+    const reclaimEvents = store.events.length;
+    const reclaimed = await handler.claim(
       store,
       { ...context, idempotencyKey: "reclaim", requestHash: "reclaim" },
       { scheduleId: "schedule-1", customerName: "B" },
     );
+    expect(store.transactions).toBe(reclaimTransactions + 1);
+    expect(store.receipts.size).toBe(reclaimReceipts + 1);
+    expect(store.events).toHaveLength(reclaimEvents + 1);
+    expect(store.events.at(-1)).toMatchObject({
+      operation: "claim",
+      recordId: reclaimed.id,
+    });
+    expect(store.receipts.get("scope:reclaim")?.response).toEqual(reclaimed);
     for (const [field, value] of [
       ["end", "2026-10-01T02:00:00Z"],
       ["start", "2026-02-30T01:00:00Z"],
@@ -439,6 +479,7 @@ describe("appointment scheduling capability package", () => {
       expect(snapshotStore(store)).toEqual(invalidSnapshot);
     }
     const forgedSnapshot = snapshotStore(store);
+    const forgedTransactions = store.transactions;
     await expect(
       handler.claim(store, context, {
         scheduleId: "schedule-2",
@@ -446,8 +487,10 @@ describe("appointment scheduling capability package", () => {
         availability: 9,
       }),
     ).rejects.toThrow("appointment.invalid_request");
+    expect(store.transactions).toBe(forgedTransactions);
     expect(snapshotStore(store)).toEqual(forgedSnapshot);
     const contextSnapshot = snapshotStore(store);
+    const contextTransactions = store.transactions;
     await expect(
       handler.claim(
         store,
@@ -455,6 +498,7 @@ describe("appointment scheduling capability package", () => {
         { scheduleId: "schedule-2", customerName: "B" },
       ),
     ).rejects.toThrow("appointment.unauthorized");
+    expect(store.transactions).toBe(contextTransactions);
     expect(snapshotStore(store)).toEqual(contextSnapshot);
     const rollbackSnapshot = snapshotStore(store);
     store.failEvent = true;
