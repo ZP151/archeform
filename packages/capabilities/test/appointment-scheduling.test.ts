@@ -331,19 +331,26 @@ describe("appointment scheduling capability package", () => {
       requestHash: "hash-1",
       now: "2026-10-01T00:00:00.000Z",
     };
+    const transactionsBeforeClaim = store.transactions;
     const claimed = await handler.claim(store, context, {
       scheduleId: "schedule-1",
       customerName: "A",
     });
+    expect(store.transactions).toBe(transactionsBeforeClaim + 1);
     expect(claimed.status).toBe("requested");
     expect(store.events).toHaveLength(1);
+    const replaySnapshot = snapshotStore(store);
+    const replayTransactions = store.transactions;
     await expect(
       handler.claim(store, context, {
         scheduleId: "schedule-1",
         customerName: "A",
       }),
     ).resolves.toEqual(claimed);
+    expect(store.transactions).toBe(replayTransactions);
+    expect(snapshotStore(store)).toEqual(replaySnapshot);
     expect(store.events).toHaveLength(1);
+    const capacitySnapshot = snapshotStore(store);
     await expect(
       handler.claim(
         store,
@@ -351,7 +358,9 @@ describe("appointment scheduling capability package", () => {
         { scheduleId: "schedule-1", customerName: "B" },
       ),
     ).rejects.toThrow("appointment.capacity_conflict");
+    expect(snapshotStore(store)).toEqual(capacitySnapshot);
     expect(store.records.get("appointment")?.size).toBe(1);
+    const idempotencySnapshot = snapshotStore(store);
     await expect(
       handler.claim(
         store,
@@ -362,8 +371,10 @@ describe("appointment scheduling capability package", () => {
         },
       ),
     ).rejects.toThrow("appointment.idempotency_conflict");
+    expect(snapshotStore(store)).toEqual(idempotencySnapshot);
     const stored = store.records.get("appointment")!.get(claimed.id)!;
     stored.status = "confirmed";
+    const moveTransactions = store.transactions;
     const moved = await handler.move(
       store,
       { ...context, idempotencyKey: "move", requestHash: "move" },
@@ -373,7 +384,9 @@ describe("appointment scheduling capability package", () => {
         scheduleId: "schedule-2",
       },
     );
+    expect(store.transactions).toBe(moveTransactions + 1);
     expect(moved.scheduleId).toBe("schedule-2");
+    const staleSnapshot = snapshotStore(store);
     await expect(
       handler.release(
         store,
@@ -385,6 +398,8 @@ describe("appointment scheduling capability package", () => {
         },
       ),
     ).rejects.toThrow("appointment.version_conflict");
+    expect(snapshotStore(store)).toEqual(staleSnapshot);
+    const releaseTransactions = store.transactions;
     await handler.release(
       store,
       { ...context, idempotencyKey: "release", requestHash: "release" },
@@ -394,11 +409,36 @@ describe("appointment scheduling capability package", () => {
         cancellationReason: "x",
       },
     );
+    expect(store.transactions).toBe(releaseTransactions + 1);
     await handler.claim(
       store,
       { ...context, idempotencyKey: "reclaim", requestHash: "reclaim" },
       { scheduleId: "schedule-1", customerName: "B" },
     );
+    for (const [field, value] of [
+      ["end", "2026-10-01T02:00:00Z"],
+      ["start", "2026-02-30T01:00:00Z"],
+      ["timezone", "Mars/Olympus"],
+    ] as const) {
+      const schedule = store.records.get("schedule")!.get("schedule-2")!;
+      const previous = schedule[field];
+      const invalidSnapshot = snapshotStore(store);
+      schedule[field] = value;
+      await expect(
+        handler.claim(
+          store,
+          {
+            ...context,
+            idempotencyKey: `invalid-${field}`,
+            requestHash: `invalid-${field}`,
+          },
+          { scheduleId: "schedule-2", customerName: "C" },
+        ),
+      ).rejects.toThrow("appointment.schedule_invalid");
+      store.records.get("schedule")!.get("schedule-2")![field] = previous;
+      expect(snapshotStore(store)).toEqual(invalidSnapshot);
+    }
+    const forgedSnapshot = snapshotStore(store);
     await expect(
       handler.claim(store, context, {
         scheduleId: "schedule-2",
@@ -406,6 +446,8 @@ describe("appointment scheduling capability package", () => {
         availability: 9,
       }),
     ).rejects.toThrow("appointment.invalid_request");
+    expect(snapshotStore(store)).toEqual(forgedSnapshot);
+    const contextSnapshot = snapshotStore(store);
     await expect(
       handler.claim(
         store,
@@ -413,6 +455,8 @@ describe("appointment scheduling capability package", () => {
         { scheduleId: "schedule-2", customerName: "B" },
       ),
     ).rejects.toThrow("appointment.unauthorized");
+    expect(snapshotStore(store)).toEqual(contextSnapshot);
+    const rollbackSnapshot = snapshotStore(store);
     store.failEvent = true;
     await expect(
       handler.claim(
@@ -421,6 +465,7 @@ describe("appointment scheduling capability package", () => {
         { scheduleId: "schedule-2", customerName: "C" },
       ),
     ).rejects.toThrow("event failed");
+    expect(snapshotStore(store)).toEqual(rollbackSnapshot);
     expect(store.records.get("appointment")?.size).toBe(2);
     expect(store.receipts.size).toBe(4);
   });
@@ -536,6 +581,17 @@ function renderAppointmentHandler(): any {
   return module.exports.appointmentBookingHandler;
 }
 
+function snapshotStore(store: AppointmentStoreDouble) {
+  return structuredClone({
+    records: [...store.records.entries()].map(([key, values]) => [
+      key,
+      [...values.entries()],
+    ]),
+    receipts: [...store.receipts.entries()],
+    events: store.events,
+  });
+}
+
 class AppointmentStoreDouble {
   readonly records = new Map<string, Map<string, any>>([
     ["service", new Map([["service-1", { id: "service-1", active: true }]])],
@@ -573,6 +629,7 @@ class AppointmentStoreDouble {
   readonly receipts = new Map<string, any>();
   readonly events: any[] = [];
   failEvent = false;
+  transactions = 0;
   async list(entity: string) {
     return [...(this.records.get(entity)?.values() ?? [])];
   }
@@ -601,6 +658,7 @@ class AppointmentStoreDouble {
     this.events.push(event);
   }
   async inTransaction<T>(operation: (store: any) => Promise<T>) {
+    this.transactions++;
     const snapshot = structuredClone({
       records: [...this.records.entries()].map(([k, v]) => [
         k,
