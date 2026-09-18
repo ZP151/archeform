@@ -5817,3 +5817,34 @@ import failure, exact manifest/lockfile identity, actual renderer registration,
 valid-byte equality, and the complete adversarial mutation matrix through both
 real seams. Appointment remains unaccepted as an eighth product until Task 6
 runtime evidence and final release review are complete.
+
+### 2026-09-18 Appointment compiler admission evidence complete
+
+Task 4 implementation and fix rounds are complete in commit
+`dc36cd60f5a6d25d0ddad1cfe78b58c0da3fe9e57` (`Harden Appointment compiler
+admission evidence`). The exact accepted ADR-0072 amendment is
+`72ba9bfe24628f1ad01a81f77c82b14d055a5f5a804f9f596ecfb7f233df9fab`.
+Independent implementation review returned approval with P0/P1/P2 `0/0/0`.
+
+The compiler package now has the authorized root-only export map and keeps the
+lockfile byte-identical to immutable parent `b8d79696`. The private admission
+module is imported only by the compiler index, registers the actual
+`renderPageRuntime` reference exactly once, and fails closed when missing or
+repeated. The dependent `apps/compiler-worker` process compares actual root
+runtime export keys with the b8 source AST and rejects five witness/package
+deep paths with `ERR_PACKAGE_PATH_NOT_EXPORTED`. The real page-runtime seam
+produces bytes equal to the normal bundle and runs the full Appointment
+adversarial matrix.
+
+Focused evidence is green: capabilities 186 tests, adapters 193 tests, and
+compiler 96 tests; graph/capabilities/adapters/compiler typecheck and build
+pass. The retained detached-parent capture completed with an empty status,
+parent `b8d796961b1ff68c7d5efa1a12fe353aa370eee8`, script SHA
+`sha256:25922462cf37aa437ac66bfe6a711a2f765adec982515cce63a4a8665827c213`,
+and fixture SHA
+`sha256:6698cfe7b69c05461836373350aba5c940fffa6dfb8e392029a31b6e660df01b`.
+Pre-existing Prettier warnings remain only in inherited compiler index and
+compatibility-test regions; all owned changed fixtures, manifest, boundary
+test, and evidence paths pass scoped formatting. Task 6 remains the next gate:
+real local PostgreSQL/API/browser runtime evidence and final release review
+are required before Appointment is accepted as the eighth product.
