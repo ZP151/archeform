@@ -4,7 +4,7 @@ import { executeCommand } from "./local-product-acceptance.mjs";
 
 const schemaVersion = "factory.local-regression-summary/v1";
 const usage =
-  "Usage: node scripts/regression.mjs <smoke|product> [--dry-run]\n";
+  "Usage: node scripts/regression.mjs <smoke|product|definitions> [--dry-run]\n";
 const smokeTimeoutMilliseconds = 120_000;
 const productTimeoutMilliseconds = 600_000;
 
@@ -21,6 +21,42 @@ const productArguments = [
   "--concurrency=4",
 ];
 
+const definitionBuildArguments = [
+  "exec",
+  "turbo",
+  "run",
+  "build",
+  "--filter=@factory/adapters...",
+  "--filter=@factory/compiler...",
+];
+const definitionAdapterTestArguments = [
+  "--filter",
+  "@factory/adapters",
+  "test",
+  "--",
+  "test/product-definition-data.test.ts",
+  "test/requirement-interpreter.test.ts",
+];
+const definitionCompatibilityTestArguments = [
+  "--filter",
+  "@factory/compiler",
+  "test",
+  "--",
+  "test/definition-data-compatibility.test.ts",
+];
+
+function pnpmCommand(args, platform) {
+  return platform === "win32"
+    ? { command: "cmd.exe", args: ["/d", "/s", "/c", "pnpm", ...args] }
+    : { command: "pnpm", args };
+}
+
+function nodeCommand(args, platform) {
+  return platform === "win32"
+    ? { command: "cmd.exe", args: ["/d", "/s", "/c", "node", ...args] }
+    : { command: process.execPath, args };
+}
+
 function commandPlan(lane, platform) {
   if (lane === "smoke") {
     return [
@@ -35,6 +71,59 @@ function commandPlan(lane, platform) {
         command: process.execPath,
         id: "local-product-acceptance",
         timeoutMilliseconds: smokeTimeoutMilliseconds,
+      },
+    ];
+  }
+  if (lane === "definitions") {
+    const build = pnpmCommand(definitionBuildArguments, platform);
+    const adapterTests = pnpmCommand(definitionAdapterTestArguments, platform);
+    const compatibilityTests = pnpmCommand(
+      definitionCompatibilityTestArguments,
+      platform,
+    );
+    return [
+      {
+        ...build,
+        id: "definition-build",
+        timeoutMilliseconds: productTimeoutMilliseconds,
+      },
+      {
+        ...nodeCommand(
+          [
+            "--test",
+            "scripts/definition-case-index.test.mjs",
+            "scripts/regression.test.mjs",
+          ],
+          platform,
+        ),
+        id: "definition-tool-tests",
+        timeoutMilliseconds: smokeTimeoutMilliseconds,
+      },
+      {
+        ...nodeCommand(
+          ["scripts/verify-product-definition-data.mjs"],
+          platform,
+        ),
+        id: "definition-validation",
+        timeoutMilliseconds: smokeTimeoutMilliseconds,
+      },
+      {
+        ...nodeCommand(
+          ["scripts/definition-case-index.mjs", "--check"],
+          platform,
+        ),
+        id: "definition-case-index",
+        timeoutMilliseconds: smokeTimeoutMilliseconds,
+      },
+      {
+        ...adapterTests,
+        id: "definition-adapter-tests",
+        timeoutMilliseconds: productTimeoutMilliseconds,
+      },
+      {
+        ...compatibilityTests,
+        id: "definition-compatibility-tests",
+        timeoutMilliseconds: productTimeoutMilliseconds,
       },
     ];
   }
@@ -54,7 +143,7 @@ function commandPlan(lane, platform) {
 function parseArguments(argumentsList) {
   if (
     (argumentsList.length !== 1 && argumentsList.length !== 2) ||
-    (argumentsList[0] !== "smoke" && argumentsList[0] !== "product") ||
+    !["smoke", "product", "definitions"].includes(argumentsList[0]) ||
     (argumentsList.length === 2 && argumentsList[1] !== "--dry-run")
   ) {
     return null;

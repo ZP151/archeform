@@ -17,6 +17,15 @@ const productArguments = [
   "--concurrency=4",
 ];
 
+const definitionArguments = [
+  "exec",
+  "turbo",
+  "run",
+  "build",
+  "--filter=@factory/adapters...",
+  "--filter=@factory/compiler...",
+];
+
 function successfulCommand() {
   return { exitCode: 0, terminationProven: true };
 }
@@ -32,6 +41,7 @@ describe("local regression lanes", () => {
       [],
       ["full"],
       ["smoke", "smoke"],
+      ["definitions", "--dry-run", "extra"],
       ["--dry-run", "smoke"],
       ["smoke", "--dry-run", "extra"],
     ]) {
@@ -50,7 +60,7 @@ describe("local regression lanes", () => {
       assert.equal(result.exitCode, 1);
       assert.equal(calls, 0);
       assert.deepEqual(output.values, [
-        "Usage: node scripts/regression.mjs <smoke|product> [--dry-run]\n",
+        "Usage: node scripts/regression.mjs <smoke|product|definitions> [--dry-run]\n",
       ]);
     }
   });
@@ -80,6 +90,73 @@ describe("local regression lanes", () => {
         {
           args: ["--test", "scripts/local-product-acceptance.test.mjs"],
           id: "local-product-acceptance",
+        },
+      ],
+    });
+  });
+
+  it("lists the provider-free definition admission commands during dry-run", async () => {
+    const output = collector();
+    let calls = 0;
+
+    const result = await runRegression({
+      argumentsList: ["definitions", "--dry-run"],
+      platform: "linux",
+      execute: async () => {
+        calls += 1;
+        return successfulCommand();
+      },
+      writeOutput: output.writeOutput,
+    });
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(calls, 0);
+    assert.deepEqual(JSON.parse(output.values[0]), {
+      dryRun: true,
+      lane: "definitions",
+      schemaVersion: "factory.local-regression-summary/v1",
+      status: "dry-run",
+      steps: [
+        {
+          args: definitionArguments,
+          id: "definition-build",
+        },
+        {
+          args: [
+            "--test",
+            "scripts/definition-case-index.test.mjs",
+            "scripts/regression.test.mjs",
+          ],
+          id: "definition-tool-tests",
+        },
+        {
+          args: ["scripts/verify-product-definition-data.mjs"],
+          id: "definition-validation",
+        },
+        {
+          args: ["scripts/definition-case-index.mjs", "--check"],
+          id: "definition-case-index",
+        },
+        {
+          args: [
+            "--filter",
+            "@factory/adapters",
+            "test",
+            "--",
+            "test/product-definition-data.test.ts",
+            "test/requirement-interpreter.test.ts",
+          ],
+          id: "definition-adapter-tests",
+        },
+        {
+          args: [
+            "--filter",
+            "@factory/compiler",
+            "test",
+            "--",
+            "test/definition-data-compatibility.test.ts",
+          ],
+          id: "definition-compatibility-tests",
         },
       ],
     });

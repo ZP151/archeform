@@ -2,9 +2,11 @@
 
 **Status:** Reviewed and reconciled after Equipment's complete local acceptance
 on 2026-09-17. The same ordinary independent reviewer approves this plan and the
-product with P0/P1/P2 0/0/0; PM accepts the next execution sequence. Proposed
-source/operability changes below are not implemented by writing this document,
-and their stated technology-authority prerequisites remain applicable.
+product with P0/P1/P2 0/0/0; PM accepts the next execution sequence. The first
+Package A slice (the provider-free definition lane and non-authoritative case
+index) was delivered and accepted on 2026-09-22. The remaining emitted-control,
+complete-workspace, cache, dispatch and extraction work below remains planned;
+its stated technology-authority prerequisites remain applicable.
 
 **Product objective:** An ordinary user describes a business job and receives a
 usable, responsive application with minimal clarification and no exposed
@@ -130,6 +132,19 @@ Use disjoint ownership only after the relevant interfaces and generated-output
 expectations are frozen; a shared-contract change pauses affected writers.
 
 ## Package A: short, complete ordinary admission
+
+### Delivered first slice — 2026-09-22
+
+`node scripts/regression.mjs definitions` now builds the adapter/compiler
+dependency closures, runs its tool tests and independent catalogue validator,
+verifies one case/evidence binding per current definition and executes the
+focused adapter and protected compiler compatibility tests. The derived
+`factory.product-definition-case-index/v1` is routing information only and
+cannot register or accept a definition. It strips provider variables, stops on
+the first failed child, and keeps the existing direct commands callable. See
+`docs/acceptance/definition-regression-lane.md` for the RED/GREEN and real-lane
+evidence. Emitted control/read-only/summary checks and complete-workspace
+density checks remain the next Package A step.
 
 1. Extend the existing regression entry point with a documented definition
    lane. It builds only necessary stale workspace dependencies, validates the

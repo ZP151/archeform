@@ -1,15 +1,16 @@
 # Archeform delivery status
 
-Updated: 2026-09-17
+Updated: 2026-09-22
 
-## Current local result: seven products, three runtime families
+## Current local result: eight products, four runtime families
 
 The calculated-request long Goal's product and planning work is accepted locally.
-Coverage is **seven distinct registered / seven locally accepted definitions /
-three demonstrated runtime families**. Equipment Procurement joins Restaurant
+Coverage is **eight distinct registered / eight locally accepted definitions /
+four demonstrated runtime families**. Appointment Booking now joins Restaurant
 Ordering, Expense Approval, Purchase Request Approval, Team Task Tracking,
-Publication Review and Training Funding. The ordinary-user goal remains a
-complete assembled app with minimal business questions.
+Publication Review, Training Funding and Equipment Procurement. The
+ordinary-user goal remains a complete assembled app with minimal business
+questions.
 
 - Shared server-owned quantity-times-price capability is delivered at `ada413fc`.
   Actual PostgreSQL, exact decimal persistence, rollback, correction and the full
@@ -31,19 +32,28 @@ See [Equipment acceptance](acceptance/equipment-procurement.md),
 [phone results](acceptance/evidence/equipment-procurement/two-authored-records-390.png)
 and [shared capability](acceptance/calculated-request-totals.md).
 
+The first engineering-optimization slice is also accepted locally. The
+provider-free definition lane passes its six fixed steps and the derived case
+index covers all eight rows without becoming an acceptance authority. See the
+[lane acceptance record](acceptance/definition-regression-lane.md). It reduces
+the repeated command-list edits required for a new definition; emitted
+control/complete-workspace checks, build-cache measurement and additional
+definition breadth remain open.
+
 The next route follows the reviewed
 [engineering optimization plan](superpowers/plans/2026-09-17-iteration-engineering-optimization.md):
 
-1. Deliver one short definition regression entry point and a non-authoritative
-   case/evidence index; catch control, validation and full-page gaps before builds.
+1. Add the planned emitted-control, no-write feedback and complete-workspace
+   density checks to the short definition lane before image construction.
 2. Improve bounded build context/cache and reuse the owned acceptance runner,
    under the existing operability authority; measure cold/warm costs separately.
 3. Admit 3–5 varied supported jobs through data and shared components, using one
    ordinary review. Extract private compiler responsibilities in small exact-byte
    steps without delaying usable products.
-4. Add Appointment's interval/capacity/conflict/cancel/rebook invariants; measure
-   real-model selection and consented user effort alongside expansion. Prove
-   varied 30-definition coverage before 100+ retrieval and larger catalogues.
+4. Admit the next varied supported jobs through data and shared components;
+   measure real-model selection and consented user effort alongside expansion.
+   Prove varied 30-definition coverage before 100+ retrieval and larger
+   catalogues.
 
 The plan is a delivered proposal with concrete paths, owners, exits and rollback;
 its future cache/refactor/retrieval changes are not implemented claims. Normal

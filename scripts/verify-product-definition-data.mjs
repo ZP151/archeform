@@ -4,6 +4,10 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import {
+  admittedDefinitionKeys,
+  historicalDefinitionKeys,
+} from "./definition-case-bindings.mjs";
 
 // Independent acceptance of the built CLI; never writes or admits candidates.
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -29,19 +33,6 @@ assert.deepEqual(
   "The built catalogue must be the exact source bytes.",
 );
 const catalogue = JSON.parse(source.toString("utf8"));
-const historicalDefinitionKeys = [
-  "restaurant-ordering",
-  "expense-approval",
-  "purchase-request-approval",
-  "team-task-tracking",
-  "publication-review",
-  "training-funding-approval",
-  "equipment-procurement-approval",
-];
-const admittedDefinitionKeys = [
-  ...historicalDefinitionKeys,
-  "appointment-booking-v1",
-];
 assert.deepEqual(
   catalogue.definitions.map((entry) => entry.definitionKey),
   admittedDefinitionKeys,

@@ -15,6 +15,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "format:check": "prettier --check .",
+    "regression": "node scripts/regression.mjs",
     "doctor": "node scripts/doctor.mjs local",
     "doctor:toolchain": "node scripts/doctor.mjs toolchain",
     "accept:local": "node scripts/local-product-acceptance.mjs",

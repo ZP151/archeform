@@ -1,6 +1,6 @@
 # Archeform roadmap
 
-## Current route — 2026-09-17
+## Current route — 2026-09-22
 
 The five-definition local Alpha is integrated into main at `bae5e2a0` through
 [PR #4](https://github.com/ZP151/archeform/pull/4). The exact merged commit's
@@ -21,15 +21,17 @@ Return effort to reusable product capability and ordinary-user outcomes:
 | After varied proven coverage    | 30 definitions, then 100+ retrieval                       | Distinct usable jobs and representative rule/UI regressions, with source-reuse cost recorded                                     |
 | Before external maturity claims | Production identity and durable hosted delivery           | Appropriate access boundaries, stable URL, persistence, recovery and operating responsibility                                    |
 
-Identifier reliability, numeric domains, Training Funding and shared calculated
-totals are delivered on the consumer branch. Equipment's actual attempt 4 and
-independent ordinary review pass: seven locally accepted definitions across
-three families, ready in 197,474 ms with fixture interpretation. The long Goal's
-detailed engineering plan reduces repeated build, verification and authoring
-effort. Follow the
+Identifier reliability, numeric domains, Training Funding, shared calculated
+totals, Equipment and Appointment are delivered on the consumer branch:
+**eight locally accepted definitions across four runtime families**. The first
+Package A tooling slice is now delivered: one provider-free definition lane and
+a non-authoritative case/evidence index cover all eight rows, with focused
+adapter and protected compiler compatibility checks. The long Goal's detailed
+engineering plan reduces repeated build, verification and authoring effort. Follow the
 [engineering plan](superpowers/plans/2026-09-17-iteration-engineering-optimization.md)
-for proposed short admission lanes, bounded cache improvements, varied batches
-and module extraction; its proposals are not completed source changes.
+for the remaining emitted-control checks, bounded cache improvements, varied
+batches and module extraction; those later proposals are not completed source
+changes.
 Technology-contract changes retain their existing authority; ordinary
 definition additions reuse valid family evidence and proportionate regression.
 See [current status](project-status.md) and the
