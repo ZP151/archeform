@@ -71,16 +71,18 @@ without reflecting business payloads or instructions.
 
 ## Run the short definition regression lane
 
-After building the affected workspace dependencies, run the provider-free
-admission lane:
+After the workspace's frozen dependency install, run the provider-free admission
+lane; it prepares its own builds and Prisma client:
 
 ```powershell
 node scripts/regression.mjs definitions
 ```
 
 The lane builds the adapter and compiler dependency closures, runs the
-independent catalogue/CLI checks, validates the protected compiler definition
-compatibility fixtures and stops at the first failure. It strips the known
+independent catalogue/CLI checks, generates the existing Prisma client, executes
+the numeric/calculated emitted-control and complete-workspace browser suites,
+validates protected compiler definition fixtures and stops at the first failure.
+Browser cases need the existing Playwright Chromium installation. It strips the known
 provider variables from every child process and never starts a provider or a
 runtime preview. Use `--dry-run` to inspect the fixed command plan without
 executing it.

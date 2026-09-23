@@ -44,6 +44,19 @@ const definitionCompatibilityTestArguments = [
   "--",
   "test/definition-data-compatibility.test.ts",
 ];
+const definitionEmittedControlTestArguments = [
+  "--filter",
+  "@factory/compiler",
+  "test",
+  "--",
+  "test/approval-numeric-domain.test.ts",
+  "test/approval-calculated-total.test.ts",
+];
+const definitionPrismaGenerateArguments = [
+  "--filter",
+  "@factory/control-plane",
+  "prisma:generate",
+];
 
 function pnpmCommand(args, platform) {
   return platform === "win32"
@@ -79,6 +92,14 @@ function commandPlan(lane, platform) {
     const adapterTests = pnpmCommand(definitionAdapterTestArguments, platform);
     const compatibilityTests = pnpmCommand(
       definitionCompatibilityTestArguments,
+      platform,
+    );
+    const emittedControlTests = pnpmCommand(
+      definitionEmittedControlTestArguments,
+      platform,
+    );
+    const prismaGenerate = pnpmCommand(
+      definitionPrismaGenerateArguments,
       platform,
     );
     return [
@@ -118,6 +139,16 @@ function commandPlan(lane, platform) {
       {
         ...adapterTests,
         id: "definition-adapter-tests",
+        timeoutMilliseconds: productTimeoutMilliseconds,
+      },
+      {
+        ...prismaGenerate,
+        id: "definition-prisma-generate",
+        timeoutMilliseconds: productTimeoutMilliseconds,
+      },
+      {
+        ...emittedControlTests,
+        id: "definition-emitted-control-tests",
         timeoutMilliseconds: productTimeoutMilliseconds,
       },
       {

@@ -4,9 +4,11 @@
 on 2026-09-17. The same ordinary independent reviewer approves this plan and the
 product with P0/P1/P2 0/0/0; PM accepts the next execution sequence. The first
 Package A slice (the provider-free definition lane and non-authoritative case
-index) was delivered and accepted on 2026-09-22. The remaining emitted-control,
-complete-workspace, cache, dispatch and extraction work below remains planned;
-its stated technology-authority prerequisites remain applicable.
+index) was delivered and accepted on 2026-09-22. Existing emitted-control and
+complete-workspace suites were added to the lane and accepted on 2026-09-24,
+including reproducible Prisma client preparation. Cache, dispatch, expanded
+family coverage and extraction work below remain planned; their stated
+technology-authority prerequisites remain applicable.
 
 **Product objective:** An ordinary user describes a business job and receives a
 usable, responsive application with minimal clarification and no exposed
@@ -143,8 +145,9 @@ focused adapter and protected compiler compatibility tests. The derived
 cannot register or accept a definition. It strips provider variables, stops on
 the first failed child, and keeps the existing direct commands callable. See
 `docs/acceptance/definition-regression-lane.md` for the RED/GREEN and real-lane
-evidence. Emitted control/read-only/summary checks and complete-workspace
-density checks remain the next Package A step.
+evidence. On 2026-09-24, the existing numeric/calculated emitted suites joined
+the lane, including read-only/summary, no-write and complete-workspace density
+checks. New-family coverage and comparable timing measurements remain open.
 
 1. Extend the existing regression entry point with a documented definition
    lane. It builds only necessary stale workspace dependencies, validates the

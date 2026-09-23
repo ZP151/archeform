@@ -1,6 +1,31 @@
 # Archeform delivery status
 
-Updated: 2026-09-22
+Updated: 2026-09-24
+
+## Active Goal: scenario-led family expansion and continuous delivery
+
+An unbudgeted Goal now drives the [September 24 execution route](superpowers/plans/2026-09-24-family-expansion-and-delivery.md).
+The first new family is Resource Directory, followed by Inventory Operations.
+Work Orders, Customer Requests, Event Registration and Sales Pipeline are candidate
+waves, not registered or accepted products. Mobile browsing/field work and desktop
+management are selected by actual use; dual-surface products must complete their
+cross-role journey. The eight-definition baseline below is unchanged.
+
+The short-lane continuation now passes all eight steps, including 97 emitted
+numeric/calculated cases and reproducible Prisma client generation, with one
+independent ordinary review. ADR-0074 is accepted through the existing standing
+independent-review authority; the directory's exact profile and preserved
+old-eight baseline are in implementation. No new-family product is yet accepted.
+Continuous delivery is a separate tracked outcome: CI exists, but durable upgrades,
+rollback and hosted operation remain unverified. Source inspection confirms the
+Preview runner removes its owned volumes and uses per-preview resource identity;
+it must not be repurposed as durable deployment. Target hosting information has
+been requested while independent local work proceeds.
+
+The root checkout contains separately owned Eval V2 work. This Goal works in the
+existing isolated `codex/definition-regression-entry` branch and preserves that
+work. Counts distinguish candidates, registered definitions, runtime families,
+local journeys and hosted products; planned catalogue growth is not delivery.
 
 ## Current local result: eight products, four runtime families
 
@@ -33,18 +58,18 @@ See [Equipment acceptance](acceptance/equipment-procurement.md),
 and [shared capability](acceptance/calculated-request-totals.md).
 
 The first engineering-optimization slice is also accepted locally. The
-provider-free definition lane passes its six fixed steps and the derived case
+provider-free definition lane now passes eight fixed steps and the derived case
 index covers all eight rows without becoming an acceptance authority. See the
 [lane acceptance record](acceptance/definition-regression-lane.md). It reduces
-the repeated command-list edits required for a new definition; emitted
-control/complete-workspace checks, build-cache measurement and additional
-definition breadth remain open.
+the repeated command-list edits required for a new definition. Existing Approval
+emitted-control/complete-workspace checks are included; new-family coverage,
+build-cache measurement and additional definition breadth remain open.
 
 The next route follows the reviewed
 [engineering optimization plan](superpowers/plans/2026-09-17-iteration-engineering-optimization.md):
 
-1. Add the planned emitted-control, no-write feedback and complete-workspace
-   density checks to the short definition lane before image construction.
+1. Extend the now-integrated emitted-control, no-write feedback and complete-workspace
+   checks with each new family's representative cases before image construction.
 2. Improve bounded build context/cache and reuse the owned acceptance runner,
    under the existing operability authority; measure cold/warm costs separately.
 3. Admit 3–5 varied supported jobs through data and shared components, using one

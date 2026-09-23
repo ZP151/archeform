@@ -60,10 +60,43 @@ Turbo cache. It is a provider-free local observation, not a cold-build or
 ordinary-user performance claim. The full runtime business and visual
 acceptance cases remain the authority for product completeness.
 
-## Remaining route
+## Emitted-control continuation — 2026-09-24
 
-The next tooling slice can add the already-planned cheap emitted-control and
-complete-workspace checks before image construction. Build-context/cache
-changes remain a separate operability decision and must measure cold and warm
-stages independently. Definition counts, accepted journeys and ordinary-user
-effort remain separate metrics.
+The current lane has eight fixed steps. After the cheap adapter checks, it runs
+the existing `@factory/control-plane prisma:generate` command, then the existing
+compiler `approval-numeric-domain.test.ts` and `approval-calculated-total.test.ts`
+suites before protected compatibility. The added cases cover emitted numeric
+controls, read-only totals, invalid-input no-write behavior and complete-workspace
+browser density with realistic records/roles. This reuses existing tests and
+changes no generated output or dependency.
+
+The first direct emitted run passed 95 of 97 cases and exposed two setup failures:
+the clean worktree lacked a generated Prisma client. The lane now prepares that
+client itself, without connecting to or migrating a database. Focused RED was
+observed before adding the setup step; script tests subsequently pass 12/12 and
+the real emitted suites pass 97/97. The engineer recorded 48.18 seconds for that
+direct test run; it is not an end-to-end lane benchmark.
+
+Root's complete `pnpm regression definitions` run passes all eight steps:
+
+```text
+definition-build 0
+definition-tool-tests 0
+definition-validation 0
+definition-case-index 0
+definition-adapter-tests 0
+definition-prisma-generate 0
+definition-emitted-control-tests 0
+definition-compatibility-tests 0
+```
+
+Independent read-only `/root/directory_decision_review` approves the two-file
+tooling change with P0/P1/P2 0/0/0. Generation and emitted-test failures stop the
+lane; Windows dispatch and provider-variable stripping remain covered. The
+ordinary tooling scope is accepted locally. Actual product acceptance and
+new-family visual review remain separate, applicable outcomes.
+
+Build-context/cache work and three comparable warm-lane timing samples remain
+open. No cold/warm speedup or two-minute lane guarantee is claimed. New-family
+representative emitted cases must join the lane when implemented; the Approval
+tests do not establish Directory, Inventory or hosted-product acceptance.

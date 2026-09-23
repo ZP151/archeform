@@ -1,0 +1,175 @@
+# Scenario-led family expansion and continuous delivery
+
+> **For agentic workers:** Execute accepted slices with focused tests and one
+> ordinary review. Shared Graph/runtime/security/operability changes use the
+> existing technology decision process. Do not introduce a separate gate per
+> definition, viewport or component.
+
+**Goal:** Grow useful business coverage while an ordinary user describes a need,
+answers only material questions and receives an application they can use and keep
+using after an update.
+
+**Architecture:** Reuse reviewed family behavior, strict definition data and UI
+recipes. Preserve Draft -> Publish -> immutable Compilation. Separate temporary
+Preview resources from any future durable delivery environment.
+
+**Tech stack:** Existing accepted TypeScript/Node/React/Next/Nest/Prisma/PostgreSQL
+profile. This plan installs no dependency and selects no hosting provider.
+
+## Authority and baseline
+
+The founder requests continued comprehensive family expansion through a long Goal,
+and specifies mobile or web according to real usage, with continuous deployment
+and delivery included. An active unbudgeted Goal was created on 2026-09-24.
+
+The execution base is `62c53884897a7f72c3a4c9fe25c2b010491515fd` in the existing
+isolated `codex/definition-regression-entry` worktree. Root-checkout Eval V2 work
+is separately owned and must not be overwritten or imported without review.
+
+The current catalogue contains eight registered definitions and four runtime
+families. Existing local evidence does not establish ordinary-user success or
+hosted delivery. New candidates in this document do not increase those counts.
+
+The September 13 scale roadmap and September 17 engineering plan authorize the
+route. A new family contract is implemented only after its exact ADR is accepted.
+Cloud execution waits for a concrete environment and its applicable authority;
+the environment question does not block local product work.
+
+## Global constraints
+
+- English code, tests, UI and repository documentation.
+- Graph is the source of truth; never compile mutable Drafts or modify historical
+  Published data, composition locks or protected generated-output fixtures.
+- Choose surfaces by job. Mobile web is responsive web, not a native app claim.
+- Reuse registered assets before adding source or dependencies. Preserve meaningful
+  color, imagery where useful, icon actions with accessible names, and complete
+  empty/error/recovery states. Do not duplicate an approval layout for every job.
+- Never count a label-only variant, material, candidate brief or unit test as a
+  separately accepted product.
+- Keep model material and credentials out of artifacts, logs and evidence.
+- New public/tenant identity, delivery providers and schema migrations require
+  their accepted decisions. Demo role switches do not establish private hosting.
+
+## Ordered business waves
+
+| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                   |
+| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Tech Lead proposal in progress                                           |
+| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Planned; reuse existing inventory capabilities only after fit assessment |
+| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen; validate the actual assignment/access and evidence requirements before admission                                                                                | Candidate; not a renamed task definition                                 |
+| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit          |
+| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics    |
+| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                  |
+
+After each new reusable family, assess 3-5 real domain briefs. Admit supported,
+semantically distinct jobs through data and bindings. Reject or queue unsupported
+rules instead of adding product-specific runtime branches. Thirty varied reviewed
+definitions precede 100+ retrieval; hundreds or thousands remain later coverage
+targets, not a reason to relax acceptance.
+
+## Task 1: finish the existing cheap preflight
+
+**Owner/paths:** `definition_lane_completion`, only `scripts/regression.mjs` and
+`scripts/regression.test.mjs`. Root owns accompanying evidence/docs.
+
+**Interface:** Preserve `definitions [--dry-run]` and the existing safe summary.
+Reuse `approval-numeric-domain.test.ts` and `approval-calculated-total.test.ts` to
+run emitted controls, invalid/no-write behavior and complete-workspace density.
+
+- [ ] RED: assert the real emitted-test selection is present and a failure stops
+      the lane, retaining Windows dispatch and provider-free behavior.
+- [ ] GREEN: compose those existing tests into the fixed lane; no output changes.
+- [ ] Execute the real lane and inspect browser execution rather than treating a
+      dry-run command listing as visual evidence.
+- [ ] One ordinary review, focused correction and controller delivery.
+
+This task prevents known regressions; it does not establish visual acceptance of
+a new family. New directory controls receive their own representative checks.
+
+## Task 2: deliver Resource Directory as the next family
+
+**Decision owner:** `content_directory_decision`, only proposed ADR-0074.
+**Implementation ownership:** assigned after the exact accepted decision freezes
+family admission, compiler and persistence interfaces; no parallel shared writers.
+
+- [ ] Inspect existing assets and runtime semantics; distinguish event-only
+      capability stubs from executable business behavior.
+- [ ] Record a narrow family design, exact reusable assets and proposed ADR.
+- [ ] Independent decision review under the existing standing authority if eligible.
+- [ ] Write focused failing tests for list/detail visibility, management correction,
+      invalid input, stale update, denial, retry and missing media.
+- [ ] Implement shared family behavior, then one canonical definition through data.
+- [ ] Run old-eight compatibility and actual generated business journey, inspect
+      390/768/1440 output appropriate to both reader and curator roles.
+- [ ] Record real persisted results, immutable lifecycle, failures and cleanup;
+      complete applicable shared-contract review and ordinary visual review together.
+
+No contact button implies delivered email. If management is the declared action,
+the generated app must visibly perform it on the same persisted entry. Fake
+bookings, payments, submission delivery and inaccessible private entries are not
+acceptable substitutes for unsupported features.
+
+## Task 3: establish a durable delivery path
+
+This is a distinct workstream with a concrete gap: the current Preview runner
+names resources per preview and intentionally removes volumes during cleanup.
+V1 generated Compose has no explicit durable PostgreSQL volume binding; V3
+Restaurant has a per-project `shared-state` volume. Neither establishes safe
+cross-revision application upgrades.
+
+| Stage                           | Work and acceptance                                                                                                                                                                                 | Authority/status                                                        |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Existing CI                     | Frozen install, types, tests, build and provenance checks in `.github/workflows/ci.yml`                                                                                                             | Present; not deployment                                                 |
+| Continuous branch delivery      | Reviewed bounded commits, push equality, accepted integration through PR; report exact revision                                                                                                     | Existing delivery policy; current iteration not yet integrated          |
+| Local durable-upgrade rehearsal | Create business data under revision A; deliver compatible revision B to the same logical app; verify IDs, values, history and actions; inject failed readiness and retain A                         | Needs bounded operability/migration ADR before implementation           |
+| Local recovery rehearsal        | Roll back executable artifacts for a compatible schema; verify post-upgrade writes remain; incompatible downgrade must stop explicitly. Prove separate backup restore into disposable owned storage | Planned; restart alone is insufficient                                  |
+| Hosted pilot                    | Selected account/environment, private access, durable storage, HTTPS, health checks, failed-rollout recovery, backup restore and operating owner                                                    | Target requested; no provider selected or deployed                      |
+| Routine hosted delivery         | Immutable artifact promotion, readiness-based traffic switch, safe serialized rollouts and visible current/previous release                                                                         | After pilot acceptance, not a fresh user-operated development checklist |
+
+The user should see a working address, release progress and an understandable
+failure/retry result. Internal schema compatibility, build, checks and promotion
+remain platform responsibilities. Destructive schema changes cannot be disguised
+as automatic rollback. A future deployment adapter must never call Preview's
+volume-deleting cleanup against durable product storage.
+
+Evidence sources: `apps/compiler-worker/src/preview-runner.ts`, generated Compose
+in `packages/compiler/src/index.ts`, V3 Compose in
+`packages/compiler/src/targets/restaurant-v3/product-target.ts`, and
+`docs/delivery-policy.md`. This is source inspection, not a deployment test result.
+
+## Task 4: scale after usable slices
+
+Initial source assessment found reusable inventory foundations, with an important
+boundary. `commerce.inventory@1.1.1` implements cart-bound reserve/release effects;
+the `commerce.inventory-ledger@1.0.0` template exports metadata, while concrete
+transactional adjustment/history behavior lives in
+`packages/compiler/src/restaurant-runtime.ts` and is selected by the Restaurant
+profile. Therefore standalone stock receiving/issue cannot be claimed from the
+ledger registry entry alone. The next inventory decision must evaluate extraction
+or composition of that actual implementation, without changing historical
+Restaurant bundles or exposing order-specific assumptions to inventory users.
+
+- [ ] Assess inventory-ledger and inventory capability contracts against receiving,
+      issue, adjustment and concurrency; reuse only semantics actually implemented.
+- [ ] Build the smallest missing shared rule, then admit the business definition.
+- [ ] Expand supported definitions in small data batches, measuring per-definition
+      runtime/UI changes and rejecting duplicates.
+- [ ] Reuse the separately owned evaluation work after an accepted integration;
+      measure rough-prompt selection and requirement retention without another harness.
+- [ ] Run consented ordinary-user sessions when available, tracking questions,
+      time to first useful action, rescue and subsequent correction effort.
+
+## Delivery scorecard and stopping rules
+
+Record reviewed candidates, registered definitions, runtime-proven families,
+locally accepted journeys and hosted products separately. For each new journey
+record source/Compilation identity, chosen surfaces, measured ready time and first
+action, retained requirements, reused keys, handwritten runtime changes, visual
+result, recovery result and exact resource cleanup.
+
+Target a prepared-local useful app within five minutes with zero technical
+handoffs or manual rescue; this is a target, not an external service guarantee.
+One failed meaningful action outranks catalogue expansion. Fix a shared defect
+once, rerun affected checks, and reuse unchanged evidence. Do not restart a full
+audit for every field or visual correction. Do not mark the long Goal complete
+while its new-family and delivery acceptance outcomes remain open.

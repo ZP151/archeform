@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { describe, it } from "node:test";
+import { isDeepStrictEqual } from "node:util";
 
 import { runRegression } from "./regression.mjs";
 
@@ -24,6 +25,19 @@ const definitionArguments = [
   "build",
   "--filter=@factory/adapters...",
   "--filter=@factory/compiler...",
+];
+const definitionEmittedControlTestArguments = [
+  "--filter",
+  "@factory/compiler",
+  "test",
+  "--",
+  "test/approval-numeric-domain.test.ts",
+  "test/approval-calculated-total.test.ts",
+];
+const definitionPrismaGenerateArguments = [
+  "--filter",
+  "@factory/control-plane",
+  "prisma:generate",
 ];
 
 function successfulCommand() {
@@ -149,6 +163,14 @@ describe("local regression lanes", () => {
           id: "definition-adapter-tests",
         },
         {
+          args: definitionPrismaGenerateArguments,
+          id: "definition-prisma-generate",
+        },
+        {
+          args: definitionEmittedControlTestArguments,
+          id: "definition-emitted-control-tests",
+        },
+        {
           args: [
             "--filter",
             "@factory/compiler",
@@ -160,6 +182,120 @@ describe("local regression lanes", () => {
         },
       ],
     });
+  });
+
+  it("stops definitions admission when the emitted-control step fails, including Windows dispatch", async () => {
+    for (const platform of ["linux", "win32"]) {
+      const output = collector();
+      const calls = [];
+      const expectedCommand = platform === "win32" ? "cmd.exe" : "pnpm";
+      const expectedArgs =
+        platform === "win32"
+          ? ["/d", "/s", "/c", "pnpm", ...definitionEmittedControlTestArguments]
+          : definitionEmittedControlTestArguments;
+      const result = await runRegression({
+        argumentsList: ["definitions"],
+        execute: async (command, args) => {
+          calls.push({ args, command });
+          return command === expectedCommand &&
+            isDeepStrictEqual(args, expectedArgs)
+            ? { exitCode: 7, terminationProven: true }
+            : successfulCommand();
+        },
+        platform,
+        writeOutput: output.writeOutput,
+      });
+
+      assert.equal(result.exitCode, 1);
+      assert.deepEqual(calls.at(-1), {
+        args: expectedArgs,
+        command: expectedCommand,
+      });
+      assert.equal(
+        calls.some(({ args }) =>
+          args.includes("test/definition-data-compatibility.test.ts"),
+        ),
+        false,
+      );
+      assert.deepEqual(JSON.parse(output.values[0]), {
+        dryRun: false,
+        lane: "definitions",
+        schemaVersion: "factory.local-regression-summary/v1",
+        status: "failed",
+        steps: [
+          { exitCode: 0, id: "definition-build" },
+          { exitCode: 0, id: "definition-tool-tests" },
+          { exitCode: 0, id: "definition-validation" },
+          { exitCode: 0, id: "definition-case-index" },
+          { exitCode: 0, id: "definition-adapter-tests" },
+          { exitCode: 0, id: "definition-prisma-generate" },
+          { exitCode: 7, id: "definition-emitted-control-tests" },
+        ],
+      });
+    }
+  });
+
+  it("runs provider-free Prisma generation before emitted controls and stops definitions admission when it fails", async () => {
+    for (const platform of ["linux", "win32"]) {
+      const output = collector();
+      const calls = [];
+      const expectedCommand = platform === "win32" ? "cmd.exe" : "pnpm";
+      const expectedArgs =
+        platform === "win32"
+          ? ["/d", "/s", "/c", "pnpm", ...definitionPrismaGenerateArguments]
+          : definitionPrismaGenerateArguments;
+      const result = await runRegression({
+        argumentsList: ["definitions"],
+        environment: {
+          OPENAI_API_KEY: "provider-secret-sentinel",
+          SAFE: "safe",
+        },
+        execute: async (command, args, options) => {
+          calls.push({ args, command, options });
+          return command === expectedCommand &&
+            isDeepStrictEqual(args, expectedArgs)
+            ? { exitCode: 5, terminationProven: true }
+            : successfulCommand();
+        },
+        platform,
+        writeOutput: output.writeOutput,
+      });
+
+      assert.equal(result.exitCode, 1);
+      assert.deepEqual(
+        calls.at(-1) && {
+          args: calls.at(-1).args,
+          command: calls.at(-1).command,
+        },
+        { args: expectedArgs, command: expectedCommand },
+      );
+      assert.equal(calls.at(-1).options.environment.SAFE, "safe");
+      assert.equal("OPENAI_API_KEY" in calls.at(-1).options.environment, false);
+      assert.equal(
+        output.values[0].includes("provider-secret-sentinel"),
+        false,
+      );
+      assert.equal(
+        calls.some(({ args }) =>
+          args.includes("test/approval-numeric-domain.test.ts"),
+        ),
+        false,
+      );
+      assert.deepEqual(JSON.parse(output.values[0]), {
+        dryRun: false,
+        lane: "definitions",
+        schemaVersion: "factory.local-regression-summary/v1",
+        status: "failed",
+        steps: [
+          { exitCode: 0, id: "definition-build" },
+          { exitCode: 0, id: "definition-tool-tests" },
+          { exitCode: 0, id: "definition-validation" },
+          { exitCode: 0, id: "definition-case-index" },
+          { exitCode: 0, id: "definition-adapter-tests" },
+          { exitCode: 5, id: "definition-prisma-generate" },
+        ],
+      });
+    }
   });
 
   it("uses the exact POSIX product selection and removes provider variables", async () => {
