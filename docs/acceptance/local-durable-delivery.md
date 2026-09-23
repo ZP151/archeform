@@ -46,12 +46,12 @@ failed evidence before the next run; a passing unit test is not a passed rollout
 
 ## Actual attempts
 
-| Attempt | Run ID | Result |
-| --- | --- | --- |
-| 1 | `f5c6514c05895336ea7a93e5` | Failed after application image build on an unconditional PostgreSQL pull. A short-image-ID cleanup comparison also failed. Exact owned images were subsequently removed; no database or application containers were created. Failed source is retained for diagnosis. |
-| 2 | `1798403ec468377082ef5661` | Failed after A readiness. Unphased assertions and buffer-only attachments prevented localization. All owned Docker resources were removed. This run remains failed. |
-| 3 | `15a8e326e3b1e87aafc670bd` | Failed at the A screenshot assertion after create/read/correct/transition/history passed. The screenshot visibly contains both authored records. Actual emitted-DOM reproduction proves the title includes its responsive field label, which the exact-text locator omitted. Scoped cleanup and independent resource inventory pass. |
-| 4 | `7dd8d049d3ef0673fa227d1b` | Passed all 24 phases and scoped cleanup, exit 0 with `delivery.completed`. Independent run-label inventory confirms no owned containers, volumes, images or networks. |
+| Attempt | Run ID                     | Result                                                                                                                                                                                                                                                                                                                               |
+| ------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1       | `f5c6514c05895336ea7a93e5` | Failed after application image build on an unconditional PostgreSQL pull. A short-image-ID cleanup comparison also failed. Exact owned images were subsequently removed; no database or application containers were created. Failed source is retained for diagnosis.                                                                |
+| 2       | `1798403ec468377082ef5661` | Failed after A readiness. Unphased assertions and buffer-only attachments prevented localization. All owned Docker resources were removed. This run remains failed.                                                                                                                                                                  |
+| 3       | `15a8e326e3b1e87aafc670bd` | Failed at the A screenshot assertion after create/read/correct/transition/history passed. The screenshot visibly contains both authored records. Actual emitted-DOM reproduction proves the title includes its responsive field label, which the exact-text locator omitted. Scoped cleanup and independent resource inventory pass. |
+| 4       | `7dd8d049d3ef0673fa227d1b` | Passed all 24 phases and scoped cleanup, exit 0 with `delivery.completed`. Independent run-label inventory confirms no owned containers, volumes, images or networks.                                                                                                                                                                |
 
 Attempt 3's [safe evidence](evidence/local-durable-delivery/attempt-03/safe-evidence.json)
 and [failure screenshot](evidence/local-durable-delivery/attempt-03/failure.png)
@@ -101,6 +101,13 @@ Docker image identities. All source is based on branch HEAD `ac627b676ed6ac44956
 plus these uncommitted test files; this is not a claim that HEAD already contains them.
 
 ## Limits and next delivery work
+
+The focused harness suite also passes 34/34 cases with native TypeScript stripping
+disabled, covering the supported Node 22.11 execution mode. Its test-only loader
+transpiles the actual fixture in memory with the existing TypeScript dependency;
+the harness, fixture and actual acceptance spec hashes above remain unchanged.
+The existing independent reviewer clears this bounded follow-up at P0/P1/P2
+0/0/0. No deployment behavior changes or additional Docker rehearsal are implied.
 
 The rehearsal is synthetic, local and schema-compatible. It does not establish
 real-user effort, private identity, tenancy, TLS, operational monitoring, a

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm, symlink } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:http";
@@ -18,6 +18,56 @@ import {
   runCommand,
   cleanupOwned,
 } from "./local-durable-delivery.mjs";
+
+let fixtureModule;
+function loadFixtureModule() {
+  return (fixtureModule ??= (async () => {
+    const ts = await import("typescript");
+    const helperUrl = new URL(
+      "../e2e/helpers/durable-delivery-fixture.ts",
+      import.meta.url,
+    );
+    // Node 22.11 does not load TypeScript natively. Transpile the actual helper
+    // in memory, keeping its public package imports pointed at their real files.
+    const { outputText } = ts.transpileModule(
+      await readFile(helperUrl, "utf8"),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.ESNext,
+          target: ts.ScriptTarget.ES2022,
+        },
+        transformers: {
+          before: [
+            (context) => (source) =>
+              ts.visitEachChild(
+                source,
+                (node) => {
+                  if (
+                    !ts.isImportDeclaration(node) ||
+                    !node.moduleSpecifier.text.startsWith(".")
+                  )
+                    return node;
+                  return context.factory.updateImportDeclaration(
+                    node,
+                    node.modifiers,
+                    node.importClause,
+                    context.factory.createStringLiteral(
+                      new URL(node.moduleSpecifier.text, helperUrl).href,
+                    ),
+                    node.attributes,
+                  );
+                },
+                context,
+              ),
+          ],
+        },
+      },
+    );
+    return import(
+      `data:text/javascript;base64,${Buffer.from(outputText).toString("base64")}`
+    );
+  })());
+}
 
 const fixture = (title, revision) => {
   const graph = {
@@ -332,8 +382,7 @@ test(
   { timeout: 20000 },
   async () => {
     const { createHash } = await import("node:crypto");
-    const { durableDeliveryFixture } =
-      await import("../e2e/helpers/durable-delivery-fixture.ts");
+    const { durableDeliveryFixture } = await loadFixtureModule();
     const fixture = await durableDeliveryFixture();
     const { createRehearsal } = await import("./local-durable-delivery.mjs");
     const service = createServer((_req, res) => res.end("healthy"));
@@ -896,8 +945,7 @@ test("safe HTTP diagnostics retain statuses and fixed Task code without body con
   );
 });
 test("safe JSON evidence is persisted on disk and attached by path", async () => {
-  const { persistDurableEvidence } =
-    await import("../e2e/helpers/durable-delivery-fixture.ts");
+  const { persistDurableEvidence } = await loadFixtureModule();
   const { readFile } = await import("node:fs/promises");
   const root = await mkdtemp(join(tmpdir(), "durable-evidence-test-"));
   const attachments = [];
@@ -922,8 +970,7 @@ test("safe JSON evidence is persisted on disk and attached by path", async () =>
   }
 });
 test("actual emitted Team Task runtime accepts the rehearsal create correction and transition payloads", async () => {
-  const { durableDeliveryFixture } =
-    await import("../e2e/helpers/durable-delivery-fixture.ts");
+  const { durableDeliveryFixture } = await loadFixtureModule();
   const fixture = await durableDeliveryFixture();
   const { createRequire } = await import("node:module");
   const { resolve, posix } = await import("node:path");
@@ -1006,7 +1053,7 @@ test(
   { timeout: 30000 },
   async () => {
     const { durableDeliveryFixture, durableTaskTitle } =
-      await import("../e2e/helpers/durable-delivery-fixture.ts");
+      await loadFixtureModule();
     const { chromium, expect } = await import("@playwright/test");
     const { createRequire } = await import("node:module");
     const { resolve } = await import("node:path");
