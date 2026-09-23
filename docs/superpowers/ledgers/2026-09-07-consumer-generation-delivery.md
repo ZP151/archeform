@@ -1,7 +1,31 @@
 # Consumer Generation Delivery Ledger
 
-Updated: 2026-09-10 (Asia/Singapore). PM is the single task-state and
+Updated: 2026-09-24 (Asia/Singapore). PM is the single task-state and
 product-scorecard owner. The task and approval started on September 7.
+
+## Current execution checkpoint
+
+- **Delivered:** Directory `e0c0f467`; planning tip `e97ad46d`, both pushed.
+  Nine registered / nine locally accepted definitions / five demonstrated
+  runtime families. No hosted product or ordinary-user success claim.
+- **Active:** Inventory Operations Task 1 under amended accepted ADR-0076 SHA-256
+  `b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`.
+  `inventory_contract_implementation` is the only source writer; the exact path
+  assignment is in the final Inventory Task 1 ownership entry below.
+- **Next action:** the unchanged nine-product baseline is captured. Resume the
+  exact composition/selector contract with the narrow empty-state Graph witness. Runtime
+  and UI follow that freeze. The canonical tenth row is not registered yet.
+- **Working documents:** [Inventory plan](../plans/2026-09-24-inventory-operations.md),
+  [acceptance brief](../../acceptance/inventory-operations.md),
+  [current status](../../project-status.md). Root alone edits these documents.
+- **Delivery:** local compatible upgrade/rollback/restore passes. A concrete
+  hosted environment and accepted adapter remain outstanding; Preview is disposable.
+- **Residuals:** historical policy-blocked scratch/worker cleanup stays open.
+  Later successful scoped cleanup does not close it or authorize a whole-branch
+  release. Preserve separately owned Eval V2 work in the original checkout.
+
+The dated entries below retain authority and evidence history. Older task boards
+are historical; use this checkpoint and the latest dated ownership entry to resume.
 
 ## Approved objective and authority
 
@@ -6427,3 +6451,131 @@ start competing source writers. Capture from Directory commit `e0c0f467` before
 changing behavior. Runtime, UI and worker implementation follow the frozen
 contract in the plan. No tenth definition or sixth runtime family is claimed.
 The unbudgeted Goal remains active.
+
+### 2026-09-24 Inventory Task 1 execution ownership
+
+The preceding Goal turn is progress: Directory source/evidence and the accepted
+Inventory decision/plan are committed and pushed. Root revalidates clean worktree
+HEAD `e97ad46d611f754c063820ba1aae353d84d601b9`, the exact accepted ADR-0076
+hash, and the active unbudgeted Goal. Source under packages is unchanged from
+Directory commit `e0c0f467f98c7597eaabe60bde0c8a0740c6983d`.
+
+PM assigns `inventory_contract_implementation` as the sole Task 1 source owner:
+
+- `packages/capabilities/src/product-composer.ts` and new
+  `packages/capabilities/test/inventory-operations-composition.test.ts`;
+- `packages/adapters/src/requirements/definition-family-registry.ts`,
+  `product-definition-data.ts` only if strict family admission needs it, and new
+  `packages/adapters/test/inventory-operations-definition.test.ts`;
+- new `packages/compiler/src/inventory-operations-contract.ts`, narrow selector
+  exports/fail-closed integration in `packages/compiler/src/index.ts`, and new
+  `packages/compiler/test/inventory-operations-contract.test.ts`;
+- additive `packages/compiler/test/fixtures/inventory-operations.ts`,
+  `nine-definition-baseline.json`, `nine-definition-baseline-capture.json` and
+  `capture-nine-definition-baseline.mjs`. Temporary capture drivers are scoped
+  below the compiler test directory and removed by their owner.
+
+Capture all nine immutable inputs/locks and file hashes before source edits.
+The capture may run at the documentation-only descendant HEAD only after proving
+tracked source identity to `e0c0f467`; record both commits. Do not alter any earlier
+baseline. No canonical tenth catalogue row, catalogue selection, runtime emitter,
+UI, worker, package manifest/lock, Graph schema, Docker or Git changes are assigned.
+Request a concrete path extension if a required direct seam is outside this list;
+do not silently grow scope. Root concurrently owns only planning/acceptance docs
+and read-only inspection. There are no parallel shared-source writers.
+
+PM approves two direct Task 1 extensions requested by the owner:
+`packages/capabilities/src/plan-alternatives.ts` may suppress the unsupported
+five-lock Inventory alternative using the exact witness, as Appointment already
+does for mandatory capabilities; no new package export is authorized. Additive
+`capture-nine-definition-baseline.executed.txt` preserves the exact executed
+capture tool before formatting its maintained runner. Receipt metadata must
+distinguish run-time and later formatting hashes; original fixture expectations
+and capture facts cannot be refreshed after implementation.
+
+### 2026-09-24 Continuous branch delivery: actual CI format failure
+
+Root checks actual CI run `35910939463` for pushed `e97ad46d`: both Node 22.11
+and 22.x jobs stop at `pnpm format:check`, before typecheck/business tests. There
+are thirteen named files, not a passed full delivery pipeline. Root owns a
+separate purely mechanical repair in these disjoint editable paths:
+
+- `docs/acceptance/evidence/appointment-booking/correction-journey.json` and
+  `delivery-journey.json`, preserving parsed evidence;
+- `docs/superpowers/plans/2026-09-18-appointment-booking-v1.md`;
+- `packages/compiler/src/appointment-mutation-contract.ts`,
+  `packages/compiler/src/page-runtime-projection.ts`,
+  `packages/compiler/test/appointment-booking-runtime.test.ts`, and
+  `packages/compiler/test/definition-data-compatibility.test.ts`.
+
+The remaining files are exact-hash ADR-0074, the executed eight-baseline capture
+tool and four versioned Appointment package descriptors. Root will preserve
+their bytes and obtain a scoped review of the formatting treatment; no blanket
+gate removal or package-digest refresh is authorized. Inventory's source owner
+has been notified. Historical generated output equality remains required after
+any source formatting. No runtime/dependency/Graph contract changes are part of
+this CI repair.
+
+The ordinary read-only review reports P0/P1/P2 0/0/0 and verifies the seven
+editable files against Prettier output, JSON value preservation and the exact
+six immutable exception paths. The source formatter's second pass is stable.
+Root verifies nine captured products still emit identical paths/content hashes
+(one selected comparison passed; 24 Inventory cases intentionally unselected),
+and capability registry/Appointment integrity tests pass 82/82. All seven edited
+paths pass formatting. No published descriptor, accepted ADR-0074 or executed
+eight-product capture bytes changed. Root commits only this repair as
+`1a885b73dc53d86026feafcfdd1896a2df5391f3`, pushes it, and verifies remote equality.
+Actual CI run `35913165265` passes formatting on both Node matrix jobs and the
+Node 22.11 typecheck, progressing to tests. The run is still in progress; no
+complete CI success is claimed.
+
+### 2026-09-24 Inventory empty-state semantic blocker
+
+Task 1 captures the unchanged nine-product baseline before implementation:
+SHA-256 `9c39f0b1e8a624b3dbac57707c8c7c6d81b0e945ad3cd9f63642d6619bdc209a`.
+Composition tests pass 10/11, with the valid empty Inventory rejected by Graph's
+five required persisted numeric witnesses. Adapter tests are 12/14 while family
+admission is still unimplemented. These are explicit RED results, not acceptance.
+Affected capabilities/adapters/compiler typechecks and old-nine output comparison
+pass. The contract owner freezes source changes when the Graph authority conflict
+is identified; PM dispatches the separate Tech Lead before extending any paths.
+No fabricated initial stock, broad seed exemption or compiler-only bypass is allowed.
+
+The separate Tech Lead proposes the explicit ADR-0069 AUT-006 override in
+ADR-0076 AMN-001 through AMN-012. Independent reviewer
+`directory_decision_review` returns `APPROVED_FOR_STANDING_ACCEPTANCE: yes`,
+P0/P1/P2 0/0/0, for exact SHA-256
+`b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`.
+Its single earlier wording finding is resolved: created item quantity/version
+0/0 becomes 1/1 after receive one, with the corresponding persisted movement.
+PM records acceptance under the September 1 standing founder authorization in
+`docs/tech-governance.md` before resuming source implementation. This bounded
+local decision grants no external operation, publication or deployment.
+
+PM extends the same sole contract owner's write scope to Graph
+`src/model.ts`, `src/index.ts`, new `src/inventory-operations-graph-witness.ts`,
+new `test/inventory-operations-graph-witness.test.ts` and existing
+`test/application-graph.test.ts`. One browser-safe structural matcher owns the
+exact Inventory shape; only its five missing-seed issues receive an exception
+when the explicit seed array is empty. Compiler admission still requires lossless
+Published input, hash and independently resolved exact locks. All other numeric
+validation remains unchanged. Actual create/receive/readback worker probes are
+mandatory later and cannot be replaced by these unit tests. No schema, dependency,
+package export-map, runtime, UI or worker path is assigned to Task 1.
+
+Root adds only the exact nine-definition-baseline JSON path to `.prettierignore`
+for this capture's immutable bytes; root rechecks its recorded SHA-256. The
+capture runner and receipt remain formatted and distinct from the original
+executed script snapshot. This exception ships with the Inventory capture.
+
+### 2026-09-24 CI historical Equipment fixture correction
+
+Run `35913165265` completes with format/typecheck success on both Node versions,
+then both test jobs fail the old Equipment catalogue assertion: expected seven,
+actual nine admitted rows. Root reproduces the focused test (12 pass, one fail)
+and owns only `packages/adapters/test/equipment-definition-admission.test.ts` for
+an ordinary test-fixture correction. Freeze its intended seven historical row
+identities instead of validating the growing catalogue against an obsolete count.
+The existing product-definition-data test continues to assert every exact current
+catalogue identity and full-batch admission. No production behavior or product
+admission contract changes. The Inventory writer is notified of this disjoint path.

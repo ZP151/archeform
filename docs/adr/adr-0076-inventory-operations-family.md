@@ -390,6 +390,205 @@ reason, correctionOf, actorRole, recordedAt, status: "recorded" }`.
   separate accepted work. Do not advertise continuous hosted delivery from
   this local family acceptance.
 
+## Proposed Graph numeric-witness amendment — 2026-09-24
+
+- **AMN-001 — Status and changed authority**: **Proposed**; recommendation:
+  **experiment** with an exact Inventory-only alternative to the persisted
+  numeric seed witness. Keep all other accepted contracts in this ADR. The
+  previous accepted ADR bytes have SHA-256
+  `788b183d5d9a62439566b29a8824a085060f32b3abad59d04c99109ecbccfe24`
+  and are preserved in commit `e97ad46d611f754c063820ba1aae353d84d601b9`.
+  This amendment explicitly changes Graph V1 semantic admission, though not
+  its serialized schema or version. It narrowly overrides ADR-0069 AUT-006's
+  requirement for a usable persisted seed on the exact Inventory shape below;
+  it does not silently reinterpret that rule as optional for other domains.
+  The prior accepted FAM-005 empty-seed derivation is insufficient authority
+  to change Graph semantics. PM must record separate acceptance of this new
+  ADR hash and new Graph ownership through the same qualified independent
+  standing-review gate before the paused source owner resumes. No external
+  action, Product Publish, repository release or deployment is authorized.
+- **AMN-002 — Observed failure and witness purpose**: In
+  `packages/graph/src/model.ts`, `numericFieldDomainIssues` runs from both
+  `parseApplicationGraph` and `validateApplicationGraph`. It validates each
+  policy's mathematical/type domain, validates any supplied seeds, and then
+  requires an actual satisfying seed per constrained field. Inventory with
+  `domain.seedData: []` consequently reports five
+  `domain.field.numeric_domain_witness_missing` issues during
+  `applyGraphDiffToDraft`, before the compiler selector can run. ADR-0069
+  AUT-006 deliberately uses real seed values for worker create/update probes;
+  domain nonemptiness alone is not its operational verification guarantee.
+  In Inventory, inserting a seed balance or draft movement to satisfy that
+  guarantee would contradict the empty stockroom and immutable ledger. The
+  replacement must therefore include actual command-based verification,
+  not just suppress an error or pretend that test values are business seeds.
+- **AMN-003 — One shared structural check**: Add browser-safe leaf module
+  `packages/graph/src/inventory-operations-graph-witness.ts`. Move the full
+  Inventory Graph-only structural check out of compiler-private
+  `inventory-operations-contract.ts` into this one leaf; model semantics and
+  compiler admission use the same implementation. It checks the complete
+  FAM-002/003/004 shape: exactly the two business entities plus existing
+  factory principal/session entities, exact fields/types/requiredness/domains,
+  SKU uniqueness and indexes, both exact relations and reference coordinates,
+  role order and grants including identity infrastructure, movement workflow
+  and sole audit effect, exact non-selection integration declarations, three
+  page blocks/routes and navigation, and own required empty `domain.seedData`.
+  Extra/missing business or identity fields, numeric policies or calculations,
+  widened roles, altered units/coordinates, extra flows/pages or other known
+  Graph behavior cannot match. Safe labels, application/entity/actor/workflow/
+  page identifiers and the already permitted experience data remain data;
+  no title, family label, package presence or marker alone establishes a match.
+- **AMN-004 — Root export and signature**: Authorize exactly two additive
+  exports from the existing `@factory/graph` root via `src/index.ts`:
+  value `matchInventoryOperationsGraphV1` and type
+  `InventoryOperationsGraphWitnessV1`. The value signature is
+  `(graph: ApplicationGraphV1) => InventoryOperationsGraphWitnessV1 | undefined`.
+  It consumes an already schema-parsed Graph, returns `undefined` for a
+  structural mismatch, and never mutates its input. Its detached deeply frozen
+  readonly result contains exactly `apiVersion:
+"factory.inventory-operations-graph-witness/v1"`, `itemEntity`,
+  `movementEntity`, `workflow`, `roles: { stockkeeper, observer }`,
+  `pages: { list, form, detail }`, and `numericFields`, a readonly array of
+  readonly `{ entityKey, fieldKey }` pairs for the five coordinates in AMN-006,
+  in that order. This computed witness is never serialized into a Graph, lock,
+  request, provider schema or artifact as admission authority. No existing
+  parse/validate/compiler signature gains a supplied witness, callback,
+  skip-validation flag or seed exemption option. Existing compiler exports
+  remain exactly the two in FAM-008; the Graph helper grants no compilation.
+- **AMN-005 — Dependency and lifecycle separation**: The leaf uses only
+  browser-safe local primitives and, if required, a type-only import from
+  `model.ts`; no runtime import of `model.ts`, the Graph root, capabilities,
+  adapters or compiler, and no Node API, filesystem, crypto, parser, semantic
+  validator or hash invocation. This avoids a dependency cycle or recursive
+  `model -> matcher -> parse/hash -> model`. `model.ts` imports the leaf
+  directly. Compiler imports the matcher through `@factory/graph`, retaining
+  its current own-JSON guard, lossless schema check, complete semantic
+  validation, Published hash and separately resolved exact package lock with
+  versions, manifest digests, dependency closure and bindings. Remove the
+  duplicated Graph-shape predicate; do not substitute the new matcher for any
+  of those independent authorities. Neither a returned witness nor Graph
+  validity proves a valid lock. Package export-map keys, browser entrypoint
+  exports, versions, dependencies and lockfiles stay unchanged; the Graph
+  browser entrypoint can still transitively execute model validation without
+  importing Node-only code.
+- **AMN-006 — Exact exemption condition**: Inside the existing numeric issue
+  calculation, compute the shared structural match from the schema-parsed
+  Graph. Suppress only `numeric_domain_witness_missing`, and only for these
+  five required integer fields of a successful match with own
+  `domain.seedData` equal to an actual empty array:
+  item `quantity` (`0..1000000000`); movement `delta`
+  (`-1000000000..1000000000`), `beforeQuantity` and `afterQuantity`
+  (`0..1000000000`), and `itemVersion` (`1..2147483647`), all inclusive and
+  using the exact `factory.numeric-field-domain/v1` object. Run all existing
+  numeric type/domain checks, supplied-seed checks and other semantic checks
+  unchanged; never return early from numeric validation or filter unrelated
+  errors. No omitted/undefined/null seeds, nonempty seeds, partial Inventory
+  shape, sixth constrained field, different bound or other family receives
+  this exemption. A seeded candidate may still satisfy the ordinary numeric
+  rule if its seeds are valid, but must fail Inventory admission under FAM-007;
+  the amendment does not globally prohibit otherwise valid seeded Graphs.
+- **AMN-007 — Composition selections versus Published input**: During Draft
+  derivation the Graph may contain own `integration.compositionSelections`;
+  the immutable compiler-facing Published Graph instead omits that property
+  and supplies its separate lock. The shared matcher treats this one declared
+  property as optional composition metadata and compares all other integration
+  members exactly. Its presence never supplies family authority or substitutes
+  for a lock. Existing Graph schema/symbol validation still validates its shape
+  and references; the accepted plan and composer still enforce exact six-lock
+  selection, digests and bindings before the Draft mutation. This helper does
+  not re-resolve packages in Graph or invent a second capability resolver.
+  Compiler admission still requires the Published integration representation
+  without composition selections and the separate exact digest-bound lock;
+  embedded selections are not a Published bypass. Test both lifecycle forms
+  against the same structural matcher. Do not rely on generic unknown-key
+  stripping to grant compilation: existing Graph parsing behavior is preserved,
+  while compiler own-JSON/lossless validation still rejects unknown input.
+- **AMN-008 — Operational replacement for seed coverage**: A pure test tuple
+  establishes the fixed domains' representable values: item quantity `0`,
+  movement delta `1`, before `0`, after `1`, item version `1`. It is a
+  mathematical/test witness only and must never enter `domain.seedData`,
+  bootstrap or product records implicitly. The actual worker Inventory
+  verification profile must first use the exact FAM-007/008 compiler selector
+  and then create an item through the authorized API, verifying created item
+  quantity `0` and version `0`. Receive one unit through the real movement
+  command. Fresh reads must show the same item ID with quantity `1` and
+  version `1`, and its movement with delta `1`, beforeQuantity `0`,
+  afterQuantity `1`, itemVersion `1` and the same associated item ID. Verify
+  the required fields, recorded status, audit effect and persisted history.
+  Continue with the
+  accepted issue/correction/retry/denial journeys. Test inputs are fixed,
+  synthetic and confined to existing owned verification resources, not
+  synthesized from arbitrary bounds or imported into ordinary product
+  bootstrap. Generic numeric probes retain their seed requirements for other
+  families. A helper test, absent probe or skipped suite cannot replace actual
+  worker/API/PostgreSQL evidence, and new-family acceptance stays open until it
+  exists. No general configurable witness generator is introduced.
+- **AMN-009 — Alternatives and tradeoffs**: **Reject** removing the global
+  seed requirement or allowing every mathematically valid empty domain: that
+  widens ADR-0069 admission and leaves existing seed-driven verifier paths
+  without executable inputs. **Reject** fake business seeds, stripping numeric
+  policies, compiler-only bypasses, caller-controlled exemption flags and
+  Graph imports of compiler/capability code. **Keep** all non-Inventory rules.
+  The selected experiment introduces a small Graph-owned family semantic
+  contract and two root exports to keep one exact check across layers; this
+  is a maintenance commitment and explicit semantic change, not a schema-only
+  fix. Positive consequence is honest empty business state with stronger
+  end-to-end command evidence. Negative consequence is that a future change
+  to this family shape must update the shared governed witness and its callers
+  together, and Graph acceptance alone no longer demonstrates persisted seed
+  coverage for these five fields. It still establishes the fixed representable
+  domains; runtime enforcement and actual verification establish operations.
+- **AMN-010 — Effects and ownership**: CUR-001/002 versions and serialization,
+  all generated API/storage/UI contracts, catalog admission, licenses,
+  supply-chain, credentials, tenant boundaries and local-only operability stay
+  unchanged. PM extends the paused single contract owner's scope only after
+  new exact-hash acceptance to Graph `src/model.ts`, new
+  `src/inventory-operations-graph-witness.ts`, root `src/index.ts`, and focused
+  Graph tests; the already assigned compiler contract consumes the helper and
+  retains separate lock/hash checks. Add tests at
+  `packages/graph/test/inventory-operations-graph-witness.test.ts` and
+  `application-graph.test.ts`; existing composer/adapter/compiler tests cover
+  actual lifecycle integration. Worker replacement probes remain the later
+  assigned verifier slice in IMP-004, not concurrent implicit Graph ownership.
+  This explicitly extends IMP-002's path boundary for semantic code; no Graph
+  schema edit, package export-map change or change to another accepted family
+  is authorized. The Tech Lead changes only this proposed ADR.
+- **AMN-011 — Verification and evidence**: Start with the actual five-issue
+  failure through `composeProductDraft -> applyGraphDiffToDraft`; preserve its
+  failing result before the change. After acceptance, execute
+  `pnpm --filter @factory/graph test -- inventory-operations-graph-witness.test.ts application-graph.test.ts application-graph-adapter.test.ts`,
+  `pnpm --filter @factory/capabilities test -- inventory-operations-composition.test.ts product-composer.test.ts`,
+  `pnpm --filter @factory/compiler test -- inventory-operations-contract.test.ts definition-data-compatibility.test.ts`,
+  and the existing adapter Inventory/definition tests. Exercise every negative
+  in AMN-003/006, required empty versus absent/null/nonempty seeds, altered
+  SKU/movement indexes and relation targets, foreign seed entities, wrong
+  bounds/type, extra fields/policies, forged roles/effects/pages, and the
+  unchanged Approval/Appointment missing-witness and optional-null rules.
+  For every nonmatching graph, the numeric issue result must equal its previous
+  behavior; do not weaken existing assertions to make tests pass. Both
+  parse/validate entrypoints and actual Draft/apply/Publish/JSON-round-trip/
+  compiler paths must agree. Missing/wrong/stale separate locks and embedded
+  selections must still fail compiler admission. Assert the built root
+  exports/signature/readonly result, deep-freeze behavior, and browser import
+  viability with no upward/runtime cycle. Build dependencies in order, run
+  affected typechecks and `pnpm regression definitions`, and compare all nine
+  captured historical inputs, hashes and generated files without refreshing
+  expectations. Later run actual AMN-008 worker probes under existing owned
+  runtime acceptance. Record exact hashes, commands, failures, review and phase
+  distinctions in the existing Inventory acceptance/evidence paths and ledger;
+  no implementation or runtime success is claimed by this amendment.
+- **AMN-012 — Rollback and abort**: Before any new immutable Inventory
+  publication, stop admission and revert only the amendment's helper, exports,
+  call sites and tests together; do not touch other families or their fixtures.
+  After immutable Inventory publication, retain the accepted semantic reader
+  needed to inspect those artifacts and stop new admission/compilation rather
+  than making historical Graphs unreadable. Never rewrite published bytes,
+  remove user data or apply a database migration. Abort on a broader exemption,
+  duplicate divergent structural predicates, any skipped domain/seed/type
+  validation, a circular/upward dependency, lock bypass, old-nine output drift,
+  persisted synthetic business seeds or inability to provide actual command
+  verification. No irreversible step is introduced; an unresolved wider
+  semantic change returns to a new decision, not an implementation exception.
+
 ## Alternatives and consequences
 
 - **ALT-001**: **Keep only current packages**: rejected as the answer to this

@@ -15,7 +15,11 @@ issue against the same records. This first slice uses indivisible `each` units
 and one local shared pool, with demo roles and no hosted/private-identity claim.
 
 ADR-0076 is accepted through the standing independent-review authority at SHA-256
-`788b183d5d9a62439566b29a8824a085060f32b3abad59d04c99109ecbccfe24`.
+`b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`.
+The accepted AMN-001 through AMN-012 amendment shares one exact browser-safe
+Graph witness between semantic validation and compiler admission. Only the five
+Inventory numeric fields may have empty seeds; actual create/receive/readback
+worker probes replace persisted seed witnesses. All other numeric rules remain.
 Its exact fields, numeric bounds, role rules, routes, Graph projections, audit,
 receipt/CAS behavior and exclusions govern implementation. Keep the current
 Golden stack and six core locks; no package/version/service change. Existing
@@ -29,7 +33,7 @@ in the ledger before dispatch. Scope: new Inventory contract/tests, additive nin
 baseline capture, and exact-family composer/admission seams in the current
 adapter/capability modules. No runtime, UI, worker or unrelated edits.
 
-- [ ] Capture the accepted pre-Inventory source revision, immutable inputs,
+- [x] Capture the accepted pre-Inventory source revision, immutable inputs,
       separate locks and all generated file hashes for the existing nine products.
       Preserve the earlier eight-product fixture; never refresh an expectation
       after changing the implementation.

@@ -11,6 +11,14 @@ waves, not registered or accepted products. Mobile browsing/field work and deskt
 management are selected by actual use; dual-surface products must complete their
 cross-role journey. The original eight-definition compatibility baseline is unchanged.
 
+**Current execution:** Directory is delivered at `e0c0f467`. Inventory Task 1 is
+active with one contract owner: the unchanged nine-product baseline is captured
+and byte comparison passes. The accepted narrow Graph witness amendment resolves
+the empty-stockroom admission blocker; implementation and rejection tests resume. Its
+[acceptance brief](acceptance/inventory-operations.md) freezes the receive 10 ->
+issue 3 -> correct -1 -> balance 6 journey and scenario-specific phone/desktop
+criteria before UI work. No tenth catalogue row or Inventory runtime is claimed.
+
 The short-lane continuation now passes all eight steps, including 97 emitted
 numeric/calculated cases and reproducible Prisma client generation, with one
 independent ordinary review. ADR-0074 is accepted through the existing standing
