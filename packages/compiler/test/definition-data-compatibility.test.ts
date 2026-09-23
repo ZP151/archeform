@@ -729,14 +729,9 @@ describe("Product definition data compatibility", () => {
     ]);
     expect(parsed.parentHead).toBe("b8d796961b1ff68c7d5efa1a12fe353aa370eee8");
     expect(parsed.statusPorcelainV1).toBe("");
-    expect(parsed.nodeVersion).toBe(process.version);
-    expect(parsed.pnpmVersion).toBe(
-      execFileSync(
-        process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-        ["--version"],
-        { encoding: "utf8", shell: process.platform === "win32" },
-      ).trim(),
-    );
+    // These identify the historical capture, not the current verifier host.
+    expect(parsed.nodeVersion).toBe("v22.23.2");
+    expect(parsed.pnpmVersion).toBe("9.0.0");
     expect(parsed.command).toBe(
       "node packages/compiler/test/fixtures/capture-seven-definition-baseline.mjs --parent b8d796961b1ff68c7d5efa1a12fe353aa370eee8 --fixture packages/compiler/test/fixtures/seven-definition-baseline.json --receipt docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json",
     );

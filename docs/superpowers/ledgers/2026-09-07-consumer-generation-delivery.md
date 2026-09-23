@@ -6660,3 +6660,61 @@ The two focused portfolio tests and formatting pass. Independent scoped review
 `directory_decision_review` approves P0/P1/P2 0/0/0; all existing query and safe
 response assertions remain unchanged. Root delivers only the test correction
 and this ledger update; Inventory implementation remains under separate review.
+
+### 2026-09-24 Inventory review correction: unrelated workflow compatibility
+
+Independent task review reproduces one P2: a non-stock Task blueprint using
+`draft -> submit -> recorded` has no Inventory fields, is valid and emits 62
+files at the pre-Inventory HEAD, but the new workflow-only candidate check rejects
+it as unsupported Inventory in both composer and compiler. PM returns those
+already owned paths and their focused tests to the same contract owner for a
+bounded correction. Inventory candidate detection must require stock-specific
+evidence; malformed actual Inventory remains fail-closed. This is an in-scope
+compatibility repair, not a new schema, family or decision. Add the reproduced
+non-stock workflow regression before fixing; preserve the frozen old-nine bytes.
+
+Both unrelated-workflow regressions reproduce RED before removing only the
+workflow-alone candidate alternatives. Corrected composer/planner tests pass
+63/63; compiler tests pass 35/35, including actual generic 62-file compilation
+and unchanged nine-product bytes. One subsequently added missing-all-numeric-
+domains regression passes independently (35 unchanged tests unselected).
+Both affected builds/typechecks and formatting pass. Root confirms corrected
+composer SHA-256 `0decacf6a0289f515e6b93df17f96564841a41dc9bdb3d99e765ed7bcbd9043f`
+and compiler contract SHA-256
+`17da6cf8dd900109b5a978b42814f09675f5bcd3dec16d5ccae82054dca7a584`.
+The same independent reviewer receives only the changed candidate/tests for
+scoped recheck. Graph, adapter and baseline bytes are unchanged.
+
+Independent scoped recheck approves P0/P1/P2 0/0/0 at all four frozen hashes,
+reproducing public non-stock compilation (62 files), compiler missing-domain
+denial and both composer cases. PM retains unaffected review. Because Task 1
+changes shared Graph semantic admission, `docs/delivery-policy.md` requires the
+existing independent Terra QA and Sol release judgment before its source delivery.
+These cover this shared-contract boundary once; ordinary CI fixture repairs and
+later presentation corrections do not acquire additional full gates.
+
+Root reconciles the package-lint fix with ADR-0072 CMP-009's retained manifest
+comparison: restore the original lint script and instead add
+`packages/compiler/.prettierignore` with only the same two immutable capture
+paths relative to package cwd. This supersedes the earlier tooling choice;
+`packages/compiler/package.json` is unchanged from HEAD. Root owns the new local
+ignore file, no dependency or package contract changes. Terra QA is notified of
+the exact replacement before its final judgment.
+
+### 2026-09-24 CI history and historical receipt environment
+
+Run `35915446518` reaches the full compiler tests and reports 14 failures on
+Node 22.x / 15 on 22.11. These include missing historical Git blobs under the
+shallow CI checkout, and a receipt test comparing the captured `v22.23.2` against
+the current 22.11 runner. Root owns `.github/workflows/ci.yml` solely to fetch
+history for existing immutable-source checks, and the version expectations in
+`packages/compiler/test/definition-data-compatibility.test.ts` to pin the actual
+historical Node/pnpm values rather than the current host. Receipt and baseline
+bytes remain unchanged. The existing source commit/blob is verified locally.
+Other failures concern pre-profile Appointment inputs and outdated export-surface
+assertions; these remain open, with independent bounded compatibility diagnosis
+in progress. No whole-CI success or generic Appointment relaxation is claimed.
+The focused receipt case passes (76 unchanged cases unselected), formatting
+passes, and independent scoped review `directory_decision_review` approves
+P0/P1/P2 0/0/0. Git credential persistence stays disabled. Root delivers these
+two paths and ledger evidence separately from Inventory source acceptance.
