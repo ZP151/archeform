@@ -12,9 +12,9 @@ product-scorecard owner. The task and approval started on September 7.
   `b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`.
   `inventory_contract_implementation` is the only source writer; the exact path
   assignment is in the final Inventory Task 1 ownership entry below.
-- **Next action:** the unchanged nine-product baseline is captured. Resume the
-  exact composition/selector contract with the narrow empty-state Graph witness. Runtime
-  and UI follow that freeze. The canonical tenth row is not registered yet.
+- **Next action:** Task 1 source is frozen with 465 focused tests and all eight
+  definition regression phases passing. Independent contract review is active;
+  transactional runtime and UI follow that freeze. No tenth row is registered yet.
 - **Working documents:** [Inventory plan](../plans/2026-09-24-inventory-operations.md),
   [acceptance brief](../../acceptance/inventory-operations.md),
   [current status](../../project-status.md). Root alone edits these documents.
@@ -6617,3 +6617,46 @@ source SHA-256 `5d43f43f9cbfe07f53189f05d48b53dbff2320f38bc8660a5abaa75c36f4e1f9
 The exact eligible set stays at 16; 28 current capabilities include 12 quarantined
 and nine without profile locks. These are component evidence counts, not delivered
 product counts. The full remote pipeline still requires its next actual run.
+
+### 2026-09-24 Compiler lint uses the shared immutable-evidence policy
+
+Task 1 package lint discovers that Prettier invoked from `packages/compiler`
+does not consume the root ignore file by default. Root owns only that package's
+`lint` script change to pass `--ignore-path ../../.prettierignore`; dependencies,
+versions, export maps and build/runtime commands are unchanged. The actual scoped
+command passes without rewriting either frozen baseline or its executed capture
+tool. Review this direct tooling correction together with Task 1's exact new
+baseline exception, retaining the same source-format check and immutable hashes.
+
+### 2026-09-24 Inventory Task 1 source freeze and task review
+
+The sole owner freezes its 18 assigned paths. Graph tests pass 184/184,
+composition/planner 72/72, adapter admission 98/98 and compiler/compatibility
+111/111 (465 total). Four builds and typechecks pass; built root exports,
+readonly declarations, browser imports, unchanged package export maps and the
+nine-entry case index pass. All eight definition regression phases pass.
+Root verifies compiler contract SHA-256
+`e51e87312e5d332fee18f5e5ef743e153e7a8124c597d747f57f413265e68b7d`
+and Graph matcher SHA-256
+`a97c26f14a4760afb71917257a292d63ab2b18efb08ae8b35b454b66c9e635c9`.
+The new matcher rejects ambiguous page IDs after a focused failing test.
+Root dispatches independent `inventory_contract_review` against the frozen source
+and two root-owned formatting paths. The proposer and source owner do not review
+their own decision or implementation. Runtime, UI, canonical product admission,
+worker probes and actual PostgreSQL/browser evidence remain future tasks. The
+valid Inventory selector currently stops compilation before any generic runtime
+fallback; this expected Task 1 boundary is not product acceptance.
+
+### 2026-09-24 CI portfolio count expectation
+
+Actual run `35914702515` passes the prior corrections and fails the portfolio
+summary test's pre-Appointment counts. Root owns only
+`apps/control-plane/src/portfolio/portfolio-summary.service.test.ts` for this
+two-literal correction. After building the missing local `portfolio-public`
+dependency, the actual test reproduces one pass/one fail: 28 current capability
+keys and 56 retained versions versus old expectations 27/54. Appointment adds one
+current key and two immutable package versions; no service or API behavior changes.
+The two focused portfolio tests and formatting pass. Independent scoped review
+`directory_decision_review` approves P0/P1/P2 0/0/0; all existing query and safe
+response assertions remain unchanged. Root delivers only the test correction
+and this ledger update; Inventory implementation remains under separate review.

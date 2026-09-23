@@ -49,8 +49,8 @@ describe("WorkspacePortfolioSummaryService", () => {
         }),
       ]),
       capabilities: {
-        golden: 27,
-        lockedVersions: 54,
+        golden: 28,
+        lockedVersions: 56,
         candidate: 0,
         provider: 0,
       },
