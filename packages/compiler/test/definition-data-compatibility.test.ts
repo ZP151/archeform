@@ -24,20 +24,40 @@ import {
 } from "../src/appointment-mutation-contract.js";
 
 describe("Product definition data compatibility", () => {
-  function appointmentField(graph: any, lock: any, bindingKey: "serviceDurationMinutesField" | "scheduleCapacityField") {
-    const binding = lock.packages.find((entry: any) => entry.lock.key === "scheduling.appointment").bindings[bindingKey];
-    const entity = graph.domain.entities.find((candidate: any) => candidate.key === binding.graphSymbol.replace("graph.domain.", ""));
+  function appointmentField(
+    graph: any,
+    lock: any,
+    bindingKey: "serviceDurationMinutesField" | "scheduleCapacityField",
+  ) {
+    const binding = lock.packages.find(
+      (entry: any) => entry.lock.key === "scheduling.appointment",
+    ).bindings[bindingKey];
+    const entity = graph.domain.entities.find(
+      (candidate: any) =>
+        candidate.key === binding.graphSymbol.replace("graph.domain.", ""),
+    );
     return entity.fields.find((field: any) => field.key === binding.fieldKey);
   }
-  function compileAppointmentMutation(mutate: (graph: any, lock: any) => void, refreshChecksum = true) {
+  function compileAppointmentMutation(
+    mutate: (graph: any, lock: any) => void,
+    refreshChecksum = true,
+  ) {
     const input = appointmentDefinitionCompilationInput();
     const graph = structuredClone(input.graph);
     const lock = structuredClone(input.compositionLock);
     mutate(graph, lock);
     const compositionLock = refreshChecksum
-      ? createCapabilityCompositionLock({ graphChecksum: hashApplicationGraph(graph), selections: lock.packages })
+      ? createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(graph),
+          selections: lock.packages,
+        })
       : lock;
-    return () => generateApplicationBundle({ publishedRevisionId: "appointment-adversarial", graph, compositionLock } as never);
+    return () =>
+      generateApplicationBundle({
+        publishedRevisionId: "appointment-adversarial",
+        graph,
+        compositionLock,
+      } as never);
   }
   function renderAppointmentMutation(
     mutate: (graph: any, lock: any) => void,
@@ -69,17 +89,57 @@ describe("Product definition data compatibility", () => {
       );
   }
   function addValidCalculation(graph: any, entityKey: string) {
-    const entity = graph.domain.entities.find((candidate: any) => candidate.key === entityKey);
-    const domain = { apiVersion: "factory.numeric-field-domain/v1", minimum: { value: 0, inclusive: false } };
-    entity.fields.push(
-      { key: "unreviewedQuantity", type: "integer", required: true, numericDomain: domain },
-      { key: "unreviewedUnitPrice", type: "decimal", required: true, numericDomain: domain },
-      { key: "unreviewedTotal", type: "decimal", required: true, calculation: { apiVersion: "factory.quantity-unit-price-total/v1", quantityFieldKey: "unreviewedQuantity", unitPriceFieldKey: "unreviewedUnitPrice" } },
+    const entity = graph.domain.entities.find(
+      (candidate: any) => candidate.key === entityKey,
     );
-    const values = { unreviewedQuantity: 2, unreviewedUnitPrice: 10, unreviewedTotal: 20 };
-    const seed = graph.domain.seedData.find((candidate: any) => candidate.entity === entityKey);
+    const domain = {
+      apiVersion: "factory.numeric-field-domain/v1",
+      minimum: { value: 0, inclusive: false },
+    };
+    entity.fields.push(
+      {
+        key: "unreviewedQuantity",
+        type: "integer",
+        required: true,
+        numericDomain: domain,
+      },
+      {
+        key: "unreviewedUnitPrice",
+        type: "decimal",
+        required: true,
+        numericDomain: domain,
+      },
+      {
+        key: "unreviewedTotal",
+        type: "decimal",
+        required: true,
+        calculation: {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+          quantityFieldKey: "unreviewedQuantity",
+          unitPriceFieldKey: "unreviewedUnitPrice",
+        },
+      },
+    );
+    const values = {
+      unreviewedQuantity: 2,
+      unreviewedUnitPrice: 10,
+      unreviewedTotal: 20,
+    };
+    const seed = graph.domain.seedData.find(
+      (candidate: any) => candidate.entity === entityKey,
+    );
     if (seed) Object.assign(seed.values, values);
-    else graph.domain.seedData.push({ entity: entityKey, id: "unreviewed-calculation", values: { subjectRef: "unreviewed-subject", status: "active", expiresAt: "2026-10-01T00:00:00Z", ...values } });
+    else
+      graph.domain.seedData.push({
+        entity: entityKey,
+        id: "unreviewed-calculation",
+        values: {
+          subjectRef: "unreviewed-subject",
+          status: "active",
+          expiresAt: "2026-10-01T00:00:00Z",
+          ...values,
+        },
+      });
   }
   it("keeps the additive appointment runtime profile separate from protected definition bundles", () => {
     expect(appointmentMutationContract).toEqual({
@@ -137,7 +197,9 @@ describe("Product definition data compatibility", () => {
       definitionKey: "appointment-booking-v1",
       planSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       graphSha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
-      compositionLockGraphSha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      compositionLockGraphSha256: expect.stringMatching(
+        /^sha256:[a-f0-9]{64}$/,
+      ),
       bundleSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
     expect(first[0]!.graphSha256).toBe(first[0]!.compositionLockGraphSha256);
@@ -153,26 +215,150 @@ describe("Product definition data compatibility", () => {
   });
 
   it.each([
-    ["bound duration slot", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").required = false; }],
-    ["unbound capacity slot", (_graph: any, lock: any) => { lock.packages.find((entry: any) => entry.lock.key === "scheduling.appointment").bindings.scheduleCapacityField.graphSymbol = "graph.domain.service"; }],
-    ["injected business calculation", (graph: any) => addValidCalculation(graph, "service")],
-    ["injected Factory session calculation", (graph: any) => addValidCalculation(graph, "data-baseline-appointment-booking-v1-session")],
-    ["bound duration calculation", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").calculation = { apiVersion: "factory.quantity-unit-price-total/v1" }; }],
-    ["bound capacity calculation", (graph: any, lock: any) => { appointmentField(graph, lock, "scheduleCapacityField").calculation = { apiVersion: "factory.quantity-unit-price-total/v1" }; }],
-    ["extra numeric domain", (graph: any) => { graph.domain.entities[0].fields.push({ key: "unreviewedNumeric", type: "integer", required: false, numericDomain: { apiVersion: "factory.numeric-field-domain/v1", minimum: { value: 0, inclusive: false } } }); }],
-    ["altered numeric domain", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").numericDomain.maximum = { value: 60, inclusive: true }; }],
-    ["missing numeric domain", (graph: any, lock: any) => { delete appointmentField(graph, lock, "scheduleCapacityField").numericDomain; }],
-    ["altered numeric boundary", (graph: any, lock: any) => { appointmentField(graph, lock, "scheduleCapacityField").numericDomain.minimum.inclusive = true; }],
-    ["service name type", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceNameField").type = "text"; }],
-    ["appointment customer requiredness", (graph: any, lock: any) => { const binding = lock.packages.find((entry: any) => entry.lock.key === "scheduling.appointment").bindings.appointmentCustomerNameField; graph.domain.entities.find((entity: any) => entity.key === binding.graphSymbol.replace("graph.domain.", "")).fields.find((field: any) => field.key === binding.fieldKey).required = false; }],
-    ["schedule relation kind", (graph: any) => { graph.domain.relations.find((relation: any) => relation.from === "schedule" && relation.to === "service").kind = "one-to-one"; }],
-    ["appointment workflow", (graph: any) => { graph.flow.flows[0].transitions[0].roles = ["customer"]; }],
-    ["appointment policy", (graph: any) => { graph.policy.permissions.find((permission: any) => permission.role === "staff" && permission.resource === "appointment").actions = ["read", "cancel"]; }],
+    [
+      "bound duration slot",
+      (graph: any, lock: any) => {
+        appointmentField(graph, lock, "serviceDurationMinutesField").required =
+          false;
+      },
+    ],
+    [
+      "unbound capacity slot",
+      (_graph: any, lock: any) => {
+        lock.packages.find(
+          (entry: any) => entry.lock.key === "scheduling.appointment",
+        ).bindings.scheduleCapacityField.graphSymbol = "graph.domain.service";
+      },
+    ],
+    [
+      "injected business calculation",
+      (graph: any) => addValidCalculation(graph, "service"),
+    ],
+    [
+      "injected Factory session calculation",
+      (graph: any) =>
+        addValidCalculation(
+          graph,
+          "data-baseline-appointment-booking-v1-session",
+        ),
+    ],
+    [
+      "bound duration calculation",
+      (graph: any, lock: any) => {
+        appointmentField(
+          graph,
+          lock,
+          "serviceDurationMinutesField",
+        ).calculation = { apiVersion: "factory.quantity-unit-price-total/v1" };
+      },
+    ],
+    [
+      "bound capacity calculation",
+      (graph: any, lock: any) => {
+        appointmentField(graph, lock, "scheduleCapacityField").calculation = {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+        };
+      },
+    ],
+    [
+      "extra numeric domain",
+      (graph: any) => {
+        graph.domain.entities[0].fields.push({
+          key: "unreviewedNumeric",
+          type: "integer",
+          required: false,
+          numericDomain: {
+            apiVersion: "factory.numeric-field-domain/v1",
+            minimum: { value: 0, inclusive: false },
+          },
+        });
+      },
+    ],
+    [
+      "altered numeric domain",
+      (graph: any, lock: any) => {
+        appointmentField(
+          graph,
+          lock,
+          "serviceDurationMinutesField",
+        ).numericDomain.maximum = { value: 60, inclusive: true };
+      },
+    ],
+    [
+      "missing numeric domain",
+      (graph: any, lock: any) => {
+        delete appointmentField(graph, lock, "scheduleCapacityField")
+          .numericDomain;
+      },
+    ],
+    [
+      "altered numeric boundary",
+      (graph: any, lock: any) => {
+        appointmentField(
+          graph,
+          lock,
+          "scheduleCapacityField",
+        ).numericDomain.minimum.inclusive = true;
+      },
+    ],
+    [
+      "service name type",
+      (graph: any, lock: any) => {
+        appointmentField(graph, lock, "serviceNameField").type = "text";
+      },
+    ],
+    [
+      "appointment customer requiredness",
+      (graph: any, lock: any) => {
+        const binding = lock.packages.find(
+          (entry: any) => entry.lock.key === "scheduling.appointment",
+        ).bindings.appointmentCustomerNameField;
+        graph.domain.entities
+          .find(
+            (entity: any) =>
+              entity.key === binding.graphSymbol.replace("graph.domain.", ""),
+          )
+          .fields.find(
+            (field: any) => field.key === binding.fieldKey,
+          ).required = false;
+      },
+    ],
+    [
+      "schedule relation kind",
+      (graph: any) => {
+        graph.domain.relations.find(
+          (relation: any) =>
+            relation.from === "schedule" && relation.to === "service",
+        ).kind = "one-to-one";
+      },
+    ],
+    [
+      "appointment workflow",
+      (graph: any) => {
+        graph.flow.flows[0].transitions[0].roles = ["customer"];
+      },
+    ],
+    [
+      "appointment policy",
+      (graph: any) => {
+        graph.policy.permissions.find(
+          (permission: any) =>
+            permission.role === "staff" &&
+            permission.resource === "appointment",
+        ).actions = ["read", "cancel"];
+      },
+    ],
   ])("rejects Appointment %s before emitting a bundle", (_label, mutate) => {
     expect(() => compileAppointmentMutation(mutate)()).toThrow();
   });
   it("rejects a non-exact Appointment lock before emitting a bundle", () => {
-    expect(() => compileAppointmentMutation((_graph, lock) => { lock.packages.find((entry: any) => entry.lock.key === "core.crud").lock.version = "9.9.9"; }, false)()).toThrow();
+    expect(() =>
+      compileAppointmentMutation((_graph, lock) => {
+        lock.packages.find(
+          (entry: any) => entry.lock.key === "core.crud",
+        ).lock.version = "9.9.9";
+      }, false)(),
+    ).toThrow();
   });
   it("renders admitted Appointment page-runtime bytes identically to the bundle", () => {
     const input = appointmentDefinitionCompilationInput();
@@ -197,31 +383,183 @@ describe("Product definition data compatibility", () => {
     expect(rendered).toBe(bundled?.content);
   });
   it.each([
-    ["bound duration slot", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").required = false; }],
-    ["unbound capacity slot", (_graph: any, lock: any) => { lock.packages.find((entry: any) => entry.lock.key === "scheduling.appointment").bindings.scheduleCapacityField.graphSymbol = "graph.domain.service"; }],
-    ["injected business calculation", (graph: any) => addValidCalculation(graph, "service")],
-    ["injected Factory session calculation", (graph: any) => addValidCalculation(graph, "data-baseline-appointment-booking-v1-session")],
-    ["bound duration calculation", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").calculation = { apiVersion: "factory.quantity-unit-price-total/v1" }; }],
-    ["bound capacity calculation", (graph: any, lock: any) => { appointmentField(graph, lock, "scheduleCapacityField").calculation = { apiVersion: "factory.quantity-unit-price-total/v1" }; }],
-    ["extra numeric domain", (graph: any) => { graph.domain.entities[0].fields.push({ key: "unreviewedNumeric", type: "integer", required: false, numericDomain: { apiVersion: "factory.numeric-field-domain/v1", minimum: { value: 0, inclusive: false } } }); }],
-    ["altered numeric domain", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceDurationMinutesField").numericDomain.maximum = { value: 60, inclusive: true }; }],
-    ["missing numeric domain", (graph: any, lock: any) => { delete appointmentField(graph, lock, "scheduleCapacityField").numericDomain; }],
-    ["altered numeric boundary", (graph: any, lock: any) => { appointmentField(graph, lock, "scheduleCapacityField").numericDomain.minimum.inclusive = true; }],
-    ["numeric field type", (graph: any, lock: any) => { appointmentField(graph, lock, "scheduleCapacityField").type = "decimal"; }],
-    ["service name type", (graph: any, lock: any) => { appointmentField(graph, lock, "serviceNameField").type = "text"; }],
-    ["appointment customer requiredness", (graph: any, lock: any) => { const binding = lock.packages.find((entry: any) => entry.lock.key === "scheduling.appointment").bindings.appointmentCustomerNameField; graph.domain.entities.find((entity: any) => entity.key === binding.graphSymbol.replace("graph.domain.", "")).fields.find((field: any) => field.key === binding.fieldKey).required = false; }],
-    ["schedule relation kind", (graph: any) => { graph.domain.relations.find((relation: any) => relation.from === "schedule" && relation.to === "service").kind = "one-to-one"; }],
-    ["appointment workflow", (graph: any) => { graph.flow.flows[0].transitions[0].roles = ["customer"]; }],
-    ["appointment policy", (graph: any) => { graph.policy.permissions.find((permission: any) => permission.role === "staff" && permission.resource === "appointment").actions = ["read", "cancel"]; }],
+    [
+      "bound duration slot",
+      (graph: any, lock: any) => {
+        appointmentField(graph, lock, "serviceDurationMinutesField").required =
+          false;
+      },
+    ],
+    [
+      "unbound capacity slot",
+      (_graph: any, lock: any) => {
+        lock.packages.find(
+          (entry: any) => entry.lock.key === "scheduling.appointment",
+        ).bindings.scheduleCapacityField.graphSymbol = "graph.domain.service";
+      },
+    ],
+    [
+      "injected business calculation",
+      (graph: any) => addValidCalculation(graph, "service"),
+    ],
+    [
+      "injected Factory session calculation",
+      (graph: any) =>
+        addValidCalculation(
+          graph,
+          "data-baseline-appointment-booking-v1-session",
+        ),
+    ],
+    [
+      "bound duration calculation",
+      (graph: any, lock: any) => {
+        appointmentField(
+          graph,
+          lock,
+          "serviceDurationMinutesField",
+        ).calculation = { apiVersion: "factory.quantity-unit-price-total/v1" };
+      },
+    ],
+    [
+      "bound capacity calculation",
+      (graph: any, lock: any) => {
+        appointmentField(graph, lock, "scheduleCapacityField").calculation = {
+          apiVersion: "factory.quantity-unit-price-total/v1",
+        };
+      },
+    ],
+    [
+      "extra numeric domain",
+      (graph: any) => {
+        graph.domain.entities[0].fields.push({
+          key: "unreviewedNumeric",
+          type: "integer",
+          required: false,
+          numericDomain: {
+            apiVersion: "factory.numeric-field-domain/v1",
+            minimum: { value: 0, inclusive: false },
+          },
+        });
+      },
+    ],
+    [
+      "altered numeric domain",
+      (graph: any, lock: any) => {
+        appointmentField(
+          graph,
+          lock,
+          "serviceDurationMinutesField",
+        ).numericDomain.maximum = { value: 60, inclusive: true };
+      },
+    ],
+    [
+      "missing numeric domain",
+      (graph: any, lock: any) => {
+        delete appointmentField(graph, lock, "scheduleCapacityField")
+          .numericDomain;
+      },
+    ],
+    [
+      "altered numeric boundary",
+      (graph: any, lock: any) => {
+        appointmentField(
+          graph,
+          lock,
+          "scheduleCapacityField",
+        ).numericDomain.minimum.inclusive = true;
+      },
+    ],
+    [
+      "numeric field type",
+      (graph: any, lock: any) => {
+        appointmentField(graph, lock, "scheduleCapacityField").type = "decimal";
+      },
+    ],
+    [
+      "service name type",
+      (graph: any, lock: any) => {
+        appointmentField(graph, lock, "serviceNameField").type = "text";
+      },
+    ],
+    [
+      "appointment customer requiredness",
+      (graph: any, lock: any) => {
+        const binding = lock.packages.find(
+          (entry: any) => entry.lock.key === "scheduling.appointment",
+        ).bindings.appointmentCustomerNameField;
+        graph.domain.entities
+          .find(
+            (entity: any) =>
+              entity.key === binding.graphSymbol.replace("graph.domain.", ""),
+          )
+          .fields.find(
+            (field: any) => field.key === binding.fieldKey,
+          ).required = false;
+      },
+    ],
+    [
+      "schedule relation kind",
+      (graph: any) => {
+        graph.domain.relations.find(
+          (relation: any) =>
+            relation.from === "schedule" && relation.to === "service",
+        ).kind = "one-to-one";
+      },
+    ],
+    [
+      "appointment workflow",
+      (graph: any) => {
+        graph.flow.flows[0].transitions[0].roles = ["customer"];
+      },
+    ],
+    [
+      "appointment policy",
+      (graph: any) => {
+        graph.policy.permissions.find(
+          (permission: any) =>
+            permission.role === "staff" &&
+            permission.resource === "appointment",
+        ).actions = ["read", "cancel"];
+      },
+    ],
   ])("rejects Appointment %s at the page-runtime facade", (_label, mutate) => {
     expect(() => renderAppointmentMutation(mutate)()).toThrow();
   });
   it.each([
-    ["stale lock version", (_graph: any, lock: any) => { lock.packages.find((entry: any) => entry.lock.key === "core.crud").lock.version = "9.9.9"; }],
-    ["stale lock digest", (_graph: any, lock: any) => { lock.packages.find((entry: any) => entry.lock.key === "core.crud").lock.manifestDigest = "sha256:" + "0".repeat(64); }],
-    ["missing lock", (_graph: any, lock: any) => { lock.packages.pop(); }],
-    ["extra lock", (_graph: any, lock: any) => { lock.packages.push(structuredClone(lock.packages[0])); }],
-    ["checksum mismatch", (graph: any) => { graph.domain.entities[0].fields[0].required = false; }],
+    [
+      "stale lock version",
+      (_graph: any, lock: any) => {
+        lock.packages.find(
+          (entry: any) => entry.lock.key === "core.crud",
+        ).lock.version = "9.9.9";
+      },
+    ],
+    [
+      "stale lock digest",
+      (_graph: any, lock: any) => {
+        lock.packages.find(
+          (entry: any) => entry.lock.key === "core.crud",
+        ).lock.manifestDigest = "sha256:" + "0".repeat(64);
+      },
+    ],
+    [
+      "missing lock",
+      (_graph: any, lock: any) => {
+        lock.packages.pop();
+      },
+    ],
+    [
+      "extra lock",
+      (_graph: any, lock: any) => {
+        lock.packages.push(structuredClone(lock.packages[0]));
+      },
+    ],
+    [
+      "checksum mismatch",
+      (graph: any) => {
+        graph.domain.entities[0].fields[0].required = false;
+      },
+    ],
   ])("rejects Appointment %s at the page-runtime facade", (_label, mutate) => {
     expect(() => renderAppointmentMutation(mutate, false)()).toThrow();
   });
@@ -230,11 +568,8 @@ describe("Product definition data compatibility", () => {
     [
       "missing duration domain",
       (graph: any, lock: any) => {
-        delete appointmentField(
-          graph,
-          lock,
-          "serviceDurationMinutesField",
-        ).numericDomain;
+        delete appointmentField(graph, lock, "serviceDurationMinutesField")
+          .numericDomain;
       },
       true,
     ],
@@ -349,7 +684,12 @@ describe("Product definition data compatibility", () => {
     const expected = JSON.parse(baselineBytes);
     expect(expected.base).toBe("b8d796961b1ff68c7d5efa1a12fe353aa370eee8");
     expect(expected.entries).toHaveLength(7);
-    expect(expected.entries.every((entry: { graphSha256: string; compositionLockGraphSha256: string }) => entry.graphSha256 === entry.compositionLockGraphSha256)).toBe(true);
+    expect(
+      expected.entries.every(
+        (entry: { graphSha256: string; compositionLockGraphSha256: string }) =>
+          entry.graphSha256 === entry.compositionLockGraphSha256,
+      ),
+    ).toBe(true);
     expect(
       currentDefinitionDataCompilationEvidence(
         expected.entries.map(
@@ -360,8 +700,14 @@ describe("Product definition data compatibility", () => {
   });
 
   it("retains a closed receipt for the isolated seven-definition baseline capture", () => {
-    const script = new URL("./fixtures/capture-seven-definition-baseline.mjs", import.meta.url);
-    const receipt = new URL("../../../docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json", import.meta.url);
+    const script = new URL(
+      "./fixtures/capture-seven-definition-baseline.mjs",
+      import.meta.url,
+    );
+    const receipt = new URL(
+      "../../../docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json",
+      import.meta.url,
+    );
     expect(existsSync(script)).toBe(true);
     expect(existsSync(receipt)).toBe(true);
     const scriptContents = readFileSync(script, "utf8");
@@ -370,16 +716,51 @@ describe("Product definition data compatibility", () => {
     expect(scriptContents).toContain("realpathSync");
     expect(scriptContents).not.toContain("symlinkSync");
     const parsed = JSON.parse(readFileSync(receipt, "utf8"));
-    expect(Object.keys(parsed)).toEqual(["parentHead", "statusPorcelainV1", "nodeVersion", "pnpmVersion", "command", "captureScriptPath", "captureScriptSha256", "fixturePath", "fixtureSha256"]);
+    expect(Object.keys(parsed)).toEqual([
+      "parentHead",
+      "statusPorcelainV1",
+      "nodeVersion",
+      "pnpmVersion",
+      "command",
+      "captureScriptPath",
+      "captureScriptSha256",
+      "fixturePath",
+      "fixtureSha256",
+    ]);
     expect(parsed.parentHead).toBe("b8d796961b1ff68c7d5efa1a12fe353aa370eee8");
     expect(parsed.statusPorcelainV1).toBe("");
     expect(parsed.nodeVersion).toBe(process.version);
-    expect(parsed.pnpmVersion).toBe(execFileSync(process.platform === "win32" ? "pnpm.cmd" : "pnpm", ["--version"], { encoding: "utf8", shell: process.platform === "win32" }).trim());
-    expect(parsed.command).toBe("node packages/compiler/test/fixtures/capture-seven-definition-baseline.mjs --parent b8d796961b1ff68c7d5efa1a12fe353aa370eee8 --fixture packages/compiler/test/fixtures/seven-definition-baseline.json --receipt docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json");
-    expect(parsed.captureScriptSha256).toBe(`sha256:${createHash("sha256").update(readFileSync(script)).digest("hex")}`);
-    expect(parsed.captureScriptPath).toBe("packages/compiler/test/fixtures/capture-seven-definition-baseline.mjs");
-    expect(parsed.fixturePath).toBe("packages/compiler/test/fixtures/seven-definition-baseline.json");
-    expect(parsed.fixtureSha256).toBe(`sha256:${createHash("sha256").update(readFileSync(new URL("./fixtures/seven-definition-baseline.json", import.meta.url))).digest("hex")}`);
+    expect(parsed.pnpmVersion).toBe(
+      execFileSync(
+        process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+        ["--version"],
+        { encoding: "utf8", shell: process.platform === "win32" },
+      ).trim(),
+    );
+    expect(parsed.command).toBe(
+      "node packages/compiler/test/fixtures/capture-seven-definition-baseline.mjs --parent b8d796961b1ff68c7d5efa1a12fe353aa370eee8 --fixture packages/compiler/test/fixtures/seven-definition-baseline.json --receipt docs/acceptance/evidence/appointment-booking/definition-composition/seven-definition-baseline-capture.json",
+    );
+    expect(parsed.captureScriptSha256).toBe(
+      `sha256:${createHash("sha256").update(readFileSync(script)).digest("hex")}`,
+    );
+    expect(parsed.captureScriptPath).toBe(
+      "packages/compiler/test/fixtures/capture-seven-definition-baseline.mjs",
+    );
+    expect(parsed.fixturePath).toBe(
+      "packages/compiler/test/fixtures/seven-definition-baseline.json",
+    );
+    expect(parsed.fixtureSha256).toBe(
+      `sha256:${createHash("sha256")
+        .update(
+          readFileSync(
+            new URL(
+              "./fixtures/seven-definition-baseline.json",
+              import.meta.url,
+            ),
+          ),
+        )
+        .digest("hex")}`,
+    );
   });
 
   it("preserves all five delivered definitions and complete Published bundles from bbb1e23c", () => {

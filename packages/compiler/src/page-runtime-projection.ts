@@ -72,7 +72,13 @@ export interface GeneratedPageRuntimeCommerceV1 {
 /** A browser-safe projection: command names only, never capacity or slot-write bindings. */
 export interface GeneratedPageRuntimeAppointmentV1 {
   readonly appointmentEntity: string;
-  readonly commands: readonly ["request", "confirm", "reschedule", "cancel", "history"];
+  readonly commands: readonly [
+    "request",
+    "confirm",
+    "reschedule",
+    "cancel",
+    "history",
+  ];
 }
 
 export interface GeneratedPageRuntimeBindingsV1 {
@@ -464,13 +470,7 @@ export function createGeneratedPageRuntimeProjection(
       ? {
           appointment: {
             appointmentEntity: bindings.appointment.appointmentEntity,
-            commands: [
-              "request",
-              "confirm",
-              "reschedule",
-              "cancel",
-              "history",
-            ],
+            commands: ["request", "confirm", "reschedule", "cancel", "history"],
           } as GeneratedPageRuntimeAppointmentV1,
         }
       : {}),

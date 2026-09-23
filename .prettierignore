@@ -18,3 +18,12 @@ packages/compiler/test/generated-runtime-*/
 .agents/skills/writing-skills/
 .agents/skills/create-architectural-decision-record/SKILL.md
 packages/capabilities/assets/core.audit/1.0.2/tests/contract.json
+# Exact accepted ADR bytes are the recorded decision authority.
+docs/adr/adr-0074-content-directory-family.md
+# Preserve the executed capture script identified by the eight-product receipt.
+packages/compiler/test/fixtures/capture-eight-definition-baseline.mjs
+# Published appointment manifests bind these exact asset bytes by digest.
+packages/capabilities/assets/scheduling.appointment/1.0.0/adapter.json
+packages/capabilities/assets/scheduling.appointment/1.0.0/component.json
+packages/capabilities/assets/scheduling.appointment/1.0.1/adapter.json
+packages/capabilities/assets/scheduling.appointment/1.0.1/component.json

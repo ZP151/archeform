@@ -4,22 +4,9 @@
   "confirmVersion": 1,
   "moveVersion": 2,
   "cancelVersion": 3,
-  "statuses": [
-    "requested",
-    "confirmed",
-    "requested",
-    "cancelled"
-  ],
-  "historyActions": [
-    "claim",
-    "confirm",
-    "move",
-    "cancel"
-  ],
-  "slotTimezones": [
-    "Asia/Singapore",
-    "America/Los_Angeles"
-  ],
+  "statuses": ["requested", "confirmed", "requested", "cancelled"],
+  "historyActions": ["claim", "confirm", "move", "cancel"],
+  "slotTimezones": ["Asia/Singapore", "America/Los_Angeles"],
   "capacityConflict": {
     "status": 409,
     "code": "appointment.capacity_conflict",
