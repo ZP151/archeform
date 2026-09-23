@@ -187,3 +187,12 @@ do not weaken them or use the first matching global node to avoid ambiguity.
 When a fixture omits framework chrome, include that chrome in a focused locator
 check before the actual lifecycle run. This is a test-authoring convention, not
 another acceptance gate.
+
+When claiming automatic consumer delivery, start at the ordinary Describe entry
+and record the user's required business actions separately from technical actions
+(plan selection, Draft apply, Publish, Compile, Verify and Preview). A script
+clicking those technical controls is runtime evidence, not proof that users no
+longer need them. Record opt-out, interrupted delivery and the next useful app
+action through the same flow. Keep runtime-family counts separate from verified
+automatic consumer-entry coverage; zero human rescues during an automated test
+does not measure zero user handoffs or reduced ordinary-user effort.

@@ -14,8 +14,13 @@ replay. Exact owned runtime cleanup is complete; historical residuals stay open.
 Next, resolve the shared follow-up UX gap: an unsupported requirement that the
 user still needs currently produces a generic rejection. Preserve requirements
 and fail-closed behavior while proposing an understandable next action through
-the existing decision process. Then advance Work Orders with real assignment
-and resolution semantics; do not inflate coverage with renamed Task records.
+the existing decision process. Next connect the already accepted Appointment,
+Directory and Inventory families to the consumer automatic-delivery flow. Their
+current actual acceptance uses technical Choose/Apply/Publish/Compile/Verify
+controls; runtime acceptance does not prove those user steps were removed.
+Proposed ADR-0079 must preserve exact family and immutable lifecycle safeguards.
+Then advance Work Orders with real assignment and resolution semantics; do not
+inflate coverage with renamed Task records.
 
 Choose mobile lookup/field actions and desktop management by the business job.
 Continuous delivery remains a separate outcome: remote CI and a compatible local

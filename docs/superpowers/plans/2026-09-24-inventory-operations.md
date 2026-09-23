@@ -105,7 +105,7 @@ existing case index. Add no new approval or deployment harness.
 - [x] Use the existing task review and required family-boundary QA/release review,
       reusing unchanged evidence. PM distinguishes registration, demonstrated
       runtime, accepted local journey and hosted delivery counts.
-- [ ] Root creates and pushes the bounded accepted commit and verifies remote
+- [x] Root creates and pushes the bounded accepted commit and verifies remote
       equality. This authorizes no main merge, repository release or cloud action.
 - [x] Choose the next genuinely different job from the roadmap. Add variants
       through data only when their business semantics already fit the family;
@@ -113,8 +113,9 @@ existing case index. Add no new approval or deployment harness.
 
 The accepted local family advances coverage to ten definitions and six runtime
 families. Actual evidence is in `docs/acceptance/evidence/inventory-operations`.
-Next address unresolved-requirement follow-up through proposed ADR-0078, then
-advance Work Orders' assignment/resolution semantics. Proposal preparation is
+Delivered as `63c7b12c` with verified remote equality. Next address unresolved
+follow-up through ADR-0078 and accepted-family consumer delivery through ADR-0079,
+then advance Work Orders' assignment/resolution semantics. Proposal preparation is
 authorized; implementation waits for the existing accepted-decision boundary.
 
 Keep continuous delivery as a parallel product outcome: the existing synthetic

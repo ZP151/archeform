@@ -7280,3 +7280,57 @@ attempt records and owned acceptance/status/checklist documentation. No main
 merge, repository release, cloud action or historical cleanup closure is granted.
 ADR-0078 remains separately owned proposed work, excluded from this commit until
 its own exact-hash review. The unbudgeted Goal remains active.
+
+### 2026-09-24 Goal continuation and ordinary-user delivery gap
+
+The previous Goal turn is progress: Inventory actual acceptance is delivered as
+`63c7b12c4e17398d20f1a3f21964a1456bde17bb`, pushed with verified remote equality.
+Root revalidates that HEAD and a clean worktree. Its CI run `35931234181` is live.
+The Goal remains active without a budget; coverage stays ten/ten/six.
+
+Source inspection identifies a higher-priority gap in the ordinary-user objective:
+`consumer-family.ts` only admits Restaurant, Approval and Task to automatic
+assembly. Directory/Inventory acceptance explicitly clicks Choose, Apply to Draft,
+Publish Draft, Compile, Verify and Preview through the technical workflow. Their
+actual runtime evidence is valid, but does not establish one-step consumer
+delivery. The existing zero `technicalHandoffs` field in authored runtime evidence
+must not be interpreted as proof that these technical UI steps disappeared.
+
+PM prioritizes automatic delivery of the accepted families after unresolved-scope
+recovery and before adding Work Orders. Tech Lead `accepted_family_autodelivery`
+owns only proposed `docs/adr/adr-0079-accepted-family-consumer-delivery.md`.
+Inspect and reuse current validated family witnesses, checksum-bound plan and
+consumer lifecycle latches; do not auto-admit arbitrary definitions by label.
+No source implementation, Graph widening, external provider or cloud action is
+authorized. Keep this proposal separate from ADR-0078 and serialize their eventual
+source work if paths overlap. Root owns shared plans and status. Acceptance must
+count actual user-visible technical actions and demonstrate a useful generated
+app through the consumer entry, with current fail-closed and cleanup behavior.
+
+The ADR-0078 proposing agent terminates twice with confirmed model-capacity
+errors and produces no file. PM transfers that single proposed-ADR path to
+`unresolved_scope_proposal` on the strongest assigned contract model. The former
+owner is terminal and has no write authority. No implementation or decision
+acceptance is inferred from the interrupted investigation.
+
+### 2026-09-24 ADR-0078 acceptance and serialized implementation
+
+Tech Lead `unresolved_scope_proposal` completes proposed ADR-0078 at SHA-256
+`d607d8a57b9a90625d339fe17d141b8363bab2b07279ac47af047bcf9db0f6d6`.
+Separate read-only `scope_decision_review`, neither proposer nor future writer,
+verifies that exact hash before/after review and returns
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 0/0/0, no unresolved ambiguity.
+It verifies actual adapter refusal/repair, closed V1 reader, context-clearing
+resubmission and the proposed reversible recovery boundaries against technology
+governance and the threat model. PM records founder acceptance through the
+September 1 standing authorization before source work.
+
+PM assigns `unresolved_scope_implementation` the serialized source/test manifest
+in `docs/superpowers/plans/2026-09-24-unresolved-requirement-follow-up.md`, under
+the unchanged ADR hash. The owner implements focused RED/GREEN adapter refusal,
+exact V1/V2 errors, context-preserving deliberate revision, reused Home controls
+and the provider-free UI case. Root owns process execution, evidence, shared
+docs and Git delivery. No ADR-0079 source, provider execution, persistence,
+security weakening, Graph/compiler changes or cloud action is authorized.
+The acceptance review of the decision is not source acceptance. Preserve all
+unrelated evaluation work and current ten/ten/six product counts.

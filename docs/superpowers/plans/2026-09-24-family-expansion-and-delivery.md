@@ -90,6 +90,18 @@ that decision is accepted. Source evidence: the definition-selection guard in
 cases in `packages/adapters/test/requirement-interpreter.test.ts`, and the fixed
 422 message in `apps/workbench/lib/product-journey/interpret-contract.ts`.
 
+### Next shared-flow correction: accepted-family automatic delivery
+
+Inventory is now locally accepted and delivered as `63c7b12c`. Before Work Orders,
+proposed ADR-0079 addresses the existing consumer selector's omission of accepted
+Appointment, Directory and Inventory semantics. Their actual business cases use
+technical plan and lifecycle buttons; do not count those as automatic consumer
+delivery. Reuse the existing phase latches, immutable lifecycle and exact validated
+family witnesses. Require actual consumer-entry evidence, explicit manual opt-out,
+retained failure/cleanup behavior and measured technical actions. No new provider,
+cloud environment or permissive definition-label shortcut is implied. Source work
+waits for the independent exact-hash decision review and PM acceptance.
+
 ## Next-wave reuse evidence: Work Orders
 
 Source inspection at delivered `9a4bda79` establishes a concrete reuse boundary

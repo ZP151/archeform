@@ -24,9 +24,24 @@ locator attempt is preserved. See [Inventory acceptance](acceptance/inventory-op
 Coverage is now ten registered and locally accepted definitions across six
 demonstrated runtime families. The expanded eight-step definition lane and
 retained source reviews remain valid. Next, proposed ADR-0078 addresses the
-shared unresolved-requirement follow-up experience, then Work Orders advances
-real assignment and resolution behavior. No implementation starts from an
+shared unresolved-requirement follow-up experience. Proposed ADR-0079 next connects
+accepted Appointment/Directory/Inventory to automatic consumer delivery; their
+current runtime cases still use technical lifecycle controls. Work Orders then
+advances real assignment and resolution behavior. No implementation starts from an
 unaccepted proposal. Real-model, ordinary-user and hosted outcomes stay separate.
+
+| Business runtime     | Accepted definitions | Consumer delivery evidence boundary                                                                          |
+| -------------------- | -------------------: | ------------------------------------------------------------------------------------------------------------ |
+| Restaurant Ordering  |                    1 | Existing automatic lifecycle path; local fixture scope                                                       |
+| Approval             |                    5 | Existing shared automatic eligibility; per-definition runtime acceptance is not a fresh automatic-entry test |
+| Task                 |                    1 | Existing automatic lifecycle path; local fixture scope                                                       |
+| Appointment          |                    1 | Accepted runtime; current consumer selector does not admit this family                                       |
+| Resource Directory   |                    1 | Accepted runtime; actual case uses explicit technical lifecycle controls                                     |
+| Inventory Operations |                    1 | Accepted runtime; actual case uses explicit technical lifecycle controls                                     |
+
+Thus six demonstrated runtimes do not mean six automated consumer journeys.
+Future consumer-entry evidence must count actual technical actions instead of
+inferring zero user effort from an automated runtime test's zero human rescues.
 
 The short-lane continuation now passes all eight steps, including 97 emitted
 numeric/calculated cases and reproducible Prisma client generation, with one
