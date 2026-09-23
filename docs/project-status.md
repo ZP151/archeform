@@ -18,20 +18,34 @@ independent-review authority. The private directory profile and fixed old-eight
 baseline pass 127 focused/compatibility tests and compiler typecheck, with its
 single review finding corrected and rechecked. The generated Directory business
 runtime now passes 162 focused/compatibility cases, emitted API and package
-typechecks, and a real PostgreSQL probe. Definition admission and presentation
-remain next; no new-family product is yet accepted.
-Continuous delivery is a separate tracked outcome: CI exists, but durable upgrades,
-rollback and hosted operation remain unverified. Source inspection confirms the
+typechecks, and a real PostgreSQL probe. The ninth definition's data admission is
+reviewed in the working tree, while the Directory reader/curator interface and
+actual verification journey are being implemented. Admission remains uncommitted
+until its real case restores the definition index; no new-family product is yet
+accepted. The previously green eight-step lane must not be read as passing against
+the pending ninth-definition state.
+Continuous delivery is a separate tracked outcome: CI exists, and the synthetic
+local compatible-upgrade/rollback/restore rehearsal now passes. Hosted operation
+remains unverified. Source inspection confirms the
 Preview runner removes its owned volumes and uses per-preview resource identity;
 it must not be repurposed as durable deployment. Target hosting information has
 been requested while independent local work proceeds.
 
-ADR-0075 now authorizes the synthetic local durable-delivery rehearsal, and its
-test harness is being implemented alongside the Directory runtime in disjoint
-paths. It will verify compatible A/B revision switching, failed readiness,
-retained-image rollback and separate backup restore using real PostgreSQL.
-This acceptance is authority to run the experiment, not a passed delivery result
-or a production deployment adapter.
+ADR-0075 authorizes the synthetic local durable-delivery rehearsal. Its harness
+passes 34 focused tests, with scoped independent review retained for unchanged
+behavior and root reproduction of the corrected screenshot locator. Three actual runs failed:
+the first exposed cached-image and cleanup defects; the second started revision A
+but failed before upgrade, with inadequate failure diagnostics; the third isolated
+an exact-text screenshot locator mismatch after all A business checks passed.
+Actual attempt 4 now passes all 24 phases: failed readiness retains writable A,
+healthy B preserves data and accepts writes, PostgreSQL restart preserves state,
+retained A images roll back with B writes intact, and a separate backup restores
+records/history/receipts without changing the main app. Independent inventory
+confirms no owned Docker resources remain. The same independent reviewer accepts
+this narrow local rehearsal at P0/P1/P2 0/0/0, retaining its transient-readiness and
+earlier blocked-cleanup limitations.
+See [local durable delivery](acceptance/local-durable-delivery.md).
+This does not implement a production deployment adapter or hosted rollout.
 
 The host's Docker Desktop startup blocker is resolved: root quarantined only the
 two verified zero-byte IPC directories and confirmed Engine `29.6.2` responds.

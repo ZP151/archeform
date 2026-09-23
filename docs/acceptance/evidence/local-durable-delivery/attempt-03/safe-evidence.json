@@ -1,0 +1,143 @@
+{
+  "runId": "15a8e326e3b1e87aafc670bd",
+  "applicationId": "durable-task-15a8e326e3b1e87aafc670bd",
+  "engine": "29.6.2",
+  "databaseContract": "cdfdf4b71fd0b127acefdf7019af197a098048cdf60fbba8a8140d4a168092b9",
+  "graphHashes": [
+    "sha256:4aa0bfc7675dd65bd6932111b8fa1e7bf960cc566af45299707406fcc9a39bb2",
+    "sha256:b84e5ffea2cff384126b45eee5576a61835553a4abc4199841ea9152d8deebf1"
+  ],
+  "lockDigests": [
+    "sha256:4afa97dd8c3ab8a821a957125a0eda19c36a736a0900dcbbaca731da57b2aece",
+    "sha256:04a60b1a481de533f743db035bdf6e7f4a539f721337e9cabaf74238b35f57a2"
+  ],
+  "bundleDigests": [
+    "072f733b3d031c00662e8421ff691f71e7be8e8960f82158a28458d21c04db2c",
+    "eeae34b49dad21bdabbafe31cbd86f00a0079ae9b3df7a4867c242183f41835b"
+  ],
+  "images": {
+    "bootstrap": "sha256:ab41daf6878006495894368f94f54bad52df08fadb94fdb602b6ce0da21e4bf1",
+    "a-api": "sha256:0254d1534f3d39d5055f8b525590da237dc821b069516d7488ce2b1f53dbb0bd",
+    "a-web": "sha256:166ca8b52f11588f40594b86e499bd21ac0f7c193c38d082bb4b8578321cca86",
+    "b-api": "sha256:389874c1cf1b838f9ecf26f2bee62e03d4767ecc993e3e55e0dc92eb77dfc56f",
+    "b-web": "sha256:ec0502156efbd2b1cd2197f2944caaea01fb841e3772b421070bcf3fbcf0f01f",
+    "postgres": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
+  },
+  "phases": [
+    {
+      "phase": "immutable-fixtures",
+      "outcome": "passed",
+      "durationMs": 199
+    },
+    {
+      "phase": "build",
+      "outcome": "passed",
+      "durationMs": 81996
+    },
+    {
+      "phase": "base-image",
+      "outcome": "passed",
+      "durationMs": 532
+    },
+    {
+      "phase": "bootstrap-a",
+      "outcome": "passed",
+      "durationMs": 12885
+    },
+    {
+      "phase": "serve-a",
+      "outcome": "passed",
+      "durationMs": 1819
+    },
+    {
+      "phase": "a-gateway-page",
+      "outcome": "passed",
+      "durationMs": 128
+    },
+    {
+      "phase": "a-baseline-snapshot",
+      "outcome": "passed",
+      "durationMs": 575
+    },
+    {
+      "phase": "a-create-first",
+      "outcome": "passed",
+      "durationMs": 70
+    },
+    {
+      "phase": "a-create-second",
+      "outcome": "passed",
+      "durationMs": 43
+    },
+    {
+      "phase": "a-correction",
+      "outcome": "passed",
+      "durationMs": 27
+    },
+    {
+      "phase": "a-transition",
+      "outcome": "passed",
+      "durationMs": 46
+    },
+    {
+      "phase": "a-history-snapshot",
+      "outcome": "passed",
+      "durationMs": 531
+    },
+    {
+      "phase": "a-capture",
+      "outcome": "delivery.failed",
+      "durationMs": 5072
+    }
+  ],
+  "postgresSource": "cached",
+  "currentPhase": "a-capture",
+  "httpChecks": [
+    {
+      "operation": "create-task",
+      "expectedStatus": 201,
+      "actualStatus": 201,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "create-task",
+      "expectedStatus": 201,
+      "actualStatus": 201,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "correct-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "start-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    }
+  ],
+  "failureScreenshot": "failure.png",
+  "cleanup": "removed",
+  "failure": "delivery.failed",
+  "cleanupFailure": null
+}

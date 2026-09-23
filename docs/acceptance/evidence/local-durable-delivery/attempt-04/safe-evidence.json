@@ -1,0 +1,504 @@
+{
+  "runId": "7dd8d049d3ef0673fa227d1b",
+  "applicationId": "durable-task-7dd8d049d3ef0673fa227d1b",
+  "engine": "29.6.2",
+  "databaseContract": "5a248dd89cafb64259d6edcac45a6ae4ddd7cf271acbd2d0d8936a07a5ebefd4",
+  "graphHashes": [
+    "sha256:7841c207cb09a33dd67f76af7eabc4c535bf7390498a3c278f89f9ff69fc230c",
+    "sha256:76bdd9b044f82f3a75b967b76c3b6da94caf74ad0fcbef05388b1b25a45ec681"
+  ],
+  "lockDigests": [
+    "sha256:4160399c1f0f12f4e279b485583845cdfce809e4e90380a78d81ecbee95bdfb8",
+    "sha256:3d59d618e5a9d087efbe5d70b7c8b96aa0626ca02784e5e8d09e984e85bf63dc"
+  ],
+  "bundleDigests": [
+    "0e75f7b36f13d7bfd8ec136813185cd1300cbac454f9dc3c14eed7b8f73a2e71",
+    "377394f7066d3f4509aecc5b20ad9660b59d41ef5f2ab3442d93f7f907f80a2e"
+  ],
+  "images": {
+    "bootstrap": "sha256:dee72ec64b4c237e6b3aa726d6b3af55138030a72f7d56b4671b0e1a9a6a413d",
+    "a-api": "sha256:86d30dd8fec9897ee4c776c9a71e89cf72704fa25da14acb5abf1dce42e56478",
+    "a-web": "sha256:805fe705bbe4c0403cde0ac392cc8c7d0b503e2a86fcb76d84e3f609756faa46",
+    "b-api": "sha256:a95dd6b1896ec4eac91c4b1ff79dc074e32072aa6f893452e2173471800e8be2",
+    "b-web": "sha256:fa41c831f303b862c6e6c70430230d0e70abcc20ef9205184d03f98cea302c5d",
+    "postgres": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
+  },
+  "phases": [
+    {
+      "phase": "immutable-fixtures",
+      "outcome": "passed",
+      "durationMs": 197
+    },
+    {
+      "phase": "build",
+      "outcome": "passed",
+      "durationMs": 71683
+    },
+    {
+      "phase": "base-image",
+      "outcome": "passed",
+      "durationMs": 572
+    },
+    {
+      "phase": "bootstrap-a",
+      "outcome": "passed",
+      "durationMs": 11873
+    },
+    {
+      "phase": "serve-a",
+      "outcome": "passed",
+      "durationMs": 2078
+    },
+    {
+      "phase": "a-gateway-page",
+      "outcome": "passed",
+      "durationMs": 155
+    },
+    {
+      "phase": "a-baseline-snapshot",
+      "outcome": "passed",
+      "durationMs": 533
+    },
+    {
+      "phase": "a-create-first",
+      "outcome": "passed",
+      "durationMs": 72
+    },
+    {
+      "phase": "a-create-second",
+      "outcome": "passed",
+      "durationMs": 45
+    },
+    {
+      "phase": "a-correction",
+      "outcome": "passed",
+      "durationMs": 27
+    },
+    {
+      "phase": "a-transition",
+      "outcome": "passed",
+      "durationMs": 37
+    },
+    {
+      "phase": "a-history-snapshot",
+      "outcome": "passed",
+      "durationMs": 541
+    },
+    {
+      "phase": "a-capture",
+      "outcome": "passed",
+      "durationMs": 177
+    },
+    {
+      "phase": "failed-readiness-retains-a",
+      "outcome": "passed",
+      "durationMs": 16967
+    },
+    {
+      "phase": "a-retained-snapshot",
+      "outcome": "passed",
+      "durationMs": 604
+    },
+    {
+      "phase": "switch-b",
+      "outcome": "passed",
+      "durationMs": 5171
+    },
+    {
+      "phase": "b-create",
+      "outcome": "passed",
+      "durationMs": 39
+    },
+    {
+      "phase": "b-correction",
+      "outcome": "passed",
+      "durationMs": 39
+    },
+    {
+      "phase": "b-history-snapshot",
+      "outcome": "passed",
+      "durationMs": 543
+    },
+    {
+      "phase": "postgres-restart",
+      "outcome": "passed",
+      "durationMs": 3916
+    },
+    {
+      "phase": "backup",
+      "outcome": "passed",
+      "durationMs": 493
+    },
+    {
+      "phase": "retained-image-rollback",
+      "outcome": "passed",
+      "durationMs": 18460
+    },
+    {
+      "phase": "rollback-history-snapshot",
+      "outcome": "passed",
+      "durationMs": 579
+    },
+    {
+      "phase": "separate-restore",
+      "outcome": "passed",
+      "durationMs": 10544
+    }
+  ],
+  "postgresSource": "cached",
+  "currentPhase": "separate-restore",
+  "httpChecks": [
+    {
+      "operation": "create-task",
+      "expectedStatus": 201,
+      "actualStatus": 201,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "create-task",
+      "expectedStatus": 201,
+      "actualStatus": 201,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "correct-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "start-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "create-task",
+      "expectedStatus": 201,
+      "actualStatus": 201,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "create-task",
+      "expectedStatus": 201,
+      "actualStatus": 201,
+      "code": null
+    },
+    {
+      "operation": "correct-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 403,
+      "code": "task.denied"
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "create-task",
+      "expectedStatus": 201,
+      "actualStatus": 201,
+      "code": null
+    },
+    {
+      "operation": "start-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "read-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    },
+    {
+      "operation": "create-task",
+      "expectedStatus": 201,
+      "actualStatus": 201,
+      "code": null
+    },
+    {
+      "operation": "start-task",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "code": null
+    }
+  ],
+  "backup": {
+    "sha256": "954f10c5653aa5b9efa2699f909539730db4a28cfe21f3a36989d0c4c3b84cb0",
+    "size": 17837
+  },
+  "persistence": {
+    "initialFacts": {
+      "audit": {
+        "count": 4,
+        "sha256": "9c846754c6dcaecda1af762d58cd58a10c5315efaa3501ea8d8425f7e9bce7ce"
+      },
+      "capability": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "receipt": {
+        "count": 4,
+        "sha256": "e9b30590695c86bfd33a3e7c8e88d0c83da900ce5e510c4f8845a154332ad343"
+      }
+    },
+    "factsBeforeB": {
+      "audit": {
+        "count": 5,
+        "sha256": "1824e367ac121fc85d21e56ebcb5a697827ccccb3dd4fcbe1c2572ab65a86fac"
+      },
+      "capability": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "receipt": {
+        "count": 5,
+        "sha256": "5dab0fbeb0c471ffa86cbc69ff15a1493038869744c36fca9e6ffba036c14145"
+      }
+    },
+    "factsAfterB": {
+      "audit": {
+        "count": 7,
+        "sha256": "5e1f16e03c6d5c88973f68fdada24f0ece75328e572426c5f048ce3dc559a383"
+      },
+      "capability": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "receipt": {
+        "count": 7,
+        "sha256": "ca6d5670dbf065e459aa926e86477b195f1f554a4c563ff4614a3434c8538095"
+      }
+    },
+    "mainFacts": {
+      "audit": {
+        "count": 8,
+        "sha256": "23e7a558c0bd55473a1e03fe31191514263d394889c8964bd5d400468e6b48f2"
+      },
+      "capability": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "receipt": {
+        "count": 8,
+        "sha256": "2e65341943a33ce31fed5d3b0fa23a8f4380b3f7f64929c13dcd150a074973e9"
+      }
+    },
+    "records": [
+      {
+        "id": "cmuegfsc30000ns01vqrki01d",
+        "version": 0,
+        "status": "not-started"
+      },
+      {
+        "id": "cmuegfse90003ns01jwawoar0",
+        "version": 2,
+        "status": "in-progress"
+      },
+      {
+        "id": "cmuegganh0000o701qzcofcf1",
+        "version": 1,
+        "status": "not-started"
+      }
+    ]
+  },
+  "cleanup": "removed",
+  "failure": null,
+  "cleanupFailure": null
+}
