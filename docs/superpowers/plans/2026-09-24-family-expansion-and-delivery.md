@@ -54,7 +54,7 @@ the environment question does not block local product work.
 
 | Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                   |
 | ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Tech Lead proposal in progress                                           |
+| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | ADR-0074 accepted; profile complete; runtime implementation active       |
 | B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Planned; reuse existing inventory capabilities only after fit assessment |
 | C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen; validate the actual assignment/access and evidence requirements before admission                                                                                | Candidate; not a renamed task definition                                 |
 | D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit          |
@@ -76,12 +76,12 @@ targets, not a reason to relax acceptance.
 Reuse `approval-numeric-domain.test.ts` and `approval-calculated-total.test.ts` to
 run emitted controls, invalid/no-write behavior and complete-workspace density.
 
-- [ ] RED: assert the real emitted-test selection is present and a failure stops
+- [x] RED: assert the real emitted-test selection is present and a failure stops
       the lane, retaining Windows dispatch and provider-free behavior.
-- [ ] GREEN: compose those existing tests into the fixed lane; no output changes.
-- [ ] Execute the real lane and inspect browser execution rather than treating a
+- [x] GREEN: compose those existing tests into the fixed lane; no output changes.
+- [x] Execute the real lane and inspect browser execution rather than treating a
       dry-run command listing as visual evidence.
-- [ ] One ordinary review, focused correction and controller delivery.
+- [x] One ordinary review, focused correction and controller delivery.
 
 This task prevents known regressions; it does not establish visual acceptance of
 a new family. New directory controls receive their own representative checks.
@@ -92,10 +92,10 @@ a new family. New directory controls receive their own representative checks.
 **Implementation ownership:** assigned after the exact accepted decision freezes
 family admission, compiler and persistence interfaces; no parallel shared writers.
 
-- [ ] Inspect existing assets and runtime semantics; distinguish event-only
+- [x] Inspect existing assets and runtime semantics; distinguish event-only
       capability stubs from executable business behavior.
-- [ ] Record a narrow family design, exact reusable assets and proposed ADR.
-- [ ] Independent decision review under the existing standing authority if eligible.
+- [x] Record a narrow family design, exact reusable assets and proposed ADR.
+- [x] Independent decision review under the existing standing authority if eligible.
 - [ ] Write focused failing tests for list/detail visibility, management correction,
       invalid input, stale update, denial, retry and missing media.
 - [ ] Implement shared family behavior, then one canonical definition through data.
@@ -111,6 +111,13 @@ acceptable substitutes for unsupported features.
 
 ## Task 3: establish a durable delivery path
 
+ADR-0075 is accepted through the existing standing independent-review authority
+at SHA-256 `d2cf85a5bd0bc299e4144a81e708b4407532d081bf087f4e49f8549f2f9167bb`.
+It authorizes one synthetic local Team Task A/B rehearsal using unchanged database
+artifacts, owned persistent fixture storage, failed readiness, retained-image
+rollback and separate backup restore. It does not implement hosted deployment.
+Harness implementation and actual runtime evidence remain open.
+
 This is a distinct workstream with a concrete gap: the current Preview runner
 names resources per preview and intentionally removes volumes during cleanup.
 V1 generated Compose has no explicit durable PostgreSQL volume binding; V3
@@ -121,8 +128,8 @@ cross-revision application upgrades.
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | Existing CI                     | Frozen install, types, tests, build and provenance checks in `.github/workflows/ci.yml`                                                                                                             | Present; not deployment                                                 |
 | Continuous branch delivery      | Reviewed bounded commits, push equality, accepted integration through PR; report exact revision                                                                                                     | Existing delivery policy; current iteration not yet integrated          |
-| Local durable-upgrade rehearsal | Create business data under revision A; deliver compatible revision B to the same logical app; verify IDs, values, history and actions; inject failed readiness and retain A                         | Needs bounded operability/migration ADR before implementation           |
-| Local recovery rehearsal        | Roll back executable artifacts for a compatible schema; verify post-upgrade writes remain; incompatible downgrade must stop explicitly. Prove separate backup restore into disposable owned storage | Planned; restart alone is insufficient                                  |
+| Local durable-upgrade rehearsal | Create business data under revision A; deliver compatible revision B to the same logical app; verify IDs, values, history and actions; inject failed readiness and retain A                         | ADR-0075 accepted; fixture implementation active                        |
+| Local recovery rehearsal        | Roll back executable artifacts for a compatible schema; verify post-upgrade writes remain; incompatible downgrade must stop explicitly. Prove separate backup restore into disposable owned storage | Same accepted rehearsal; actual runtime evidence pending                |
 | Hosted pilot                    | Selected account/environment, private access, durable storage, HTTPS, health checks, failed-rollout recovery, backup restore and operating owner                                                    | Target requested; no provider selected or deployed                      |
 | Routine hosted delivery         | Immutable artifact promotion, readiness-based traffic switch, safe serialized rollouts and visible current/previous release                                                                         | After pilot acceptance, not a fresh user-operated development checklist |
 
@@ -131,6 +138,21 @@ failure/retry result. Internal schema compatibility, build, checks and promotion
 remain platform responsibilities. Destructive schema changes cannot be disguised
 as automatic rollback. A future deployment adapter must never call Preview's
 volume-deleting cleanup against durable product storage.
+
+For the first Directory product, the phone acceptance journey is find -> read;
+the desktop curator journey is create -> correct -> show -> hide. Verify a
+curator's change through a fresh reader view on the same persisted entry, not
+two unrelated viewport fixtures. Each surface must preserve its useful action,
+readable content, keyboard/touch access and error recovery at its intended size.
+Do not require native packaging or duplicate all desktop controls on a phone
+unless a concrete business job needs them.
+
+Continuous delivery has two separately reported outcomes: shipping reviewed
+platform revisions, and promoting a generated application's executable revision
+while its data survives. Passing CI or pushing this branch proves neither a
+hosted rollout nor the second outcome. The rehearsal establishes the narrow
+compatible-revision foundation; selecting the hosted pilot environment and
+implementing its accepted adapter remain explicit follow-up work.
 
 Evidence sources: `apps/compiler-worker/src/preview-runner.ts`, generated Compose
 in `packages/compiler/src/index.ts`, V3 Compose in

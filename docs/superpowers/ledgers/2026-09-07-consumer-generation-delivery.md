@@ -5983,3 +5983,42 @@ Root retains docs, integration, resource ownership and Git. Docker is not curren
 available, so real PostgreSQL claims remain pending; emitted/in-memory/probe tests
 may proceed and must be reported as that narrower evidence. The shared-contract
 integration and final product gate remain at the completed family boundary.
+
+Task 2 ownership also includes `packages/compiler/src/targets/database/target.ts`
+for the exact directory profile's version/receipt schema and migration fragments.
+The engineer identified this native target seam before writing outside scope.
+Using it implements the already accepted persistence contract and avoids string
+postprocessing after identifier validation; no new public contract is authorized.
+Existing target tests and fixed old-eight bytes must verify unchanged other-family
+output. Root approves this routine path extension within the frozen ADR.
+
+The local engine blocker is now resolved. After confirming Docker was stopped
+and both plain directories contained only zero-byte IPC/reparse entries, root
+renamed the exact `Docker/run` and `docker-secrets-engine` directories aside under
+their existing parents, preserving all contents. Docker recreated them and
+`docker version --format '{{.Server.Version}}'` returned `29.6.2`. No database,
+volume, settings or installed version changed. Retained quarantine directories
+are intentionally preserved; this was host recovery, not product acceptance.
+
+### 2026-09-24 Local durable-delivery rehearsal accepted for implementation
+
+Tech Lead `/root/content_directory_decision` proposes experiment ADR-0075.
+Independent read-only `/root/directory_decision_review` verified the current
+generated health route and compiled the A/B page-title-only fixtures in memory:
+both have 63 files and byte-equal database/API Prisma artifacts. One readiness
+route typo was corrected before acceptance. Final exact ADR SHA-256 is
+`d2cf85a5bd0bc299e4144a81e708b4407532d081bf087f4e49f8549f2f9167bb`;
+the reviewer returns `APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 `0/0/0`,
+with no material choice or uncertainty. PM accepts under the founder's existing
+standing policy. This is synthetic local-fixture authority only, no cloud or
+user-application deployment, external provider, release or credential exposure.
+
+Serialized harness owner `durable_delivery_implementation` owns only
+`scripts/local-durable-delivery.mjs`, `scripts/local-durable-delivery.test.mjs`,
+`e2e/helpers/durable-delivery-fixture.ts`, and `e2e/local-durable-delivery.spec.ts`.
+CLI `plan|run`, same-app A/B compatibility, ownership labels, loopback gateway,
+readiness/drain, image-ID rollback, separate restore and cleanup are frozen by
+ADR-0075. Root owns actual Docker execution, evidence, docs and integration.
+Unit tests and implementation may run independently of the directory source owner;
+no compiler/template/worker/Graph/dependency or existing acceptance file changes.
+Any required production change stops this fixture task for inspection.

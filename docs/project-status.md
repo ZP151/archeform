@@ -24,11 +24,18 @@ Preview runner removes its owned volumes and uses per-preview resource identity;
 it must not be repurposed as durable deployment. Target hosting information has
 been requested while independent local work proceeds.
 
-The current host's Docker Desktop startup is failing on inaccessible local IPC
-endpoints. A stale zero-byte inference endpoint was archived, but the engine
-remains unavailable; no database reset or application-volume deletion was used.
-Compiler/browser preflight works without Docker. Actual Directory PostgreSQL and
-generated-runtime acceptance remain pending engine recovery, not waived.
+ADR-0075 now authorizes the synthetic local durable-delivery rehearsal, and its
+test harness is being implemented alongside the Directory runtime in disjoint
+paths. It will verify compatible A/B revision switching, failed readiness,
+retained-image rollback and separate backup restore using real PostgreSQL.
+This acceptance is authority to run the experiment, not a passed delivery result
+or a production deployment adapter.
+
+The host's Docker Desktop startup blocker is resolved: root quarantined only the
+two verified zero-byte IPC directories and confirmed Engine `29.6.2` responds.
+No database reset or application-volume deletion was used. Actual Directory
+PostgreSQL and generated-runtime acceptance remain pending implementation; engine
+availability is not itself product acceptance.
 
 The root checkout contains separately owned Eval V2 work. This Goal works in the
 existing isolated `codex/definition-regression-entry` branch and preserves that
