@@ -12,9 +12,11 @@ product-scorecard owner. The task and approval started on September 7.
   `b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`.
   `inventory_contract_implementation` is the only source writer; the exact path
   assignment is in the final Inventory Task 1 ownership entry below.
-- **Next action:** Task 1 source is frozen with 465 focused tests and all eight
-  definition regression phases passing. Independent contract review is active;
-  transactional runtime and UI follow that freeze. No tenth row is registered yet.
+- **Next action:** correct the final review's P1 stripped-coordinate generic
+  fallback in Inventory candidate detection, then scoped affected verification.
+  Earlier task review/Terra QA remains valid outside that gap. Independently,
+  accepted ADR-0077 restores historical booking compilation in disjoint files.
+  Transactional runtime and UI follow the Inventory freeze. No tenth row is registered.
 - **Working documents:** [Inventory plan](../plans/2026-09-24-inventory-operations.md),
   [acceptance brief](../../acceptance/inventory-operations.md),
   [current status](../../project-status.md). Root alone edits these documents.
@@ -6718,3 +6720,74 @@ The focused receipt case passes (76 unchanged cases unselected), formatting
 passes, and independent scoped review `directory_decision_review` approves
 P0/P1/P2 0/0/0. Git credential persistence stays disabled. Root delivers these
 two paths and ledger evidence separately from Inventory source acceptance.
+
+### 2026-09-24 Compiler public-surface assertion repair
+
+Root reproduces five passes/two failures in `test/index-exports.test.ts` with
+history available. Its regular expression consumes import statements and source
+bodies following `export { ... } from`, and the expected runtime surface predates
+the explicitly accepted Directory and Inventory root additions. Root owns only
+this test file: parse public declarations with the existing TypeScript library,
+then compare historical exports plus exactly the ADR-0074/0076 value/type names.
+Keep deep-import denial, registration checks, manifest and lockfile comparisons.
+This test correction changes no export or package authority and ships with the
+Inventory source boundary, not before its new export is delivered.
+The corrected seven export/built-consumer tests pass; no broad suite was repeated.
+
+### 2026-09-24 Inventory Task 1 independent QA
+
+`inventory_contract_qa` (explicit Terra after the role dispatcher resolved an
+unavailable model) reports PASS, P0/P1/P2 0/0/0. Independent focused runs pass:
+Graph witness 32, Inventory composition 13, definition admission 14 and compiler
+contract 36 (95 total), including all nine immutable byte comparisons and generic
+non-stock 62-file compilation. Four builds/typechecks, compiler lint and diff
+whitespace checks pass. Exact accepted ADR, corrected source and baseline hashes
+match. QA confirms local/root formatter exceptions preserve immutable bytes and
+the compiler manifest is unchanged. Runtime/family acceptance remains open.
+Root dispatches the policy-required Sol release review for this narrow contract
+boundary, including the seven-test export assertion repair; unrelated remote CI
+and old Appointment compatibility remain explicitly excluded from whole-branch
+release claims. No main integration or repository release is authorized.
+
+### 2026-09-24 Old generic booking/current Appointment distinction
+
+Independent diagnosis reproduces the frozen TypeScript booking baseline rejection
+and traces it to the entity-name-only guard added in `156165936`. Historic booking
+uses six ordinary locks, no numeric domains, Appointment -> Service `serviceKey`
+and Schedule `day`/`capacity`; current Appointment references Schedule with its
+atomic interval/capacity contract. A read-only probe proves bare removal of the
+name guard also allows a current candidate missing both its Appointment lock and
+numeric domains through facade checks. Do not apply that unsafe simplification.
+ADR-0071 requires old-output preservation and ADR-0072 requires missing-lock
+failure, so PM dispatches the diagnosing independent agent as Tech Lead for a
+proposed explicit discriminator decision before any production change. Ownership
+is only new `docs/adr/adr-0077-historical-booking-compiler-admission.md`.
+Inventory source and its release review remain independent and frozen.
+
+### 2026-09-24 Inventory final review: stripped-coordinate fallback
+
+Sol reports one P1 in the new stock-specific candidate predicate: removing the
+required quantity coordinates and numeric domains from an Inventory-derived
+Graph leaves stock roles/pages/flow/effect/reference and identifying fields,
+but both current candidate triplets disappear. A correctly rebound six-package
+lock then allows Graph validation, an undefined Inventory selector, and a generic
+62-file compilation. PM does not accept Task 1 source delivery. Return the same
+composer/compiler candidate paths and tests to their owner to preserve recognition
+of malformed stock structures after coordinate removal/renaming, while keeping
+the unrelated non-stock workflow regression green. Preserve exact-witness checks,
+Graph semantics, locks and immutable fixtures. Rerun affected evidence and scoped
+review/QA/release checks; retain unchanged Graph and adapter evidence.
+
+### 2026-09-24 ADR-0077 standing acceptance
+
+Separate qualified reviewer `directory_decision_review` returns
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 0/0/0, with no unresolved
+material ambiguity for ADR-0077 SHA-256
+`67b2c9331ae604b2624b77273ba91b38908282dcedc98d3bdb1f2533d1d77c1f`.
+PM records acceptance under the September 1 standing founder authority before
+implementation. A separate serialized compatibility writer owns only
+`packages/compiler/src/appointment-compilation-admission.ts` and new
+`packages/compiler/test/historical-booking-admission.test.ts`; no index, Inventory,
+fixture, asset, Graph, package or other family changes. The accepted complete
+historical witness and both-facade integrity checks are mandatory. No external
+operation, publication, repository release or deployment is authorized.

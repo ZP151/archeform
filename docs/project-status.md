@@ -12,9 +12,11 @@ management are selected by actual use; dual-surface products must complete their
 cross-role journey. The original eight-definition compatibility baseline is unchanged.
 
 **Current execution:** Directory is delivered at `e0c0f467`. Inventory Task 1 is
-active with one contract owner: the unchanged nine-product baseline is captured
-and byte comparison passes. The accepted narrow Graph witness amendment resolves
-the empty-stockroom admission blocker; implementation and rejection tests resume. Its
+has a bounded final-review correction underway: after the nine-product baseline,
+focused tests and task review/Terra QA passed, Sol reproduced a malformed stock
+graph falling into generic compilation when quantity coordinates were removed.
+Candidate detection and adversarial tests are being corrected before transactional
+runtime work. Its
 [acceptance brief](acceptance/inventory-operations.md) freezes the receive 10 ->
 issue 3 -> correct -1 -> balance 6 journey and scenario-specific phone/desktop
 criteria before UI work. No tenth catalogue row or Inventory runtime is claimed.
@@ -46,7 +48,12 @@ branch delivery: nine registered and locally accepted definitions across five
 demonstrated runtime families. This is not hosted or ordinary-user acceptance.
 Continuous delivery is a separate tracked outcome: CI exists, and the synthetic
 local compatible-upgrade/rollback/restore rehearsal now passes. Hosted operation
-remains unverified. Source inspection confirms the
+remains unverified. Actual remote CI progresses beyond repaired formatting and
+historical count checks, but still exposes old generic Appointment admission and
+export-surface test failures. Source-history checkout and historical toolchain
+receipt assertions are corrected; ADR-0077's bounded old/current Appointment
+distinction is accepted and being implemented in disjoint files. Complete CI
+success is not claimed. Source inspection confirms the
 Preview runner removes its owned volumes and uses per-preview resource identity;
 it must not be repurposed as durable deployment. Target hosting information has
 been requested while independent local work proceeds.

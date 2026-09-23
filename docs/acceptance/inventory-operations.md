@@ -1,6 +1,9 @@
 # Inventory Operations acceptance brief
 
-Status: planned; no Inventory runtime or product acceptance has run.
+Status: Task 1 implementation is under a bounded P1 correction after final review
+found stripped stock coordinates could permit generic fallback. Earlier task
+review and independent QA evidence remain valid outside that gap. No Inventory
+runtime or product acceptance has run.
 Authority: accepted ADR-0076 and the active PM ledger. This file defines the
 business and visual observations before implementation. It adds no approval gate.
 The catalogue remains nine locally accepted definitions across five demonstrated
@@ -101,7 +104,16 @@ These are authored coverage scenarios, not market research or additional product
 
 ## Evidence and delivery limits
 
-All result fields are pending. Record actual source/ADR hashes, generated bundle,
+Task 1 focused tests pass 465/465: Graph 184, composition/planner 72, adapter
+admission 98 and compiler/compatibility 111. Four dependency builds/typechecks
+and all eight phases of `pnpm regression definitions` pass. These are contract
+and historical regression results, not a generated Inventory user journey.
+The frozen nine-product baseline retains SHA-256
+`9c39f0b1e8a624b3dbac57707c8c7c6d81b0e945ad3cd9f63642d6619bdc209a`;
+all captured inputs/locks reproduce identical generated paths and content hashes.
+Valid Inventory compilation deliberately fails closed until its runtime exists.
+
+Runtime result fields are pending. Record actual source/ADR hashes, generated bundle,
 Published/Compilation identities, failure attempts, timings, screenshot findings,
 business state and cleanup here when available. A canonical row, passing selector
 or generated UI fixture does not increase accepted counts.
