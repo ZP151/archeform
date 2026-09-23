@@ -52,14 +52,14 @@ the environment question does not block local product work.
 
 ## Ordered business waves
 
-| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                       |
-| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Runtime verified; definition reviewed; UI and verifier implementation active |
-| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Planned; reuse existing inventory capabilities only after fit assessment     |
-| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen; validate the actual assignment/access and evidence requirements before admission                                                                                | Candidate; not a renamed task definition                                     |
-| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit              |
-| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics        |
-| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                      |
+| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                          |
+| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Accepted local journey; delivered at e0c0f467; nine definitions / five families |
+| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | ADR-0076 accepted; detailed plan ready; next serialized contract slice          |
+| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen; validate the actual assignment/access and evidence requirements before admission                                                                                | Candidate; not a renamed task definition                                        |
+| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit                 |
+| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics           |
+| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                         |
 
 After each new reusable family, assess 3-5 real domain briefs. Admit supported,
 semantically distinct jobs through data and bindings. Reject or queue unsupported
@@ -96,12 +96,12 @@ family admission, compiler and persistence interfaces; no parallel shared writer
       capability stubs from executable business behavior.
 - [x] Record a narrow family design, exact reusable assets and proposed ADR.
 - [x] Independent decision review under the existing standing authority if eligible.
-- [ ] Write focused failing tests for list/detail visibility, management correction,
+- [x] Write focused failing tests for list/detail visibility, management correction,
       invalid input, stale update, denial, retry and missing media.
-- [ ] Implement shared family behavior, then one canonical definition through data.
-- [ ] Run old-eight compatibility and actual generated business journey, inspect
+- [x] Implement shared family behavior, then one canonical definition through data.
+- [x] Run old-eight compatibility and actual generated business journey, inspect
       390/768/1440 output appropriate to both reader and curator roles.
-- [ ] Record real persisted results, immutable lifecycle, failures and cleanup;
+- [x] Record real persisted results, immutable lifecycle, failures and cleanup;
       complete applicable shared-contract review and ordinary visual review together.
 
 No contact button implies delivered email. If management is the declared action,
@@ -126,14 +126,14 @@ V1 generated Compose has no explicit durable PostgreSQL volume binding; V3
 Restaurant has a per-project `shared-state` volume. Neither establishes safe
 cross-revision application upgrades.
 
-| Stage                           | Work and acceptance                                                                                                                                                                                 | Authority/status                                                        |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Existing CI                     | Frozen install, types, tests, build and provenance checks in `.github/workflows/ci.yml`                                                                                                             | Present; not deployment                                                 |
-| Continuous branch delivery      | Reviewed bounded commits, push equality, accepted integration through PR; report exact revision                                                                                                     | Existing delivery policy; current iteration not yet integrated          |
-| Local durable-upgrade rehearsal | Create business data under revision A; deliver compatible revision B to the same logical app; verify IDs, values, history and actions; inject failed readiness and retain A                         | Actual attempt 4 passes; narrow local rehearsal accepted |
+| Stage                           | Work and acceptance                                                                                                                                                                                 | Authority/status                                                                   |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Existing CI                     | Frozen install, types, tests, build and provenance checks in `.github/workflows/ci.yml`                                                                                                             | Present; not deployment                                                            |
+| Continuous branch delivery      | Reviewed bounded commits, push equality, accepted integration through PR; report exact revision                                                                                                     | Existing delivery policy; current iteration not yet integrated                     |
+| Local durable-upgrade rehearsal | Create business data under revision A; deliver compatible revision B to the same logical app; verify IDs, values, history and actions; inject failed readiness and retain A                         | Actual attempt 4 passes; narrow local rehearsal accepted                           |
 | Local recovery rehearsal        | Roll back executable artifacts for a compatible schema; verify post-upgrade writes remain; incompatible downgrade must stop explicitly. Prove separate backup restore into disposable owned storage | Actual rollback, database restart and separate restore pass; scoped cleanup proven |
-| Hosted pilot                    | Selected account/environment, private access, durable storage, HTTPS, health checks, failed-rollout recovery, backup restore and operating owner                                                    | Target requested; no provider selected or deployed                      |
-| Routine hosted delivery         | Immutable artifact promotion, readiness-based traffic switch, safe serialized rollouts and visible current/previous release                                                                         | After pilot acceptance, not a fresh user-operated development checklist |
+| Hosted pilot                    | Selected account/environment, private access, durable storage, HTTPS, health checks, failed-rollout recovery, backup restore and operating owner                                                    | Target requested; no provider selected or deployed                                 |
+| Routine hosted delivery         | Immutable artifact promotion, readiness-based traffic switch, safe serialized rollouts and visible current/previous release                                                                         | After pilot acceptance, not a fresh user-operated development checklist            |
 
 The user should see a working address, release progress and an understandable
 failure/retry result. Internal schema compatibility, build, checks and promotion
@@ -173,7 +173,14 @@ ledger registry entry alone. The next inventory decision must evaluate extractio
 or composition of that actual implementation, without changing historical
 Restaurant bundles or exposing order-specific assumptions to inventory users.
 
-- [ ] Assess inventory-ledger and inventory capability contracts against receiving,
+ADR-0076 now completes this assessment and is accepted at SHA-256
+`788b183d5d9a62439566b29a8824a085060f32b3abad59d04c99109ecbccfe24`
+through the recorded standing review. The [Inventory execution plan](2026-09-24-inventory-operations.md)
+uses existing mutation protection with an explicit new stock/movement contract,
+empty initial stock, indivisible units and unchanged historical outputs. Start
+its serialized implementation only after Directory's family delivery closes.
+
+- [x] Assess inventory-ledger and inventory capability contracts against receiving,
       issue, adjustment and concurrency; reuse only semantics actually implemented.
 - [ ] Build the smallest missing shared rule, then admit the business definition.
 - [ ] Expand supported definitions in small data batches, measuring per-definition
@@ -197,3 +204,10 @@ One failed meaningful action outranks catalogue expansion. Fix a shared defect
 once, rerun affected checks, and reuse unchanged evidence. Do not restart a full
 audit for every field or visual correction. Do not mark the long Goal complete
 while its new-family and delivery acceptance outcomes remain open.
+
+Directory's passing actual run measures 182,850 ms in isolated verification and
+21,389 ms in Preview startup, with app readiness at 208,554 ms. This identifies
+build/verification reuse as a concrete speed investigation after the next family
+baseline is frozen. Measure cold/warm costs before choosing an optimization; keep
+immutable inputs and required business checks. Do not remove correctness checks
+merely to improve the timer or count outer-stack preparation as a user SLA.

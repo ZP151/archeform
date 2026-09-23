@@ -6395,3 +6395,35 @@ explicit; demo roles do not establish private identity or tenancy. Hosted delive
 mature consumer acceptance, main integration and repository release are not
 authorized. Earlier blocked scratch/worker cleanup remains open. Inventory is
 the next planned wave, not a delivered tenth definition.
+
+Controller delivers Directory as `e0c0f467f98c7597eaabe60bde0c8a0740c6983d` and
+verifies the exact remote branch tip. This is the frozen nine-product source
+baseline for the next wave. No Inventory source is included in that commit.
+
+### 2026-09-24 Inventory decision accepted and next execution entry
+
+Tech Lead `inventory_technology_decision` proposes ADR-0076. Separate read-only
+`directory_decision_review` rejects the initial hash with two P2 freeze gaps:
+generic seed derivation would fabricate stock/movement data, and storage reference
+mapping/uniqueness were implicit. The ADR-only correction freezes empty seeds,
+Blueprint `stockItem` -> Graph `stockItemId` -> API `stockItem`, exact relations
+and unique projections, plus the existing Graph-backed audit declaration.
+
+The separate reviewer returns `APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2
+0/0/0, for SHA-256
+`788b183d5d9a62439566b29a8824a085060f32b3abad59d04c99109ecbccfe24`.
+PM records founder acceptance under the September 1 standing authorization in
+`docs/tech-governance.md`: bounded reversible local experiment, no unresolved
+material choice, external provider, cloud, credential, destructive migration or
+release authority. The proposed file remains unchanged to preserve its accepted
+hash. The detailed Inventory plan is ready and Directory is now closed locally.
+
+Next executable task is Inventory Task 1: root assigns one strongest contract
+owner to the new `packages/compiler/src/inventory-operations-contract.ts`, its
+focused test and additive nine-definition baseline fixture/capture record, plus
+the exact-family composer/admission seams enumerated by ADR IMP-002. Before
+dispatch, record the concrete existing paths in the live ownership entry; do not
+start competing source writers. Capture from Directory commit `e0c0f467` before
+changing behavior. Runtime, UI and worker implementation follow the frozen
+contract in the plan. No tenth definition or sixth runtime family is claimed.
+The unbudgeted Goal remains active.
