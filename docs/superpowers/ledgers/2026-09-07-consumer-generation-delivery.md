@@ -6586,3 +6586,34 @@ review `directory_decision_review` approves P0/P1/P2 0/0/0 at test SHA-256
 the exact identity/order assertion catches missing, duplicate and reordered
 historical entries, while unchanged full-catalogue validation covers all nine.
 No broader audit or runtime rerun is required for this test-only correction.
+
+### 2026-09-24 Inventory Task 1 direct type seam
+
+The owner reports Graph focused tests 182/182, Inventory composition 11/11 and
+authored definition admission 14/14. Adapter build exposes the private
+`DefinitionEntry.family` union in
+`packages/adapters/src/requirements/definition-selection-catalogue.ts` lacking
+the accepted Inventory family key. PM authorizes only adding that literal to
+this private type declaration under the same owner and accepted ADR-0076.
+This does not authorize a canonical catalogue row or selection registration.
+
+### 2026-09-24 CI Appointment evidence registry reconciliation
+
+Latest run `35914000432` passes both format/typecheck lanes and the Equipment
+correction, then exposes a missing declared evidence row for the already current
+`scheduling.appointment@1.0.1` asset. Root reproduces 16/18 focused Foundry tests
+passing and two count/coverage failures (27 declared versus 28 current assets).
+Root owns only `packages/capabilities/src/foundry-evidence.ts` and
+`test/foundry-evidence.test.ts` / `test/foundry-matrix.test.ts` to reconcile the
+current asset's literal reviewed digests. No asset bytes, eligible decision,
+verifier lock, registry contract or family implementation changes are authorized.
+Appointment has no two-profile Foundry proof and must remain quarantined; this
+metadata correction cannot promote it using product-journey evidence instead.
+
+Focused Foundry evidence/matrix and Appointment patch checks pass 20/20. Root and
+independent reviewer verify the literal fixture/contract hashes against physical
+files. Ordinary review `directory_decision_review` approves P0/P1/P2 0/0/0 at
+source SHA-256 `5d43f43f9cbfe07f53189f05d48b53dbff2320f38bc8660a5abaa75c36f4e1f9`.
+The exact eligible set stays at 16; 28 current capabilities include 12 quarantined
+and nine without profile locks. These are component evidence counts, not delivered
+product counts. The full remote pipeline still requires its next actual run.

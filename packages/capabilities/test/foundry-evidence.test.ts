@@ -164,7 +164,7 @@ describe("declaredFoundryFamilyEvidence", () => {
       declaredFoundryFamilyEvidence.filter(
         (record) => record.profileLocks.length === 0,
       ).length,
-    ).toBe(8);
+    ).toBe(9);
   });
 
   it("mirrors the reviewed verification digests of the current assets", () => {
@@ -187,7 +187,7 @@ describe("declaredFoundryFamilyEvidence", () => {
 
   it("admits the locked families exactly as the evidence proves", () => {
     // Honest split after Batch 5: the 16 families with two-Profile locks and
-    // reviewed verification digests are eligible; the 11 without two-Profile
+    // reviewed verification digests are eligible; the 12 without two-Profile
     // proof stay quarantined; nothing is partial and nothing is rejected.
     // The admission projection must surface the exact reasons.
     const verdictFor = (key: string) => {
@@ -228,7 +228,9 @@ describe("declaredFoundryFamilyEvidence", () => {
     const quarantined = declaredFoundryFamilyEvidence.filter(
       (record) => verdictFor(record.key).result === "quarantined",
     );
-    expect(quarantined.length).toBe(11);
+    expect(quarantined.length).toBe(12);
+    expect(byKey.get("scheduling.appointment")!.profileLocks).toEqual([]);
+    expect(verdictFor("scheduling.appointment").result).toBe("quarantined");
     for (const record of quarantined) {
       expect(verdictFor(record.key).reasonCodes).toEqual([
         "fewer-than-two-profiles",

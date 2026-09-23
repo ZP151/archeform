@@ -108,7 +108,7 @@ function declareFamily(
   });
 }
 
-/** One declared evidence record per current capability family (27). */
+/** One declared evidence record per current capability family. */
 export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
   Object.freeze([
     declareFamily(
@@ -711,5 +711,18 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
       "restaurant.reporting",
       "1.1.0",
       "sha256:400fb6c041e1f2f4191c779be37af2144ba7c8d8be5675dc16191d676fa7d221",
+    ),
+    // Current Appointment package integrity is recorded, but no two-profile
+    // Foundry verification is claimed. Local product acceptance is separate.
+    declareFamily(
+      "scheduling.appointment",
+      "1.0.1",
+      "sha256:d77a8ec2a8bcaba17510b7d6a7d073b26ccc6a2857fd6644c9d80700d672a9c7",
+      {
+        fixtureDigest:
+          "sha256:22720a4bbbb1a230f1f71bce3be10c842d1c78083af6fbd4f19882cd8116edd1",
+        contractTestDigest:
+          "sha256:8930291b7ba1f36706aea913846a3fd5a056d67574d1eceaa4d143535731fba9",
+      },
     ),
   ]);
