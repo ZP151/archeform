@@ -3,7 +3,9 @@
 Status: Task 1 contract source is accepted after the stripped-coordinate fallback
 correction, independent affected QA and scoped final review at P0/P1/P2 0/0/0.
 Earlier task review and independent QA evidence remain valid outside that gap.
-Transactional runtime implementation is next; no Inventory runtime or product
+Task 2 transactional runtime is accepted for bounded source delivery: 100 focused
+cases and five actual emitted PostgreSQL cases pass. Independent task review,
+Terra QA and Sol judgment close P0/P1/P2 0/0/0. No UI or complete-product
 acceptance has run.
 Authority: accepted ADR-0076 and the active PM ledger. This file defines the
 business and visual observations before implementation. It adds no approval gate.
@@ -112,7 +114,9 @@ and historical regression results, not a generated Inventory user journey.
 The frozen nine-product baseline retains SHA-256
 `9c39f0b1e8a624b3dbac57707c8c7c6d81b0e945ad3cd9f63642d6619bdc209a`;
 all captured inputs/locks reproduce identical generated paths and content hashes.
-Valid Inventory compilation deliberately fails closed until its runtime exists.
+At the delivered Task 1 revision, valid Inventory compilation deliberately fails
+closed. The subsequent Task 2 working tree now emits its runtime under independent
+review; see [transaction evidence](evidence/inventory-operations/task2-runtime/README.md).
 
 The final correction independently passes 16 composition and 40 compiler cases,
 including the Graph-valid stripped-coordinate repro, all nine historical byte

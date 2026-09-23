@@ -6878,3 +6878,116 @@ unrelated active Inventory Task 2 files. Remote run `35919451616` predates this
 fix and fails 11 cases in the four known historical suites on both Node matrix
 jobs; all source/export corrections already delivered are retained. The next CI
 run supplies post-fix evidence; no main integration or release is authorized.
+
+Root delivers the booking correction as
+`9a4bda79b3c6473a68fb369c01e49f4844e5b306` and verifies remote equality. Exact-head
+CI run `35920468035` is in progress at this checkpoint. Inventory Task 2 continues
+in its six authorized paths; the emitted journey has reproduced RED and runtime
+implementation is underway. No new database fixture has been started. The
+unbudgeted Goal remains active with counts nine/nine/five and hosted acceptance
+pending a concrete authorized environment.
+
+### 2026-09-24 Inventory Task 2 live database fixture
+
+After the emitted main journey and API typecheck pass, root creates isolated
+PostgreSQL fixture `factory-inventory-task2-d8f368d2928847839dfd6a00523a7989`
+from the existing `postgres:16-alpine` image. Database
+`inventory_task2_d8f368d2928847839dfd6a00523a7989` listens only on loopback port
+58960; `pg_isready` confirms readiness. Its ignored owner/configuration directory
+is `generated/.inventory-task2-d8f368d2928847839dfd6a00523a7989`, with absent probe
+child `archeform-inventory-postgres-d8f368d2928847839dfd6a00523a7989` reserved for
+the generated client. Credentials remain only in local ignored environment files.
+The actual test has not run at this checkpoint; root awaits the writer's stable
+test and owns execution plus cleanup after process exit. This fixture is distinct
+from all historical blocked-cleanup paths and carries no product acceptance claim.
+
+The first actual emitted PostgreSQL run passes 4/4, exit 0, in 50.18 seconds,
+including the real stock journey, reconnect replay, same-key and last-unit races,
+transaction-boundary rollback and database constraints. Before final freeze, the
+writer identifies two accepted-contract details to tighten: receipt column name
+`keyDigest` and rejection of C1 control characters. Their focused tests reproduce
+RED then GREEN; the final database run requires a fresh schema.
+
+After process exit, root verifies exact path containment, the dependency junction
+target and container owner label. Automatic approval rejects the combined removal
+command with only `blocked by policy`; no command runs. Root does not retry any
+directory deletion. A narrower stop succeeds and Docker confirms the exact
+container is `exited`. The container, anonymous data volume and client/config
+directory remain `cleanup_required_container_stopped` in the local owner record.
+This residual prevents a full cleanup/release claim; it does not invalidate the
+observed transaction results. No old blocked-cleanup resource is touched.
+
+The corrected final source passes 95 provider-free cases (55 runtime plus 40
+contract), compiler build/typecheck/lint and emitted API typecheck. Root runs the
+five actual PostgreSQL cases against fresh owner
+`525e5d922e0d4b0ead401ccf66c2718a`, loopback port 57578, with exit 0 in 9.65 seconds.
+The new database includes exact `keyDigest` receipt storage, C1-control rejection,
+distinct-key duplicate-SKU races and upper-bound rollback assertions. Root then
+stops the owned container and confirms `exited`; it is retained pending review.
+Frozen identities, semantics and both resource states are recorded in
+`docs/acceptance/evidence/inventory-operations/task2-runtime/README.md`.
+Independent Astra `historical_booking_review` is assigned the six frozen Task 2
+paths for the existing runtime/security review. No UI, worker or canonical row
+ownership has started.
+
+Remote CI run `35920468035` completes successfully on both Node 22.11.0 and 22.x
+for `9a4bda79b3c6473a68fb369c01e49f4844e5b306`. This replaces the earlier pending
+CI checkpoint and establishes full workflow success for that delivered revision.
+It does not cover the later uncommitted Inventory runtime or remove cleanup,
+main integration, repository release, hosted delivery or ordinary-user limits.
+
+### 2026-09-24 Inventory runtime review: admitted identifier collisions
+
+Independent task review reproduces two P2 defects without database/provider calls.
+A coherently renamed item `inventory-mutation-receipt` is admitted but collides
+with the private Prisma receipt model. Item `audit` is admitted but its required
+list route is shadowed by the fixed audit denial; fixed capability/health routes
+need the same explicit dispatch assessment. The reviewer finds no other blocking
+atomicity, policy, query, retry or constraint defect. PM returns the same six paths
+to their owner for focused RED/GREEN and affected emitter/Prisma/route checks.
+Use collision-free internal names and preserve both business access and generic
+audit/capability denial. Preserve public health readiness while resolving a
+health-named item; do not silently change the selector, Graph or accepted keys.
+Retain unaffected 95/5 evidence, with source hashes superseded only after the
+correction freezes. UI/worker source work still waits for the runtime interface.
+
+PM confirms the bounded Inventory-only health dispatch: for item `health`, a
+headerless request retains public readiness. Any present fixture-session header
+uses existing principal validation and the authorized item-list path; invalid,
+empty or array headers fail 403, never fall back to readiness. Other item keys
+retain the existing health response. Audit/capability fixed routes dispatch to
+item listing only when their literal matches the admitted item key; otherwise
+they remain denied. No new identity authority, header, route or selector rule is
+introduced, and all previously delivered family bytes remain unchanged.
+
+The writer reproduces the actual Nest route failures for all three names. A
+temporary Prisma CLI check also exposes Windows `EBUSY` cleanup and is moved into
+the existing root-owned PostgreSQL probe before final verification. Two no-secret
+temporary schema/junction directories remain at
+`C:/Users/15492/AppData/Local/Temp/archeform-inventory-prisma-s0hUd8` and
+`C:/Users/15492/AppData/Local/Temp/archeform-inventory-prisma-L4vVOO`; no deletion
+retry is authorized or performed in this correction. Future renamed-schema
+validate/generate checks run within the explicit parent-owned probe, with no
+in-process removal of loaded Prisma clients. Root will use a fresh database in
+the retained test container, preserving both earlier database results.
+
+### 2026-09-24 Inventory Task 2 acceptance and source delivery
+
+The final correction uses `Factory_InventoryMutationReceipt` and preserves the
+accepted header-aware item routing. Independent Astra task review closes both
+P2 findings at P0/P1/P2 0/0/0. Independent Terra passes 100/100 focused tests,
+compiler build/typecheck, formatting and exact identities. Root's final actual
+PostgreSQL attempt validates/generates both renamed models, migrates a fresh
+schema and passes 5/5 in 14.98 seconds. The preceding stale-port setup failure
+has five skipped business cases and remains recorded; it is not counted as a pass.
+Both owned database containers are stopped. Existing cleanup residuals remain.
+
+Independent Sol `inventory_contract_release_review` checks the six frozen hashes,
+exact ADR, atomicity, validation, scoped replay, disclosure and collision fixes,
+then closes P0/P1/P2 0/0/0. PM accepts only the six Task 2 source/test paths and
+root-owned evidence/status/plan updates for a bounded source commit and push.
+All nine historical bundles remain byte-identical. UI, worker integration,
+canonical registration and complete Inventory acceptance remain open; counts
+stay nine registered / nine locally accepted / five demonstrated runtime families.
+The full green CI at `9a4bda79` predates this runtime and is not its CI evidence.
+No main integration, repository release or hosted deployment is authorized.

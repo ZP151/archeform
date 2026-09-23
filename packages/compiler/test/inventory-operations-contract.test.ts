@@ -329,15 +329,16 @@ describe("Inventory Operations Published admission", () => {
       }
     },
   );
-  it("fails closed through normal and persisted compiler paths until runtime is implemented", () => {
+  it("emits the dedicated runtime through normal and persisted compiler paths", () => {
     const input = inventoryOperationsInput();
     for (const value of [input, JSON.parse(JSON.stringify(input))])
-      expect(() =>
+      expect(
         generateApplicationBundle({
           ...value,
           publishedRevisionId: "inventory-published",
-        }),
-      ).toThrow(/Inventory Operations runtime is not implemented/);
+        }).files.find((file) => file.path === "api/src/application-runtime.ts")
+          ?.content,
+      ).toContain("factory.generated.inventory-command/v1");
   });
   it("shares the exact Draft and Published witness but rejects embedded selection authority", () => {
     const input = inventoryOperationsInput();

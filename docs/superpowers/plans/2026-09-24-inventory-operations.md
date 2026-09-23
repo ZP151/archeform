@@ -52,13 +52,13 @@ Owner: one serialized runtime implementer. Scope: private Inventory emitter,
 profile-only fresh generated schema/migration and narrow compiler integration.
 Do not apply its schema to an existing product database.
 
-- [ ] RED/GREEN for zero-initialized item creation, receive, issue, justified
+- [x] RED/GREEN for zero-initialized item creation, receive, issue, justified
       signed correction, name correction, bounded reads and immutable history.
-- [ ] Prove nonnegative bounded balances, duplicate SKU protection, scoped
+- [x] Prove nonnegative bounded balances, duplicate SKU protection, scoped
       idempotency, same-version one-winner CAS and generic mutation-route denial.
-- [ ] Use one transaction for balance, movement, receipt and declared audit.
+- [x] Use one transaction for balance, movement, receipt and declared audit.
       Test injected failures and prove no partial mutation or duplicate history.
-- [ ] Run the actual emitted Prisma/PostgreSQL cases on a root-owned local
+- [x] Run the actual emitted Prisma/PostgreSQL cases on a root-owned local
       fixture: last-unit races, overflow/underflow, replay after reconnect and
       rollback. Report skipped prerequisites separately from passed tests.
 

@@ -1,3 +1,4 @@
+import { renderInventoryFile } from "./inventory-operations-runtime.js";
 import { selectInventoryOperationsProfile } from "./inventory-operations-contract.js";
 export {
   selectInventoryOperationsProfile,
@@ -2863,7 +2864,9 @@ function renderPageRuntime(
     compositionLock !== undefined &&
     exactAppointmentNumericWitness(graph, compositionLock, appointmentProfile);
   const numericIdentity =
-    calculatedIdentity || appointmentNumeric
+    calculatedIdentity ||
+    appointmentNumeric ||
+    selectInventoryOperationsProfile(graph, compositionLock)
       ? undefined
       : selectNumericApproval(graph, correctionEntity);
   const recordIdentity =
@@ -4039,8 +4042,10 @@ export function generateApplicationBundle(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): GeneratedApplicationBundle {
-  if (selectInventoryOperationsProfile(input.graph, input.compositionLock))
-    throw new Error("Inventory Operations runtime is not implemented.");
+  const inventoryProfile = selectInventoryOperationsProfile(
+    input.graph,
+    input.compositionLock,
+  );
   const directoryProfile = selectContentDirectoryProfile(
     input.graph,
     input.compositionLock,
@@ -4060,7 +4065,7 @@ export function generateApplicationBundle(
     input.compositionLock,
     appointmentProfile,
   );
-  if (!calculatedApproval && !appointmentNumeric)
+  if (!calculatedApproval && !appointmentNumeric && !inventoryProfile)
     selectNumericApproval(graph, approvalEntity);
   const rendererGraph = compilationInput.rendererGraph;
   const presentationProfile = taskEntity
@@ -4656,7 +4661,7 @@ export function generateApplicationBundle(
   assertSafeGeneratedFileSet(plannedFiles);
   const files = plannedFiles.map(({ path, render }) => ({
     path,
-    content: render(),
+    content: renderInventoryFile(path, render(), inventoryProfile),
   }));
   return { rootDirectory, graphHash: plan.graphHash, files };
 }

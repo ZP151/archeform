@@ -67,6 +67,27 @@ rules instead of adding product-specific runtime branches. Thirty varied reviewe
 definitions precede 100+ retrieval; hundreds or thousands remain later coverage
 targets, not a reason to relax acceptance.
 
+### Next-wave reuse evidence: Work Orders
+
+Source inspection at delivered `9a4bda79` establishes a concrete reuse boundary
+while Inventory runtime work continues. This is a fit assessment, not approval of
+a new family contract or another accepted definition.
+
+| Required job                                 | Existing evidence                                                                                                                                                     | Remaining decision or implementation                                                                                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Start, finish and reopen work                | `packages/compiler/src/task-mutation-contract.ts` already implements locked `start`, `complete`, `reopen`, expected-version writes, audit and scoped receipts         | Reuse the transaction and recovery pattern after an exact Work Orders contract is accepted                                                                         |
+| Dispatch to a technician                     | The Task family admits `assignee` as required plain text; `taskValues` validates text, and `taskCommand` authorizes a role without resolving that text to a principal | Define a real assignment target, assignment/reassignment events and the supported identity boundary; changing a label cannot supply this behavior                  |
+| Limit technician operations to assigned work | Existing Task business grants use one modifying member role and one read-only viewer role                                                                             | Decide and test record-level assignment authority before promising a technician-specific queue or privacy                                                          |
+| Resolve with evidence, then reopen           | Current Task completion takes only `expectedVersion`; its exact five-field business shape has no resolution evidence contract                                         | Decide the minimum useful resolution record and whether reassignment/reopen preserves it; avoid pretending a free-form description is verified completion evidence |
+
+The next Tech Lead proposal must resolve these concrete gaps before source work.
+Preserve old Task byte compatibility and reuse its established write protection;
+do not broaden Task admission to accept a renamed unsupported Work Order. Mobile
+technician work and desktop dispatch must complete the same persisted job. Any
+private identity, outbound notification or new data boundary remains subject to
+the existing technology/security authority. Inventory stays the active delivery
+slice; this assessment introduces no parallel source owner or additional gate.
+
 ## Task 1: finish the existing cheap preflight
 
 **Owner/paths:** `definition_lane_completion`, only `scripts/regression.mjs` and

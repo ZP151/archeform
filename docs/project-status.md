@@ -15,10 +15,14 @@ cross-role journey. The original eight-definition compatibility baseline is unch
 contract source is accepted after its malformed-stock fallback correction.
 Independent affected QA passes 56 cases and Sol closes the reproduced P1 at
 0/0/0, retaining unaffected Graph/adapter evidence and all nine historical bytes.
-Transactional stock and movement implementation is the next authorized slice. Its
+Inventory Task 2 is accepted for bounded source delivery: 100 focused cases and
+five real emitted PostgreSQL cases pass, including the stock journey, concurrency
+and transaction rollback. Independent task review, Terra QA and Sol judgment
+close P0/P1/P2 0/0/0. Responsive UI and worker integration follow. Its
 [acceptance brief](acceptance/inventory-operations.md) freezes the receive 10 ->
 issue 3 -> correct -1 -> balance 6 journey and scenario-specific phone/desktop
-criteria before UI work. No tenth catalogue row or Inventory runtime is claimed.
+criteria before UI work. No tenth catalogue row, Inventory UI or complete Inventory
+product journey is accepted yet.
 
 The short-lane continuation now passes all eight steps, including 97 emitted
 numeric/calculated cases and reproducible Prisma client generation, with one
@@ -47,15 +51,13 @@ branch delivery: nine registered and locally accepted definitions across five
 demonstrated runtime families. This is not hosted or ordinary-user acceptance.
 Continuous delivery is a separate tracked outcome: CI exists, and the synthetic
 local compatible-upgrade/rollback/restore rehearsal now passes. Hosted operation
-remains unverified. Actual remote CI progresses beyond repaired formatting and
-historical count checks, but still exposes old generic Appointment admission and
-export-surface test failures. Source-history checkout and historical toolchain
-receipt assertions are corrected; ADR-0077's bounded old/current Appointment
-distinction now passes 99 focused cases and independent task review, Terra QA and
-Sol judgment at 0/0/0. PM accepts its bounded source delivery. Remote run
-`35919451616` predates that correction and retains 11 failures across the four
-historical booking suites; a new run must establish the post-fix result. Complete
-CI success is not claimed. Source inspection confirms the
+remains unverified. Remote CI run `35920468035` passes both Node 22.11.0 and 22.x
+jobs at delivered `9a4bda79b3c6473a68fb369c01e49f4844e5b306`, after the historical
+booking, source-history, receipt and export checks are corrected. This verifies
+that exact delivered revision, not the later uncommitted Inventory runtime.
+Historical booking's focused 99 cases and independent task review, Terra QA and
+Sol judgment also pass. Cleanup residuals still prevent main/repository release.
+Source inspection confirms the
 Preview runner removes its owned volumes and uses per-preview resource identity;
 it must not be repurposed as durable deployment. Target hosting information has
 been requested while independent local work proceeds.
