@@ -12,10 +12,11 @@ product-scorecard owner. The task and approval started on September 7.
 - **Accepted:** Inventory Operations actual local journey under ADR-0076 SHA-256
   `b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`.
   Terra QA and Sol final family judgment close 0/0/0; exact current runtime cleanup
-  is complete. Root delivers the bounded acceptance/evidence commit next.
-- **Active/next:** Tech Lead `unresolved_requirement_decision` owns proposed ADR-0078
-  only. Resolve shared follow-up UX before Work Orders; retain historical behavior
-  until the independent exact-hash decision review and PM acceptance close.
+  is complete. Acceptance/evidence is delivered at `63c7b12c`, with both CI jobs green.
+- **Active:** `unresolved_scope_implementation` implements accepted ADR-0078 under
+  the exact manifest below. Root owns runtime/evidence/shared docs and delivery.
+- **Next:** ADR-0079 is accepted for exact-family consumer entry; source work waits
+  for ADR-0078's overlapping implementation to close. Then advance Work Orders.
 - **Working documents:** [Inventory plan](../plans/2026-09-24-inventory-operations.md),
   [acceptance brief](../../acceptance/inventory-operations.md),
   [current status](../../project-status.md). Root alone edits these documents.
@@ -7334,3 +7335,25 @@ docs and Git delivery. No ADR-0079 source, provider execution, persistence,
 security weakening, Graph/compiler changes or cloud action is authorized.
 The acceptance review of the decision is not source acceptance. Preserve all
 unrelated evaluation work and current ten/ten/six product counts.
+
+### 2026-09-24 ADR-0079 acceptance and queued consumer delivery
+
+The independent read-only `scope_decision_review` verifies ADR-0079 SHA-256
+`c3977b14ba87e8134e75d50feda48496f2765778b6ea0bae579ebb54360e2460`
+before/after review and returns `APPROVED_FOR_STANDING_ACCEPTANCE: yes`,
+P0/P1/P2 0/0/0 with no unresolved material choice. It verifies current planner
+derivation, browser export boundaries, Directory wrapper retention, requirement
+identity semantics, unchanged lifecycle/manual opt-out and bounded rollback.
+PM accepts the decision under the existing September 1 standing authority.
+The execution plan is `2026-09-24-accepted-family-consumer-delivery.md`.
+No source owner starts until ADR-0078 closes overlapping Workbench paths and
+builds; this is queued implementation, not consumer acceptance or new coverage.
+
+ADR-0078 focused recovery RED/GREEN is underway. PM explicitly authorizes the two
+mechanical controller-stub members in
+`apps/workbench/lib/product-journey/use-consumer-generation.test.tsx` under its
+matching-fixture allowance. Root prepares only ignored local UI ownership at
+`generated/.scope-recovery-468bf3f95cdc`, without credentials or a process.
+Planned UI port is 64087 and unused fixture-only Control Plane origin is 64088.
+No real backend/provider is started. Inventory CI `35931234181` now passes both
+Node jobs at `63c7b12c`.
