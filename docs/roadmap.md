@@ -1,6 +1,30 @@
 # Archeform roadmap
 
-## Current route — 2026-09-22
+## Current route — 2026-09-24
+
+The active unbudgeted Goal follows the
+[scenario-led expansion and delivery plan](superpowers/plans/2026-09-24-family-expansion-and-delivery.md).
+Ten definitions now have accepted local journeys across six demonstrated runtime
+families. Inventory's complete actual journey passes after a focused test-locator
+correction: readiness 199,288 ms, first stock job 202,860 ms, total 238,805 ms.
+Independent Terra QA and Sol final judgment close 0/0/0. The failed first attempt
+is preserved; the successful run proves concurrency, recovery and API restart
+replay. Exact owned runtime cleanup is complete; historical residuals stay open.
+
+Next, resolve the shared follow-up UX gap: an unsupported requirement that the
+user still needs currently produces a generic rejection. Preserve requirements
+and fail-closed behavior while proposing an understandable next action through
+the existing decision process. Then advance Work Orders with real assignment
+and resolution semantics; do not inflate coverage with renamed Task records.
+
+Choose mobile lookup/field actions and desktop management by the business job.
+Continuous delivery remains a separate outcome: remote CI and a compatible local
+upgrade/rollback/restore rehearsal pass; stable hosted addresses, production
+identity and durable deployment still require their concrete environment and
+accepted implementation. Preview remains disposable. See the
+[current status](project-status.md) for evidence and remaining limits.
+
+## Previous route — 2026-09-22
 
 The five-definition local Alpha is integrated into main at `bae5e2a0` through
 [PR #4](https://github.com/ZP151/archeform/pull/4). The exact merged commit's

@@ -179,3 +179,11 @@ realistic title lengths, and closed global history where available. Verify the
 existing first-action and first-two-summary bounds before expensive generation;
 a single isolated card or empty page cannot prove these outcomes. Check invalid
 input by its required meaning unless exact wording is an explicit copy contract.
+
+Scope generated-product browser assertions to the product workspace. Framework
+live regions, including Next's route announcer, may share `alert` or `status`
+roles with business feedback. Keep exact business assertions inside that scope;
+do not weaken them or use the first matching global node to avoid ambiguity.
+When a fixture omits framework chrome, include that chrome in a focused locator
+check before the actual lifecycle run. This is a test-authoring convention, not
+another acceptance gate.

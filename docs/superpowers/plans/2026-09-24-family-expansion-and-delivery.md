@@ -28,7 +28,9 @@ is separately owned and must not be overwritten or imported without review.
 
 At the execution base, the catalogue contained eight registered definitions and
 four runtime families. Directory delivery now establishes nine registered and
-locally accepted definitions across five demonstrated runtime families. Existing
+locally accepted definitions across five demonstrated runtime families. Inventory
+now advances that baseline to ten accepted definitions across six families after
+its actual journey, responsive inspection, Terra QA and Sol final judgment. Existing
 local evidence does not establish ordinary-user success or hosted delivery. New
 candidates in this document do not increase those counts.
 
@@ -57,7 +59,7 @@ the environment question does not block local product work.
 | Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                          |
 | ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Accepted local journey; delivered at e0c0f467; nine definitions / five families |
-| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Runtime delivered; UI/verifier source accepted; actual app journey next         |
+| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Accepted actual local journey; ten definitions / six families                   |
 | C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen; validate the actual assignment/access and evidence requirements before admission                                                                                | Candidate; not a renamed task definition                                        |
 | D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit                 |
 | E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics           |
@@ -225,7 +227,7 @@ its serialized implementation only after Directory's family delivery closes.
 
 - [x] Assess inventory-ledger and inventory capability contracts against receiving,
       issue, adjustment and concurrency; reuse only semantics actually implemented.
-- [ ] Build the smallest missing shared rule, then admit the business definition.
+- [x] Build the smallest missing shared rule, then admit the business definition.
 - [ ] Expand supported definitions in small data batches, measuring per-definition
       runtime/UI changes and rejecting duplicates.
 - [ ] Reuse the separately owned evaluation work after an accepted integration;

@@ -5,18 +5,17 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
-- **Delivered:** Directory `e0c0f467`; amended Inventory plan `116de748`, both pushed.
-  Nine registered / nine locally accepted definitions / five demonstrated
+- **Delivered:** Inventory runtime `0ada5fd1`, verifier `20cb4519`, presentation
+  `7c3a4960` and definition/acceptance source `58d305de`, all pushed.
+  Ten registered / ten locally accepted definitions / six demonstrated
   runtime families. No hosted product or ordinary-user success claim.
-- **Active:** Inventory Operations Task 1 under amended accepted ADR-0076 SHA-256
+- **Accepted:** Inventory Operations actual local journey under ADR-0076 SHA-256
   `b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`.
-  `inventory_contract_implementation` is the only source writer; the exact path
-  assignment is in the final Inventory Task 1 ownership entry below.
-- **Next action:** correct the final review's P1 stripped-coordinate generic
-  fallback in Inventory candidate detection, then scoped affected verification.
-  Earlier task review/Terra QA remains valid outside that gap. Independently,
-  accepted ADR-0077 restores historical booking compilation in disjoint files.
-  Transactional runtime and UI follow the Inventory freeze. No tenth row is registered.
+  Terra QA and Sol final family judgment close 0/0/0; exact current runtime cleanup
+  is complete. Root delivers the bounded acceptance/evidence commit next.
+- **Active/next:** Tech Lead `unresolved_requirement_decision` owns proposed ADR-0078
+  only. Resolve shared follow-up UX before Work Orders; retain historical behavior
+  until the independent exact-hash decision review and PM acceptance close.
 - **Working documents:** [Inventory plan](../plans/2026-09-24-inventory-operations.md),
   [acceptance brief](../../acceptance/inventory-operations.md),
   [current status](../../project-status.md). Root alone edits these documents.
@@ -7217,3 +7216,67 @@ five demonstrated runtime families. The real worker/PostgreSQL journey, responsi
 image judgment, API restart, timing and exact scoped cleanup remain open, followed
 by the already required final family QA and release judgment. Existing cleanup
 residuals and the separate shared follow-up UX gap remain explicit.
+
+### 2026-09-24 Inventory actual attempt 1
+
+Root delivers source as `58d305de` and builds the exact owned outer stack.
+Attempt `4be6c434-bcb7-45ca-ad3a-80345963539a` passes actual isolated worker
+verification, starts an empty PostgreSQL-backed Preview and reaches readiness
+in 192,635 ms. The main job completes in 196,150 ms: two items, cable balance 6,
+three immutable movements and no duplicate effects after a dropped committed
+response and exact retry. This is authored local evidence, with zero model calls
+or ordinary-user studies.
+
+The attempt fails at the over-issue alert locator after the server returns 409.
+Root inspects the actual result and failure screenshots: the error and retained
+input are rendered. The case owner is assigned only the Inventory case for a
+focused diagnosis/correction of global alert matching, including the later stale
+assertion; no production contract or runtime change is authorized. Retain the
+failed attempt. Its exact Preview artifact, containers, network and volume are
+removed; the outer stack stays ready for the corrected run. Final family QA
+awaits complete runtime evidence. Counts remain ten/nine/five.
+
+The writer reproduces both alert failures with Chromium and the installed Next
+announcer: two global alerts cause strict matching failure, while one scoped
+Inventory alert passes. Independent review verifies that exactly the two
+selectors changed (spec SHA-256
+`e4e3b79f8867364f40ae80072eeb494eae300f3733ab414d3de2aec0d4205f14`),
+all business assertions remain, and no new P0/P1/P2 finding exists. Root starts
+fresh attempt `f0cfb8f9-b769-4bec-8955-8580a14693ee` on the unchanged outer stack.
+The existing checklist gains the scoped-product locator convention to avoid
+repeating this known framework collision in later families. Source CI run
+`35928931625` succeeds on both Node jobs at `58d305de`.
+
+### 2026-09-24 Inventory actual closure and next decision preparation
+
+Corrected attempt `f0cfb8f9-b769-4bec-8955-8580a14693ee` exits 0 and passes the
+complete journey in 238,805 ms; readiness is 199,288 ms and first stock job is
+202,860 ms. Root and independent Terra inspect actual responsive, recovery,
+observer and dark evidence without new P0/P1/P2 findings. Preview and exact outer
+resources are removed, independently recorded by root resource counts. Final Sol
+family judgment is active; PM counts remain unchanged until it closes.
+
+While that read-only final judgment runs, PM brings forward preparation of the
+next already-prioritized shared-flow decision to avoid idle implementation time.
+Tech Lead `unresolved_requirement_decision` owns only proposed
+`docs/adr/adr-0078-unresolved-requirement-follow-up.md`; no source edits, provider
+calls or implementation are authorized. Read both technology/security authorities
+and actual follow-up contracts. Recommend the smallest reversible user-facing
+resolution that preserves still-material requirements and fail-closed safety.
+Independent exact-hash standing-acceptance review remains required before any
+implementation. Root alone owns shared plans/status/ledger; this proposal does
+not overlap the frozen Inventory code or its final judgment.
+
+### 2026-09-24 Inventory local family acceptance
+
+Independent Sol `inventory_family_release` verifies the exact accepted ADR,
+frozen source identities, actual call-path assertions, preserved failed attempt,
+Terra image/recovery judgment and exact cleanup. It returns
+`APPROVED_FOR_NARROW_LOCAL_FAMILY_ACCEPTANCE: yes`, P0/P1/P2 0/0/0.
+PM accepts the authored loopback Inventory family and updates counts to ten
+registered / ten locally accepted definitions / six demonstrated runtime families.
+Root is authorized to commit/push the two-selector case correction, both actual
+attempt records and owned acceptance/status/checklist documentation. No main
+merge, repository release, cloud action or historical cleanup closure is granted.
+ADR-0078 remains separately owned proposed work, excluded from this commit until
+its own exact-hash review. The unbudgeted Goal remains active.

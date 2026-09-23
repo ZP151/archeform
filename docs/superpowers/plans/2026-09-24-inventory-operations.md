@@ -91,25 +91,31 @@ existing case index. Add no new approval or deployment harness.
 - [x] Admit one meaningful canonical definition with coarse-intent selection,
       explicit unsupported units/locations and material clarification cases.
 - [x] Run the existing short definition lane before image construction.
-- [ ] Start with an empty actual store. Create two SKUs; receive 10, issue 3 and
+- [x] Start with an empty actual store. Create two SKUs; receive 10, issue 3 and
       correct -1 on one item. Verify balance 6 and all three retained movements;
       the second SKU stays unchanged. Correct the same item's name and reload.
-- [ ] Exercise denial, over-issue, stale/concurrent writes, uncertain same-key
+- [x] Exercise denial, over-issue, stale/concurrent writes, uncertain same-key
       retry and API restart replay with no extra movement/receipt/audit.
-- [ ] Record immutable Published/Compilation and source identities, actual
+- [x] Record immutable Published/Compilation and source identities, actual
       responsive screenshots, ready/first-job timings and exact scoped cleanup.
       Preserve failed attempts; target prepared-local readiness within five minutes.
 
 ## Task 5: close the slice and select the next varied job
 
-- [ ] Use the existing task review and required family-boundary QA/release review,
+- [x] Use the existing task review and required family-boundary QA/release review,
       reusing unchanged evidence. PM distinguishes registration, demonstrated
       runtime, accepted local journey and hosted delivery counts.
 - [ ] Root creates and pushes the bounded accepted commit and verifies remote
       equality. This authorizes no main merge, repository release or cloud action.
-- [ ] Choose the next genuinely different job from the roadmap. Add variants
+- [x] Choose the next genuinely different job from the roadmap. Add variants
       through data only when their business semantics already fit the family;
       do not increase counts by changing names, colors or example records.
+
+The accepted local family advances coverage to ten definitions and six runtime
+families. Actual evidence is in `docs/acceptance/evidence/inventory-operations`.
+Next address unresolved-requirement follow-up through proposed ADR-0078, then
+advance Work Orders' assignment/resolution semantics. Proposal preparation is
+authorized; implementation waits for the existing accepted-decision boundary.
 
 Keep continuous delivery as a parallel product outcome: the existing synthetic
 upgrade/rollback/restore rehearsal is evidence for compatible local artifacts.

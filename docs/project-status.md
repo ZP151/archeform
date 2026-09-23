@@ -11,23 +11,22 @@ waves, not registered or accepted products. Mobile browsing/field work and deskt
 management are selected by actual use; dual-surface products must complete their
 cross-role journey. The original eight-definition compatibility baseline is unchanged.
 
-**Current execution:** Directory is delivered at `e0c0f467`. Inventory Task 1
-contract source is accepted after its malformed-stock fallback correction.
-Independent affected QA passes 56 cases and Sol closes the reproduced P1 at
-0/0/0, retaining unaffected Graph/adapter evidence and all nine historical bytes.
-Inventory Task 2 is delivered at `0ada5fd1`: 100 focused cases and
-five real emitted PostgreSQL cases pass, including the stock journey, concurrency
-and transaction rollback. Independent task review, Terra QA and Sol judgment
-close P0/P1/P2 0/0/0. Task 3 verifier source is delivered at `20cb4519`; responsive
-UI source and its narrow compiler integration also pass one independent review.
-Browser tests pass 13/13 and root compatibility/export checks 47/47. These
-synthetic UI/runtime checks do not replace the next actual generated-product
-journey. Its
-[acceptance brief](acceptance/inventory-operations.md) freezes the receive 10 ->
-issue 3 -> correct -1 -> balance 6 journey and scenario-specific phone/desktop
-criteria before implementation. The tenth catalogue row (`supplies-stockroom`) and its actual case source are
-accepted, with all eight expanded definition-lane steps passing. Actual Inventory
-worker/PostgreSQL, lifecycle and complete-product acceptance remain pending.
+**Current execution:** Inventory Operations is locally accepted after its actual
+PostgreSQL-backed worker and complete product journey. Readiness is 199,288 ms;
+the first stock job completes in 202,860 ms and the case in 238,805 ms. Receive
+10 -> issue 3 -> linked correction -1 leaves 6; name correction, denial,
+concurrency, exact retry and API restart preserve the authoritative data and
+immutable lifecycle. Root and independent Terra inspect actual phone/tablet/
+desktop, recovery and dark images; Sol final judgment closes P0/P1/P2 0/0/0.
+Exact current Preview and outer resources are removed. The failed first test
+locator attempt is preserved. See [Inventory acceptance](acceptance/inventory-operations.md).
+
+Coverage is now ten registered and locally accepted definitions across six
+demonstrated runtime families. The expanded eight-step definition lane and
+retained source reviews remain valid. Next, proposed ADR-0078 addresses the
+shared unresolved-requirement follow-up experience, then Work Orders advances
+real assignment and resolution behavior. No implementation starts from an
+unaccepted proposal. Real-model, ordinary-user and hosted outcomes stay separate.
 
 The short-lane continuation now passes all eight steps, including 97 emitted
 numeric/calculated cases and reproducible Prisma client generation, with one
@@ -61,8 +60,9 @@ jobs at delivered `9a4bda79b3c6473a68fb369c01e49f4844e5b306`, after the historic
 booking, source-history, receipt and export checks are corrected. This verifies
 that exact delivered revision. Inventory runtime CI run `35924474729` also passes both Node jobs
 at delivered `0ada5fd136b9cb3442c6e9498fe4062c5dd19e85`. Verifier CI `35926255343` at `20cb4519` and presentation CI `35926842005`
-at `7c3a4960` also pass both Node jobs. Later Task 4 admission/case work is not
-covered by those delivered revisions.
+at `7c3a4960` also pass both Node jobs. Task 4 admission/case source CI
+`35928931625` at `58d305de` also passes both jobs; the subsequent test-only
+scoped-alert correction passes the complete actual case and independent review.
 Historical booking's focused 99 cases and independent task review, Terra QA and
 Sol judgment also pass. Cleanup residuals still prevent main/repository release.
 Source inspection confirms the
@@ -100,16 +100,21 @@ existing isolated `codex/definition-regression-entry` branch and preserves that
 work. Counts distinguish candidates, registered definitions, runtime families,
 local journeys and hosted products; planned catalogue growth is not delivery.
 
-## Current local result: ten registered, nine accepted products, five runtime families
+## Current local result: ten accepted definitions, six runtime families
 
 The calculated-request long Goal's product and planning work is accepted locally.
-Coverage is **ten distinct registered / nine locally accepted definitions /
-five demonstrated runtime families**. Knowledge Resource Directory and Appointment
+Coverage is **ten distinct registered / ten locally accepted definitions /
+six demonstrated runtime families**. Supplies Stockroom, Knowledge Resource Directory and Appointment
 Booking now join Restaurant
 Ordering, Expense Approval, Purchase Request Approval, Team Task Tracking,
 Publication Review, Training Funding and Equipment Procurement. The
 ordinary-user goal remains a complete assembled app with minimal business
 questions.
+
+- Supplies Stockroom completes phone lookup/issue and desktop receiving,
+  correction and history against the same actual records. Independent final QA
+  and review close 0/0/0. This establishes the sixth narrow local runtime family;
+  it does not establish private hosting or Inventory upgrades/migrations.
 
 - Knowledge Resource Directory completes its reader/curator lifecycle, correction,
   concurrency and recovery journey in an actual generated PostgreSQL-backed app.
@@ -140,7 +145,7 @@ and [shared capability](acceptance/calculated-request-totals.md).
 
 The first engineering-optimization slice is also accepted locally. The
 provider-free definition lane now passes eight fixed steps and the derived case
-index now covers all nine rows without becoming an acceptance authority. See the
+index now covers all ten rows without becoming an acceptance authority. See the
 [lane acceptance record](acceptance/definition-regression-lane.md). It reduces
 the repeated command-list edits required for a new definition. Existing Approval
 emitted-control/complete-workspace checks are included; new-family coverage,

@@ -8,12 +8,13 @@ cases and five actual emitted PostgreSQL cases pass. Independent task review,
 Terra QA and Sol judgment close P0/P1/P2 0/0/0. Task 3 source and synthetic
 emitted-browser evidence also pass their single independent review: 13 browser
 cases, 47 compatibility/export cases and 38 verifier cases. Actual PostgreSQL-backed
-worker/lifecycle and complete-product acceptance remain open.
+worker/lifecycle and the complete local journey now pass. Independent Terra QA,
+Sol final judgment and PM accept the narrow local family at P0/P1/P2 0/0/0.
 Authority: accepted ADR-0076 and the active PM ledger. This file defines the
 business and visual observations before implementation. It adds no approval gate.
-Inventory data/case source is now accepted: ten registered definitions, with nine
-locally accepted definitions across five demonstrated runtime families. The
-Inventory journey still needs actual runtime evidence and the existing final review.
+Inventory is locally accepted: ten registered and ten locally accepted definitions
+across six demonstrated runtime families. Hosted and ordinary-user acceptance
+remain separate, unproven outcomes.
 
 ## Scenario and useful surfaces
 
@@ -129,10 +130,17 @@ denial at both the selector and public compiler and closes the original P1.
 Root additionally passes compiler lint and all seven export-boundary tests.
 These scoped reruns retain the unaffected earlier Graph and adapter QA evidence.
 
-Runtime result fields are pending. Record actual source/ADR hashes, generated bundle,
-Published/Compilation identities, failure attempts, timings, screenshot findings,
-business state and cleanup here when available. A canonical row, passing selector
-or generated UI fixture does not increase accepted counts.
+Actual attempt `f0cfb8f9-b769-4bec-8955-8580a14693ee` passes the complete case:
+ready 199,288 ms, first stock job 202,860 ms, total 238,805 ms including Preview
+cleanup. The cable remains 6/version 4 with three movements after name correction
+and API restart; the pad stays zero. The separate concurrency probe, exact retry,
+denial and immutable lifecycle checks pass. Root and independent Terra inspect
+actual responsive/recovery/dark screenshots without new findings. Exact Preview
+and outer resources are removed; historical cleanup residuals remain. The first
+failed alert-locator attempt is preserved. See the
+[actual acceptance record](evidence/inventory-operations/README.md) for identities,
+facts, limits and subsequent judgment. A canonical row or fixture alone does not
+increase accepted counts.
 
 The earlier Team Task local upgrade/rollback/restore rehearsal is not evidence for
 Inventory upgrades, schema migration or cross-revision exactly-once commands.

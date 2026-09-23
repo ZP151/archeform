@@ -1,0 +1,171 @@
+{
+  "attempt": "4be6c434-bcb7-45ca-ad3a-80345963539a",
+  "definitionKey": "supplies-stockroom",
+  "runtimeFamily": "inventory-operations/v1",
+  "caseId": "supplies-stockroom-local",
+  "scope": "isolated-local-fixture-session",
+  "authoredSelections": 1,
+  "authoredItems": 2,
+  "modelCalls": 0,
+  "ordinaryUserStudies": 0,
+  "technicalHandoffs": 0,
+  "inRunManualRescues": 0,
+  "readyTargetMs": 300000,
+  "outerPreparation": "root-owned; excluded from prepared-local timer",
+  "outcome": "failed",
+  "visualReview": "pending-image-inspection",
+  "phases": [
+    {
+      "name": "source-identity",
+      "elapsedMs": 20
+    },
+    {
+      "name": "draft",
+      "elapsedMs": 1230
+    },
+    {
+      "name": "publish",
+      "elapsedMs": 227
+    },
+    {
+      "name": "compile",
+      "elapsedMs": 511
+    },
+    {
+      "name": "verify",
+      "elapsedMs": 169412
+    },
+    {
+      "name": "preview",
+      "elapsedMs": 20411
+    },
+    {
+      "name": "empty-create",
+      "elapsedMs": 1989
+    },
+    {
+      "name": "uncertain-retry",
+      "elapsedMs": 1357
+    },
+    {
+      "name": "receive-issue-adjust",
+      "elapsedMs": 1494
+    },
+    {
+      "name": "find-read",
+      "elapsedMs": 849
+    },
+    {
+      "name": "over-issue",
+      "elapsedMs": 852
+    },
+    {
+      "name": "cleanup",
+      "elapsedMs": 14768
+    }
+  ],
+  "sources": {
+    "e2e/inventory-operations.spec.ts": "sha256:982e48c5a0b53cd96705ab91a9adca86c57157d760558707f26f4c53cff50944",
+    "e2e/helpers/inventory-operations.ts": "sha256:c45bad933e1f8411c472730507db593d1e8a7779ce5a6f203ab22e489a7e8c03",
+    "e2e/helpers/content-directory.ts": "sha256:4fb529a9b6b5d3a7e596719886378dc4a77132481a238b0c6237e7f4b329d072",
+    "docs/adr/adr-0076-inventory-operations-family.md": "sha256:b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800",
+    "packages/compiler/src/index.ts": "sha256:a78462ec8cc470479236a41455a6d44d1ebcaf40d0dcc652e1ff4c8ca9605293",
+    "packages/compiler/src/inventory-operations-contract.ts": "sha256:fa154775eec0a89dc551bb5208c5e300ed2f9e0eb57f075568256d6d81a5cdeb",
+    "packages/compiler/src/inventory-operations-runtime.ts": "sha256:55550b02d77d89e483cce91e8ad0a91f6e3a222d2ce43b2fbd0f1accbf1be2dd",
+    "packages/compiler/src/inventory-operations-presentation.ts": "sha256:3a346ef3f1ad73369f407ad657f2da93589dd1be2910108c46dfb276f03c2244",
+    "packages/adapters/src/requirements/definitions/product-definitions.v1.json": "sha256:63a909554cb01c3c4af171f97fee66029e3ee5480f5a6299e64abb990744c1ef",
+    "apps/compiler-worker/src/verifier/inventory-operations-verification.ts": "sha256:4c79cff47115e152c819c8a8fd3d4c656c01f2bf4349082672637ee9ef29e473",
+    "apps/compiler-worker/src/verifier/verification-environment.ts": "sha256:231fceaaaab0643f7eb3cb20f527d819280b101e01e3413ef00866426a910a22",
+    "apps/compiler-worker/src/verifier/probes.ts": "sha256:ff8a64732324997c1735b1eb3499851c04dc0381ddb6942fce496553d2e79693",
+    "pnpm-lock.yaml": "sha256:bcb0e52c5f56329ac8490080d618a142ccc8585e8cd60fb45e2980f62d2c9ea7"
+  },
+  "publishedRevisionId": "cmueoox30000bs04to4s1szv9",
+  "inputGraphHash": "sha256:54b2f14ab01bbc4f31248653efdec30fdb4ac12ac1630aa2bc23b93ee48994e1",
+  "compositionLockHash": "sha256:fce58c9e622fb0c8f0d9ca8705595598e3f842a0219bc0b0a44cf46fab1aba7c",
+  "compilationId": "cmueoox55000ds04thm6k0hb0",
+  "compilationObservation": {
+    "status": "succeeded",
+    "failureCode": null
+  },
+  "verificationPassed": true,
+  "previewRunId": "preview-39e6f130-b58a-446c-b082-a27d3659ba82",
+  "published": {
+    "id": "cmueoox30000bs04to4s1szv9",
+    "applicationGraphId": "cmueoowm60006s04th2offpjq",
+    "sourceDraftRevisionId": "cmueoowu70009s04tx5zxezr1",
+    "graphHash": "sha256:54b2f14ab01bbc4f31248653efdec30fdb4ac12ac1630aa2bc23b93ee48994e1",
+    "compositionLockHash": "sha256:fce58c9e622fb0c8f0d9ca8705595598e3f842a0219bc0b0a44cf46fab1aba7c",
+    "emptySeeds": true
+  },
+  "worker": {
+    "verificationRunId": "verify-09a4130a-0147-4bc8-8f89-46e2a3488482",
+    "evidenceDigest": "sha256:32012c0c364e6b17a3642981bc003b4f0f1be74b58a03e2f45278d6d6a75765f",
+    "inventoryJourneyPassed": true
+  },
+  "compilation": {
+    "id": "cmueoox55000ds04thm6k0hb0",
+    "publishedRevisionId": "cmueoox30000bs04to4s1szv9",
+    "artifactManifestHash": "sha256:a6435db14bcb48ec724b49010202f60a94c91ae02e1118722237447637a80b6e",
+    "inputGraphHash": "sha256:54b2f14ab01bbc4f31248653efdec30fdb4ac12ac1630aa2bc23b93ee48994e1"
+  },
+  "initialDatabaseFacts": {
+    "items": 0,
+    "movements": 0,
+    "audit": 0,
+    "receipts": 0,
+    "effects": 0,
+    "records": []
+  },
+  "readyMs": 192635,
+  "readyTargetMet": true,
+  "firstCompletedJobMs": 196150,
+  "mainJobFacts": {
+    "items": 2,
+    "movements": 3,
+    "audit": 5,
+    "receipts": 5,
+    "effects": 3,
+    "records": [
+      {
+        "quantity": 6,
+        "version": 3,
+        "movements": 3,
+        "itemAudit": 1,
+        "movementAudit": 3,
+        "receipts": 4,
+        "effects": 3
+      },
+      {
+        "quantity": 0,
+        "version": 0,
+        "movements": 0,
+        "itemAudit": 1,
+        "movementAudit": 0,
+        "receipts": 1,
+        "effects": 0
+      }
+    ]
+  },
+  "failure": {
+    "phase": "over-issue",
+    "assertion": "unknown",
+    "location": {
+      "file": "e2e/inventory-operations.spec.ts",
+      "line": 553,
+      "column": 48
+    },
+    "kind": "assertion-or-operation-failed"
+  },
+  "cleanup": {
+    "outcome": "removed",
+    "previewRunId": "preview-39e6f130-b58a-446c-b082-a27d3659ba82",
+    "composeProjectName": "factory-preview-preview-39e6f130-b58a-446c-b082-a27d3659ba82",
+    "resources": {
+      "artifact": false,
+      "containers": false,
+      "networks": false,
+      "volumes": false
+    }
+  },
+  "elapsedMs": 213120
+}

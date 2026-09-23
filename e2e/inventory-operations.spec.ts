@@ -550,9 +550,9 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
       .getByRole("button", { name: "Issue stock", exact: true })
       .click();
     expect((await insufficient).status()).toBe(409);
-    await expect(generated.getByRole("alert")).toContainText(
-      "not enough stock",
-    );
+    await expect(
+      generated.locator("main.inventory-v1").getByRole("alert"),
+    ).toContainText("not enough stock");
     await expect(generated.locator("#inventory-amount")).toHaveValue("7");
     await expect(generated.getByLabel("Reason", { exact: true })).toHaveValue(
       "Too many cables requested",
@@ -669,7 +669,9 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
       .click();
     expect((await staleResponse).status()).toBe(409);
     const stale = await staleRequest;
-    await expect(generated.getByRole("alert")).toContainText("Stock changed");
+    await expect(
+      generated.locator("main.inventory-v1").getByRole("alert"),
+    ).toContainText("Stock changed");
     await expect(generated.locator("#inventory-amount")).toHaveValue("3");
     await expect(generated.getByLabel("Reason", { exact: true })).toHaveValue(
       "Probe issue retained during conflict",

@@ -1,0 +1,232 @@
+{
+  "attempt": "f0cfb8f9-b769-4bec-8955-8580a14693ee",
+  "definitionKey": "supplies-stockroom",
+  "runtimeFamily": "inventory-operations/v1",
+  "caseId": "supplies-stockroom-local",
+  "scope": "isolated-local-fixture-session",
+  "authoredSelections": 1,
+  "authoredItems": 3,
+  "modelCalls": 0,
+  "ordinaryUserStudies": 0,
+  "technicalHandoffs": 0,
+  "inRunManualRescues": 0,
+  "readyTargetMs": 300000,
+  "outerPreparation": "root-owned; excluded from prepared-local timer",
+  "outcome": "passed",
+  "visualReview": "pending-image-inspection",
+  "phases": [
+    {
+      "name": "source-identity",
+      "elapsedMs": 21
+    },
+    {
+      "name": "draft",
+      "elapsedMs": 787
+    },
+    {
+      "name": "publish",
+      "elapsedMs": 231
+    },
+    {
+      "name": "compile",
+      "elapsedMs": 199
+    },
+    {
+      "name": "verify",
+      "elapsedMs": 175686
+    },
+    {
+      "name": "preview",
+      "elapsedMs": 21482
+    },
+    {
+      "name": "empty-create",
+      "elapsedMs": 2001
+    },
+    {
+      "name": "uncertain-retry",
+      "elapsedMs": 1440
+    },
+    {
+      "name": "receive-issue-adjust",
+      "elapsedMs": 1545
+    },
+    {
+      "name": "find-read",
+      "elapsedMs": 886
+    },
+    {
+      "name": "over-issue",
+      "elapsedMs": 1412
+    },
+    {
+      "name": "name-correction",
+      "elapsedMs": 376
+    },
+    {
+      "name": "stale-concurrency",
+      "elapsedMs": 2520
+    },
+    {
+      "name": "observer-denials",
+      "elapsedMs": 1428
+    },
+    {
+      "name": "restart-replay",
+      "elapsedMs": 13934
+    },
+    {
+      "name": "cleanup",
+      "elapsedMs": 14857
+    }
+  ],
+  "sources": {
+    "e2e/inventory-operations.spec.ts": "sha256:e4e3b79f8867364f40ae80072eeb494eae300f3733ab414d3de2aec0d4205f14",
+    "e2e/helpers/inventory-operations.ts": "sha256:c45bad933e1f8411c472730507db593d1e8a7779ce5a6f203ab22e489a7e8c03",
+    "e2e/helpers/content-directory.ts": "sha256:4fb529a9b6b5d3a7e596719886378dc4a77132481a238b0c6237e7f4b329d072",
+    "docs/adr/adr-0076-inventory-operations-family.md": "sha256:b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800",
+    "packages/compiler/src/index.ts": "sha256:a78462ec8cc470479236a41455a6d44d1ebcaf40d0dcc652e1ff4c8ca9605293",
+    "packages/compiler/src/inventory-operations-contract.ts": "sha256:fa154775eec0a89dc551bb5208c5e300ed2f9e0eb57f075568256d6d81a5cdeb",
+    "packages/compiler/src/inventory-operations-runtime.ts": "sha256:55550b02d77d89e483cce91e8ad0a91f6e3a222d2ce43b2fbd0f1accbf1be2dd",
+    "packages/compiler/src/inventory-operations-presentation.ts": "sha256:3a346ef3f1ad73369f407ad657f2da93589dd1be2910108c46dfb276f03c2244",
+    "packages/adapters/src/requirements/definitions/product-definitions.v1.json": "sha256:63a909554cb01c3c4af171f97fee66029e3ee5480f5a6299e64abb990744c1ef",
+    "apps/compiler-worker/src/verifier/inventory-operations-verification.ts": "sha256:4c79cff47115e152c819c8a8fd3d4c656c01f2bf4349082672637ee9ef29e473",
+    "apps/compiler-worker/src/verifier/verification-environment.ts": "sha256:231fceaaaab0643f7eb3cb20f527d819280b101e01e3413ef00866426a910a22",
+    "apps/compiler-worker/src/verifier/probes.ts": "sha256:ff8a64732324997c1735b1eb3499851c04dc0381ddb6942fce496553d2e79693",
+    "pnpm-lock.yaml": "sha256:bcb0e52c5f56329ac8490080d618a142ccc8585e8cd60fb45e2980f62d2c9ea7"
+  },
+  "publishedRevisionId": "cmueoxgj6002es04tuwo908y4",
+  "inputGraphHash": "sha256:f750bd0d3c35fd0ebd030e64c4ea3eeef53b3b61c9d1a483958063d59d0b0d4d",
+  "compositionLockHash": "sha256:68c3aee94a886b47f75e3c73ca099e8fd794dcdb31f99420dd90eb3a9c067989",
+  "compilationId": "cmueoxgl4002gs04t5yolhl7e",
+  "compilationObservation": {
+    "status": "succeeded",
+    "failureCode": null
+  },
+  "verificationPassed": true,
+  "previewRunId": "preview-cd34bc5e-8915-420c-b51c-b41fed316929",
+  "published": {
+    "id": "cmueoxgj6002es04tuwo908y4",
+    "applicationGraphId": "cmueoxg320029s04tf7q7203d",
+    "sourceDraftRevisionId": "cmueoxgah002cs04tuunvzcpw",
+    "graphHash": "sha256:f750bd0d3c35fd0ebd030e64c4ea3eeef53b3b61c9d1a483958063d59d0b0d4d",
+    "compositionLockHash": "sha256:68c3aee94a886b47f75e3c73ca099e8fd794dcdb31f99420dd90eb3a9c067989",
+    "emptySeeds": true
+  },
+  "worker": {
+    "verificationRunId": "verify-dd788aae-913f-459c-adb9-cdddda7f37ab",
+    "evidenceDigest": "sha256:d31a0d83a2419bc8bb8af7aafd07d2acc85a5f58606422ec9ea5472cd3318e88",
+    "inventoryJourneyPassed": true
+  },
+  "compilation": {
+    "id": "cmueoxgl4002gs04t5yolhl7e",
+    "publishedRevisionId": "cmueoxgj6002es04tuwo908y4",
+    "artifactManifestHash": "sha256:b734d98ac135bb80a96fcc0f14d15966587f58023794d6298fc4ae5267fe3eec",
+    "inputGraphHash": "sha256:f750bd0d3c35fd0ebd030e64c4ea3eeef53b3b61c9d1a483958063d59d0b0d4d"
+  },
+  "initialDatabaseFacts": {
+    "items": 0,
+    "movements": 0,
+    "audit": 0,
+    "receipts": 0,
+    "effects": 0,
+    "records": []
+  },
+  "readyMs": 199288,
+  "readyTargetMet": true,
+  "firstCompletedJobMs": 202860,
+  "mainJobFacts": {
+    "items": 2,
+    "movements": 3,
+    "audit": 5,
+    "receipts": 5,
+    "effects": 3,
+    "records": [
+      {
+        "quantity": 6,
+        "version": 3,
+        "movements": 3,
+        "itemAudit": 1,
+        "movementAudit": 3,
+        "receipts": 4,
+        "effects": 3
+      },
+      {
+        "quantity": 0,
+        "version": 0,
+        "movements": 0,
+        "itemAudit": 1,
+        "movementAudit": 0,
+        "receipts": 1,
+        "effects": 0
+      }
+    ]
+  },
+  "adversarialItems": 1,
+  "concurrencyProbe": {
+    "recordHash": "sha256:f5b314d4565c8f834355a206851232e936fac0553b9f87724d6e73f0f8f39471",
+    "quantity": 8,
+    "version": 4,
+    "movements": 4,
+    "historyDigest": "sha256:ce1ef4515a72674b39249536914560c1868d972feb2f9aa717d74e985c59fff3",
+    "freshVersionConfirmed": true,
+    "oneWinner": true
+  },
+  "records": [
+    "sha256:922bf8d4894398696c965d4b0df9ba78c11df0e26f001da7731e13aea91066f9",
+    "sha256:49a487efeef444f484d0e83116d9acd27b8511e2271ccf80ef6cc085d7e3df59"
+  ],
+  "historyDigest": "sha256:5ddd1e5ddf00cd8e2d2ba4654cd98f57d8050e6e770f41bb7ee435b4619f1fb6",
+  "finalDatabaseFacts": {
+    "items": 3,
+    "movements": 7,
+    "audit": 11,
+    "receipts": 11,
+    "effects": 7,
+    "records": [
+      {
+        "quantity": 6,
+        "version": 4,
+        "movements": 3,
+        "itemAudit": 2,
+        "movementAudit": 3,
+        "receipts": 5,
+        "effects": 3
+      },
+      {
+        "quantity": 0,
+        "version": 0,
+        "movements": 0,
+        "itemAudit": 1,
+        "movementAudit": 0,
+        "receipts": 1,
+        "effects": 0
+      },
+      {
+        "quantity": 8,
+        "version": 4,
+        "movements": 4,
+        "itemAudit": 1,
+        "movementAudit": 4,
+        "receipts": 5,
+        "effects": 4
+      }
+    ]
+  },
+  "sameKeyReplayAfterApiRestart": true,
+  "databaseRetained": true,
+  "immutablePublishedAndCompilationPreserved": true,
+  "unintendedRemoteRequests": 0,
+  "cleanup": {
+    "outcome": "removed",
+    "previewRunId": "preview-cd34bc5e-8915-420c-b51c-b41fed316929",
+    "composeProjectName": "factory-preview-preview-cd34bc5e-8915-420c-b51c-b41fed316929",
+    "resources": {
+      "artifact": false,
+      "containers": false,
+      "networks": false,
+      "volumes": false
+    }
+  },
+  "elapsedMs": 238805
+}
