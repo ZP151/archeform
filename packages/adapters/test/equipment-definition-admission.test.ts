@@ -65,13 +65,39 @@ const envelope = (value: unknown) => ({
 });
 
 describe("Equipment procurement definition admission", () => {
-  it("admits seven distinct reviewed definitions through the independent batch boundary", () => {
-    const report = validateDefinitionBatch(
+  it("admits the seven historical definitions through the independent batch boundary", () => {
+    const historicalKeys = [
+      "restaurant-ordering",
+      "expense-approval",
+      "purchase-request-approval",
+      "team-task-tracking",
+      "publication-review",
+      "training-funding-approval",
+      definitionKey,
+    ];
+    const catalogue = JSON.parse(
       readFileSync(
         new URL(
           "../src/requirements/definitions/product-definitions.v1.json",
           import.meta.url,
         ),
+      ).toString("utf8"),
+    );
+    const historicalDefinitions = catalogue.definitions.filter(
+      (entry: { definitionKey: string }) =>
+        historicalKeys.includes(entry.definitionKey),
+    );
+    expect(
+      historicalDefinitions.map(
+        (entry: { definitionKey: string }) => entry.definitionKey,
+      ),
+    ).toEqual(historicalKeys);
+    const report = validateDefinitionBatch(
+      Buffer.from(
+        JSON.stringify({
+          apiVersion: catalogue.apiVersion,
+          definitions: historicalDefinitions,
+        }),
       ),
     );
     expect(report).toMatchObject({

@@ -5,7 +5,7 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
-- **Delivered:** Directory `e0c0f467`; planning tip `e97ad46d`, both pushed.
+- **Delivered:** Directory `e0c0f467`; amended Inventory plan `116de748`, both pushed.
   Nine registered / nine locally accepted definitions / five demonstrated
   runtime families. No hosted product or ordinary-user success claim.
 - **Active:** Inventory Operations Task 1 under amended accepted ADR-0076 SHA-256
@@ -6579,3 +6579,10 @@ identities instead of validating the growing catalogue against an obsolete count
 The existing product-definition-data test continues to assert every exact current
 catalogue identity and full-batch admission. No production behavior or product
 admission contract changes. The Inventory writer is notified of this disjoint path.
+
+Root's focused Equipment and full-catalogue tests pass 44/44. Independent ordinary
+review `directory_decision_review` approves P0/P1/P2 0/0/0 at test SHA-256
+`e01e41c9ee8366796f1cbdd74b09d44fd93c82cc6a82af472745046714e92a03`:
+the exact identity/order assertion catches missing, duplicate and reordered
+historical entries, while unchanged full-catalogue validation covers all nine.
+No broader audit or runtime rerun is required for this test-only correction.
