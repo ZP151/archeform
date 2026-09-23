@@ -47,24 +47,64 @@ const immutableCompilerParent = "b8d796961b1ff68c7d5efa1a12fe353aa370eee8";
 const compilerIndexPath = new URL("../src/index.ts", import.meta.url);
 
 function publicExportSurface(source: string) {
-  return [
-    ...source.matchAll(
-      /^export\s+(?:function|class|interface|type)\s+(\w+)|^export\s*\{([\s\S]*?)\};/gm,
-    ),
-  ]
-    .flatMap((match) => {
-      if (match[1]) return [match[1]];
-      return match[2]!
-        .split(",")
-        .map((value) => value.replace(/\/\/.*$/, "").trim())
-        .filter(Boolean)
-        .map(
-          (value) =>
-            value.replace(/^type\s+/, "").split(/\s+as\s+/)[1] ?? value,
+  const sourceFile = ts.createSourceFile(
+    "index.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TS,
+  );
+  const names: string[] = [];
+  for (const statement of sourceFile.statements) {
+    if (ts.isExportDeclaration(statement)) {
+      if (!statement.exportClause)
+        throw new Error("Unbounded compiler export.");
+      if (ts.isNamedExports(statement.exportClause)) {
+        names.push(
+          ...statement.exportClause.elements.map(
+            (element) => element.name.text,
+          ),
         );
-    })
-    .sort();
+      } else {
+        names.push(statement.exportClause.name.text);
+      }
+      continue;
+    }
+    if (
+      !ts.canHaveModifiers(statement) ||
+      !ts
+        .getModifiers(statement)
+        ?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword)
+    )
+      continue;
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name))
+          throw new Error("Unbounded compiler export binding.");
+        names.push(declaration.name.text);
+      }
+    } else if (
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement) ||
+        ts.isInterfaceDeclaration(statement) ||
+        ts.isTypeAliasDeclaration(statement) ||
+        ts.isEnumDeclaration(statement)) &&
+      statement.name
+    )
+      names.push(statement.name.text);
+  }
+  return names.sort();
 }
+
+// Exact later additions authorized by ADR-0074 and ADR-0076; internals stay private.
+const laterRuntimeExports = [
+  "selectContentDirectoryProfile",
+  "selectInventoryOperationsProfile",
+];
+const laterTypeExports = [
+  "ContentDirectoryProfile",
+  "InventoryOperationsProfile",
+];
 
 function runtimeExportSurface(source: string) {
   const sourceFile = ts.createSourceFile(
@@ -111,7 +151,11 @@ describe("Appointment compiler admission exports", () => {
       { encoding: "utf8" },
     );
     expect(publicExportSurface(current)).toEqual(
-      publicExportSurface(historical),
+      [
+        ...publicExportSurface(historical),
+        ...laterRuntimeExports,
+        ...laterTypeExports,
+      ].sort(),
     );
     expect(current).toMatch(
       /import\s*\{[\s\S]*exactAppointmentNumericWitness,[\s\S]*registerAppointmentPageRuntimeForTest,[\s\S]*\}\s*from "\.\/appointment-compilation-admission\.js";/,
@@ -212,7 +256,7 @@ describe("compiler consumer package boundary", () => {
       { encoding: "utf8" },
     );
     expect(consumerRuntimeExportKeys()).toEqual(
-      runtimeExportSurface(historical),
+      [...runtimeExportSurface(historical), ...laterRuntimeExports].sort(),
     );
     for (const specifier of [
       "@factory/compiler/dist/appointment-compilation-admission.js",

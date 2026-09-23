@@ -27,3 +27,5 @@ packages/capabilities/assets/scheduling.appointment/1.0.0/adapter.json
 packages/capabilities/assets/scheduling.appointment/1.0.0/component.json
 packages/capabilities/assets/scheduling.appointment/1.0.1/adapter.json
 packages/capabilities/assets/scheduling.appointment/1.0.1/component.json
+# Preserve captured pre-Inventory Graph, lock and output evidence bytes.
+packages/compiler/test/fixtures/nine-definition-baseline.json

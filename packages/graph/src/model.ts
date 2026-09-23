@@ -1,3 +1,4 @@
+import { matchInventoryOperationsGraphV1 } from "./inventory-operations-graph-witness.js";
 import {
   quantityUnitPriceTotalSchema,
   isCalculatedFieldSetValid,
@@ -531,6 +532,7 @@ function numericFieldDomainIssues(
   graph: ApplicationGraphV1,
 ): GraphValidationIssue[] {
   const issues: GraphValidationIssue[] = [];
+  const inventory = matchInventoryOperationsGraphV1(graph);
   graph.domain.entities.forEach((entity, entityIndex) => {
     entity.fields.forEach((field, fieldIndex) => {
       if (field.numericDomain === undefined) return;
@@ -576,7 +578,14 @@ function numericFieldDomainIssues(
           });
         }
       });
-      if (!hasWitness) {
+      if (
+        !hasWitness &&
+        !inventory?.numericFields.some(
+          (coordinate) =>
+            coordinate.entityKey === entity.key &&
+            coordinate.fieldKey === field.key,
+        )
+      ) {
         issues.push({
           code: "domain.field.numeric_domain_witness_missing",
           message: `Field '${field.key}' of entity '${entity.key}' requires a valid numeric seed witness.`,

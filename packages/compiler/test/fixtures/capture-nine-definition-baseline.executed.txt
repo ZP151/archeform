@@ -1,0 +1,31 @@
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {readFileSync,writeFileSync,unlinkSync,existsSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import {resolve} from 'node:path';
+const root=fileURLToPath(new URL('../../../../',import.meta.url));
+const base='e0c0f467f98c7597eaabe60bde0c8a0740c6983d';
+const captureHead='e97ad46d611f754c063820ba1aae353d84d601b9';
+const fixture='packages/compiler/test/fixtures/nine-definition-baseline.json';
+const receipt='packages/compiler/test/fixtures/nine-definition-baseline-capture.json';
+const driver='packages/compiler/test/.capture-nine-definition-baseline.test.ts';
+const run=(cmd,args,encoding='utf8')=>execFileSync(cmd,args,{cwd:root,encoding,shell:cmd==='pnpm.cmd'});
+const sha=bytes=>'sha256:'+createHash('sha256').update(bytes).digest('hex');
+if(run('git',['rev-parse','HEAD']).trim()!==captureHead) throw Error('Incorrect capture HEAD');
+if(run('git',['diff',base,captureHead,'--','packages','package.json','pnpm-lock.yaml']).trim()) throw Error('Capture HEAD source differs from baseline');
+if(run('git',['diff','HEAD','--','packages','package.json','pnpm-lock.yaml']).trim()) throw Error('Modified source');
+if(existsSync(resolve(root,fixture))||existsSync(resolve(root,receipt))) throw Error('Never overwrite a frozen baseline');
+const paths=run('git',['ls-files','packages','package.json','pnpm-lock.yaml']).trim().split(/\r?\n/);
+const sourceFiles=paths.map(path=>{ const bytes=readFileSync(resolve(root,path)); const gitBytes=run('git',['show',base+':'+path],null); const expectedWorking=Buffer.from(gitBytes.toString('utf8').replace(/\r?\n/g,'\r\n')); if(!bytes.equals(gitBytes)&&!bytes.equals(expectedWorking))throw Error('Working bytes differ from baseline: '+path); return {path,sha256:sha(bytes),baselineBlobSha256:sha(gitBytes),captureHeadBlobSha256:sha(run('git',['show',captureHead+':'+path],null))}; });
+const statusBefore=run('git',['status','--porcelain=v1']);
+const pnpm=process.platform==='win32'?'pnpm.cmd':'pnpm';
+for(const pkg of ['graph','ui-primitives','ui-patterns','generated-ui','experience-recipes','screen-recipes','capabilities','adapters'])run(pnpm,['--filter','@factory/'+pkg,'build']);
+let helper=readFileSync(resolve(root,'packages/compiler/test/fixtures/definition-data-compatibility.ts'),'utf8');
+const start=helper.indexOf('export function currentDefinitionDataCompilationEvidence(');
+const end=helper.indexOf('export function appointmentDefinitionCompilationInput()');
+let fn=helper.slice(start,end).replace('      definitionKey: entry.definitionKey,\n      canonicalSha256:', '      definitionKey: entry.definitionKey,\n      inputGraph,\n      compositionLock,\n      publishedRevisionId: selection.requirementId,\n      canonicalSha256:');
+// Accommodate a checkout using CRLF without altering the actual source.
+fn=helper.slice(start,end).replace(/\r\n/g,'\n').replace('      definitionKey: entry.definitionKey,\n      canonicalSha256:', '      definitionKey: entry.definitionKey,\n      inputGraph,\n      compositionLock,\n      publishedRevisionId: selection.requirementId,\n      canonicalSha256:');
+const imports=`import { createHash } from 'node:crypto';\nimport {writeFileSync} from 'node:fs';\nimport {it,expect} from 'vitest';\nimport {definitionSelectionCatalogue,projectDefinitionSelection} from '../../adapters/src/requirements/definition-selection-catalogue.js';\nimport {createCapabilityCompositionLock} from '@factory/capabilities';\nimport {composeProductDraft,planProductAlternatives} from '@factory/capabilities/node';\nimport {applyGraphDiffToDraft,createBlankApplicationDraft,hashApplicationGraph} from '@factory/graph';\nimport {generateApplicationBundle} from '../src/index.js';\nconst digest=(value: unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');\n`;
+writeFileSync(resolve(root,driver),imports+fn+`\nit('captures immutable nine inputs and outputs',()=>{const entries=currentDefinitionDataCompilationEvidence(definitionSelectionCatalogue.map(e=>e.definitionKey));expect(entries).toHaveLength(9);for(const entry of entries){expect(entry.inputGraph).toBeDefined();expect(entry.compositionLock.applicationGraphChecksum).toBe(entry.graphSha256);}writeFileSync(new URL('./fixtures/nine-definition-baseline.json',import.meta.url),JSON.stringify({base,captureHead,comparison:'current-generated-bytes',entries},null,2)+'\\n');});\n`.replace('{base,captureHead,','{base:'+JSON.stringify(base)+',captureHead:'+JSON.stringify(captureHead)+','));
+try {run(pnpm,['--filter','@factory/compiler','exec','vitest','run','test/.capture-nine-definition-baseline.test.ts']); for(const source of sourceFiles)if(sha(readFileSync(resolve(root,source.path)))!==source.sha256)throw Error('Source changed during capture');writeFileSync(resolve(root,receipt),JSON.stringify({base,captureHead,statusBefore,nodeVersion:process.version,pnpmVersion:run(pnpm,['--version']).trim(),command:'node packages/compiler/test/fixtures/capture-nine-definition-baseline.mjs',captureScriptSha256:sha(readFileSync(fileURLToPath(import.meta.url))),fixtureSha256:sha(readFileSync(resolve(root,fixture))),sourceFiles},null,2)+'\n');}finally{unlinkSync(resolve(root,driver));}

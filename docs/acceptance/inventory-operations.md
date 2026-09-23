@@ -1,9 +1,10 @@
 # Inventory Operations acceptance brief
 
-Status: Task 1 implementation is under a bounded P1 correction after final review
-found stripped stock coordinates could permit generic fallback. Earlier task
-review and independent QA evidence remain valid outside that gap. No Inventory
-runtime or product acceptance has run.
+Status: Task 1 contract source is accepted after the stripped-coordinate fallback
+correction, independent affected QA and scoped final review at P0/P1/P2 0/0/0.
+Earlier task review and independent QA evidence remain valid outside that gap.
+Transactional runtime implementation is next; no Inventory runtime or product
+acceptance has run.
 Authority: accepted ADR-0076 and the active PM ledger. This file defines the
 business and visual observations before implementation. It adds no approval gate.
 The catalogue remains nine locally accepted definitions across five demonstrated
@@ -112,6 +113,13 @@ The frozen nine-product baseline retains SHA-256
 `9c39f0b1e8a624b3dbac57707c8c7c6d81b0e945ad3cd9f63642d6619bdc209a`;
 all captured inputs/locks reproduce identical generated paths and content hashes.
 Valid Inventory compilation deliberately fails closed until its runtime exists.
+
+The final correction independently passes 16 composition and 40 compiler cases,
+including the Graph-valid stripped-coordinate repro, all nine historical byte
+comparisons and positive generic workflow-only/SKU-unit-only cases. Sol reproduces
+denial at both the selector and public compiler and closes the original P1.
+Root additionally passes compiler lint and all seven export-boundary tests.
+These scoped reruns retain the unaffected earlier Graph and adapter QA evidence.
 
 Runtime result fields are pending. Record actual source/ADR hashes, generated bundle,
 Published/Compilation identities, failure attempts, timings, screenshot findings,

@@ -1,3 +1,4 @@
+import { isInventoryOperationsBlueprint } from "./product-composer.js";
 import {
   CompositionError,
   assertCompositionPlan,
@@ -210,6 +211,11 @@ function selectedKeysFor(
   key: ProductPlanAlternativeKey,
 ): readonly string[] {
   const required = catalogue.required.map((asset) => asset.key);
+  if (isInventoryOperationsBlueprint(blueprint)) {
+    const mandatory = [...required, "core.notification"];
+    assertSelectionClosure(catalogue, mandatory);
+    return mandatory;
+  }
   if (isAppointmentBookingBlueprint(blueprint)) {
     const mandatory = [
       ...required,

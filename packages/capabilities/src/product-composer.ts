@@ -245,6 +245,8 @@ function derivedPages(
       blocks: [block],
     });
   }
+  // Inventory movement history is composed inside item detail, never an extra CRUD page.
+  if (isInventoryOperationsBlueprint(blueprint)) return pages;
   for (const entity of blueprint.entities) {
     if (
       blueprint.pageIntents.some(
@@ -347,6 +349,15 @@ function derivedEntities(
         ? [{ fields: ["status"] }]
         : [],
     };
+    if (isInventoryOperationsBlueprint(blueprint)) {
+      if (entity === blueprint.entities[0])
+        fields.find((field) => field.key === "sku")!.unique = true;
+      else
+        mapped.indexes.push({
+          fields: ["stockItemId", "itemVersion"],
+          unique: true,
+        });
+    }
     entities.push(mapped);
   }
 
@@ -390,6 +401,142 @@ function derivedEntities(
  */
 function referenceScalarKey(fieldKey: string): string {
   return /(?:id|key)$/i.test(fieldKey) ? fieldKey : `${fieldKey}Id`;
+}
+
+/** Recognize stock-specific structure even when required quantity coordinates are missing. */
+function isInventoryCandidate(blueprint: ProductBlueprintV1): boolean {
+  const entities = blueprint.entities.map((entity) => ({
+    keys: new Set(entity.fields.map((field) => field.key)),
+    stockKinds: entity.fields.some(
+      (field) =>
+        field.key === "kind" &&
+        ["receive", "issue", "adjust"].every((kind) =>
+          field.options?.includes(kind),
+        ),
+    ),
+  }));
+  const reference = (entity: (typeof entities)[number]) =>
+    entity.keys.has("stockItem") || entity.keys.has("stockItemId");
+  return (
+    entities.some(
+      (entity) =>
+        ["sku", "unit", "quantity"].every((key) => entity.keys.has(key)) ||
+        ["delta", "beforeQuantity", "afterQuantity"].every((key) =>
+          entity.keys.has(key),
+        ) ||
+        (reference(entity) && entity.stockKinds),
+    ) ||
+    entities.some(
+      (item) =>
+        item.keys.has("sku") &&
+        item.keys.has("unit") &&
+        entities.some(
+          (movement) =>
+            movement !== item && (reference(movement) || movement.stockKinds),
+        ),
+    )
+  );
+}
+export function isInventoryOperationsBlueprint(
+  blueprint: ProductBlueprintV1,
+  selectedKeys?: readonly string[],
+): boolean {
+  if (
+    blueprint.entities.length !== 2 ||
+    blueprint.actors.length !== 2 ||
+    blueprint.workflows.length !== 1 ||
+    blueprint.pageIntents.length !== 3
+  )
+    return false;
+  if (
+    selectedKeys &&
+    (selectedKeys.length !== 6 ||
+      ![
+        "core.crud",
+        "core.workflow",
+        "core.identity-policy",
+        "core.policy-declarations",
+        "core.audit",
+        "core.notification",
+      ].every((key) => selectedKeys.includes(key)))
+  )
+    return false;
+  const [item, movement] = blueprint.entities;
+  const [stockkeeper, observer] = blueprint.actors;
+  const flow = blueprint.workflows[0]!;
+  const domain = (minimum: number, maximum: number) => ({
+    apiVersion: "factory.numeric-field-domain/v1",
+    minimum: { value: minimum, inclusive: true },
+    maximum: { value: maximum, inclusive: true },
+  });
+  const field = (key: string, type: string, required = true) => ({
+    key,
+    type,
+    required,
+  });
+  const numeric = (key: string, min: number, max: number) => ({
+    ...field(key, "number"),
+    numericDomain: domain(min, max),
+  });
+  const semantics = (fields: typeof item.fields) =>
+    fields.map(({ label: _label, ...value }) => value);
+  return (
+    item.key !== movement.key &&
+    stockkeeper.key !== observer.key &&
+    canonicalEquals(semantics(item.fields), [
+      field("sku", "text"),
+      field("name", "text"),
+      field("unit", "text"),
+      numeric("quantity", 0, 1000000000),
+    ]) &&
+    canonicalEquals(semantics(movement.fields), [
+      { ...field("stockItem", "reference"), referenceTo: item.key },
+      { ...field("kind", "enum"), options: ["receive", "issue", "adjust"] },
+      numeric("delta", -1000000000, 1000000000),
+      numeric("beforeQuantity", 0, 1000000000),
+      numeric("afterQuantity", 0, 1000000000),
+      numeric("itemVersion", 1, 2147483647),
+      field("reason", "long-text"),
+      field("actorRole", "text"),
+      field("recordedAt", "datetime"),
+      field("correctionOf", "text", false),
+    ]) &&
+    canonicalEquals(stockkeeper.permissions, [
+      { entityKey: item.key, actions: ["create", "read", "update"] },
+      {
+        entityKey: movement.key,
+        actions: ["create", "read", "submit", "audit"],
+      },
+    ]) &&
+    canonicalEquals(observer.permissions, [
+      { entityKey: item.key, actions: ["read"] },
+    ]) &&
+    flow.entityKey === movement.key &&
+    canonicalEquals(
+      flow.states.map((state) => state.key),
+      ["draft", "recorded"],
+    ) &&
+    canonicalEquals(
+      flow.transitions.map(({ label: _label, ...value }) => value),
+      [
+        {
+          key: "submit",
+          from: "draft",
+          to: "recorded",
+          actorKey: stockkeeper.key,
+        },
+      ],
+    ) &&
+    canonicalEquals(
+      blueprint.pageIntents.map(
+        ({ key: _key, label: _label, ...value }) => value,
+      ),
+      ["list", "form", "detail"].map((intent) => ({
+        intent,
+        entityKey: item.key,
+      })),
+    )
+  );
 }
 
 const positiveAppointmentInteger = {
@@ -678,7 +825,11 @@ function derivedFlows(
       // Audit is locked for every product (identity-policy requires its
       // interface), but flow effects stay blueprint-driven: only products
       // with an approval decision record audit events.
-      if (audit && hasApprovalDecision(blueprint))
+      if (
+        audit &&
+        (hasApprovalDecision(blueprint) ||
+          isInventoryOperationsBlueprint(blueprint))
+      )
         effects.push({ capability: "audit.record", operation: "record" });
       if (notification && isDecisionActor(blueprint, transition.actorKey)) {
         effects.push({ capability: "notification.send", operation: "send" });
@@ -699,6 +850,7 @@ function derivedFlows(
 function derivedSeedData(
   blueprint: ProductBlueprintV1,
 ): ApplicationGraphV1["domain"]["seedData"] {
+  if (isInventoryOperationsBlueprint(blueprint)) return [];
   if (isAppointmentBookingBlueprint(blueprint)) {
     const [service, schedule, appointment] = blueprint.entities;
     const field = (
@@ -918,6 +1070,11 @@ export function deriveProductOperations(
   input: ProductDerivationInput,
 ): GraphDiffV1 {
   const blueprint = assertProductBlueprint(input.blueprint);
+  if (
+    isInventoryCandidate(blueprint) &&
+    !isInventoryOperationsBlueprint(blueprint, input.selectedKeys)
+  )
+    throw new CompositionError("Unsupported Inventory Operations blueprint.");
   const calculations = blueprint.entities.flatMap((entity) =>
     entity.fields.filter((field) => field.calculation),
   );
@@ -943,7 +1100,8 @@ export function deriveProductOperations(
   if (
     constrained.length &&
     !supportsNumericApprovalBlueprint(blueprint) &&
-    !isAppointmentBookingBlueprint(blueprint, input.selectedKeys)
+    !isAppointmentBookingBlueprint(blueprint, input.selectedKeys) &&
+    !isInventoryOperationsBlueprint(blueprint, input.selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",
@@ -1239,7 +1397,8 @@ export function composeProductDraft(input: {
       entity.fields.some((field) => field.numericDomain),
     ) &&
     !supportsNumericApprovalBlueprint(blueprint, selectedKeys) &&
-    !isAppointmentBookingBlueprint(blueprint, selectedKeys)
+    !isAppointmentBookingBlueprint(blueprint, selectedKeys) &&
+    !isInventoryOperationsBlueprint(blueprint, selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",

@@ -11,12 +11,11 @@ waves, not registered or accepted products. Mobile browsing/field work and deskt
 management are selected by actual use; dual-surface products must complete their
 cross-role journey. The original eight-definition compatibility baseline is unchanged.
 
-**Current execution:** Directory is delivered at `e0c0f467`. Inventory Task 1 is
-has a bounded final-review correction underway: after the nine-product baseline,
-focused tests and task review/Terra QA passed, Sol reproduced a malformed stock
-graph falling into generic compilation when quantity coordinates were removed.
-Candidate detection and adversarial tests are being corrected before transactional
-runtime work. Its
+**Current execution:** Directory is delivered at `e0c0f467`. Inventory Task 1
+contract source is accepted after its malformed-stock fallback correction.
+Independent affected QA passes 56 cases and Sol closes the reproduced P1 at
+0/0/0, retaining unaffected Graph/adapter evidence and all nine historical bytes.
+Transactional stock and movement implementation is the next authorized slice. Its
 [acceptance brief](acceptance/inventory-operations.md) freezes the receive 10 ->
 issue 3 -> correct -1 -> balance 6 journey and scenario-specific phone/desktop
 criteria before UI work. No tenth catalogue row or Inventory runtime is claimed.
@@ -52,7 +51,7 @@ remains unverified. Actual remote CI progresses beyond repaired formatting and
 historical count checks, but still exposes old generic Appointment admission and
 export-surface test failures. Source-history checkout and historical toolchain
 receipt assertions are corrected; ADR-0077's bounded old/current Appointment
-distinction is accepted and being implemented in disjoint files. Complete CI
+distinction is implemented in disjoint files and under independent review. Complete CI
 success is not claimed. Source inspection confirms the
 Preview runner removes its owned volumes and uses per-preview resource identity;
 it must not be repurposed as durable deployment. Target hosting information has

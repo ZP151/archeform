@@ -1,3 +1,5 @@
 # Factory Pilot package digests include template bytes.  Keep every tracked
 # text file stable across Windows and Unix checkouts.
 * text=auto eol=lf
+# Preserve the exact executed capture bytes bound to its immutable receipt.
+packages/compiler/test/fixtures/capture-nine-definition-baseline.executed.txt -text whitespace=cr-at-eol

@@ -419,3 +419,8 @@ export {
   createCalculatedRequestTotalRuntime,
   type QuantityUnitPriceTotalV1,
 } from "./calculated-request-total.js";
+
+export {
+  matchInventoryOperationsGraphV1,
+  type InventoryOperationsGraphWitnessV1,
+} from "./inventory-operations-graph-witness.js";

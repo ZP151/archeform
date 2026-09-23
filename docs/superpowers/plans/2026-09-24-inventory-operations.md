@@ -37,13 +37,13 @@ adapter/capability modules. No runtime, UI, worker or unrelated edits.
       separate locks and all generated file hashes for the existing nine products.
       Preserve the earlier eight-product fixture; never refresh an expectation
       after changing the implementation.
-- [ ] Start RED for exact family eligibility, JSON persistence round trip, rejected
+- [x] Start RED for exact family eligibility, JSON persistence round trip, rejected
       malformed data, numeric bounds, reference mapping, unique fields/indexes,
       empty seeds and Graph-backed audit declaration.
-- [ ] Compose only the frozen Inventory witness. Publish `stockItemId` with the
+- [x] Compose only the frozen Inventory witness. Publish `stockItemId` with the
       declared relation/indexes and expose `stockItem` only through the accepted
       API projection. Require `domain.seedData: []`; invent no initial stock.
-- [ ] Freeze the readonly selector/type through the two accepted compiler-root
+- [x] Freeze the readonly selector/type through the two accepted compiler-root
       exports. Prove all historical outputs remain byte-identical.
 
 ## Task 2: implement transactional stock and movement behavior

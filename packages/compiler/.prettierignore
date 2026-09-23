@@ -1,3 +1,7 @@
 test/.generated-commerce-transaction-runtime/
 test/.generated-runtime/
 test/generated-runtime-*/
+# Match root policy when package lint runs from this directory. These bytes
+# are bound to immutable capture receipts; source formatting stays enabled.
+test/fixtures/capture-eight-definition-baseline.mjs
+test/fixtures/nine-definition-baseline.json

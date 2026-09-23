@@ -9,7 +9,12 @@ import { createDefinitionEntry } from "./definition-family-registry.js";
 type DefinitionEntry = {
   readonly definitionKey: string;
   readonly family:
-    "restaurant" | "approval" | "task" | "appointment" | "content-directory";
+    | "restaurant"
+    | "approval"
+    | "task"
+    | "appointment"
+    | "content-directory"
+    | "inventory-operations";
   readonly parameterPolicy: "restaurant-menu" | "none";
   readonly selectionSchema: z.ZodEffects<z.AnyZodObject>;
   readonly jsonSchema: object;

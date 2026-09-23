@@ -6697,9 +6697,11 @@ later presentation corrections do not acquire additional full gates.
 
 Root reconciles the package-lint fix with ADR-0072 CMP-009's retained manifest
 comparison: restore the original lint script and instead add
-`packages/compiler/.prettierignore` with only the same two immutable capture
-paths relative to package cwd. This supersedes the earlier tooling choice;
-`packages/compiler/package.json` is unchanged from HEAD. Root owns the new local
+the same two immutable capture paths to `packages/compiler/.prettierignore`,
+relative to package cwd, retaining its existing generated-directory entries.
+Root catches and restores those original three entries during the final diff
+check. This supersedes the earlier tooling choice;
+`packages/compiler/package.json` is unchanged from HEAD. Root owns the local
 ignore file, no dependency or package contract changes. Terra QA is notified of
 the exact replacement before its final judgment.
 
@@ -6791,3 +6793,47 @@ implementation. A separate serialized compatibility writer owns only
 fixture, asset, Graph, package or other family changes. The accepted complete
 historical witness and both-facade integrity checks are mandatory. No external
 operation, publication, repository release or deployment is authorized.
+
+### 2026-09-24 Inventory Task 1 acceptance and runtime ownership
+
+The bounded candidate correction reproduces RED before fixing stock-specific
+recognition when numeric coordinates are removed or renamed. Independent Terra
+`inventory_contract_qa` passes 16 composition and 40 compiler cases, verifies all
+four frozen hashes, formatting, nine historical byte comparisons and unchanged
+manifest. Sol `inventory_contract_release_review` independently reruns its original
+Graph-valid seeded repro with a fresh six-package lock; both selector and public
+compiler now reject it. Workflow-only and SKU/unit-only generic cases remain
+62-file outputs. Sol closes P0/P1/P2 0/0/0 and approves this contract source only.
+Root passes compiler lint, seven public-export tests and diff whitespace checks.
+Unchanged prior Graph/adapter QA and task review remain valid. PM accepts Task 1
+for a bounded commit and branch push; counts remain nine/nine/five.
+
+Frozen corrected composer SHA-256 is
+`55c835a525d87a8b7a2d5726751b84867d9f749cdb48f081f53dd8fd73e286bf`;
+compiler contract SHA-256 is
+`fa154775eec0a89dc551bb5208c5e300ed2f9e0eb57f075568256d6d81a5cdeb`.
+The nine-product capture retains
+`9c39f0b1e8a624b3dbac57707c8c7c6d81b0e945ad3cd9f63642d6619bdc209a`.
+Root staging catches line-ending conversion of the exact executed-script snapshot.
+One path-specific `.gitattributes` exception preserves its original bytes and
+recognizes CR at end of line; every ordinary source keeps the existing LF policy.
+After explicit renormalization, the staged blob matches receipt SHA-256
+`cc93e8e4f25e986cb14dbac10cbd0cef5b6c9572d9902982f4f19eec2ad6eddf`.
+The receipt and snapshot are unchanged; staged whitespace checks pass.
+
+After that source commit, PM authorizes the same strongest serialized Inventory
+owner for Task 2 under accepted ADR-0076. Write ownership is only new
+`packages/compiler/src/inventory-operations-runtime.ts`, new
+`packages/compiler/test/inventory-operations-runtime.test.ts`, new
+`packages/compiler/test/inventory-operations-postgres.test.ts`, new
+`packages/compiler/test/fixtures/inventory-operations-runtime.ts`, the narrow
+Inventory integration in `packages/compiler/src/index.ts`, and the existing
+contract test's pending-runtime expectation. Freeze Graph/composer/adapters,
+selector semantics, baseline captures, package manifests, and old family outputs.
+No canonical row, UI, worker, new framework or schema migration for existing apps.
+Root alone owns new local database resources, ignored environment/configuration
+and verified cleanup after test process exit. The writer first proves emitted
+transaction behavior with provider-free RED/GREEN, then actual emitted Prisma
+cases run against that root-owned PostgreSQL fixture. Review must cover atomic
+balance/movement/audit/receipt, replay, bounds, roles, query predicates, generic
+route denial and concurrency. Existing historical cleanup residuals stay untouched.

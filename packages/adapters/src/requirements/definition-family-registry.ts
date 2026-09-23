@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createHash } from "node:crypto";
 import {
   CompositionError,
+  matchInventoryOperationsGraphV1,
   graphKeySchema,
   safeBusinessTextSchema,
   hashRequirementSpec,
@@ -234,6 +235,9 @@ const categories = [
 const text = z.string().min(1).max(24000);
 const bp = productBlueprintSchema.shape;
 export const familyGuideSchemas = {
+  "inventory-operations": productBlueprintSchema
+    .extend({ definitionKey: graphKeySchema, identity: text })
+    .strict(),
   "content-directory": productBlueprintSchema
     .extend({ definitionKey: graphKeySchema, identity: text })
     .strict(),
@@ -456,6 +460,15 @@ const restaurantLocks = [
   },
 ];
 export const definitionFamilyRegistry = Object.freeze({
+  "inventory-operations": Object.freeze({
+    version: "inventory-operations/v1",
+    parameterPolicy: "none/v1",
+    presentation: {
+      key: "inventory-operations-presentation",
+      version: "1.0.0",
+    },
+    compilerProfile: "inventory-operations@1.0.0",
+  }),
   "content-directory": Object.freeze({
     version: "content-directory/v1",
     parameterPolicy: "none/v1",
@@ -521,25 +534,29 @@ function slotsFor(entry: ProductDefinitionData): Slots {
   const b = entry.canonical.blueprint,
     f = b.workflows[0]!;
   const roleNames =
-    entry.familyBinding.key === "appointment"
-      ? ["customer", "staff", "administrator"]
-      : entry.familyBinding.key === "approval"
-        ? ["requester", "reviewer", "auditor"]
-        : entry.familyBinding.key === "task"
-          ? ["member", "viewer"]
-          : entry.familyBinding.key === "content-directory"
-            ? ["reader", "curator"]
-            : ["customer"];
+    entry.familyBinding.key === "inventory-operations"
+      ? ["stockkeeper", "observer"]
+      : entry.familyBinding.key === "appointment"
+        ? ["customer", "staff", "administrator"]
+        : entry.familyBinding.key === "approval"
+          ? ["requester", "reviewer", "auditor"]
+          : entry.familyBinding.key === "task"
+            ? ["member", "viewer"]
+            : entry.familyBinding.key === "content-directory"
+              ? ["reader", "curator"]
+              : ["customer"];
   return {
     roles: new Map(b.actors.map((a, i) => [a.key, roleNames[i]!])),
     entities: new Map(
       b.entities.map((e, i) => [
         e.key,
-        entry.familyBinding.key === "appointment"
-          ? ["service", "schedule", "appointment"][i]!
-          : i === 0
-            ? "primary"
-            : "requester-profile",
+        entry.familyBinding.key === "inventory-operations"
+          ? ["item", "movement"][i]!
+          : entry.familyBinding.key === "appointment"
+            ? ["service", "schedule", "appointment"][i]!
+            : i === 0
+              ? "primary"
+              : "requester-profile",
       ]),
     ),
     workflows: new Map([[f.key, "lifecycle"]]),
@@ -885,6 +902,54 @@ function directoryPlanningSemantics(entry: ProductDefinitionData): boolean {
     )
   );
 }
+/** Planning uses the exact existing composer and shared Graph witness; no second Inventory predicate. */
+function inventoryPlanningSemantics(entry: ProductDefinitionData): boolean {
+  const { spec, blueprint } = entry.canonical;
+  if (
+    spec.productType !== undefined ||
+    !equal(
+      spec.actors.map((a) => a.key),
+      blueprint.actors.map((a) => a.key),
+    ) ||
+    !equal(
+      spec.domainConcepts.map((e) => e.key),
+      blueprint.entities.map((e) => e.key),
+    )
+  )
+    return false;
+  try {
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: spec.requirementId,
+      workspaceId: "local-workspace",
+      name: blueprint.title,
+    });
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    if (!standard) return false;
+    const { diff } = composeProductDraft({
+      plan: standard.plan,
+      blueprint,
+      baseDraft,
+    });
+    const witness = matchInventoryOperationsGraphV1(
+      applyGraphDiffToDraft(baseDraft, diff).graph,
+    );
+    return (
+      !!witness &&
+      equal(entry.primaryJob, {
+        actorKey: witness.roles.stockkeeper,
+        entityKey: witness.movementEntity,
+        operation: "submit",
+        successState: "recorded",
+      })
+    );
+  } catch {
+    return false;
+  }
+}
 function validatePlanningSemantics(entry: ProductDefinitionData): boolean {
   const { spec, blueprint: b } = entry.canonical,
     f = b.workflows[0];
@@ -996,6 +1061,8 @@ function validatePlanningSemantics(entry: ProductDefinitionData): boolean {
       spec.domainConcepts[0]!.key === flow.entity
     );
   }
+  if (entry.familyBinding.key === "inventory-operations")
+    return inventoryPlanningSemantics(entry);
   if (entry.familyBinding.key === "appointment")
     return appointmentPlanningSemantics(entry);
   if (entry.familyBinding.key === "content-directory")
@@ -1209,6 +1276,25 @@ function validateJourneys(entry: ProductDefinitionData): DefinitionReason[] {
   ) => {
     const flow = flows.find((f) => f.entity === s.entityKey);
     if (
+      entry.familyBinding.key === "inventory-operations" &&
+      s.entityKey === b.entities[0]?.key
+    ) {
+      if (
+        !roles.includes(s.actorKey) ||
+        s.fromState !== null ||
+        s.toState !== null ||
+        !["create", "read", "update"].includes(s.operation)
+      )
+        return false;
+      const granted = grants.some(
+        (p) =>
+          p.role === s.actorKey &&
+          p.resource === s.entityKey &&
+          p.actions.includes(s.operation),
+      );
+      return s.expectation === "denied" ? !granted : granted;
+    }
+    if (
       !roles.includes(s.actorKey) ||
       !flow ||
       ![s.fromState, s.toState].every(
@@ -1404,6 +1490,37 @@ function executionMatches(entry: ProductDefinitionData): boolean {
     )
   )
     return false;
+  if (entry.familyBinding.key === "inventory-operations") {
+    const witness = matchInventoryOperationsGraphV1(graph);
+    if (!witness) return false;
+    const symbol = (model: string, key: string) => ({
+      graphSymbol: `graph.${model}.${key}`,
+    });
+    const expectedBindings = {
+      "core.crud": {
+        entityKey: symbol("domain", witness.itemEntity),
+        routeKey: symbol("page", witness.pages.list),
+      },
+      "core.workflow": { flowKey: symbol("flow", witness.workflow) },
+      "core.identity-policy": {
+        principalEntity: symbol("domain", spec.requirementId + "-principal"),
+        sessionEntity: symbol("domain", spec.requirementId + "-session"),
+        defaultRole: symbol("policy", witness.roles.stockkeeper),
+        authenticatedRole: symbol("policy", witness.roles.observer),
+      },
+      "core.audit": { actorRole: symbol("policy", witness.roles.stockkeeper) },
+      "core.notification": {
+        recipientRole: symbol("policy", witness.roles.stockkeeper),
+      },
+      "core.policy-declarations": {},
+    };
+    return actual.every((selection) =>
+      equal(
+        selection.bindings,
+        expectedBindings[selection.lock.key as keyof typeof expectedBindings],
+      ),
+    );
+  }
   if (entry.familyBinding.key === "appointment") {
     const [service, schedule, appointment] = blueprint.entities;
     if (!service || !schedule || !appointment) return false;
@@ -1662,6 +1779,7 @@ export function validateFamilyDefinition(
   const reasons: DefinitionReason[] = [];
   if (
     entry.familyBinding.key !== "approval" &&
+    entry.familyBinding.key !== "inventory-operations" &&
     entry.familyBinding.key !== "appointment" &&
     entry.canonical.blueprint.entities.some((e) =>
       e.fields.some((f) => f.numericDomain || f.calculation),

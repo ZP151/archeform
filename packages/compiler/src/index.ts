@@ -1,3 +1,8 @@
+import { selectInventoryOperationsProfile } from "./inventory-operations-contract.js";
+export {
+  selectInventoryOperationsProfile,
+  type InventoryOperationsProfile,
+} from "./inventory-operations-contract.js";
 import {
   selectCalculatedApproval,
   renderCalculatedPage,
@@ -4034,6 +4039,8 @@ export function generateApplicationBundle(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): GeneratedApplicationBundle {
+  if (selectInventoryOperationsProfile(input.graph, input.compositionLock))
+    throw new Error("Inventory Operations runtime is not implemented.");
   const directoryProfile = selectContentDirectoryProfile(
     input.graph,
     input.compositionLock,
