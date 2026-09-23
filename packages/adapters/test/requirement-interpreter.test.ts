@@ -257,6 +257,7 @@ const admittedDefinitionKeys = [
   ...historicalDefinitionKeys,
   "appointment-booking-v1",
   "knowledge-resource-directory",
+  "supplies-stockroom",
 ] as const;
 
 const vagueApprovalBrief = [
@@ -992,7 +993,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       ).toBe(false);
     }
   });
-  it("keeps seven historical and two append-only coherent registrations", () => {
+  it("keeps seven historical and three append-only coherent registrations", () => {
     expect(
       definitionSelectionCatalogue.map((entry) => entry.definitionKey),
     ).toEqual(admittedDefinitionKeys);

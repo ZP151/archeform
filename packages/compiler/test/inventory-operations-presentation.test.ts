@@ -35,6 +35,7 @@ const evidence = join(
   root,
   "docs/acceptance/evidence/inventory-operations/task3-ui",
 );
+const captureScreenshots = process.env.FACTORY_CAPTURE_INVENTORY_UI === "1";
 let browser: any, script: string;
 beforeAll(async () => {
   script = (
@@ -55,7 +56,7 @@ beforeAll(async () => {
     })
   ).outputFiles[0].text;
   browser = await playwright.chromium.launch({ headless: true });
-  mkdirSync(evidence, { recursive: true });
+  if (captureScreenshots) mkdirSync(evidence, { recursive: true });
 });
 afterAll(async () => {
   await browser?.close();
@@ -252,6 +253,7 @@ async function submit(page: any, label: string) {
     .click();
 }
 async function capture(page: any, name: string) {
+  if (!captureScreenshots) return;
   await page.screenshot({
     path: join(evidence, name + ".png"),
     fullPage: true,

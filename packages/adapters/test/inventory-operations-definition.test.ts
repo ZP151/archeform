@@ -81,7 +81,7 @@ function definition() {
   return entry;
 }
 describe("Inventory authored definition admission", () => {
-  it("admits only the authored exact family without registering a tenth product", () => {
+  it("admits only the authored exact family alongside the canonical stockroom registration", () => {
     const entry = definition();
     expect(validateFamilyDefinition(entry)).toEqual([]);
     const parsed = parseProductDefinitionCatalogue(
@@ -93,12 +93,12 @@ describe("Inventory authored definition admission", () => {
       ),
     );
     expect(parsed.definitions).toHaveLength(1);
-    expect(definitionSelectionCatalogue).toHaveLength(9);
+    expect(definitionSelectionCatalogue).toHaveLength(10);
     expect(
       definitionSelectionCatalogue.some(
         (e) => e.definitionKey === "supplies-stockroom",
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
   it("projects safe text and preserves empty seeds through a persisted Published witness", () => {
     const entry = createDefinitionEntry(definition());

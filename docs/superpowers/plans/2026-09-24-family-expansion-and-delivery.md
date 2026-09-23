@@ -69,7 +69,26 @@ rules instead of adding product-specific runtime branches. Thirty varied reviewe
 definitions precede 100+ retrieval; hundreds or thousands remain later coverage
 targets, not a reason to relax acceptance.
 
-### Next-wave reuse evidence: Work Orders
+### Next shared-flow correction: unresolved follow-up requirements
+
+Inventory admission exposes a platform-wide usability gap: registered-definition
+follow-ups with answered context and still-required unsupported capabilities are
+rejected as `requirement.output_invalid`, although provider guidance retains their
+questions. Historical tests and ADR-0065 preserve the refusal, so Inventory data
+admission must not silently change it. No unsupported feature may be dropped or
+reported as implemented.
+
+After the actual Inventory family closes, dispatch the Tech Lead to specify a
+compatible, understandable unresolved-requirement outcome and its minimal user
+action before increasing catalogue volume. Prove that prior material requirements
+survive, explicit scope acceptance resolves only accepted differences, and the
+ordinary user sees a useful next action. Keep existing fail-closed safety until
+that decision is accepted. Source evidence: the definition-selection guard in
+`packages/adapters/src/requirements/openai-interpreter.ts`, historical follow-up
+cases in `packages/adapters/test/requirement-interpreter.test.ts`, and the fixed
+422 message in `apps/workbench/lib/product-journey/interpret-contract.ts`.
+
+## Next-wave reuse evidence: Work Orders
 
 Source inspection at delivered `9a4bda79` establishes a concrete reuse boundary
 while Inventory runtime work continues. This is a fit assessment, not approval of

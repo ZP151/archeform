@@ -5474,6 +5474,649 @@
         "reviewedOn": "2026-09-24",
         "decision": "ADR-0065"
       }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "supplies-stockroom",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "inventory-operations",
+        "version": "inventory-operations/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "stockkeeper",
+        "entityKey": "stock-movement",
+        "operation": "submit",
+        "successState": "recorded"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "supplies-stockroom-definition",
+          "outcome": "Maintain an authoritative shared supplies balance with recorded receiving, issue and justified corrections.",
+          "actors": [
+            { "key": "stockkeeper", "label": "Stockkeeper" },
+            { "key": "observer", "label": "Observer" }
+          ],
+          "domainConcepts": [
+            { "key": "stock-item", "label": "Stock item" },
+            { "key": "stock-movement", "label": "Stock movement" }
+          ],
+          "workflows": [
+            { "key": "record-movement", "label": "Record movement" }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "record-stock",
+              "given": "An empty stock item",
+              "when": "The stockkeeper receives stock",
+              "then": "The balance and movement are recorded together"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:766b2af1ad011cbdb8be01f62973c2bc27989c3ed7698a9473616266430becad",
+          "title": "Supplies Stockroom",
+          "actors": [
+            {
+              "key": "stockkeeper",
+              "label": "Stockkeeper",
+              "permissions": [
+                {
+                  "entityKey": "stock-item",
+                  "actions": ["create", "read", "update"]
+                },
+                {
+                  "entityKey": "stock-movement",
+                  "actions": ["create", "read", "submit", "audit"]
+                }
+              ]
+            },
+            {
+              "key": "observer",
+              "label": "Observer",
+              "permissions": [
+                { "entityKey": "stock-item", "actions": ["read"] }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "stock-item",
+              "label": "Stock item",
+              "fields": [
+                {
+                  "key": "sku",
+                  "label": "SKU",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "name",
+                  "label": "Item name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "unit",
+                  "label": "Unit",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "quantity",
+                  "label": "Available quantity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": true },
+                    "maximum": { "value": 1000000000, "inclusive": true }
+                  }
+                }
+              ]
+            },
+            {
+              "key": "stock-movement",
+              "label": "Stock movement",
+              "fields": [
+                {
+                  "key": "stockItem",
+                  "label": "Stock item",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "stock-item"
+                },
+                {
+                  "key": "kind",
+                  "label": "Kind",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["receive", "issue", "adjust"]
+                },
+                {
+                  "key": "delta",
+                  "label": "Quantity change",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": -1000000000, "inclusive": true },
+                    "maximum": { "value": 1000000000, "inclusive": true }
+                  }
+                },
+                {
+                  "key": "beforeQuantity",
+                  "label": "Previous quantity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": true },
+                    "maximum": { "value": 1000000000, "inclusive": true }
+                  }
+                },
+                {
+                  "key": "afterQuantity",
+                  "label": "Resulting quantity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": true },
+                    "maximum": { "value": 1000000000, "inclusive": true }
+                  }
+                },
+                {
+                  "key": "itemVersion",
+                  "label": "Item version",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 1, "inclusive": true },
+                    "maximum": { "value": 2147483647, "inclusive": true }
+                  }
+                },
+                {
+                  "key": "reason",
+                  "label": "Reason",
+                  "type": "long-text",
+                  "required": true
+                },
+                {
+                  "key": "actorRole",
+                  "label": "Recorded by role",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "recordedAt",
+                  "label": "Recorded at",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "correctionOf",
+                  "label": "Corrected movement",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "stock-list",
+              "label": "Stock items",
+              "intent": "list",
+              "entityKey": "stock-item"
+            },
+            {
+              "key": "stock-form",
+              "label": "Add item",
+              "intent": "form",
+              "entityKey": "stock-item"
+            },
+            {
+              "key": "stock-detail",
+              "label": "Item stock and history",
+              "intent": "detail",
+              "entityKey": "stock-item"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "record-movement",
+              "label": "Record movement",
+              "entityKey": "stock-movement",
+              "states": [
+                { "key": "draft", "label": "Draft" },
+                { "key": "recorded", "label": "Recorded" }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "label": "Record",
+                  "from": "draft",
+                  "to": "recorded",
+                  "actorKey": "stockkeeper"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "record-stock",
+              "description": "Receive on desktop, issue on mobile and correct stock with retained history.",
+              "steps": [
+                {
+                  "actorKey": "stockkeeper",
+                  "action": "Create an item at zero and receive supplies with a reason."
+                },
+                {
+                  "actorKey": "stockkeeper",
+                  "action": "Find the same item on mobile and issue individual units."
+                },
+                {
+                  "actorKey": "stockkeeper",
+                  "action": "Record a justified linked correction on desktop and reload the authoritative quantity and immutable history."
+                },
+                {
+                  "actorKey": "observer",
+                  "action": "Read item quantities without movement history or mutation access."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:766b2af1ad011cbdb8be01f62973c2bc27989c3ed7698a9473616266430becad",
+          "title": "Supplies Stockroom",
+          "actors": [
+            {
+              "key": "stockkeeper",
+              "label": "Stockkeeper",
+              "permissions": [
+                {
+                  "entityKey": "stock-item",
+                  "actions": ["create", "read", "update"]
+                },
+                {
+                  "entityKey": "stock-movement",
+                  "actions": ["create", "read", "submit", "audit"]
+                }
+              ]
+            },
+            {
+              "key": "observer",
+              "label": "Observer",
+              "permissions": [
+                { "entityKey": "stock-item", "actions": ["read"] }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "stock-item",
+              "label": "Stock item",
+              "fields": [
+                {
+                  "key": "sku",
+                  "label": "SKU",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "name",
+                  "label": "Item name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "unit",
+                  "label": "Unit",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "quantity",
+                  "label": "Available quantity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": true },
+                    "maximum": { "value": 1000000000, "inclusive": true }
+                  }
+                }
+              ]
+            },
+            {
+              "key": "stock-movement",
+              "label": "Stock movement",
+              "fields": [
+                {
+                  "key": "stockItem",
+                  "label": "Stock item",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "stock-item"
+                },
+                {
+                  "key": "kind",
+                  "label": "Kind",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["receive", "issue", "adjust"]
+                },
+                {
+                  "key": "delta",
+                  "label": "Quantity change",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": -1000000000, "inclusive": true },
+                    "maximum": { "value": 1000000000, "inclusive": true }
+                  }
+                },
+                {
+                  "key": "beforeQuantity",
+                  "label": "Previous quantity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": true },
+                    "maximum": { "value": 1000000000, "inclusive": true }
+                  }
+                },
+                {
+                  "key": "afterQuantity",
+                  "label": "Resulting quantity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 0, "inclusive": true },
+                    "maximum": { "value": 1000000000, "inclusive": true }
+                  }
+                },
+                {
+                  "key": "itemVersion",
+                  "label": "Item version",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": { "value": 1, "inclusive": true },
+                    "maximum": { "value": 2147483647, "inclusive": true }
+                  }
+                },
+                {
+                  "key": "reason",
+                  "label": "Reason",
+                  "type": "long-text",
+                  "required": true
+                },
+                {
+                  "key": "actorRole",
+                  "label": "Recorded by role",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "recordedAt",
+                  "label": "Recorded at",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "correctionOf",
+                  "label": "Corrected movement",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "stock-list",
+              "label": "Stock items",
+              "intent": "list",
+              "entityKey": "stock-item"
+            },
+            {
+              "key": "stock-form",
+              "label": "Add item",
+              "intent": "form",
+              "entityKey": "stock-item"
+            },
+            {
+              "key": "stock-detail",
+              "label": "Item stock and history",
+              "intent": "detail",
+              "entityKey": "stock-item"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "record-movement",
+              "label": "Record movement",
+              "entityKey": "stock-movement",
+              "states": [
+                { "key": "draft", "label": "Draft" },
+                { "key": "recorded", "label": "Recorded" }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "label": "Record",
+                  "from": "draft",
+                  "to": "recorded",
+                  "actorKey": "stockkeeper"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "record-stock",
+              "description": "Receive on desktop, issue on mobile and correct stock with retained history.",
+              "steps": [
+                {
+                  "actorKey": "stockkeeper",
+                  "action": "Create an item at zero and receive supplies with a reason."
+                },
+                {
+                  "actorKey": "stockkeeper",
+                  "action": "Find the same item on mobile and issue individual units."
+                },
+                {
+                  "actorKey": "stockkeeper",
+                  "action": "Record a justified linked correction on desktop and reload the authoritative quantity and immutable history."
+                },
+                {
+                  "actorKey": "observer",
+                  "action": "Read item quantities without movement history or mutation access."
+                }
+              ]
+            }
+          ],
+          "definitionKey": "supplies-stockroom",
+          "identity": "Local selectable demo stockkeeper and observer roles in one shared stock pool. The stockkeeper receives, issues, adjusts and reads movement history; the observer reads item quantities only. No private identity, authentication, ownership or tenant isolation."
+        },
+        "providerInstruction": "Every supplies stockroom or standalone inventory receiving and issue brief returns definition-selection with definitionKey supplies-stockroom, generatedInterpretation null and businessParameters null. A coarse request accepts this exact default with zero materialQuestions and zero technical questions. Supported scope: one shared local stock pool and indivisible each units. The store starts empty: no seeded items, movements or invented stock. A stockkeeper creates an item with unique SKU and plain-text name at quantity 0, unit each and version 0; searches SKU and name; receives positive whole units; issues positive whole units without negative stock; and records nonzero signed corrections with a mandatory reason and optional link to a prior recorded movement of the same item. Every movement atomically updates the authoritative balance and appends immutable recorded history with before and after quantities, actor role, time and the declared local audit effect. Quantity is bounded to 0..1000000000. Correcting the same item name preserves ID, SKU and unit without a fake movement. Desktop supports receive, correction and history; mobile supports stock lookup and issue against the same records. Refresh and same-command retry preserve the committed outcome; stale changes require explicit reconciliation. The observer reads item identities and quantities only, without mutation, movement history, receipts or audit access. SKU is trimmed ASCII uppercase, 1..40 characters using letters, digits, dot, underscore or hyphen, starting with a letter or digit; names are trimmed plain text 1..120 characters and movement reasons 1..280 characters. Local demo roles do not establish private identity, authentication or tenant isolation. Any explicit fractional quantities, negative stock, multiple units or unit conversion, multiple locations or transfers, reservation, order fulfillment, barcode hardware, serial tracking, batch tracking, expiry tracking, purchasing, supplier records, valuation, payment, outbound notification including email or SMS, webhooks, offline mutation or sync, external integration, borrower records or return obligations, private identity, real accounts, SSO, ownership, tenant isolation, production access or hosted deployment requires needs-clarification with every independent material question. Requests for extra fields, custom roles, additional approval workflows, delete or editing recorded movements, bulk import, uploads, attachments, remote media and arbitrary business rules also require needs-clarification. Do not silently discard unsupported requirements or coerce fractional fabric, multiple warehouses, medicine batch/expiry or equipment lending into each-unit issue. Use only authorization, visibility, role, business-rule, data or integration question categories. Follow-ups retain every still-required unsupported capability. Only explicit acceptance of the exact supported scope resolves a material question. Display title, requirementId and outcome customize bounded safe business text only; never generate execution modules, routes, packages, database queries or external endpoints. The core.notification lock is local infrastructure and promises no delivered notification. This registration is a candidate definition and does not claim accepted product delivery."
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-item-name-correction",
+            "steps": [
+              {
+                "actorKey": "stockkeeper",
+                "entityKey": "stock-item",
+                "operation": "create",
+                "fromState": null,
+                "toState": null,
+                "expectation": "success"
+              },
+              {
+                "actorKey": "stockkeeper",
+                "entityKey": "stock-item",
+                "operation": "update",
+                "fromState": null,
+                "toState": null,
+                "expectation": "success"
+              },
+              {
+                "actorKey": "stockkeeper",
+                "entityKey": "stock-item",
+                "operation": "read",
+                "fromState": null,
+                "toState": null,
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "recorded-movement-retry",
+            "steps": [
+              {
+                "actorKey": "stockkeeper",
+                "entityKey": "stock-movement",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "recorded",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "stockkeeper",
+                "entityKey": "stock-movement",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "recorded",
+                "expectation": "retry-replay"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "observer-mutation-and-history-denied",
+            "steps": [
+              {
+                "actorKey": "observer",
+                "entityKey": "stock-item",
+                "operation": "create",
+                "fromState": null,
+                "toState": null,
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "observer",
+                "entityKey": "stock-item",
+                "operation": "update",
+                "fromState": null,
+                "toState": null,
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "observer",
+                "entityKey": "stock-movement",
+                "operation": "read",
+                "fromState": "recorded",
+                "toState": "recorded",
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "observer",
+                "entityKey": "stock-movement",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "recorded",
+                "expectation": "denied"
+              }
+            ]
+          },
+          {
+            "key": "stale-or-invalid-stock-command",
+            "steps": [
+              {
+                "actorKey": "stockkeeper",
+                "entityKey": "stock-movement",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "recorded",
+                "expectation": "version-conflict"
+              },
+              {
+                "actorKey": "stockkeeper",
+                "entityKey": "stock-movement",
+                "operation": "submit",
+                "fromState": "draft",
+                "toState": "recorded",
+                "expectation": "validation-error"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "inventory-operations-presentation",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "inventory-operations@1.0.0"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-24",
+        "decision": "ADR-0065"
+      }
     }
   ]
 }

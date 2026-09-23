@@ -5,6 +5,7 @@ import {
   createDefinitionCaseIndex,
   validateDefinitionCaseBindings,
 } from "./definition-case-index.mjs";
+import { definitionCaseBindings } from "./definition-case-bindings.mjs";
 
 const definitions = [
   { definitionKey: "expense-approval" },
@@ -29,6 +30,21 @@ const bindings = [
 ];
 
 describe("definition case index", () => {
+  it("routes the admitted stockroom to its actual Inventory case without changing acceptance status", () => {
+    assert.deepEqual(
+      definitionCaseBindings.find(
+        (row) => row.definitionKey === "supplies-stockroom",
+      ),
+      {
+        definitionKey: "supplies-stockroom",
+        runtimeFamily: "inventory-operations/v1",
+        caseId: "supplies-stockroom-local",
+        casePath: "e2e/inventory-operations.spec.ts",
+        evidencePath: "docs/acceptance/evidence/inventory-operations",
+        protectedFixture: false,
+      },
+    );
+  });
   it("derives a non-authoritative one-case-per-definition index", () => {
     const index = createDefinitionCaseIndex({ definitions, bindings });
 

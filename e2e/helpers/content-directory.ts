@@ -283,6 +283,14 @@ export async function deliverDirectory(
   evidence: Json,
   phase: (name: string) => void,
   remember: (id: string, preview?: OwnedPreview) => void,
+  selection = {
+    definitionKey: "knowledge-resource-directory",
+    requirementIdPrefix: "directory-e2e",
+    title: "Knowledge Resource Directory",
+    outcome:
+      "Find useful resources and keep the same entries accurate and visible.",
+    brief: directoryBrief,
+  },
 ) {
   const interpretation = await new OpenAIRequirementInterpreterAdapter({
     readEnvironment: () => "fixture-key",
@@ -292,12 +300,11 @@ export async function deliverDirectory(
           outputText: JSON.stringify({
             resultKind: "definition-selection",
             definitionSelection: {
-              definitionKey: "knowledge-resource-directory",
+              definitionKey: selection.definitionKey,
               disposition: "supported-default",
-              requirementId: `directory-e2e-${randomUUID()}`,
-              title: "Knowledge Resource Directory",
-              outcome:
-                "Find useful resources and keep the same entries accurate and visible.",
+              requirementId: `${selection.requirementIdPrefix}-${randomUUID()}`,
+              title: selection.title,
+              outcome: selection.outcome,
               materialQuestions: [],
               businessParameters: null,
             },
@@ -306,7 +313,7 @@ export async function deliverDirectory(
         };
       },
     },
-  }).interpret({ brief: directoryBrief, answers: {} });
+  }).interpret({ brief: selection.brief, answers: {} });
   await page.route("**/api/requirements/interpret", async (route) =>
     route.request().method() === "POST"
       ? route.fulfill({
@@ -321,7 +328,7 @@ export async function deliverDirectory(
   await expect(
     page.getByText("Control Plane ready", { exact: true }),
   ).toBeVisible({ timeout: 120_000 });
-  await page.getByLabel("Requirement brief").fill(directoryBrief);
+  await page.getByLabel("Requirement brief").fill(selection.brief);
   await page
     .getByRole("button", { name: "Create product", exact: true })
     .click();

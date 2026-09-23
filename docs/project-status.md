@@ -25,8 +25,9 @@ synthetic UI/runtime checks do not replace the next actual generated-product
 journey. Its
 [acceptance brief](acceptance/inventory-operations.md) freezes the receive 10 ->
 issue 3 -> correct -1 -> balance 6 journey and scenario-specific phone/desktop
-criteria before implementation. No tenth catalogue row or complete Inventory
-product journey is accepted yet.
+criteria before implementation. The tenth catalogue row (`supplies-stockroom`) and its actual case source are
+accepted, with all eight expanded definition-lane steps passing. Actual Inventory
+worker/PostgreSQL, lifecycle and complete-product acceptance remain pending.
 
 The short-lane continuation now passes all eight steps, including 97 emitted
 numeric/calculated cases and reproducible Prisma client generation, with one
@@ -59,8 +60,9 @@ remains unverified. Remote CI run `35920468035` passes both Node 22.11.0 and 22.
 jobs at delivered `9a4bda79b3c6473a68fb369c01e49f4844e5b306`, after the historical
 booking, source-history, receipt and export checks are corrected. This verifies
 that exact delivered revision. Inventory runtime CI run `35924474729` also passes both Node jobs
-at delivered `0ada5fd136b9cb3442c6e9498fe4062c5dd19e85`. The later UI/worker
-working tree is not covered by that run.
+at delivered `0ada5fd136b9cb3442c6e9498fe4062c5dd19e85`. Verifier CI `35926255343` at `20cb4519` and presentation CI `35926842005`
+at `7c3a4960` also pass both Node jobs. Later Task 4 admission/case work is not
+covered by those delivered revisions.
 Historical booking's focused 99 cases and independent task review, Terra QA and
 Sol judgment also pass. Cleanup residuals still prevent main/repository release.
 Source inspection confirms the
@@ -98,10 +100,10 @@ existing isolated `codex/definition-regression-entry` branch and preserves that
 work. Counts distinguish candidates, registered definitions, runtime families,
 local journeys and hosted products; planned catalogue growth is not delivery.
 
-## Current local result: nine products, five runtime families
+## Current local result: ten registered, nine accepted products, five runtime families
 
 The calculated-request long Goal's product and planning work is accepted locally.
-Coverage is **nine distinct registered / nine locally accepted definitions /
+Coverage is **ten distinct registered / nine locally accepted definitions /
 five demonstrated runtime families**. Knowledge Resource Directory and Appointment
 Booking now join Restaurant
 Ordering, Expense Approval, Purchase Request Approval, Team Task Tracking,

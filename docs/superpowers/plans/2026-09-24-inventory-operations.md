@@ -88,9 +88,9 @@ Owner: one definition/case implementer under a frozen contract; root owns runtim
 creation and cleanup. Reuse the Directory lifecycle/diagnostic lessons and the
 existing case index. Add no new approval or deployment harness.
 
-- [ ] Admit one meaningful canonical definition with coarse-intent selection,
+- [x] Admit one meaningful canonical definition with coarse-intent selection,
       explicit unsupported units/locations and material clarification cases.
-- [ ] Run the existing short definition lane before image construction.
+- [x] Run the existing short definition lane before image construction.
 - [ ] Start with an empty actual store. Create two SKUs; receive 10, issue 3 and
       correct -1 on one item. Verify balance 6 and all three retained movements;
       the second SKU stays unchanged. Correct the same item's name and reload.

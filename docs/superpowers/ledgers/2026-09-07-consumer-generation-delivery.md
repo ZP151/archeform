@@ -7092,3 +7092,128 @@ the actual generated PostgreSQL-backed app, worker, immutable lifecycle, restart
 replay, useful-job timing and owned cleanup. Counts remain nine/nine/five. No
 hosted deployment, main integration, repository release or complete Inventory
 product acceptance is claimed. The unbudgeted Goal remains active.
+
+### 2026-09-24 Inventory Task 4 execution ownership
+
+Previous Goal turn is progress: runtime, verifier and presentation were accepted,
+committed and pushed. Root revalidates clean worktree at delivered
+`7c3a4960be1f8c4d5482961840033727e22c7df9`; CI run `35926842005` is active, as is
+verifier run `35926255343`. Runtime run `35924474729` is green. Preserve original
+checkout Eval V2 work and all recorded cleanup residuals.
+
+PM freezes Task 4 bindings: definition `supplies-stockroom`, family
+`inventory-operations/v1`, case `supplies-stockroom-local`, executable case
+`e2e/inventory-operations.spec.ts`, evidence root
+`docs/acceptance/evidence/inventory-operations`. Existing ADR-0076 exact Graph,
+selector, runtime, routes, local roles and surface behavior remain unchanged.
+To shorten delivery, split the planned definition/case responsibility into two
+disjoint writers against these already frozen interfaces; no new product contract.
+
+Definition owner writes only the new row in
+`packages/adapters/src/requirements/definitions/product-definitions.v1.json`,
+new `packages/adapters/test/supplies-stockroom-definition.test.ts`, affected
+catalogue count/key assertions in `packages/adapters/test/product-definition-data.test.ts`,
+and `scripts/definition-case-bindings.mjs` plus affected assertions in
+`scripts/definition-case-index.test.mjs`. Preserve the first nine rows exactly
+and every frozen output fixture. No adapter/schema/Graph/compiler behavior change.
+Report an additional required path before editing. Test supported coarse selection,
+material unsupported requests and retained clarifications without model calls;
+never log raw model material.
+
+Case owner writes only `e2e/inventory-operations.spec.ts`,
+`e2e/helpers/inventory-operations.ts` and `e2e/helpers/inventory-operations.test.ts`.
+Reuse existing lifecycle, bounded safe diagnostics and owned preview helpers by
+import; identify any unavoidable shared-helper change before editing. The case
+must perform the acceptance brief's actual complete stock journey, uncertainty,
+conflict, denial, API restart, immutable source/Compilation, timings and screenshots.
+No infrastructure execution, Git or cleanup is delegated. Root alone prepares,
+executes and inventories exactly owned local runtime resources and writes shared
+docs. Both writers preserve each other's edits. A shared-contract change pauses
+this parallel wave for its existing technology authority.
+
+Two inspected path adjustments are authorized inside Task 4: the definition
+owner may update only the first test's temporary nine-count/absence assertions
+and its name in `packages/adapters/test/inventory-operations-definition.test.ts`.
+The case owner may add a final optional fixed-definition configuration argument
+to `e2e/helpers/content-directory.ts`, preserving current Directory defaults and
+all timeout/diagnostic/ownership behavior. This reuses the existing lifecycle
+rather than duplicating it; no arbitrary callback or product API is introduced.
+Inventory's private fixed owned-preview database observation belongs in its new
+helper and must return bounded facts, not credentials or raw payloads.
+
+Root prepares only fresh ignored configuration for
+`factory-t10-inventory-ffeaac8c0d97`, under
+`generated/.inventory-acceptance-ffeaac8c0d97`. Workbench is loopback port 58002,
+Control Plane 58001. Secrets are generated into the local environment file only;
+no provider key is supplied. Exact Compose configuration validates quietly and
+Git confirms the config/owner files are ignored. State is prepared, with no
+runtime started. Image construction waits for reviewed Task 4 source and the
+existing short definition lane. Docker Engine 29.6.2 responds. No historical
+blocked-cleanup resource is touched.
+
+Verifier CI run `35926255343` at `20cb4519` is now successful. Presentation CI
+run `35926842005` at `7c3a4960` remains active at this checkpoint.
+
+Root owns the bounded `scripts/regression.mjs` and `scripts/regression.test.mjs`
+follow-through: include the new Inventory definition, emitted UI and exact
+contract/historical-output suites in their existing three definition-lane steps.
+Keep all eight steps, safe summaries, provider-free behavior and failure stopping.
+This closes a concrete selection gap without adding a new harness or gate.
+
+The short-lane selection change reproduces RED (10 pass, two fail), then passes
+12/12. Independent scoped review also passes 12/12 and closes 0/0/0, retaining
+all unchanged harness behavior. Before running the expanded lane, root identifies
+that the Inventory browser test unconditionally rewrites the accepted synthetic
+screenshots. Root therefore additionally owns a test-only capture switch in
+`packages/compiler/test/inventory-operations-presentation.test.ts`: all functional
+and geometry checks always run; only PNG writes require explicit
+`FACTORY_CAPTURE_INVENTORY_UI=1`. This preserves historical evidence during
+ordinary regression and introduces no runtime behavior or acceptance gate.
+
+Presentation CI run `35926842005` completes successfully on both Node jobs at
+`7c3a4960`. The capture-only regression correction passes all 13 browser cases
+with every accepted PNG hash unchanged; independent scoped review closes 0/0/0
+and retains the two-script review. The source UI is unchanged. Task 4 remains
+active; no actual runtime has been started or product acceptance claimed.
+
+### 2026-09-24 Shared follow-up behavior discrepancy discovered
+
+A stronger Inventory test supplies real answered clarification context with a
+still-required unsupported capability. The current registered-definition branch
+in `openai-interpreter.ts` rejects every remaining clarification in that state.
+Existing Expense/Restaurant tests explicitly require this fail-closed refusal;
+ADR-0065 REG-006 preserves the historical behavior. Therefore this is not an
+Inventory-only regression and the data writer must not remove the global guard.
+The new tests must preserve initial questions, verify unchanged prior material
+requirements on refusal, and verify supported-scope resolution separately. PM
+also authorizes only the new catalogue key and stale test-title correction in
+`packages/adapters/test/requirement-interpreter.test.ts`.
+
+A product UX gap remains: provider guidance says to retain still-material
+questions, while the public error is the generic `requirement.output_invalid`
+422 message. Rejection protects against silent approximation but does not prove
+a helpful ordinary-user resolution. Record this as the next shared-flow decision
+after Inventory's actual family closure, ahead of further label-count expansion.
+Any changed public disposition/error or historical follow-up acceptance needs
+the existing Tech Lead/decision authority first. No production adapter change,
+historical test weakening or completed follow-up UX claim is authorized here.
+
+### 2026-09-24 Task 4 source acceptance and actual-run authorization
+
+Independent ordinary review verifies the eleven frozen data/case hashes and
+closes new P0/P1/P2 0/0/0. It retains the reviewed short-lane and capture-only
+corrections. Final data tests pass 227/227, compiler compatibility 117/117,
+case-index 5/5, helper 3/3, build/typecheck/formatting and case listing. Scoped
+case checking has no owned errors but retains five inherited Restaurant helper
+diagnostics; do not claim a whole-E2E typecheck pass. Root's actual expanded
+`pnpm regression definitions` completes all eight steps with exit 0.
+
+PM accepts the fourteen owned source/test paths and root-owned evidence/status
+updates for bounded branch delivery, then authorizes the actual local Inventory
+run on prepared project `factory-t10-inventory-ffeaac8c0d97`. Source evidence is
+`docs/acceptance/evidence/inventory-operations/task4-source/README.md`. This is
+source acceptance only: counts become ten registered / nine locally accepted /
+five demonstrated runtime families. The real worker/PostgreSQL journey, responsive
+image judgment, API restart, timing and exact scoped cleanup remain open, followed
+by the already required final family QA and release judgment. Existing cleanup
+residuals and the separate shared follow-up UX gap remain explicit.

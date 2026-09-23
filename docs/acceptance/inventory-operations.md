@@ -11,8 +11,9 @@ cases, 47 compatibility/export cases and 38 verifier cases. Actual PostgreSQL-ba
 worker/lifecycle and complete-product acceptance remain open.
 Authority: accepted ADR-0076 and the active PM ledger. This file defines the
 business and visual observations before implementation. It adds no approval gate.
-The catalogue remains nine locally accepted definitions across five demonstrated
-runtime families until actual Inventory evidence and the existing review close.
+Inventory data/case source is now accepted: ten registered definitions, with nine
+locally accepted definitions across five demonstrated runtime families. The
+Inventory journey still needs actual runtime evidence and the existing final review.
 
 ## Scenario and useful surfaces
 

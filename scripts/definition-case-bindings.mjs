@@ -82,6 +82,14 @@ export const definitionCaseBindings = Object.freeze([
     evidencePath: "docs/acceptance/evidence/content-directory",
     protectedFixture: false,
   }),
+  binding({
+    definitionKey: "supplies-stockroom",
+    runtimeFamily: "inventory-operations/v1",
+    caseId: "supplies-stockroom-local",
+    casePath: "e2e/inventory-operations.spec.ts",
+    evidencePath: "docs/acceptance/evidence/inventory-operations",
+    protectedFixture: false,
+  }),
 ]);
 
 export const admittedDefinitionKeys = Object.freeze(

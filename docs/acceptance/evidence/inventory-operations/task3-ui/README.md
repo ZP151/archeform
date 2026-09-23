@@ -90,3 +90,9 @@ seven package-export checks; compiler build/typecheck pass. Independent source
 checks pass 2/2 for strict emitted TSX and literal metadata escaping, retaining
 the 13-case browser run without rewriting its screenshots. PM accepts this
 bounded source/presentation slice; complete product acceptance remains Task 4.
+
+Later Task 4 regression integration makes synthetic PNG capture opt-in with
+`FACTORY_CAPTURE_INVENTORY_UI=1`. Ordinary runs still execute every browser,
+geometry and recovery assertion, but preserve this accepted screenshot batch.
+The source/test identities above describe the original accepted Task 3 revision;
+the subsequent capture-only test change does not change generated UI behavior.
