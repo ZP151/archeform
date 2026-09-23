@@ -76,17 +76,24 @@ expect(() =>
 authorization, receipt and conditional-write patterns. **Produces:** ADR-0074
 bounded list/detail and create/correct/show/hide behavior through actual HTTP seams.
 
-- [ ] RED: reader list/detail must not reveal hidden entries; SQL wildcard-shaped
+- [x] RED: reader list/detail must not reveal hidden entries; SQL wildcard-shaped
       search remains literal; invalid/duplicate queries fail; reads use bounded
       database predicates rather than loading the entire table.
-- [ ] RED: invalid values perform no writes; stale and concurrent same-version
+- [x] RED: invalid values perform no writes; stale and concurrent same-version
       commands admit one winner; replay survives restart; conflicting key/body is 409.
-- [ ] GREEN: add profile-scoped emitted methods and controller/proxy dispatch,
+- [x] GREEN: add profile-scoped emitted methods and controller/proxy dispatch,
       preserving generic routes for all prior products. Transactions include record,
       receipt and safe audit/effects. Deny alternate generic mutation bypasses.
-- [ ] Run `pnpm --filter @factory/compiler test -- content-directory-runtime.test.ts content-directory-contract.test.ts definition-data-compatibility.test.ts`.
-- [ ] Verify the actual Prisma adapter with two rows, hidden reads, transactional
+- [x] Run `pnpm --filter @factory/compiler test -- content-directory-runtime.test.ts content-directory-contract.test.ts definition-data-compatibility.test.ts`.
+- [x] Verify the actual Prisma adapter with two rows, hidden reads, transactional
       failure and concurrent writes before claiming database correctness.
+
+Root confirms 162 focused/compatibility cases, emitted API and package typechecks,
+and a corrected actual PostgreSQL probe. The first probe's business assertions
+passed but its Windows in-process client cleanup failed. Both owned containers
+were removed; automatic command approval blocked subsequent temporary-client
+directory removal, so two scratch paths remain recorded as `cleanup_required` in
+the ledger. This narrow runtime result is not full family or cleanup acceptance.
 
 ## Task 3: admit canonical data and meaningful interpretation
 

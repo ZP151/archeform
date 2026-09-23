@@ -16,8 +16,10 @@ numeric/calculated cases and reproducible Prisma client generation, with one
 independent ordinary review. ADR-0074 is accepted through the existing standing
 independent-review authority. The private directory profile and fixed old-eight
 baseline pass 127 focused/compatibility tests and compiler typecheck, with its
-single review finding corrected and rechecked. Generated business runtime is next;
-no new-family product is yet accepted.
+single review finding corrected and rechecked. The generated Directory business
+runtime now passes 162 focused/compatibility cases, emitted API and package
+typechecks, and a real PostgreSQL probe. Definition admission and presentation
+remain next; no new-family product is yet accepted.
 Continuous delivery is a separate tracked outcome: CI exists, but durable upgrades,
 rollback and hosted operation remain unverified. Source inspection confirms the
 Preview runner removes its owned volumes and uses per-preview resource identity;
@@ -33,9 +35,12 @@ or a production deployment adapter.
 
 The host's Docker Desktop startup blocker is resolved: root quarantined only the
 two verified zero-byte IPC directories and confirmed Engine `29.6.2` responds.
-No database reset or application-volume deletion was used. Actual Directory
-PostgreSQL and generated-runtime acceptance remain pending implementation; engine
-availability is not itself product acceptance.
+No database reset or application-volume deletion was used. Directory's real
+PostgreSQL business probe passes after a Windows client-lifetime fixture fix.
+Both owned database containers were removed. Two temporary client directories
+remain `cleanup_required` because automatic command approval blocked their removal;
+the failed first attempt and exact residual paths remain in the PM ledger. Full
+generated-product acceptance is still pending.
 
 The root checkout contains separately owned Eval V2 work. This Goal works in the
 existing isolated `codex/definition-regression-entry` branch and preserves that

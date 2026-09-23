@@ -19,6 +19,8 @@ import {
   renderTaskPrismaStore,
   renderTaskApi,
 } from "./task-mutation-contract.js";
+import { selectContentDirectoryProfile } from "./content-directory-contract.js";
+import { renderDirectoryRuntime, renderDirectoryPrismaStore, renderDirectoryApi, renderDirectoryProxy } from "./content-directory-runtime.js";
 import {
   appointmentPrismaMigration,
   appointmentPrismaSchema,
@@ -4017,6 +4019,7 @@ export function generateApplicationBundle(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): GeneratedApplicationBundle {
+  const directoryProfile = selectContentDirectoryProfile(input.graph, input.compositionLock);
   const plan = buildCompilationPlan(input);
   const compilationInput = buildCompilationInput(input, options);
   const graph = compilationInput.graph;
@@ -4286,7 +4289,9 @@ export function generateApplicationBundle(
     {
       path: "web/app/api/[...path]/route.ts",
       render: () =>
-        approvalEntity
+        directoryProfile
+          ? renderDirectoryProxy(renderWebProxyRoute(false, !!identityPolicy), directoryProfile)
+          : approvalEntity
           ? renderWebProxyRoute(
               restaurantRuntimeEnabled,
               !!identityPolicy,
@@ -4405,20 +4410,23 @@ export function generateApplicationBundle(
       path: "api/src/main.ts",
       render: () =>
         restaurantRuntime()?.main ??
-        renderAppointmentApiDispatch(
-          renderTaskApi(
-            renderApiMain(
-              graph,
-              usePackageLineConfigurationHandler,
-              usePackageMoneyPricingHandler,
-              identityPolicy,
-              approvalEntity,
+        renderDirectoryApi(
+          renderAppointmentApiDispatch(
+            renderTaskApi(
+              renderApiMain(
+                graph,
+                usePackageLineConfigurationHandler,
+                usePackageMoneyPricingHandler,
+                identityPolicy,
+                approvalEntity,
+              ),
+              !!identityPolicy,
+              taskEntity,
+              hasTaskCorrection(graph, taskEntity),
             ),
-            !!identityPolicy,
-            taskEntity,
-            hasTaskCorrection(graph, taskEntity),
+            appointmentProfile,
           ),
-          appointmentProfile,
+          directoryProfile,
         ),
     },
     ...(calculatedApproval ? calculatedRuntimeFiles() : []),
@@ -4450,44 +4458,50 @@ export function generateApplicationBundle(
       path: "api/src/application-runtime.ts",
       render: () =>
         restaurantRuntime()?.applicationRuntimeContract ??
-        renderAppointmentMutationRuntime(
-          renderTaskMutationRuntime(
-            renderApplicationRuntime(
+        renderDirectoryRuntime(
+          renderAppointmentMutationRuntime(
+            renderTaskMutationRuntime(
+              renderApplicationRuntime(
+                graph,
+                useResolvedContributions,
+                usePackageCartHandler,
+                usePackageLineConfigurationHandler,
+                usePackageMoneyPricingHandler,
+                catalogEntityKey,
+                orderEntityKey,
+                orderOperationsEntityKey,
+                useGenericOrderOperationsPersistence,
+                notificationOutbox,
+                approvalEntity,
+              ),
               graph,
-              useResolvedContributions,
-              usePackageCartHandler,
-              usePackageLineConfigurationHandler,
-              usePackageMoneyPricingHandler,
-              catalogEntityKey,
-              orderEntityKey,
-              orderOperationsEntityKey,
-              useGenericOrderOperationsPersistence,
-              notificationOutbox,
-              approvalEntity,
+              taskEntity,
             ),
-            graph,
-            taskEntity,
+            appointmentProfile,
           ),
-          appointmentProfile,
+          directoryProfile,
         ),
     },
     {
       path: "api/src/prisma-record-store.ts",
       render: () =>
-        renderAppointmentPrismaStore(
-          renderTaskPrismaStore(
-            renderPrismaRecordStore(
+        renderDirectoryPrismaStore(
+          renderAppointmentPrismaStore(
+            renderTaskPrismaStore(
+              renderPrismaRecordStore(
+                graph,
+                restaurantRuntimeEnabled,
+                useGenericOrderOperationsPersistence,
+                notificationOutbox !== undefined,
+                approvalEntity,
+                appointmentProfile,
+              ),
               graph,
-              restaurantRuntimeEnabled,
-              useGenericOrderOperationsPersistence,
-              notificationOutbox !== undefined,
-              approvalEntity,
-              appointmentProfile,
+              taskEntity,
             ),
-            graph,
-            taskEntity,
+            appointmentProfile,
           ),
-          appointmentProfile,
+          directoryProfile,
         ),
     },
     ...(notificationOutbox

@@ -9,6 +9,11 @@ import {
   approvalReceiptMigration,
 } from "../../approval-mutation-contract.js";
 import { selectAppointmentRuntimeProfile } from "../../appointment-mutation-contract.js";
+import { selectContentDirectoryProfile } from "../../content-directory-contract.js";
+import {
+  directoryReceiptSchema,
+  directoryReceiptMigration,
+} from "../../content-directory-runtime.js";
 import {
   assertValidApplicationGraph,
   type ApplicationGraphV1,
@@ -37,6 +42,7 @@ export interface DatabasePlanV1 {
   readonly approvalEntity?: string;
   readonly taskEntity?: string;
   readonly appointmentEntity?: string;
+  readonly directoryEntity?: string;
   readonly orderOperationReceiptSchema?: string;
   readonly includeGenericCommerceLineItems: boolean;
   readonly additionalSchemaFragments: readonly string[];
@@ -387,6 +393,7 @@ function renderPrismaSchema(
   taskEntity?: string,
   appointmentEntity?: string,
   names?: DatabaseNames,
+  directoryEntity?: string,
 ): string {
   const duplicateRelationSuffixes = duplicateEndpointRelationSuffixes(graph);
   const relationFields = (entityKey: string): readonly string[] =>
@@ -462,7 +469,8 @@ function renderPrismaSchema(
       ...fields,
       ...(approvalEntity === entity.key ||
       taskEntity === entity.key ||
-      appointmentEntity === entity.key
+      appointmentEntity === entity.key ||
+      directoryEntity === entity.key
         ? ["  version Int @default(0)"]
         : []),
       ...relationFields(entity.key),
@@ -596,6 +604,7 @@ function renderInitialMigration(
   taskEntity?: string,
   appointmentEntity?: string,
   names?: DatabaseNames,
+  directoryEntity?: string,
 ): string {
   const duplicateRelationSuffixes = duplicateEndpointRelationSuffixes(graph);
   const createTables = graph.domain.entities.map((entity) => {
@@ -603,7 +612,8 @@ function renderInitialMigration(
     const columns = [
       ...(approvalEntity === entity.key ||
       taskEntity === entity.key ||
-      appointmentEntity === entity.key
+      appointmentEntity === entity.key ||
+      directoryEntity === entity.key
         ? ['"version" INTEGER NOT NULL DEFAULT 0']
         : []),
       `"id" TEXT NOT NULL${sqlConstraint(names, objectId("pk", entity.key))} PRIMARY KEY`,
@@ -1178,6 +1188,10 @@ function buildDatabasePlan(input: PublishedCompilationInput): DatabasePlanV1 {
   const graph = assertValidApplicationGraph(input.graph);
   const approvalEntity = selectApprovalCorrection(graph, input.compositionLock);
   const taskEntity = selectTaskContract(graph, input.compositionLock);
+  const directoryProfile = selectContentDirectoryProfile(
+    graph,
+    input.compositionLock,
+  );
   const appointmentProfile = selectAppointmentRuntimeProfile(
     graph,
     input.compositionLock,
@@ -1196,6 +1210,7 @@ function buildDatabasePlan(input: PublishedCompilationInput): DatabasePlanV1 {
     graph,
     ...(approvalEntity ? { approvalEntity } : {}),
     ...(taskEntity ? { taskEntity } : {}),
+    ...(directoryProfile ? { directoryEntity: directoryProfile.entity } : {}),
     ...(appointmentProfile
       ? { appointmentEntity: appointmentProfile.appointmentEntity }
       : {}),
@@ -1204,11 +1219,15 @@ function buildDatabasePlan(input: PublishedCompilationInput): DatabasePlanV1 {
       : { orderOperationReceiptSchema }),
     includeGenericCommerceLineItems:
       context.useGenericOrderOperationsPersistence,
-    additionalSchemaFragments: context.additionalPrismaSchemaFragments,
+    additionalSchemaFragments: directoryProfile
+      ? [...context.additionalPrismaSchemaFragments, directoryReceiptSchema]
+      : context.additionalPrismaSchemaFragments,
     ...(orderOperationReceiptMigration === undefined
       ? {}
       : { orderOperationReceiptMigration }),
-    additionalMigrationFragments: context.additionalMigrationFragments,
+    additionalMigrationFragments: directoryProfile
+      ? [...context.additionalMigrationFragments, directoryReceiptMigration]
+      : context.additionalMigrationFragments,
     hasRestaurantRuntime: context.restaurantRuntimeEnabled,
     ...(prismaSchema === undefined
       ? {}
@@ -1880,6 +1899,7 @@ function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
         plan.taskEntity,
         plan.appointmentEntity,
         names,
+        plan.directoryEntity,
       );
   const migration = plan.initialMigrationOverride
     ? plan.initialMigrationOverride
@@ -1892,6 +1912,7 @@ function renderDatabaseFiles(plan: DatabasePlanV1): readonly GeneratedFile[] {
         plan.taskEntity,
         plan.appointmentEntity,
         names,
+        plan.directoryEntity,
       );
   const [prismaIdentifiers, sqlIdentifiers] = assertUniqueDatabaseStorageNames(
     schema,
