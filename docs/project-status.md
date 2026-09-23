@@ -14,13 +14,21 @@ cross-role journey. The eight-definition baseline below is unchanged.
 The short-lane continuation now passes all eight steps, including 97 emitted
 numeric/calculated cases and reproducible Prisma client generation, with one
 independent ordinary review. ADR-0074 is accepted through the existing standing
-independent-review authority; the directory's exact profile and preserved
-old-eight baseline are in implementation. No new-family product is yet accepted.
+independent-review authority. The private directory profile and fixed old-eight
+baseline pass 127 focused/compatibility tests and compiler typecheck, with its
+single review finding corrected and rechecked. Generated business runtime is next;
+no new-family product is yet accepted.
 Continuous delivery is a separate tracked outcome: CI exists, but durable upgrades,
 rollback and hosted operation remain unverified. Source inspection confirms the
 Preview runner removes its owned volumes and uses per-preview resource identity;
 it must not be repurposed as durable deployment. Target hosting information has
 been requested while independent local work proceeds.
+
+The current host's Docker Desktop startup is failing on inaccessible local IPC
+endpoints. A stale zero-byte inference endpoint was archived, but the engine
+remains unavailable; no database reset or application-volume deletion was used.
+Compiler/browser preflight works without Docker. Actual Directory PostgreSQL and
+generated-runtime acceptance remain pending engine recovery, not waived.
 
 The root checkout contains separately owned Eval V2 work. This Goal works in the
 existing isolated `codex/definition-regression-entry` branch and preserves that

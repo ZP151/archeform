@@ -5928,3 +5928,58 @@ remain verified. PM accepts the bounded tooling result; controller may commit
 and push the exact scripts and reconciled planning/evidence documents. New
 Directory implementation remains unaccepted and outside this tooling commit.
 See `docs/acceptance/definition-regression-lane.md` for scope and open timings.
+
+### 2026-09-24 Directory category comparison clarified
+
+Task 1 review found one P2: an uppercase/lowercase approximation missed a sharp-S
+duplicate and rejected distinct dotted/dotless categories. Existing mutation tests
+could fail from stale seed categories instead of exercising this rule. The same
+review verified all 709 captured source digests and the fixed eight-output baseline.
+
+Tech Lead amended only ADR-0074 FAM-004/VER-001 to define trim + NFC followed by
+fully escaped anchored literal ECMAScript `/iu` matching (Unicode simple folding,
+not full folding or locale collation). The exact amended SHA-256 is
+`b4a99874f595006c9809ff2a09a429e253bb3b7fe6aec54aefd0cc1abeb2c9e3`.
+Independent `/root/directory_decision_review` returns
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 `0/0/0`, no material uncertainty.
+PM accepts this amendment under the same founder standing authority. It supersedes
+the earlier ADR hash for implementation; no new dependency or product scope.
+
+The existing Task 1 owner may correct only the selector and its focused tests.
+Use real composed category fixtures with consistent seed values to reproduce both
+false acceptance and false rejection; retain all earlier baseline bytes. The
+implementation P2 remains open until GREEN and its scoped recheck. No new full
+audit or unrelated QA cycle is required for this correction.
+
+### 2026-09-24 Directory Task 1 complete; runtime task authorized
+
+Root verified the corrected current tree: 50 directory cases plus 77 existing
+compatibility cases pass (127/127), and compiler typecheck passes. The independent
+reviewer's focused recheck closes the only P2 and returns P0/P1/P2 `0/0/0`, ready
+for dependent runtime work. The fixed old-eight baseline, all 709 captured source
+hashes and capture receipt remain unchanged. The retained one-shot capture script
+keeps its original receipt-bound bytes; current source/test/fixture formatting is
+checked separately. No compiler facade or generated output changed in Task 1.
+
+Private frozen interface: `selectContentDirectoryProfile(graph, compositionLock)`
+returns detached/frozen `{ key: "content-directory", version: "1.0.0", graphHash,
+entity, workflow, fields: { title, summary, body, category, status }, roles: {
+reader, curator }, pages: { list, form, detail }, categories }`. It is not exported
+through the public compiler package. This is an internal implementation milestone,
+not new-family product acceptance or a repository release.
+
+Root authorizes serialized Task 2 owner `directory_profile_implementation` to
+implement the accepted generated read/mutation/store contract in a new private
+`packages/compiler/src/content-directory-runtime.ts`, narrow
+`packages/compiler/src/index.ts` integration, and focused
+`packages/compiler/test/content-directory-runtime.test.ts` with fixture support.
+Private-module separation does not change the accepted API or Graph contract.
+Keep old-eight snapshots fixed, public exports unchanged and all historical output
+bytes equal. No adapter catalogue admission, UI, verifier, dependency, cloud or
+provider writes are in this task. Existing profile changes require a concrete
+test failure and must preserve the frozen interface; stop for contract changes.
+
+Root retains docs, integration, resource ownership and Git. Docker is not currently
+available, so real PostgreSQL claims remain pending; emitted/in-memory/probe tests
+may proceed and must be reported as that narrower evidence. The shared-contract
+integration and final product gate remain at the completed family boundary.

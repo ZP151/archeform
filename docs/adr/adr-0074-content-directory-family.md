@@ -125,7 +125,15 @@ paid resources, cloud actions and deployment remain separately governed.
   local catalogue visibility, not platform Product Publish or web deployment.
   No delete, approval, terminal decision, reader write or ownership claim.
 - **FAM-004**: Category options are 2..12 distinct reviewed strings, each
-  1..40 characters, with duplicates rejected after trim/NFC/case folding.
+  1..40 characters. For duplicate comparison, normalize each value with
+  ECMAScript `trim().normalize("NFC")`, escape every regular-expression syntax
+  character in one normalized value, and test the other against the fully
+  anchored literal pattern `^(?:escapedValue)$` with flags `iu`. This uses
+  native ECMAScript Unicode-aware simple case folding, not locale collation
+  or full case folding: `Straße` and `STRAẞE` are duplicates; `i` and `ı`
+  remain distinct; `ß` and `ss` intentionally remain distinct. Do not use
+  upper/lowercase conversion as an approximation or introduce folding tables
+  or dependencies. Rejection applies when any pair compares equal.
   The first definition uses `Guides`, `Reference`, `Checklists`. Category
   variation is supported data; it does not by itself count as a distinct job.
   Exactly three page intents bind to the entity: list, form and detail. The
@@ -370,7 +378,10 @@ paid resources, cloud actions and deployment remain separately governed.
   `pnpm --filter @factory/compiler test -- content-directory-runtime.test.ts content-directory-presentation.test.ts definition-data-compatibility.test.ts`.
   Tests cover exact positive witness; missing/extra fields, swapped roles,
   widened permissions, reversed transitions, unknown family/version, wrong
-  locks/digests/owner binding, forged query/body, wildcard literals, Unicode,
+  locks/digests/owner binding, forged query/body, wildcard literals, Unicode
+  category comparison under FAM-004 (including `Straße`/`STRAẞE` rejection,
+  `i`/`ı` and `ß`/`ss` distinction, trim/NFC equivalence and literal regex
+  metacharacters),
   HTML-shaped text and attempted generic-path bypass. Run the malformed matrix
   through actual compiler/page seams, not only a selection helper.
 - **VER-002**: Run affected adapter/compiler typecheck, build and lint after

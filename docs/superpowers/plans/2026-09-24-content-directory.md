@@ -18,7 +18,7 @@ and PostgreSQL 16. Existing local Lucide SVGs; no new dependencies or services.
 ## Global constraints
 
 - ADR-0074 is accepted at SHA-256
-  `4b9b741c074794c1d20da960eca9fb95f795fca4bda6dbc7932e100eb29f5341` through
+  `b4a99874f595006c9809ff2a09a429e253bb3b7fe6aec54aefd0cc1abeb2c9e3` through
   the standing independent-review authority recorded in the active ledger.
 - Fields, limits, roles, routes, receipt semantics and errors are specified by
   ADR-0074 FAM-001..007 and API-001..007, not inferred from this plan.
@@ -41,16 +41,16 @@ unrelated family, and throws a bounded error for malformed directory candidates.
 The implementation owner freezes its concrete TypeScript profile in the ledger
 before the dependent emitter work. Nothing is exported through the public package.
 
-- [ ] Capture actual old-eight Published inputs, separate locks and ordered bundle
+- [x] Capture actual old-eight Published inputs, separate locks and ordered bundle
       digests from the recorded unmodified base. Reuse
       `currentDefinitionDataCompilationEvidence` and verify relevant source identity
       before capture. Store fixed expected values, not a runtime-generated expectation.
-- [ ] RED: positive fixture selects the profile; wrong digest/binding, extra field,
+- [x] RED: positive fixture selects the profile; wrong digest/binding, extra field,
       widened grants, wrong state/transition, page binding and incomplete candidate
       must fail. Unrelated eight definitions remain unselected and byte-identical.
-- [ ] GREEN: implement the private exact selector using existing schemas and
+- [x] GREEN: implement the private exact selector using existing schemas and
       manifest digests; no generic CRUD fallback for malformed candidates.
-- [ ] Run `pnpm --filter @factory/compiler test -- content-directory-contract.test.ts definition-data-compatibility.test.ts`.
+- [x] Run `pnpm --filter @factory/compiler test -- content-directory-contract.test.ts definition-data-compatibility.test.ts`.
 
 Representative assertion (test fixtures supply actual Published inputs):
 
