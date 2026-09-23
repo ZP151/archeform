@@ -51,8 +51,11 @@ remains unverified. Actual remote CI progresses beyond repaired formatting and
 historical count checks, but still exposes old generic Appointment admission and
 export-surface test failures. Source-history checkout and historical toolchain
 receipt assertions are corrected; ADR-0077's bounded old/current Appointment
-distinction is implemented in disjoint files and under independent review. Complete CI
-success is not claimed. Source inspection confirms the
+distinction now passes 99 focused cases and independent task review, Terra QA and
+Sol judgment at 0/0/0. PM accepts its bounded source delivery. Remote run
+`35919451616` predates that correction and retains 11 failures across the four
+historical booking suites; a new run must establish the post-fix result. Complete
+CI success is not claimed. Source inspection confirms the
 Preview runner removes its owned volumes and uses per-preview resource identity;
 it must not be repurposed as durable deployment. Target hosting information has
 been requested while independent local work proceeds.

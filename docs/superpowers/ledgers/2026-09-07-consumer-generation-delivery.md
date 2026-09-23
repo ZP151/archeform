@@ -6837,3 +6837,44 @@ transaction behavior with provider-free RED/GREEN, then actual emitted Prisma
 cases run against that root-owned PostgreSQL fixture. Review must cover atomic
 balance/movement/audit/receipt, replay, bounds, roles, query predicates, generic
 route denial and concurrency. Existing historical cleanup residuals stay untouched.
+
+Task 1 is delivered as `4e55ca5d72c0ae68788fe7c8fb4f552ec752b966`; root verifies
+the pushed branch tip equals local HEAD. Remote CI run `35919451616` starts for
+that exact source. It still predates the independently reviewed booking fix and
+does not establish whole-branch success. Task 2 starts with a failing emitted
+Inventory journey at its deliberate temporary runtime guard.
+
+### 2026-09-24 Historical booking implementation and focused review
+
+The serialized writer implements only the two authorized admission/test paths.
+Initial RED has four expected historical failures out of 64 cases. The complete
+private witness restores old generic behavior without selecting current Appointment
+or bypassing numeric admission. Current-profile checks are unchanged. Writer
+checks pass 78 historical cases, 60 Appointment cases (17 unselected), compiler
+typecheck and formatting.
+
+Independent Astra `historical_booking_review` finds no production defect and one
+P2: separate Published input asserted determinism but omitted historical output
+comparison. Its independent probe identifies exactly five digest-bearing metadata
+files. The test-only correction first reproduces that comparison failure, then
+inverses only the two input-derived digests at exact paths and occurrence counts,
+asserting the complete frozen manifest and bundle hashes twice for both input
+forms. Six negative cases guard against overly broad normalization. Final focused
+tests pass 99/99. The reviewer closes P0/P1/P2 0/0/0 and retains production review.
+Root independently verifies source, test and historical fixture hashes and diff
+whitespace checks. Evidence is in
+`docs/acceptance/evidence/appointment-booking/historical-compiler-admission/README.md`.
+The required independent Terra QA and Sol judgment cover this authority boundary
+before source delivery; no broad audit is repeated for the test-only correction.
+
+Independent Terra `inventory_contract_qa`, assigned this separate bounded task,
+verifies frozen identities and independently passes 99/99 admission cases,
+targeted formatting and diff checks at P0/P1/P2 0/0/0. Independent Sol
+`inventory_contract_release_review` verifies the complete witness and integrity
+checks, unchanged current-profile branch, both real seams and closed historical
+byte normalization; final P0/P1/P2 is 0/0/0. PM accepts only the two source/test
+paths and their root-owned evidence/status updates for bounded delivery. Preserve
+unrelated active Inventory Task 2 files. Remote run `35919451616` predates this
+fix and fails 11 cases in the four known historical suites on both Node matrix
+jobs; all source/export corrections already delivered are retained. The next CI
+run supplies post-fix evidence; no main integration or release is authorized.
