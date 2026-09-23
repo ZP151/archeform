@@ -256,6 +256,7 @@ const historicalDefinitionKeys = [
 const admittedDefinitionKeys = [
   ...historicalDefinitionKeys,
   "appointment-booking-v1",
+  "knowledge-resource-directory",
 ] as const;
 
 const vagueApprovalBrief = [
@@ -991,7 +992,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       ).toBe(false);
     }
   });
-  it("keeps seven historical and one append-only coherent registrations", () => {
+  it("keeps seven historical and two append-only coherent registrations", () => {
     expect(
       definitionSelectionCatalogue.map((entry) => entry.definitionKey),
     ).toEqual(admittedDefinitionKeys);
@@ -2077,7 +2078,9 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         generatedInterpretation: { anyOf: unknown[] };
       };
     };
-    expect(schema.properties.definitionSelection.anyOf).toHaveLength(9);
+    expect(schema.properties.definitionSelection.anyOf).toHaveLength(
+      admittedDefinitionKeys.length + 1,
+    );
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({
       requirement: interpretation.spec,

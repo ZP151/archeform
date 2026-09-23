@@ -229,8 +229,24 @@ export async function runRoleJourneyProbe(
     {
       headers: journeyHeaders(journey),
       body: journey.body,
+      ...(journey.directoryRead
+        ? { directoryRead: { ...journey.directoryRead, recordId: recordId! } }
+        : {}),
     },
   );
+  if (journey.directoryRead && result.directoryReadMatches !== true) {
+    return failedStep(
+      context.entry,
+      "role-journey",
+      "directory.read_mismatch",
+      "Directory read did not match the bounded visibility contract.",
+      result.durationMs,
+      {
+        ...statusFacts(result.status),
+        ...journeyFacts(journey.principal, journey.action),
+      },
+    );
+  }
   if (result.status === action.expectedStatus) {
     return passedStep(
       context.entry,

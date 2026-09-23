@@ -38,6 +38,8 @@ export type BoundedCommandResult = {
 };
 
 export type BoundedRequestResult = {
+  /** Directory-only bounded comparison; response content never crosses this boundary. */
+  readonly directoryReadMatches?: boolean;
   readonly status: number;
   readonly ok: boolean;
   readonly durationMs: number;
@@ -56,11 +58,19 @@ export type BoundedRequestResult = {
  * neither is ever persisted or echoed into evidence.
  */
 export type RequestOptions = {
+  readonly directoryRead?: DirectoryReadExpectation;
   readonly headers?: readonly {
     readonly name: string;
     readonly value: string;
   }[];
   readonly body?: string;
+};
+
+export type DirectoryReadExpectation = {
+  readonly kind: "list" | "detail";
+  readonly listedOnly: boolean;
+  readonly presence: "present" | "absent";
+  readonly recordId: string;
 };
 
 const httpMethods: readonly HttpMethod[] = [
@@ -412,6 +422,18 @@ export class VerificationEnvironment {
       );
     }
     if (options) {
+      if (
+        options.directoryRead !== undefined &&
+        (method !== "GET" ||
+          port !== "api" ||
+          captureRecordId ||
+          !validDirectoryExpectation(options.directoryRead))
+      ) {
+        throw new VerificationLifecycleError(
+          "invalid_directory_read",
+          "Directory read expectations must be bounded declared fixtures.",
+        );
+      }
       if (options.headers !== undefined) {
         if (
           !Array.isArray(options.headers) ||
@@ -475,15 +497,30 @@ export class VerificationEnvironment {
         (response?.status ?? 0) < 300
           ? await captureCreatedRecordId(response)
           : undefined;
+      const directoryReadMatches =
+        options?.directoryRead === undefined
+          ? undefined
+          : response.status === 200 &&
+            (await compareDirectoryRead(
+              response,
+              options.directoryRead,
+              controller.signal,
+            ));
       return {
         status: response?.status ?? 0,
         ok: response?.ok ?? false,
         durationMs: this.elapsed(startedMs),
         ...(recordId === undefined ? {} : { recordId }),
+        ...(directoryReadMatches === undefined ? {} : { directoryReadMatches }),
       };
     } catch {
       // Network failures and timeouts are bounded results, never raw output.
-      return { status: 0, ok: false, durationMs: this.elapsed(startedMs) };
+      return {
+        status: 0,
+        ok: false,
+        durationMs: this.elapsed(startedMs),
+        ...(options?.directoryRead ? { directoryReadMatches: false } : {}),
+      };
     } finally {
       clearTimeout(timer);
     }
@@ -492,6 +529,115 @@ export class VerificationEnvironment {
 
 const maximumCapturedResponseBytes = 16 * 1024;
 const capturedRecordIdPattern = /^[a-zA-Z0-9._~-]{1,64}$/;
+
+function validDirectoryExpectation(value: DirectoryReadExpectation): boolean {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    Object.keys(value).length === 4 &&
+    ["list", "detail"].includes(value.kind) &&
+    typeof value.listedOnly === "boolean" &&
+    ["present", "absent"].includes(value.presence) &&
+    (value.kind !== "detail" || value.presence === "present") &&
+    typeof value.recordId === "string" &&
+    capturedRecordIdPattern.test(value.recordId)
+  );
+}
+// 64 KiB covers a 12,000-code-unit body even at three UTF-8 bytes per code unit,
+// plus bounded fields. Larger list responses fail closed. Authored probes use
+// fewer than twenty small fixtures; this is not permission to truncate a page.
+const maximumDirectoryResponseBytes = 64 * 1024;
+async function compareDirectoryRead(
+  response: Response,
+  expected: DirectoryReadExpectation,
+  signal: AbortSignal,
+): Promise<boolean> {
+  if (!response.body || signal.aborted) return false;
+  const reader = response.body.getReader(),
+    chunks: Uint8Array[] = [];
+  let total = 0,
+    aborted = false;
+  const abort = () => {
+    aborted = true;
+    void reader.cancel().catch(() => undefined);
+  };
+  signal.addEventListener("abort", abort, { once: true });
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (aborted || signal.aborted) return false;
+      if (done) break;
+      total += value.byteLength;
+      if (total > maximumDirectoryResponseBytes) return false;
+      chunks.push(value);
+    }
+    const parsed: unknown = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)),
+    );
+    const own = (
+      value: unknown,
+      keys: readonly string[],
+    ): value is Record<string, unknown> =>
+      !!value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.hasOwn(value, key));
+    const text = (value: unknown, max: number) =>
+      typeof value === "string" &&
+      value.trim() === value &&
+      value.length > 0 &&
+      value.length <= max;
+    const record = (
+      value: unknown,
+      detail = false,
+    ): value is Record<string, unknown> =>
+      own(value, [
+        "id",
+        "title",
+        "summary",
+        "category",
+        "status",
+        "version",
+        ...(detail ? ["body"] : []),
+      ]) &&
+      typeof value.id === "string" &&
+      capturedRecordIdPattern.test(value.id) &&
+      text(value.title, 120) &&
+      text(value.summary, 280) &&
+      text(value.category, 40) &&
+      (value.status === "hidden" || value.status === "listed") &&
+      (!expected.listedOnly || value.status === "listed") &&
+      Number.isSafeInteger(value.version) &&
+      Number(value.version) >= 0 &&
+      (!detail || text(value.body, 12000));
+    if (expected.kind === "detail")
+      return record(parsed, true) && parsed.id === expected.recordId;
+    if (
+      !own(parsed, ["apiVersion", "records", "offset", "limit", "hasMore"]) ||
+      parsed.apiVersion !== "factory.generated.directory-list/v1" ||
+      parsed.offset !== 0 ||
+      parsed.limit !== 20 ||
+      typeof parsed.hasMore !== "boolean" ||
+      !Array.isArray(parsed.records) ||
+      parsed.records.length > 20 ||
+      !parsed.records.every((value) => record(value))
+    )
+      return false;
+    const ids = parsed.records.map((value) => value.id);
+    if (new Set(ids).size !== ids.length) return false;
+    // A first page cannot prove absence while another page remains unread.
+    if (expected.presence === "absent" && parsed.hasMore) return false;
+    return (
+      ids.includes(expected.recordId) === (expected.presence === "present")
+    );
+  } catch {
+    return false;
+  } finally {
+    signal.removeEventListener("abort", abort);
+    void reader.cancel().catch(() => undefined);
+  }
+}
 
 /**
  * Reads at most `maximumCapturedResponseBytes` of a response and extracts the

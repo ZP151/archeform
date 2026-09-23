@@ -156,7 +156,7 @@ paid resources, cloud actions and deployment remain separately governed.
   `provenance.decision: "ADR-0065"` authoring-format coordinate; record this
   family's authority in its acceptance evidence rather than widening that
   literal or implying ADR-0065 alone accepted a new family.
-- **FAM-007**: One compiler-private selector verifies the true immutable
+- **FAM-007**: One compiler-owned selector verifies the true immutable
   Published Graph and separate digest-verified composition lock together:
   exact six packages/versions/digests/bindings, fields, enum values, two grants,
   transitions, initial state, three page bindings and absence of extra behavior.
@@ -164,8 +164,10 @@ paid resources, cloud actions and deployment remain separately governed.
   A directory-shaped candidate with a malformed witness fails with a bounded
   unsupported-profile error before artifact acceptance, never generic CRUD or
   Approval fallback. A product title, definition key or package presence alone
-  cannot activate it. Keep compiler exports root-only; do not expose a witness
-  bypass. Test both normal compilation and the actual emitted-page path.
+  cannot activate it. Keep compiler exports root-only; the proposed selector
+  seam amendment below permits only the existing selector and its readonly
+  result type at that root, never a witness bypass. Test both normal compilation
+  and the actual emitted-page path.
 
 ### Generated read and mutation contracts
 
@@ -279,6 +281,87 @@ paid resources, cloud actions and deployment remain separately governed.
   CMS schemas, search indexing services and public hosting. A material demand
   for any excluded behavior requires clarification, not silent omission.
 
+## Proposed selector seam amendment — 2026-09-24
+
+- **SEA-001**: Recommendation: **keep** the accepted Golden profile and exact
+  Directory selection behavior, with one additive compiler-root seam. This is
+  a proposed amendment to the previously accepted ADR bytes at SHA-256
+  `b4a99874f595006c9809ff2a09a429e253bb3b7fe6aec54aefd0cc1abeb2c9e3`.
+  The original family recommendation remains `experiment`. This amendment is
+  not accepted by its proposer; PM must record separate acceptance of its exact
+  new hash before relaxing the existing frozen no-new-exports contract.
+- **SEA-002**: Current implementation keeps
+  `selectContentDirectoryProfile` in compiler-private
+  `packages/compiler/src/content-directory-contract.ts`. The worker already
+  depends on `@factory/compiler`, whose manifest exposes only `.` mapped to
+  `dist/index.js` and `dist/index.d.ts`; worker TypeScript `rootDir` is `src`.
+  Task 4 needs the same Graph-plus-separate-lock selection to derive actual
+  Directory probes. The compiler root already exposes
+  `selectAppointmentRuntimeProfile` and `AppointmentRuntimeProfile`; that
+  precedent alone does not authorize Directory exports.
+- **SEA-003**: Permit exactly two additive root re-exports from the existing
+  Directory contract module: value `selectContentDirectoryProfile` and type
+  `ContentDirectoryProfile`. Preserve the existing signature
+  `(graph: ApplicationGraphV1, compositionLock?: CapabilityCompositionLockV1)
+  => ContentDirectoryProfile | undefined`, the detached deeply frozen readonly
+  result, and all existing validation. An unrelated Graph returns `undefined`;
+  a Directory candidate with a missing or invalid separate lock, invalid Graph,
+  hash, package, digest, binding, grants, transition or page fails with the
+  existing bounded unsupported-profile error. The optional parameter does not
+  authorize lock-free Directory selection. No caller-supplied profile/witness,
+  skip-validation flag, renderer, mutable registry or admission callback becomes
+  public. The selector remains implemented once in its private module.
+- **SEA-004**: Worker imports the value, and the type only if needed, through
+  `@factory/compiler`. It passes the actual immutable Published Graph and its
+  separate composition lock, uses the returned profile to select Directory
+  verification, and propagates or safely maps selector rejection without
+  generic CRUD or Approval fallback. This read-only derivation does not prove
+  Published identity by itself or replace existing authenticated queue,
+  immutable lifecycle, graph-hash, compilation or artifact checks. No new API
+  request field, Graph serialization, family version, capability/catalogue
+  coordinate, package version, package export-map key or runtime behavior is
+  introduced. Manifests, dependency ranges, lockfile, licenses, supply chain,
+  tenant/credential boundaries and local-only operability remain unchanged.
+- **SEA-005**: Reject relative compiler `src` imports: they cross the package
+  boundary and conflict with the worker build root. Reject relative compiler
+  `dist` imports or new subpath exports: they couple the worker to private file
+  layout or widen the package contract unnecessarily. Reject a duplicated
+  worker predicate or weaker package/title heuristic: its validation can drift
+  from the authoritative compiler selector. The positive consequence is one
+  exact fail-closed selection implementation; the negative consequence is a
+  small public-root maintenance commitment to the existing function/type.
+- **SEA-006**: PM owns acceptance, the contract-freeze update and serialized
+  integration assignment. The assigned compiler/worker owner may then add the
+  two re-exports and consume them in the existing verifier with focused tests;
+  other exports and selector semantics stay fixed. This Tech Lead changes only
+  this proposed ADR. Roll back the new worker import/use and root re-exports
+  together if needed; preserve immutable Compilations, evidence and app data.
+  There is no migration or irreversible action. Stop the seam on weakened
+  validation, caller-provided witness authority, source-layout bypass, old
+  output drift or a wider contract need. Independent work wholly inside its
+  existing frozen contract may continue; dependent seam integration waits for
+  the recorded acceptance and updated ownership.
+- **SEA-007**: After acceptance, add failing tests that import the actual root
+  selector and exercise `deriveVerificationProfile` with a true Published Graph
+  and separate lock, plus missing/stale/wrong-digest/wrong-binding locks and
+  malformed Directory candidates. Assert rejection before probe execution and
+  no generic fallback; prove valid Directory selection uses the actual selector
+  without a mocked or duplicate predicate. Run
+  `pnpm --filter @factory/compiler test -- content-directory-contract.test.ts content-directory-runtime.test.ts content-directory-presentation.test.ts definition-data-compatibility.test.ts`
+  and
+  `pnpm --filter @factory/compiler-worker test -- verification-graph-plan.test.ts`,
+  then `pnpm --filter @factory/compiler build`,
+  `pnpm --filter @factory/compiler-worker build` and
+  `pnpm --filter @factory/compiler-worker typecheck` in dependency order.
+  Inspect the built root JavaScript/declarations and execute its real selector
+  to establish the value/type boundary; package exports must still contain only
+  `.`. Execute actual generated Directory probes, not only a helper test.
+  Fixed old-eight Published projections and every generated bundle byte must
+  match the independently captured baseline without refreshing expectations.
+  Record source/ADR identity, commands, results and independent review in
+  `docs/acceptance/content-directory.md` and the active consumer delivery ledger.
+  These are required implementation checks, not claimed executed evidence.
+
 ## Effects, alternatives and consequences
 
 - **EFF-001**: Graph/Blueprint/definition serialization versions and package
@@ -330,7 +413,9 @@ paid resources, cloud actions and deployment remain separately governed.
   verifier and family-routing integration; focused tests and one reusable
   `e2e/content-directory.spec.ts`. Extend existing composition machinery only
   where exact binding/verification evidence proves a gap; do not add new Graph
-  fields, weaken shared validators or expose new public compiler exports.
+  fields or weaken shared validators. The proposed selector seam amendment
+  permits only its two named additive root exports after separate acceptance;
+  all other new public compiler exports remain prohibited.
 - **IMP-003**: Start with failing family/admission, hidden-read and stale-edit
   tests. Freeze all current canonical projections and complete generated bundle
   hashes before source changes, including the current Appointment path. Retain

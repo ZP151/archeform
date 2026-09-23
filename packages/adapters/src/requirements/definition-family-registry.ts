@@ -234,6 +234,9 @@ const categories = [
 const text = z.string().min(1).max(24000);
 const bp = productBlueprintSchema.shape;
 export const familyGuideSchemas = {
+  "content-directory": productBlueprintSchema
+    .extend({ definitionKey: graphKeySchema, identity: text })
+    .strict(),
   appointment: productBlueprintSchema
     .extend({ definitionKey: graphKeySchema, identity: text })
     .strict(),
@@ -453,6 +456,12 @@ const restaurantLocks = [
   },
 ];
 export const definitionFamilyRegistry = Object.freeze({
+  "content-directory": Object.freeze({
+    version: "content-directory/v1",
+    parameterPolicy: "none/v1",
+    presentation: { key: "content-directory-presentation", version: "1.0.0" },
+    compilerProfile: "content-directory@1.0.0",
+  }),
   appointment: Object.freeze({
     version: "appointment-booking/v1",
     parameterPolicy: "none/v1",
@@ -518,7 +527,9 @@ function slotsFor(entry: ProductDefinitionData): Slots {
         ? ["requester", "reviewer", "auditor"]
         : entry.familyBinding.key === "task"
           ? ["member", "viewer"]
-          : ["customer"];
+          : entry.familyBinding.key === "content-directory"
+            ? ["reader", "curator"]
+            : ["customer"];
   return {
     roles: new Map(b.actors.map((a, i) => [a.key, roleNames[i]!])),
     entities: new Map(
@@ -562,7 +573,15 @@ function semanticBlueprint(
             : f.key,
         type: f.type,
         required: f.required,
-        ...(f.options ? { options: f.options } : {}),
+        ...(f.options
+          ? {
+              options:
+                normalizeCalculatedFields &&
+                entry.familyBinding.key === "content-directory"
+                  ? ["reviewed-categories"]
+                  : f.options,
+            }
+          : {}),
         ...(f.numericDomain ? { numericDomain: f.numericDomain } : {}),
         ...(f.calculation
           ? {
@@ -760,6 +779,112 @@ function appointmentPlanningSemantics(entry: ProductDefinitionData): boolean {
     return false;
   return true;
 }
+function directoryPlanningSemantics(entry: ProductDefinitionData): boolean {
+  const { spec, blueprint: b } = entry.canonical;
+  const [entity] = b.entities,
+    [reader, curator] = b.actors,
+    [workflow] = b.workflows;
+  if (
+    !entity ||
+    !reader ||
+    !curator ||
+    !workflow ||
+    b.entities.length !== 1 ||
+    b.actors.length !== 2 ||
+    reader.key === curator.key
+  )
+    return false;
+  const options = entity.fields[3]?.options;
+  if (
+    !options ||
+    options.length < 2 ||
+    options.length > 12 ||
+    options.some(
+      (value) =>
+        value !== value.trim() ||
+        value.length < 1 ||
+        value.length > 40 ||
+        /[\u0000-\u001f\u007f]/.test(value),
+    )
+  )
+    return false;
+  const normalized = options.map((value) => value.trim().normalize("NFC"));
+  if (
+    normalized.some((value, index) => {
+      const literal = value.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+      const pattern = new RegExp(`^(?:${literal})$`, "iu");
+      return normalized.slice(index + 1).some((other) => pattern.test(other));
+    })
+  )
+    return false;
+  const semantic = semanticBlueprint(entry);
+  return (
+    spec.productType === undefined &&
+    equal(
+      spec.actors.map((a) => a.key),
+      b.actors.map((a) => a.key),
+    ) &&
+    equal(
+      spec.domainConcepts.map((c) => c.key),
+      [entity.key],
+    ) &&
+    equal(semantic.actors, [
+      {
+        slot: "reader",
+        permissions: [{ entity: "primary", actions: ["read"] }],
+      },
+      {
+        slot: "curator",
+        permissions: [
+          {
+            entity: "primary",
+            actions: ["cancel", "create", "read", "submit", "update"],
+          },
+        ],
+      },
+    ]) &&
+    equal(semantic.entities[0]!.fields, [
+      { key: "title", type: "text", required: true },
+      { key: "summary", type: "text", required: true },
+      { key: "body", type: "long-text", required: true },
+      { key: "category", type: "enum", required: true, options },
+    ]) &&
+    equal(
+      semantic.pages,
+      ["list", "form", "detail"].map((intent) => ({
+        intent,
+        entity: "primary",
+      })),
+    ) &&
+    workflow.entityKey === entity.key &&
+    equal(
+      workflow.states.map((s) => s.key),
+      ["hidden", "listed"],
+    ) &&
+    equal(
+      workflow.transitions.map((t) => [
+        t.key,
+        t.from,
+        t.to,
+        t.actorKey,
+        t.label,
+      ]),
+      [
+        ["submit", "hidden", "listed", curator.key, "Show entry"],
+        ["cancel", "listed", "hidden", curator.key, "Hide entry"],
+      ],
+    ) &&
+    equal(entry.primaryJob, {
+      actorKey: curator.key,
+      entityKey: entity.key,
+      operation: "submit",
+      successState: "listed",
+    }) &&
+    b.acceptanceJourneys.every((j) =>
+      j.steps.every((s) => [reader.key, curator.key].includes(s.actorKey)),
+    )
+  );
+}
 function validatePlanningSemantics(entry: ProductDefinitionData): boolean {
   const { spec, blueprint: b } = entry.canonical,
     f = b.workflows[0];
@@ -873,6 +998,8 @@ function validatePlanningSemantics(entry: ProductDefinitionData): boolean {
   }
   if (entry.familyBinding.key === "appointment")
     return appointmentPlanningSemantics(entry);
+  if (entry.familyBinding.key === "content-directory")
+    return directoryPlanningSemantics(entry);
   if (
     spec.productType !== undefined ||
     !equal(
@@ -1094,6 +1221,13 @@ function validateJourneys(entry: ProductDefinitionData): DefinitionReason[] {
         (p) => p.resource === s.entityKey && p.actions.includes(s.operation),
       ) || flow.transitions.some((t) => t.event === s.operation);
     if (!operationKnown) return false;
+    if (
+      entry.familyBinding.key === "content-directory" &&
+      s.operation === "read" &&
+      s.actorKey === b.actors[0]!.key &&
+      s.fromState === "hidden"
+    )
+      return s.toState === "hidden" && s.expectation === "not-found";
     const granted = grants.some(
       (p) =>
         p.role === s.actorKey &&
@@ -1408,7 +1542,11 @@ function executionMatches(entry: ProductDefinitionData): boolean {
     graph.integration.providers.length !== 0 ||
     graph.flow.flows.length !== 1 ||
     graph.page.pages.length !==
-      (entry.familyBinding.key === "approval" ? 7 : 5) ||
+      (entry.familyBinding.key === "approval"
+        ? 7
+        : entry.familyBinding.key === "content-directory"
+          ? 3
+          : 5) ||
     graph.domain.entities.length !==
       (entry.familyBinding.key === "approval" ? 4 : 3) ||
     !equal(

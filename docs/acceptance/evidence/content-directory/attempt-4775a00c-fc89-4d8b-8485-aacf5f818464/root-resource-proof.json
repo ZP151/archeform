@@ -1,0 +1,9 @@
+{
+  "project": "factory-t10-directory-150f2cbecb4b",
+  "scope": "owned-directory-outer-stack",
+  "containers": [],
+  "volumes": [],
+  "networks": [],
+  "images": [],
+  "outcome": "removed"
+}

@@ -9,7 +9,7 @@ The first new family is Resource Directory, followed by Inventory Operations.
 Work Orders, Customer Requests, Event Registration and Sales Pipeline are candidate
 waves, not registered or accepted products. Mobile browsing/field work and desktop
 management are selected by actual use; dual-surface products must complete their
-cross-role journey. The eight-definition baseline below is unchanged.
+cross-role journey. The original eight-definition compatibility baseline is unchanged.
 
 The short-lane continuation now passes all eight steps, including 97 emitted
 numeric/calculated cases and reproducible Prisma client generation, with one
@@ -19,11 +19,23 @@ baseline pass 127 focused/compatibility tests and compiler typecheck, with its
 single review finding corrected and rechecked. The generated Directory business
 runtime now passes 162 focused/compatibility cases, emitted API and package
 typechecks, and a real PostgreSQL probe. The ninth definition's data admission is
-reviewed in the working tree, while the Directory reader/curator interface and
-actual verification journey are being implemented. Admission remains uncommitted
-until its real case restores the definition index; no new-family product is yet
-accepted. The previously green eight-step lane must not be read as passing against
-the pending ninth-definition state.
+reviewed in the working tree. Directory reader/curator UI and bounded verification
+now pass source review and focused checks. Its real executable case and explicitly
+partial emitted-browser evidence restore the non-authoritative case index; root
+passes all eight definition-lane steps against the ninth-definition state. The
+first actual isolated run exposed a persisted-lock prototype comparison defect:
+unchanged JSON values were rejected after the Published input returned from the
+database. The focused correction passes 56 cases, including old-eight byte
+compatibility, and scoped independent review. After a worker image rebuild, the
+next run passes compilation and all 22 isolated verification steps, then exposes
+a global alert locator conflict with Next's announcer. The corrected third run
+passes the complete business journey: ready in 208,554 ms, first management job
+in 209,512 ms, and 243,808 ms including Preview cleanup. Root and independent
+Terra QA inspect actual mobile/desktop/recovery images; 168 focused cases pass.
+Owned Preview and outer-stack cleanup are proven. Independent Sol final review
+closes P0/P1/P2 0/0/0 after Terra QA. PM accepts the narrow local family for bounded
+branch delivery: nine registered and locally accepted definitions across five
+demonstrated runtime families. This is not hosted or ordinary-user acceptance.
 Continuous delivery is a separate tracked outcome: CI exists, and the synthetic
 local compatible-upgrade/rollback/restore rehearsal now passes. Hosted operation
 remains unverified. Source inspection confirms the
@@ -54,22 +66,30 @@ PostgreSQL business probe passes after a Windows client-lifetime fixture fix.
 Both owned database containers were removed. Two temporary client directories
 remain `cleanup_required` because automatic command approval blocked their removal;
 the failed first attempt and exact residual paths remain in the PM ledger. Full
-generated-product acceptance is still pending.
+generated-product acceptance now passes; those historical cleanup limits remain.
 
 The root checkout contains separately owned Eval V2 work. This Goal works in the
 existing isolated `codex/definition-regression-entry` branch and preserves that
 work. Counts distinguish candidates, registered definitions, runtime families,
 local journeys and hosted products; planned catalogue growth is not delivery.
 
-## Current local result: eight products, four runtime families
+## Current local result: nine products, five runtime families
 
 The calculated-request long Goal's product and planning work is accepted locally.
-Coverage is **eight distinct registered / eight locally accepted definitions /
-four demonstrated runtime families**. Appointment Booking now joins Restaurant
+Coverage is **nine distinct registered / nine locally accepted definitions /
+five demonstrated runtime families**. Knowledge Resource Directory and Appointment
+Booking now join Restaurant
 Ordering, Expense Approval, Purchase Request Approval, Team Task Tracking,
 Publication Review, Training Funding and Equipment Procurement. The
 ordinary-user goal remains a complete assembled app with minimal business
 questions.
+
+- Knowledge Resource Directory completes its reader/curator lifecycle, correction,
+  concurrency and recovery journey in an actual generated PostgreSQL-backed app.
+  Ready time is **208,554 ms**, first management completion **209,512 ms**.
+  Task review, independent Terra QA and Sol final review report no open findings.
+  See [Directory acceptance](acceptance/content-directory.md) for the preserved
+  failures, real screenshots and separate local/hosted and fixture/user boundaries.
 
 - Shared server-owned quantity-times-price capability is delivered at `ada413fc`.
   Actual PostgreSQL, exact decimal persistence, rollback, correction and the full
@@ -93,7 +113,7 @@ and [shared capability](acceptance/calculated-request-totals.md).
 
 The first engineering-optimization slice is also accepted locally. The
 provider-free definition lane now passes eight fixed steps and the derived case
-index covers all eight rows without becoming an acceptance authority. See the
+index now covers all nine rows without becoming an acceptance authority. See the
 [lane acceptance record](acceptance/definition-regression-lane.md). It reduces
 the repeated command-list edits required for a new definition. Existing Approval
 emitted-control/complete-workspace checks are included; new-family coverage,

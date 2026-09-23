@@ -6283,3 +6283,115 @@ Root confirms the corrected reader390/curator1440 images address the grouped
 visual findings. The one changed-file design detector run returns `[]`, exit 0;
 that detector is not product acceptance. Source review and actual PostgreSQL-backed
 generated-product acceptance remain open; definitions accepted stays eight.
+
+### 2026-09-24 Directory actual acceptance entry
+
+Controller delivers the accepted durable rehearsal as `d8d641c677e15ab41f801c9dbf53132d9ab24e56`
+and verifies its exact remote tip. Directory Task 4 and the two-file Task 5 case
+receive source/run-readiness review P0/P1/P2 0/0/0 from the same independent
+reviewer. The actual case restarts the API process while retaining PostgreSQL;
+do not call that a PostgreSQL daemon restart. Shared family acceptance stays open.
+
+The real executable case now exists. Root preserves actual emitted-browser images
+and a truthful preflight README, then adds its routing-only case binding. The
+reviewer confirms this is consistent with the index's non-acceptance purpose;
+no fake success record or accepted-count increment is introduced. The index moves
+RED missing case -> GREEN nine registered case routes. Root runs `pnpm regression
+definitions`: all eight steps pass, including dependency builds, index/tool
+checks, admission, Prisma generation, emitted controls and fixed compatibility.
+
+Root prepares isolated project `factory-t10-directory-150f2cbecb4b` using only a
+new ignored local environment file and loopback override. Workbench is
+`http://127.0.0.1:56442`, Control Plane `http://127.0.0.1:56441`; no provider key
+is supplied. Compose configuration validates quietly. Root owns starting and
+cleaning this exact project's resources and the actual family run. Source is
+frozen after review; this preparation is not product acceptance.
+
+### 2026-09-24 Directory persisted-input correction
+
+Actual attempt `e9e5c3c3-feb1-4bde-ba2c-b7c9528daae1` fails before Preview.
+Compilation `cmueh04h7000dml4t9jwb346o` rejects its immutable Published input;
+the initial case misleadingly waits 315 seconds in the verification phase.
+Root traces the rejection to six capability binding dictionaries: JSON persistence
+changes null prototypes to ordinary object prototypes, with all JSON values and
+digests unchanged. The failed evidence remains preserved; no Published row or
+failed Compilation is rewritten.
+
+The existing compiler owner reproduces RED and normalizes only lock comparison
+after own-JSON validation. Root independently passes 56 focused cases, including
+JSON-persisted public compilation, hostile-object rejection and old-eight bytes.
+The acceptance owner adds bounded terminal compilation polling and safe fixed
+phase events, so failure stays in the compile phase and stops promptly. The same
+independent reviewer checks exact hashes and reports P0/P1/P2 0/0/0. Root rebuilds
+only the owned worker: Control Plane compiler consumers are export/archive and
+Restaurant preview helpers, and the unchanged Workbench needs no new image.
+Actual lifecycle success remains open until the next run. The shared checklist
+adds a cheap JSON-round-trip regression within the existing lane, not a new gate.
+
+The durable rehearsal's test-only TypeScript fixture loader also receives a
+bounded compatibility correction for the supported Node 22.11 floor. It transpiles
+the actual helper in memory using the existing TypeScript dependency. Root passes
+all 34 cases with native type stripping disabled; the same reviewer clears this
+change. The production harness, actual fixture and previously tested durable
+delivery behavior are unchanged, so no costly Docker rerun is required.
+
+Controller commits/pushes that isolated test compatibility follow-up as
+`5899a32d1127ea7ee2023a09164b5f07e4982a3e` and verifies remote equality.
+
+Actual Directory attempt `a077a0fc-aca8-4aab-ae8d-af3a9a76aa28` now passes
+persisted compilation and isolated verification (22 steps). Its generated app
+is ready in 185,744 ms, inside the prepared-local 300,000 ms target. The run then
+fails in the curator validation assertion before completing the business journey;
+the actual screenshot shows the expected validation text. Preview artifact,
+containers, network and volumes are removed by the case. Root retains this
+failed attempt and assigns only the two-file case/helper diagnostic correction
+to the existing acceptance owner. No product acceptance increment is authorized.
+
+PM also dispatches a proposed Inventory Operations decision under the accepted
+next-wave plan. `inventory_technology_decision` owns only the new ADR-0076 file;
+no implementation starts before Directory closure and separate decision review.
+Configured dispatch reports an unavailable Spark model twice, so the strongest
+available assignment handles this Graph/runtime decision as required by AGENTS.
+
+### 2026-09-24 Directory actual journey and independent QA pass
+
+The installed Next 15.5.22 announcer reproduces two global alerts and the original
+locator failure. Scoping both assertions to `main.directory-v1` passes; no product
+code changes. The same reviewer clears the two-file correction and allowlisted
+assertion/relative-line diagnostics at 0/0/0. Root reruns the actual case against
+the unchanged reviewed images.
+
+Attempt `4775a00c-fc89-4d8b-8485-aacf5f818464` exits 0 in 243,808 ms including
+Preview cleanup. Isolated verification passes 22/22, app readiness is 208,554 ms,
+and first create/show management completion is 209,512 ms. Two authored records
+complete find/read/correct/hide/show, reader denials, stale recovery, concurrent
+one-winner CAS, interrupted committed-create retry and API restart replay.
+Audit/receipt counts remain 8/8 and 1/1, effects zero. Immutable Compilation
+identity remains unchanged and no unintended remote requests occur.
+
+Root and separate Terra `directory_family_qa` inspect actual phone reader,
+desktop curator and conflict screenshots. QA independently passes 168 focused
+runtime/profile/old-eight compatibility cases and closes P0/P1/P2 0/0/0 against
+the actual journey. Root separately removes only outer project
+`factory-t10-directory-150f2cbecb4b`; container, volume, network and image
+inventories are empty. Safe verification/cleanup proof is preserved with the
+passing attempt. Earlier blocked scratch/worker residuals are not retried or
+cleared. Root dispatches independent Sol `directory_family_release_review` for
+the required final local-family boundary, reusing unaffected checks. No new
+accepted count or main/repository/hosted release is declared before disposition.
+
+### 2026-09-24 Directory local family accepted for branch delivery
+
+Independent Sol `directory_family_release_review` returns P0/P1/P2 0/0/0 after
+the Terra QA closure. It verifies the accepted ADR, actual source hashes and call
+paths, immutable lifecycle, bounded worker comparison, business/recovery evidence,
+actual responsive images and separate cleanup proof. No further broad rerun is
+justified. PM accepts the scoped ADR-0074 local family: nine registered / nine
+locally accepted definitions / five demonstrated runtime families.
+
+Controller may make one bounded Directory commit/push, excluding the separate
+Inventory ADR and plan. Zero model calls and zero ordinary-user sessions remain
+explicit; demo roles do not establish private identity or tenancy. Hosted delivery,
+mature consumer acceptance, main integration and repository release are not
+authorized. Earlier blocked scratch/worker cleanup remains open. Inventory is
+the next planned wave, not a delivered tenth definition.

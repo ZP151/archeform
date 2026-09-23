@@ -74,6 +74,14 @@ export const definitionCaseBindings = Object.freeze([
     evidencePath: "docs/acceptance/evidence/appointment-booking",
     protectedFixture: false,
   }),
+  binding({
+    definitionKey: "knowledge-resource-directory",
+    runtimeFamily: "content-directory/v1",
+    caseId: "knowledge-resource-directory-local",
+    casePath: "e2e/content-directory.spec.ts",
+    evidencePath: "docs/acceptance/evidence/content-directory",
+    protectedFixture: false,
+  }),
 ]);
 
 export const admittedDefinitionKeys = Object.freeze(

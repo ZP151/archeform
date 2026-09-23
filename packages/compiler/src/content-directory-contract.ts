@@ -392,7 +392,13 @@ export function selectContentDirectoryProfile(
       })),
     });
     // Re-resolution verifies packages, manifests, dependency closure, bindings and the complete lock digest.
-    equal(compositionLock, expectedLock);
+    // Both plain and null-prototype own JSON objects are allowed above. A
+    // persistence round trip removes the resolver's null prototypes, so compare
+    // their JSON values only after the incoming lock passed assertOwnJson.
+    equal(
+      JSON.parse(JSON.stringify(compositionLock)),
+      JSON.parse(JSON.stringify(expectedLock)),
+    );
     return Object.freeze({
       key: "content-directory",
       version: "1.0.0",

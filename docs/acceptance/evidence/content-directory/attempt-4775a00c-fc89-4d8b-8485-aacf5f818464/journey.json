@@ -1,0 +1,132 @@
+{
+  "attempt": "4775a00c-fc89-4d8b-8485-aacf5f818464",
+  "definitionKey": "knowledge-resource-directory",
+  "scope": "isolated-local-fixture-session",
+  "authoredSelections": 1,
+  "authoredEntries": 2,
+  "modelCalls": 0,
+  "ordinaryUserStudies": 0,
+  "technicalHandoffs": 0,
+  "inRunManualRescues": 0,
+  "readyTargetMs": 300000,
+  "outcome": "passed",
+  "visualReview": "pending-human-inspection",
+  "phases": [
+    {
+      "name": "source-identity",
+      "elapsedMs": 11
+    },
+    {
+      "name": "draft",
+      "elapsedMs": 3551
+    },
+    {
+      "name": "publish",
+      "elapsedMs": 212
+    },
+    {
+      "name": "compile",
+      "elapsedMs": 232
+    },
+    {
+      "name": "verify",
+      "elapsedMs": 182850
+    },
+    {
+      "name": "preview",
+      "elapsedMs": 21389
+    },
+    {
+      "name": "curator-create",
+      "elapsedMs": 1535
+    },
+    {
+      "name": "uncertain-create-retry",
+      "elapsedMs": 1021
+    },
+    {
+      "name": "reader-find-read",
+      "elapsedMs": 1617
+    },
+    {
+      "name": "same-record-stale-correction",
+      "elapsedMs": 1796
+    },
+    {
+      "name": "server-denials-concurrency",
+      "elapsedMs": 1211
+    },
+    {
+      "name": "restart-replay-persistence",
+      "elapsedMs": 13561
+    },
+    {
+      "name": "cleanup",
+      "elapsedMs": 14822
+    }
+  ],
+  "sources": {
+    "e2e/content-directory.spec.ts": "sha256:e8c7491631ab7cdb6ed7ea7f100b0ba548fad8f3ce1c6b5e56580cc8c0a673d9",
+    "e2e/helpers/content-directory.ts": "sha256:64feba30e31ca0b51e160b8e4848a463e53cead302e2fe29fc7e5c1402df4448",
+    "docs/adr/adr-0074-content-directory-family.md": "sha256:91ad7bc1bf806fafaa4bbfa656be428567138123c632a2219c48b17195728919",
+    "packages/compiler/src/index.ts": "sha256:fc88f391bec58a2a9cb60839d23dd09a8c770b77ece276569db3173a63c5d816",
+    "packages/compiler/src/content-directory-contract.ts": "sha256:0966993730999974007fb2bbcbad4f703a7a1a93e6c4118aac5b38072426e909",
+    "packages/compiler/src/content-directory-runtime.ts": "sha256:522f85e878ead3ec9840712413b39b5f80b19ef9b2c700174902a207433a98d1",
+    "packages/compiler/src/content-directory-presentation.ts": "sha256:cd8d5b8bf6b4f79687fa4dc9f48b6d297377a4cd939f3db9e50801f4f1ff4df8",
+    "packages/adapters/src/requirements/definitions/product-definitions.v1.json": "sha256:f5a856c62a5fe3003b9c4ec47d768eac33f31a68d51cfc4f8b6139832bff2f89",
+    "apps/compiler-worker/src/verifier/verification-graph-plan.ts": "sha256:b3a80c6880909db1e2183b21a64faa554c5501259a306637b250935126a30d6e",
+    "apps/compiler-worker/src/verifier/verification-environment.ts": "sha256:412fe6b87c7671e3e9066cd7f4ff025ff013997b6a38f509f28eac43a2c30950",
+    "apps/compiler-worker/src/verifier/probes.ts": "sha256:9793594c075ab80c48e7f695a8d052137fa66d51b78618f27849b8ff06a4ea1a",
+    "pnpm-lock.yaml": "sha256:bcb0e52c5f56329ac8490080d618a142ccc8585e8cd60fb45e2980f62d2c9ea7"
+  },
+  "publishedRevisionId": "cmuehr2pq002oml4tizdjz578",
+  "inputGraphHash": "sha256:52378215777651247aca6cccd720401dc02de292dfe02fad3a0dbd106d4dc15c",
+  "compositionLockHash": "sha256:8caa3074f7ba1906291a51ab3b8956edffc0dfaf46d4807b28aa20f015a94db1",
+  "compilationId": "cmuehr2rr002qml4tcbifog6l",
+  "compilationObservation": {
+    "status": "succeeded",
+    "failureCode": null
+  },
+  "verificationPassed": true,
+  "previewRunId": "preview-e44b99a1-debe-491e-89a2-a9646dd7dbf7",
+  "compilation": {
+    "id": "cmuehr2rr002qml4tcbifog6l",
+    "publishedRevisionId": "cmuehr2pq002oml4tizdjz578",
+    "artifactManifestHash": "sha256:0f007a73c62ba1ae85e16152fc6b43baa8d030b9c397ea262b923160d7e339b1",
+    "inputGraphHash": "sha256:52378215777651247aca6cccd720401dc02de292dfe02fad3a0dbd106d4dc15c"
+  },
+  "readyMs": 208554,
+  "readyTargetMet": true,
+  "firstCompletedManagementJobMs": 209512,
+  "records": [
+    "sha256:bd7369030a6c54039c4cd3287a8ade40169a52ccc48584807765613e85c77661",
+    "sha256:a7f860c4ac0cbfa6ced1dde8dc71655fd419d448d2d0f523b338c6c9193c286d"
+  ],
+  "mutationCounts": [
+    {
+      "audit": 8,
+      "receipts": 8,
+      "effects": 0
+    },
+    {
+      "audit": 1,
+      "receipts": 1,
+      "effects": 0
+    }
+  ],
+  "immutableCompilationPreserved": true,
+  "sameKeyReplayAfterRestart": true,
+  "unintendedRemoteRequests": 0,
+  "cleanup": {
+    "outcome": "removed",
+    "previewRunId": "preview-e44b99a1-debe-491e-89a2-a9646dd7dbf7",
+    "composeProjectName": "factory-preview-preview-e44b99a1-debe-491e-89a2-a9646dd7dbf7",
+    "resources": {
+      "artifact": false,
+      "containers": false,
+      "networks": false,
+      "volumes": false
+    }
+  },
+  "elapsedMs": 243808
+}

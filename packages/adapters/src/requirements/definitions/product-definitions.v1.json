@@ -4898,6 +4898,582 @@
         "reviewedOn": "2026-09-18",
         "decision": "ADR-0065"
       }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "knowledge-resource-directory",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "content-directory",
+        "version": "content-directory/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "curator",
+        "operation": "submit",
+        "entityKey": "resource",
+        "successState": "listed"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "knowledge-resource-directory",
+          "outcome": "Readers find useful knowledge resources by category or search, while curators correct entries and control their visibility.",
+          "actors": [
+            {
+              "key": "reader",
+              "label": "Reader",
+              "description": "Finds and reads listed knowledge resources."
+            },
+            {
+              "key": "curator",
+              "label": "Curator",
+              "description": "Maintains plain text resources and controls catalogue visibility."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "resource",
+              "label": "Knowledge resource",
+              "description": "A useful plain text guide, reference or checklist."
+            }
+          ],
+          "workflows": [
+            { "key": "resource-visibility", "label": "Resource visibility" }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "find-resource",
+              "given": "a listed resource in Guides",
+              "when": "a reader filters the category and searches its title or summary",
+              "then": "the reader opens the matching resource and reads its full plain text body"
+            },
+            {
+              "key": "correct-and-hide",
+              "given": "a listed resource with outdated guidance",
+              "when": "a curator corrects the same record and hides it",
+              "then": "the corrected record remains available to the curator and is absent from reader list and detail"
+            },
+            {
+              "key": "show-again",
+              "given": "a corrected hidden resource",
+              "when": "a curator shows the entry again",
+              "then": "readers can find the same resource with its corrected content"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:e0d502ab63114432280367ef4dc4e2c6e085f6116c42876c6aa3120c92198a54",
+          "title": "Knowledge Resource Directory",
+          "actors": [
+            {
+              "key": "reader",
+              "label": "Reader",
+              "permissions": [{ "entityKey": "resource", "actions": ["read"] }]
+            },
+            {
+              "key": "curator",
+              "label": "Curator",
+              "permissions": [
+                {
+                  "entityKey": "resource",
+                  "actions": ["create", "read", "update", "submit", "cancel"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "resource",
+              "label": "Knowledge resource",
+              "description": "A curated plain text resource with a concise summary and a reviewed category.",
+              "fields": [
+                {
+                  "key": "title",
+                  "label": "Title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "summary",
+                  "label": "Summary",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "body",
+                  "label": "Body",
+                  "type": "long-text",
+                  "required": true
+                },
+                {
+                  "key": "category",
+                  "label": "Category",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["Guides", "Reference", "Checklists"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "resource-list",
+              "label": "Knowledge resources",
+              "intent": "list",
+              "entityKey": "resource"
+            },
+            {
+              "key": "resource-form",
+              "label": "New resource",
+              "intent": "form",
+              "entityKey": "resource"
+            },
+            {
+              "key": "resource-detail",
+              "label": "Resource details",
+              "intent": "detail",
+              "entityKey": "resource"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "resource-visibility",
+              "label": "Resource visibility",
+              "entityKey": "resource",
+              "states": [
+                { "key": "hidden", "label": "Hidden" },
+                { "key": "listed", "label": "Listed" }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "hidden",
+                  "to": "listed",
+                  "label": "Show entry",
+                  "actorKey": "curator"
+                },
+                {
+                  "key": "cancel",
+                  "from": "listed",
+                  "to": "hidden",
+                  "label": "Hide entry",
+                  "actorKey": "curator"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "find-and-read",
+              "description": "Readers find useful listed content without receiving hidden records.",
+              "steps": [
+                {
+                  "actorKey": "reader",
+                  "action": "filters Guides and searches title or summary with literal text"
+                },
+                {
+                  "actorKey": "reader",
+                  "action": "opens a matching listed resource and reads its full body"
+                },
+                {
+                  "actorKey": "reader",
+                  "action": "receives not found for a hidden resource even with a direct link"
+                }
+              ]
+            },
+            {
+              "key": "maintain-resource",
+              "description": "Curators maintain one resource through hidden and listed states.",
+              "steps": [
+                {
+                  "actorKey": "curator",
+                  "action": "creates a hidden resource with all four required fields"
+                },
+                {
+                  "actorKey": "curator",
+                  "action": "corrects its title, summary, body and category while hidden"
+                },
+                {
+                  "actorKey": "curator",
+                  "action": "shows the entry, corrects it while listed and hides it"
+                },
+                {
+                  "actorKey": "curator",
+                  "action": "shows the corrected entry again without creating another record"
+                }
+              ]
+            },
+            {
+              "key": "safe-correction",
+              "description": "Stale and unauthorized changes leave content unchanged; a retried mutation returns the original result.",
+              "steps": [
+                { "actorKey": "reader", "action": "is denied every mutation" },
+                {
+                  "actorKey": "curator",
+                  "action": "receives a version conflict for a stale correction and reloads current content"
+                },
+                {
+                  "actorKey": "curator",
+                  "action": "retries the same mutation key and receives the original saved result"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "definitionKey": "knowledge-resource-directory",
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:e0d502ab63114432280367ef4dc4e2c6e085f6116c42876c6aa3120c92198a54",
+          "title": "Knowledge Resource Directory",
+          "actors": [
+            {
+              "key": "reader",
+              "label": "Reader",
+              "permissions": [{ "entityKey": "resource", "actions": ["read"] }]
+            },
+            {
+              "key": "curator",
+              "label": "Curator",
+              "permissions": [
+                {
+                  "entityKey": "resource",
+                  "actions": ["create", "read", "update", "submit", "cancel"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "resource",
+              "label": "Knowledge resource",
+              "description": "A curated plain text resource with a concise summary and a reviewed category.",
+              "fields": [
+                {
+                  "key": "title",
+                  "label": "Title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "summary",
+                  "label": "Summary",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "body",
+                  "label": "Body",
+                  "type": "long-text",
+                  "required": true
+                },
+                {
+                  "key": "category",
+                  "label": "Category",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["Guides", "Reference", "Checklists"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "resource-list",
+              "label": "Knowledge resources",
+              "intent": "list",
+              "entityKey": "resource"
+            },
+            {
+              "key": "resource-form",
+              "label": "New resource",
+              "intent": "form",
+              "entityKey": "resource"
+            },
+            {
+              "key": "resource-detail",
+              "label": "Resource details",
+              "intent": "detail",
+              "entityKey": "resource"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "resource-visibility",
+              "label": "Resource visibility",
+              "entityKey": "resource",
+              "states": [
+                { "key": "hidden", "label": "Hidden" },
+                { "key": "listed", "label": "Listed" }
+              ],
+              "transitions": [
+                {
+                  "key": "submit",
+                  "from": "hidden",
+                  "to": "listed",
+                  "label": "Show entry",
+                  "actorKey": "curator"
+                },
+                {
+                  "key": "cancel",
+                  "from": "listed",
+                  "to": "hidden",
+                  "label": "Hide entry",
+                  "actorKey": "curator"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "find-and-read",
+              "description": "Readers find useful listed content without receiving hidden records.",
+              "steps": [
+                {
+                  "actorKey": "reader",
+                  "action": "filters Guides and searches title or summary with literal text"
+                },
+                {
+                  "actorKey": "reader",
+                  "action": "opens a matching listed resource and reads its full body"
+                },
+                {
+                  "actorKey": "reader",
+                  "action": "receives not found for a hidden resource even with a direct link"
+                }
+              ]
+            },
+            {
+              "key": "maintain-resource",
+              "description": "Curators maintain one resource through hidden and listed states.",
+              "steps": [
+                {
+                  "actorKey": "curator",
+                  "action": "creates a hidden resource with all four required fields"
+                },
+                {
+                  "actorKey": "curator",
+                  "action": "corrects its title, summary, body and category while hidden"
+                },
+                {
+                  "actorKey": "curator",
+                  "action": "shows the entry, corrects it while listed and hides it"
+                },
+                {
+                  "actorKey": "curator",
+                  "action": "shows the corrected entry again without creating another record"
+                }
+              ]
+            },
+            {
+              "key": "safe-correction",
+              "description": "Stale and unauthorized changes leave content unchanged; a retried mutation returns the original result.",
+              "steps": [
+                { "actorKey": "reader", "action": "is denied every mutation" },
+                {
+                  "actorKey": "curator",
+                  "action": "receives a version conflict for a stale correction and reloads current content"
+                },
+                {
+                  "actorKey": "curator",
+                  "action": "retries the same mutation key and receives the original saved result"
+                }
+              ]
+            }
+          ],
+          "identity": "Local selectable demo reader and curator roles. Readers see only listed resources; curators see hidden and listed resources. No accounts, private identity, ownership or tenant isolation."
+        },
+        "providerInstruction": "Every knowledge resource directory or curated plain text catalogue brief returns definition-selection with definitionKey knowledge-resource-directory, generatedInterpretation null and businessParameters null. A coarse request accepts this exact default with zero materialQuestions. Readers search titles and summaries, filter Guides, Reference or Checklists, and read listed resources; hidden entries are absent from reader list and detail. Curators create hidden entries, correct the same record while hidden or listed, use Show entry to list it, and Hide entry to hide it. Visibility is local catalogue state, never platform Product Publish or web deployment. Required fields: title 1..120 characters, summary 1..280 characters, body 1..12000 characters of plain text, and one exact category. Business text is trimmed; body allows line breaks and tabs, no other control characters. No HTML rendering or remote media fetch. Search is literal case-insensitive text of at most 120 characters; pages contain 1..50 records with deterministic title and ID ordering. Category variation requires separately reviewed definition data, never businessParameters or provider-generated structure. Local demo roles do not establish private identity, authentication or tenant boundaries. Any explicit contacts, reader submissions, URLs, uploads, attachments, rich text, personal or private identity, ownership, real accounts, SSO, extra fields, extra rules, custom categories, delete, approval, scheduled visibility, comments, voting, bulk actions, email, SMS, webhook or external integration requires needs-clarification with every independent material question. Do not silently discard unsupported requirements. Use only authorization, visibility, role, business-rule, data or integration question categories. Follow-ups retain every still-required unsupported capability. Only explicit acceptance of the exact supported scope resolves a material question. Display title, requirementId and outcome customize bounded safe business text only; never generate execution modules, paths, routes, packages, query code or media locations. This registration is a candidate definition and does not claim accepted product delivery."
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "same-record-visibility-recovery",
+            "steps": [
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "create",
+                "fromState": "hidden",
+                "toState": "hidden",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "update",
+                "fromState": "hidden",
+                "toState": "hidden",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "submit",
+                "fromState": "hidden",
+                "toState": "listed",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "update",
+                "fromState": "listed",
+                "toState": "listed",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "cancel",
+                "fromState": "listed",
+                "toState": "hidden",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "submit",
+                "fromState": "hidden",
+                "toState": "listed",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "submit",
+                "fromState": "hidden",
+                "toState": "listed",
+                "expectation": "retry-replay"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "reader-mutation-denied",
+            "steps": [
+              {
+                "actorKey": "reader",
+                "entityKey": "resource",
+                "operation": "create",
+                "fromState": "hidden",
+                "toState": "hidden",
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "reader",
+                "entityKey": "resource",
+                "operation": "update",
+                "fromState": "hidden",
+                "toState": "hidden",
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "reader",
+                "entityKey": "resource",
+                "operation": "submit",
+                "fromState": "hidden",
+                "toState": "hidden",
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "reader",
+                "entityKey": "resource",
+                "operation": "cancel",
+                "fromState": "hidden",
+                "toState": "hidden",
+                "expectation": "denied"
+              }
+            ]
+          },
+          {
+            "key": "hidden-direct-link",
+            "steps": [
+              {
+                "actorKey": "reader",
+                "entityKey": "resource",
+                "operation": "read",
+                "fromState": "hidden",
+                "toState": "hidden",
+                "expectation": "not-found"
+              }
+            ]
+          },
+          {
+            "key": "stale-or-invalid-correction",
+            "steps": [
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "update",
+                "fromState": "listed",
+                "toState": "listed",
+                "expectation": "version-conflict"
+              },
+              {
+                "actorKey": "curator",
+                "entityKey": "resource",
+                "operation": "create",
+                "fromState": "hidden",
+                "toState": "hidden",
+                "expectation": "validation-error"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "content-directory-presentation",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "content-directory@1.0.0"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-24",
+        "decision": "ADR-0065"
+      }
     }
   ]
 }

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createCapabilityCompositionLock } from "@factory/capabilities";
 import { hashApplicationGraph } from "@factory/graph";
 import { selectContentDirectoryProfile } from "../src/content-directory-contract.js";
+import { generateApplicationBundle } from "../src/index.js";
 import {
   contentDirectoryInput,
   previousDefinitionInput,
@@ -17,6 +18,25 @@ const baseline = JSON.parse(
   ),
 );
 describe("exact Content/Directory profile", () => {
+  it("selects and compiles the same immutable values after a JSON persistence round trip", () => {
+    const original = contentDirectoryInput();
+    const persisted = JSON.parse(JSON.stringify(original));
+    expect(
+      Object.getPrototypeOf(original.compositionLock.packages[0]!.bindings),
+    ).toBeNull();
+    expect(
+      Object.getPrototypeOf(persisted.compositionLock.packages[0].bindings),
+    ).toBe(Object.prototype);
+    expect(
+      selectContentDirectoryProfile(persisted.graph, persisted.compositionLock),
+    ).toEqual(
+      selectContentDirectoryProfile(original.graph, original.compositionLock),
+    );
+    const publishedRevisionId = "directory-json-persistence";
+    expect(
+      generateApplicationBundle({ ...persisted, publishedRevisionId }),
+    ).toEqual(generateApplicationBundle({ ...original, publishedRevisionId }));
+  });
   it("selects a real composed immutable Published Graph with a separate lock", () => {
     const input = contentDirectoryInput();
     expect(input.graph.integration.compositionSelections).toBeUndefined();
@@ -53,6 +73,35 @@ describe("exact Content/Directory profile", () => {
     ])
       expect(Object.isFrozen(value)).toBe(true);
   });
+  it.each(["unknown", "accessor", "toJSON", "pollution", "cycle"])(
+    "rejects %s on persisted lock data before JSON comparison can execute it",
+    (kind) => {
+      const input = JSON.parse(JSON.stringify(contentDirectoryInput()));
+      const bindings = input.compositionLock.packages[0].bindings;
+      let invoked = false;
+      const execute = () => {
+        invoked = true;
+        return {};
+      };
+      if (kind === "unknown") bindings.extra = "undeclared";
+      if (kind === "accessor")
+        Object.defineProperty(bindings, "extra", {
+          enumerable: true,
+          get: execute,
+        });
+      if (kind === "toJSON") bindings.toJSON = execute;
+      if (kind === "pollution")
+        Object.defineProperty(bindings, "__proto__", {
+          enumerable: true,
+          value: {},
+        });
+      if (kind === "cycle") bindings.extra = bindings;
+      expect(() =>
+        selectContentDirectoryProfile(input.graph, input.compositionLock),
+      ).toThrow("Unsupported Content/Directory profile.");
+      expect(invoked).toBe(false);
+    },
+  );
   it("recognizes semantic roles and safe custom identifiers and categories", () => {
     const input = contentDirectoryInput({
       entity: "article",

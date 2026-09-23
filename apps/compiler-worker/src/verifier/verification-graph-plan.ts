@@ -1,7 +1,11 @@
 import { isDeepStrictEqual } from "node:util";
 import { createHash } from "node:crypto";
 
-import type { PublishedGraphInput } from "@factory/compiler";
+import {
+  selectContentDirectoryProfile,
+  type ContentDirectoryProfile,
+  type PublishedGraphInput,
+} from "@factory/compiler";
 import {
   VerificationContractError,
   assertValidApplicationGraph,
@@ -775,6 +779,16 @@ export function deriveVerificationProfile(
     );
   }
 
+  let directory: ContentDirectoryProfile | undefined;
+  try {
+    directory = selectContentDirectoryProfile(graph, lock);
+  } catch {
+    throw new VerificationContractError(
+      "Content/Directory verification requires an exact immutable profile.",
+    );
+  }
+  if (directory) return directoryVerificationProfile(directory);
+
   let correctionEntity: string | undefined;
   try {
     if (
@@ -1490,6 +1504,252 @@ export function deriveVerificationProfile(
 
   return {
     profileKey,
+    stepPlan: Object.freeze(stepPlan),
+    journeys: Object.freeze(journeys),
+    apiRegistry: Object.freeze(apiRegistry),
+  };
+}
+
+/** Authored small fixtures keep each complete Directory read under the private byte cap. */
+function directoryVerificationProfile(
+  profile: ContentDirectoryProfile,
+): VerificationProfile {
+  const base = "/api/" + profile.entity;
+  const apiRegistry: RegisteredApiAction[] = [
+    {
+      action: "directory.create",
+      method: "POST",
+      route: base,
+      expectedStatus: 201,
+    },
+    {
+      action: "directory.update",
+      method: "PATCH",
+      route: base + "/{recordId}",
+      expectedStatus: 200,
+    },
+    {
+      action: "directory.show",
+      method: "POST",
+      route: base + "/{recordId}/events/submit",
+      expectedStatus: 200,
+    },
+    {
+      action: "directory.hide",
+      method: "POST",
+      route: base + "/{recordId}/events/cancel",
+      expectedStatus: 200,
+    },
+    {
+      action: "directory.detail",
+      method: "GET",
+      route: base + "/{recordId}",
+      expectedStatus: 200,
+    },
+    {
+      action: "directory.list",
+      method: "GET",
+      route: base,
+      expectedStatus: 200,
+    },
+    {
+      action: "directory.hidden-detail",
+      method: "GET",
+      route: base + "/{recordId}",
+      expectedStatus: 404,
+    },
+    {
+      action: "directory.stale-update",
+      method: "PATCH",
+      route: base + "/{recordId}",
+      expectedStatus: 409,
+    },
+  ];
+  const stepPlan: VerificationStepPlanEntry[] = [
+    { stepId: "migration", kind: "migration" },
+    { stepId: "health", kind: "health" },
+  ];
+  const journeys: Record<
+    string,
+    RoleJourneyFixture | IdempotencyJourneyFixture
+  > = {};
+  const values = {
+    title: "Verifier resource",
+    summary: "Verifier resource summary",
+    body: "Verifier plain text resource.",
+    category: profile.categories[0]!,
+  };
+  const corrected = { ...values, summary: "Verifier corrected summary" };
+  const key = (id: string) =>
+    "verify-" +
+    createHash("sha256")
+      .update(profile.graphHash + id)
+      .digest("hex")
+      .slice(0, 40);
+  const curator = "fixture-session-" + profile.roles.curator;
+  const reader = "fixture-session-" + profile.roles.reader;
+  const create = (id: string): ChainJourneyStep => ({
+    action: "directory.create",
+    body: JSON.stringify({ values }),
+    sessionId: curator,
+    idempotencyKeyOverride: key(id + "-create"),
+  });
+  const command = (
+    id: string,
+    action: string,
+    expectedVersion: number,
+  ): ChainJourneyStep => ({
+    action,
+    body: JSON.stringify({
+      expectedVersion,
+      ...(action === "directory.update" ? { values: corrected } : {}),
+    }),
+    sessionId: curator,
+    idempotencyKeyOverride: key(id + "-" + action + "-" + expectedVersion),
+  });
+  const add = (
+    id: string,
+    kind: VerificationStepPlanEntry["kind"],
+    action: string,
+    sessionId: string,
+    chain?: readonly ChainJourneyStep[],
+    body?: string,
+    directoryRead?: RoleJourneyFixture["directoryRead"],
+    expectedVersion = 0,
+  ) => {
+    stepPlan.push({ stepId: id, kind });
+    journeys[id] = {
+      journeyId: id,
+      action,
+      sessionId,
+      headers: [{ name: "x-factory-idempotency-key", value: key(id) }],
+      ...(chain ? { chain } : {}),
+      ...(body ? { body } : {}),
+      ...(directoryRead ? { directoryRead } : {}),
+      ...(kind === "idempotency"
+        ? {
+            idempotencyKey: key(id),
+            expectedVersion,
+            replayExpectation: "stored-success" as const,
+          }
+        : {}),
+    };
+  };
+  add(
+    "directory-create",
+    "idempotency",
+    "directory.create",
+    curator,
+    undefined,
+    JSON.stringify({ values }),
+  );
+  for (const listed of [false, true]) {
+    for (const role of ["reader", "curator"] as const) {
+      for (const kind of ["list", "detail"] as const) {
+        const id =
+          "directory-" +
+          role +
+          "-" +
+          (listed ? "listed" : "hidden") +
+          "-" +
+          kind;
+        const hiddenDetail = role === "reader" && !listed && kind === "detail";
+        add(
+          id,
+          "role-journey",
+          hiddenDetail ? "directory.hidden-detail" : "directory." + kind,
+          role === "reader" ? reader : curator,
+          [create(id), ...(listed ? [command(id, "directory.show", 0)] : [])],
+          undefined,
+          hiddenDetail
+            ? undefined
+            : {
+                kind,
+                listedOnly: role === "reader",
+                presence: role === "reader" && !listed ? "absent" : "present",
+              },
+        );
+      }
+    }
+  }
+  for (const listed of [false, true]) {
+    const id = "directory-correct-" + (listed ? "listed" : "hidden");
+    const expectedVersion = listed ? 1 : 0;
+    add(
+      id,
+      "idempotency",
+      "directory.update",
+      curator,
+      [create(id), ...(listed ? [command(id, "directory.show", 0)] : [])],
+      JSON.stringify({ expectedVersion, values: corrected }),
+      undefined,
+      expectedVersion,
+    );
+  }
+  for (const action of ["show", "hide"] as const) {
+    const id = "directory-" + action;
+    const expectedVersion = action === "hide" ? 1 : 0;
+    add(
+      id,
+      "idempotency",
+      "directory." + action,
+      curator,
+      [
+        create(id),
+        ...(action === "hide" ? [command(id, "directory.show", 0)] : []),
+      ],
+      JSON.stringify({ expectedVersion }),
+      undefined,
+      expectedVersion,
+    );
+  }
+  const reshow = "directory-correct-hide-reshow";
+  add(
+    reshow,
+    "idempotency",
+    "directory.show",
+    curator,
+    [
+      create(reshow),
+      command(reshow, "directory.update", 0),
+      command(reshow, "directory.show", 1),
+      command(reshow, "directory.update", 2),
+      command(reshow, "directory.hide", 3),
+    ],
+    JSON.stringify({ expectedVersion: 4 }),
+    undefined,
+    4,
+  );
+  const stale = "directory-stale-update";
+  add(
+    stale,
+    "role-journey",
+    "directory.stale-update",
+    curator,
+    [create(stale), command(stale, "directory.show", 0)],
+    JSON.stringify({ expectedVersion: 0, values: corrected }),
+  );
+  for (const action of ["create", "update", "show", "hide"] as const) {
+    const id = "directory-reader-denied-" + action;
+    add(
+      id,
+      "authorization-denial",
+      "directory." + action,
+      reader,
+      action === "create" ? undefined : [create(id)],
+      JSON.stringify(
+        action === "create"
+          ? { values }
+          : action === "update"
+            ? { expectedVersion: 0, values: corrected }
+            : { expectedVersion: 0 },
+      ),
+    );
+  }
+  return {
+    profileKey:
+      "directory-" +
+      createHash("sha256").update(profile.graphHash).digest("hex").slice(0, 32),
     stepPlan: Object.freeze(stepPlan),
     journeys: Object.freeze(journeys),
     apiRegistry: Object.freeze(apiRegistry),

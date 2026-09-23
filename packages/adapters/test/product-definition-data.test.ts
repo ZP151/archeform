@@ -28,6 +28,7 @@ const historicalDefinitionKeys = [
 const admittedDefinitionKeys = [
   ...historicalDefinitionKeys,
   "appointment-booking-v1",
+  "knowledge-resource-directory",
 ] as const;
 
 const bytes = (definitions: unknown[]) =>
@@ -43,7 +44,7 @@ const report = (definitions: unknown[]) =>
   validateDefinitionBatch(bytes(definitions));
 
 describe("Product definition data", () => {
-  it("preserves seven immutable historical entries and admits the append-only Appointment definition", () => {
+  it("preserves seven immutable historical entries and appends reviewed Appointment and Directory definitions", () => {
     const data = loadProductDefinitionData();
     expect(
       data.definitions.map((definition) => definition.definitionKey),
@@ -344,7 +345,7 @@ describe("Product definition data", () => {
       distinct: 1,
       admitted: 0,
     });
-    expect(loadProductDefinitionData().definitions).toHaveLength(8);
+    expect(loadProductDefinitionData().definitions).toHaveLength(9);
   });
   it.each([
     '{"apiVersion":"x","apiVersion":"y"}',

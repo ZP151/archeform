@@ -1,0 +1,96 @@
+{
+  "attempt": "a077a0fc-aca8-4aab-ae8d-af3a9a76aa28",
+  "definitionKey": "knowledge-resource-directory",
+  "scope": "isolated-local-fixture-session",
+  "authoredSelections": 1,
+  "authoredEntries": 2,
+  "modelCalls": 0,
+  "ordinaryUserStudies": 0,
+  "technicalHandoffs": 0,
+  "inRunManualRescues": 0,
+  "readyTargetMs": 300000,
+  "outcome": "failed",
+  "visualReview": "pending-human-inspection",
+  "phases": [
+    {
+      "name": "source-identity",
+      "elapsedMs": 10
+    },
+    {
+      "name": "draft",
+      "elapsedMs": 980
+    },
+    {
+      "name": "publish",
+      "elapsedMs": 157
+    },
+    {
+      "name": "compile",
+      "elapsedMs": 469
+    },
+    {
+      "name": "verify",
+      "elapsedMs": 163493
+    },
+    {
+      "name": "preview",
+      "elapsedMs": 20368
+    },
+    {
+      "name": "curator-create",
+      "elapsedMs": 598
+    },
+    {
+      "name": "cleanup",
+      "elapsedMs": 13798
+    }
+  ],
+  "sources": {
+    "e2e/content-directory.spec.ts": "sha256:2c9bbbef425cb36babd10cde7ed8444134e62e243efc98d1f28915dcbe89875a",
+    "e2e/helpers/content-directory.ts": "sha256:3e140bf7152828641ab60f4fecb720239bdcf2e1e8d632c554f3c18d090e0342",
+    "docs/adr/adr-0074-content-directory-family.md": "sha256:91ad7bc1bf806fafaa4bbfa656be428567138123c632a2219c48b17195728919",
+    "packages/compiler/src/index.ts": "sha256:fc88f391bec58a2a9cb60839d23dd09a8c770b77ece276569db3173a63c5d816",
+    "packages/compiler/src/content-directory-contract.ts": "sha256:0966993730999974007fb2bbcbad4f703a7a1a93e6c4118aac5b38072426e909",
+    "packages/compiler/src/content-directory-runtime.ts": "sha256:522f85e878ead3ec9840712413b39b5f80b19ef9b2c700174902a207433a98d1",
+    "packages/compiler/src/content-directory-presentation.ts": "sha256:cd8d5b8bf6b4f79687fa4dc9f48b6d297377a4cd939f3db9e50801f4f1ff4df8",
+    "packages/adapters/src/requirements/definitions/product-definitions.v1.json": "sha256:f5a856c62a5fe3003b9c4ec47d768eac33f31a68d51cfc4f8b6139832bff2f89",
+    "apps/compiler-worker/src/verifier/verification-graph-plan.ts": "sha256:b3a80c6880909db1e2183b21a64faa554c5501259a306637b250935126a30d6e",
+    "apps/compiler-worker/src/verifier/verification-environment.ts": "sha256:412fe6b87c7671e3e9066cd7f4ff025ff013997b6a38f509f28eac43a2c30950",
+    "apps/compiler-worker/src/verifier/probes.ts": "sha256:9793594c075ab80c48e7f695a8d052137fa66d51b78618f27849b8ff06a4ea1a",
+    "pnpm-lock.yaml": "sha256:bcb0e52c5f56329ac8490080d618a142ccc8585e8cd60fb45e2980f62d2c9ea7"
+  },
+  "publishedRevisionId": "cmuehj0nu000lml4to9iup4f8",
+  "inputGraphHash": "sha256:1aa58b90157fede78ad793976936e8c06b2156af506a8879ef77b27c8f4404a3",
+  "compositionLockHash": "sha256:7fc086775c28a27d6dcc60f093b8cc02816266fb9a694cea96ff43af51069123",
+  "compilationId": "cmuehj0pn000nml4tmkr8iqii",
+  "compilationObservation": {
+    "status": "succeeded",
+    "failureCode": null
+  },
+  "verificationPassed": true,
+  "previewRunId": "preview-1ea4c03c-5808-4125-aefa-033bab6d8a10",
+  "compilation": {
+    "id": "cmuehj0pn000nml4tmkr8iqii",
+    "publishedRevisionId": "cmuehj0nu000lml4to9iup4f8",
+    "artifactManifestHash": "sha256:8c032a12f29257d0fdcef7e44a6cb317582a398e43ae78f22304966988deec09",
+    "inputGraphHash": "sha256:1aa58b90157fede78ad793976936e8c06b2156af506a8879ef77b27c8f4404a3"
+  },
+  "readyMs": 185744,
+  "readyTargetMet": true,
+  "failure": {
+    "phase": "curator-create",
+    "kind": "assertion-or-operation-failed"
+  },
+  "cleanup": {
+    "outcome": "removed",
+    "previewRunId": "preview-1ea4c03c-5808-4125-aefa-033bab6d8a10",
+    "composeProjectName": "factory-preview-preview-1ea4c03c-5808-4125-aefa-033bab6d8a10",
+    "resources": {
+      "artifact": false,
+      "containers": false,
+      "networks": false,
+      "volumes": false
+    }
+  },
+  "elapsedMs": 199873
+}

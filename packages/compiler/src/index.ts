@@ -20,7 +20,20 @@ import {
   renderTaskApi,
 } from "./task-mutation-contract.js";
 import { selectContentDirectoryProfile } from "./content-directory-contract.js";
-import { renderDirectoryRuntime, renderDirectoryPrismaStore, renderDirectoryApi, renderDirectoryProxy } from "./content-directory-runtime.js";
+export {
+  selectContentDirectoryProfile,
+  type ContentDirectoryProfile,
+} from "./content-directory-contract.js";
+import {
+  renderContentDirectoryWorkspace,
+  renderContentDirectoryStyles,
+} from "./content-directory-presentation.js";
+import {
+  renderDirectoryRuntime,
+  renderDirectoryPrismaStore,
+  renderDirectoryApi,
+  renderDirectoryProxy,
+} from "./content-directory-runtime.js";
 import {
   appointmentPrismaMigration,
   appointmentPrismaSchema,
@@ -3535,6 +3548,7 @@ function renderWebStyles(
   graph: ApplicationGraphV1,
   profile: GeneratedPresentationProfile,
   approvalEntity?: string,
+  directory = false,
 ): string {
   // The generated application styles come entirely from the resolved
   // Experience Design System: every token group (colour, typography,
@@ -3543,7 +3557,7 @@ function renderWebStyles(
   // made in the Page Studio therefore survive Publish and compilation.
   const system = resolveExperienceDesignSystem(graph.experience);
   const usesPrivateApprovalCobalt =
-    (profile === "approval-v1" || profile === "task-v1") &&
+    (profile === "approval-v1" || profile === "task-v1" || directory) &&
     graph.experience.designSystem === undefined;
   const themeBlock = (mode: "light" | "dark"): string => {
     const tokenVars: string[] = [];
@@ -3596,6 +3610,7 @@ function renderWebStyles(
           hasTaskCorrection(graph, graph.flow.flows[0]?.entity),
         )
       : []),
+    ...(directory ? [renderContentDirectoryStyles()] : []),
     ...(profile === "approval-v1"
       ? [
           ...approvalWorkspaceStyles.map((style) =>
@@ -4019,7 +4034,10 @@ export function generateApplicationBundle(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): GeneratedApplicationBundle {
-  const directoryProfile = selectContentDirectoryProfile(input.graph, input.compositionLock);
+  const directoryProfile = selectContentDirectoryProfile(
+    input.graph,
+    input.compositionLock,
+  );
   const plan = buildCompilationPlan(input);
   const compilationInput = buildCompilationInput(input, options);
   const graph = compilationInput.graph;
@@ -4134,7 +4152,8 @@ export function generateApplicationBundle(
   );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
-    ...(presentationProfile === "approval-v1" ||
+    ...(directoryProfile ||
+    presentationProfile === "approval-v1" ||
     presentationProfile === "task-v1"
       ? [
           {
@@ -4251,19 +4270,25 @@ export function generateApplicationBundle(
     {
       path: "web/app/page-runtime.tsx",
       render: () =>
-        restaurantRuntimeEnabled
-          ? renderRestaurantPageRuntime(rendererGraph)
-          : taskEntity
-            ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
-            : renderPageRuntime(
-                graph,
-                orderEntityKey,
-                !!identityPolicy,
-                presentationProfile,
-                approvalEntity,
-                appointmentProfile,
-                input.compositionLock,
-              ),
+        directoryProfile
+          ? renderContentDirectoryWorkspace(
+              graph,
+              directoryProfile,
+              !!identityPolicy,
+            )
+          : restaurantRuntimeEnabled
+            ? renderRestaurantPageRuntime(rendererGraph)
+            : taskEntity
+              ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
+              : renderPageRuntime(
+                  graph,
+                  orderEntityKey,
+                  !!identityPolicy,
+                  presentationProfile,
+                  approvalEntity,
+                  appointmentProfile,
+                  input.compositionLock,
+                ),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -4290,22 +4315,11 @@ export function generateApplicationBundle(
       path: "web/app/api/[...path]/route.ts",
       render: () =>
         directoryProfile
-          ? renderDirectoryProxy(renderWebProxyRoute(false, !!identityPolicy), directoryProfile)
-          : approvalEntity
-          ? renderWebProxyRoute(
-              restaurantRuntimeEnabled,
-              !!identityPolicy,
-              !!appointmentProfile,
+          ? renderDirectoryProxy(
+              renderWebProxyRoute(false, !!identityPolicy),
+              directoryProfile,
             )
-              .replace(
-                "headers: { 'content-type':",
-                "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
-              )
-              .replace(
-                "export const POST = proxy;",
-                "export const POST = proxy;\nexport const PATCH = proxy;",
-              )
-          : taskEntity
+          : approvalEntity
             ? renderWebProxyRoute(
                 restaurantRuntimeEnabled,
                 !!identityPolicy,
@@ -4317,20 +4331,39 @@ export function generateApplicationBundle(
                 )
                 .replace(
                   "export const POST = proxy;",
-                  hasTaskCorrection(graph, taskEntity)
-                    ? "export const POST = proxy;\nexport const PATCH = proxy;"
-                    : "export const POST = proxy;",
+                  "export const POST = proxy;\nexport const PATCH = proxy;",
                 )
-            : renderWebProxyRoute(
-                restaurantRuntimeEnabled,
-                !!identityPolicy,
-                !!appointmentProfile,
-              ),
+            : taskEntity
+              ? renderWebProxyRoute(
+                  restaurantRuntimeEnabled,
+                  !!identityPolicy,
+                  !!appointmentProfile,
+                )
+                  .replace(
+                    "headers: { 'content-type':",
+                    "headers: { 'x-factory-idempotency-key': request.headers.get('x-factory-idempotency-key') ?? '', 'content-type':",
+                  )
+                  .replace(
+                    "export const POST = proxy;",
+                    hasTaskCorrection(graph, taskEntity)
+                      ? "export const POST = proxy;\nexport const PATCH = proxy;"
+                      : "export const POST = proxy;",
+                  )
+              : renderWebProxyRoute(
+                  restaurantRuntimeEnabled,
+                  !!identityPolicy,
+                  !!appointmentProfile,
+                ),
     },
     {
       path: "web/app/globals.css",
       render: () =>
-        renderWebStyles(rendererGraph, presentationProfile, approvalEntity),
+        renderWebStyles(
+          rendererGraph,
+          presentationProfile,
+          approvalEntity,
+          !!directoryProfile,
+        ),
     },
     {
       path: "api/package.json",

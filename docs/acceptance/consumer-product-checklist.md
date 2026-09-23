@@ -72,6 +72,18 @@ check before expensive actual generation, within the existing review.
 
 ## Required acceptance dimensions
 
+Before expensive generated-product builds, focused exact-profile tests must pass
+the immutable Graph and its separately persisted composition lock through a JSON
+round trip. Compare the resulting public compiler output with the original input
+and retain malformed-data rejection cases. This catches persistence representation
+differences without weakening value, digest or authority checks. It belongs to the
+existing regression lane and adds no approval stage.
+
+Scope generated-product status/error assertions to the product workspace when a
+framework adds global live regions. Retain the business assertion and verify the
+framework interaction with its installed implementation before an expensive rerun;
+do not weaken the expected outcome to silence a locator failure.
+
 | Dimension                          | Observable acceptance condition                                                                                                                                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                                                                                               |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Need and definition fidelity       | The result satisfies the supported business intent, roles, fields and rules. Defaults are safe; only material unknowns trigger questions. Unsupported requirements remain explicit rather than silently discarded.                                                                                   | Requirement-to-outcome cases, including coarse intent and at least one material ambiguity or unsupported case relevant to the slice.                                                                                                                                                                                                   |

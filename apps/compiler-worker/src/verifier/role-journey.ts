@@ -1,6 +1,9 @@
 import { VerificationContractError } from "@factory/graph";
 
-import type { HttpMethod } from "./verification-environment.js";
+import type {
+  HttpMethod,
+  DirectoryReadExpectation,
+} from "./verification-environment.js";
 import { isSafeRequestPath } from "./verification-environment.js";
 
 /**
@@ -32,6 +35,8 @@ export type DeclaredJourneyHeader = {
 };
 
 export type RoleJourneyFixture = {
+  /** Only exact-selected directory plans declare this private bounded read proof. */
+  readonly directoryRead?: Omit<DirectoryReadExpectation, "recordId">;
   /** Bounds into the verification step ID; `[a-z0-9-]{1,64}`. */
   readonly journeyId: string;
   /** Must resolve in the profile registry; unknown actions fail closed. */
@@ -458,6 +463,22 @@ export function validateRoleJourney(
   }
   if (journey.chain !== undefined) {
     validateChainPrologue(journey, registry);
+  }
+  if (journey.directoryRead !== undefined) {
+    const read = journey.directoryRead;
+    if (
+      !read ||
+      Object.keys(read).length !== 3 ||
+      !["list", "detail"].includes(read.kind) ||
+      typeof read.listedOnly !== "boolean" ||
+      !["present", "absent"].includes(read.presence) ||
+      (read.kind === "detail" && read.presence !== "present") ||
+      !journey.chain ||
+      resolveRegistryAction(registry, journey.action).method !== "GET"
+    )
+      throw new VerificationContractError(
+        "Directory journeys require an exact bounded read expectation and captured record.",
+      );
   }
   return resolveRegistryAction(registry, journey.action);
 }
