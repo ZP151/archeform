@@ -115,8 +115,9 @@ The frozen nine-product baseline retains SHA-256
 `9c39f0b1e8a624b3dbac57707c8c7c6d81b0e945ad3cd9f63642d6619bdc209a`;
 all captured inputs/locks reproduce identical generated paths and content hashes.
 At the delivered Task 1 revision, valid Inventory compilation deliberately fails
-closed. The subsequent Task 2 working tree now emits its runtime under independent
-review; see [transaction evidence](evidence/inventory-operations/task2-runtime/README.md).
+closed. Task 2 subsequently delivers the accepted runtime at `0ada5fd1`, with
+100 focused and five actual PostgreSQL cases, clean independent review and both
+Node CI jobs passing. See [transaction evidence](evidence/inventory-operations/task2-runtime/README.md).
 
 The final correction independently passes 16 composition and 40 compiler cases,
 including the Graph-valid stripped-coordinate repro, all nine historical byte

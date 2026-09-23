@@ -15,10 +15,11 @@ cross-role journey. The original eight-definition compatibility baseline is unch
 contract source is accepted after its malformed-stock fallback correction.
 Independent affected QA passes 56 cases and Sol closes the reproduced P1 at
 0/0/0, retaining unaffected Graph/adapter evidence and all nine historical bytes.
-Inventory Task 2 is accepted for bounded source delivery: 100 focused cases and
+Inventory Task 2 is delivered at `0ada5fd1`: 100 focused cases and
 five real emitted PostgreSQL cases pass, including the stock journey, concurrency
 and transaction rollback. Independent task review, Terra QA and Sol judgment
-close P0/P1/P2 0/0/0. Responsive UI and worker integration follow. Its
+close P0/P1/P2 0/0/0. Responsive UI and worker integration are active in disjoint
+owned paths. Its
 [acceptance brief](acceptance/inventory-operations.md) freezes the receive 10 ->
 issue 3 -> correct -1 -> balance 6 journey and scenario-specific phone/desktop
 criteria before UI work. No tenth catalogue row, Inventory UI or complete Inventory
@@ -54,7 +55,9 @@ local compatible-upgrade/rollback/restore rehearsal now passes. Hosted operation
 remains unverified. Remote CI run `35920468035` passes both Node 22.11.0 and 22.x
 jobs at delivered `9a4bda79b3c6473a68fb369c01e49f4844e5b306`, after the historical
 booking, source-history, receipt and export checks are corrected. This verifies
-that exact delivered revision, not the later uncommitted Inventory runtime.
+that exact delivered revision. Inventory runtime CI run `35924474729` also passes both Node jobs
+at delivered `0ada5fd136b9cb3442c6e9498fe4062c5dd19e85`. The later UI/worker
+working tree is not covered by that run.
 Historical booking's focused 99 cases and independent task review, Terra QA and
 Sol judgment also pass. Cleanup residuals still prevent main/repository release.
 Source inspection confirms the

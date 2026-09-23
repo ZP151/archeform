@@ -26,9 +26,11 @@ The execution base is `62c53884897a7f72c3a4c9fe25c2b010491515fd` in the existing
 isolated `codex/definition-regression-entry` worktree. Root-checkout Eval V2 work
 is separately owned and must not be overwritten or imported without review.
 
-The current catalogue contains eight registered definitions and four runtime
-families. Existing local evidence does not establish ordinary-user success or
-hosted delivery. New candidates in this document do not increase those counts.
+At the execution base, the catalogue contained eight registered definitions and
+four runtime families. Directory delivery now establishes nine registered and
+locally accepted definitions across five demonstrated runtime families. Existing
+local evidence does not establish ordinary-user success or hosted delivery. New
+candidates in this document do not increase those counts.
 
 The September 13 scale roadmap and September 17 engineering plan authorize the
 route. A new family contract is implemented only after its exact ADR is accepted.
@@ -52,14 +54,14 @@ the environment question does not block local product work.
 
 ## Ordered business waves
 
-| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                          |
-| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Accepted local journey; delivered at e0c0f467; nine definitions / five families |
-| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Task 1 contract accepted; transactional runtime next                            |
-| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen; validate the actual assignment/access and evidence requirements before admission                                                                                | Candidate; not a renamed task definition                                        |
-| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit                 |
-| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics           |
-| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                         |
+| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                               |
+| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Accepted local journey; delivered at e0c0f467; nine definitions / five families      |
+| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Contract and transactional runtime delivered; responsive UI and worker checks active |
+| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen; validate the actual assignment/access and evidence requirements before admission                                                                                | Candidate; not a renamed task definition                                             |
+| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit                      |
+| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics                |
+| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                              |
 
 After each new reusable family, assess 3-5 real domain briefs. Admit supported,
 semantically distinct jobs through data and bindings. Reject or queue unsupported
@@ -194,8 +196,9 @@ ledger registry entry alone. The next inventory decision must evaluate extractio
 or composition of that actual implementation, without changing historical
 Restaurant bundles or exposing order-specific assumptions to inventory users.
 
-ADR-0076 now completes this assessment and is accepted at SHA-256
-`788b183d5d9a62439566b29a8824a085060f32b3abad59d04c99109ecbccfe24`
+ADR-0076 and its accepted AMN-001 through AMN-012 amendments complete this
+assessment at final SHA-256
+`b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`
 through the recorded standing review. The [Inventory execution plan](2026-09-24-inventory-operations.md)
 uses existing mutation protection with an explicit new stock/movement contract,
 empty initial stock, indivisible units and unchanged historical outputs. Start

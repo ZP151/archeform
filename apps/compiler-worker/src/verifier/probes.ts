@@ -1,4 +1,5 @@
 import type { VerificationStepV1 } from "@factory/graph";
+import { runInventoryJourney } from "./inventory-operations-verification.js";
 
 import type { VerificationStepPlanEntry } from "./verification-lifecycle.js";
 import type { VerificationEnvironment } from "./verification-environment.js";
@@ -16,8 +17,8 @@ import {
 /**
  * The six bounded probes. Each probe returns exactly one allowlisted
  * VerificationStepV1: a fixed prose summary, the declared status/role/action,
- * and measured duration. Response bodies and process output are never read,
- * so they can never leak into evidence; any malformed or hostile fixture
+ * and measured duration. Private bounded comparisons and observations expose
+ * no response bodies or process output to evidence; any malformed or hostile fixture
  * throws before a request is sent.
  */
 
@@ -215,6 +216,7 @@ export async function runRoleJourneyProbe(
   registry: readonly RegisteredApiAction[],
 ): Promise<VerificationStepV1> {
   const action = validateRoleJourney(journey, registry);
+  if (journey.inventory) return runInventoryJourney(context, journey.inventory);
   let recordId: string | undefined;
   if (journey.chain !== undefined) {
     const prologue = await runChainPrologue(context, journey, registry);

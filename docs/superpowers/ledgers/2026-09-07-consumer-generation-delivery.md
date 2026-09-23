@@ -6991,3 +6991,75 @@ canonical registration and complete Inventory acceptance remain open; counts
 stay nine registered / nine locally accepted / five demonstrated runtime families.
 The full green CI at `9a4bda79` predates this runtime and is not its CI evidence.
 No main integration, repository release or hosted deployment is authorized.
+
+### 2026-09-24 Inventory Task 3 frozen parallel ownership
+
+Root delivers Task 2 as `0ada5fd136b9cb3442c6e9498fe4062c5dd19e85` and verifies
+remote branch equality. Its exact-head CI is not yet claimed. PM authorizes the
+existing Task 3 implementation under unchanged ADR-0076 and acceptance brief.
+The runtime source and exported selector/profile contract freeze at that commit.
+
+Presentation owner writes only `packages/compiler/src/inventory-operations-presentation.ts`
+and `packages/compiler/test/inventory-operations-presentation.test.ts`. Private
+helpers are `renderInventoryOperationsWorkspace(graph, profile, fixture): string`
+and `renderInventoryOperationsStyles(): string`, with a private provenance
+`inventoryOperationsPresentation` descriptor. Root alone owns `src/index.ts`
+page/style integration and shared documentation. Reuse approved primitives,
+patterns and pinned local icons; preserve explicit Graph design tokens. Follow
+390/768/1440 full-workspace acceptance, consequential action labels, authoritative
+reads, uncertain same-key retries and explicit stale-intent reconciliation.
+
+The separate verifier owner may write only compiler-worker
+`src/verifier/verification-graph-plan.ts`, `verification-environment.ts`,
+`verification-profiles.ts`, `role-journey.ts`, `probes.ts`, a private
+`inventory-operations-verification.ts`, and
+`test/inventory-operations-verification.test.ts` plus affected assertions in
+`test/verification-graph-plan.test.ts`. Derive through the frozen compiler
+selector; reuse current safe evidence types and bounded isolated preview
+resources. Before implementation, report whether existing owned execution can
+prove persisted audit/capability effects required by AMN-008. Do not expose a new
+API, alter authorization or claim an unobserved audit effect. Escalate any shared
+contract or authority change; neither writer changes Graph, runtime, packages,
+canonical definitions or another owner's files. Both writers are working in a
+shared worktree and must accommodate rather than revert others' changes.
+
+These accepted-scope slices use focused tests and one independent review, with
+actual generated-product visual/functional acceptance retained for Tasks 3/4.
+There is no new approval stage or routine whole-branch audit.
+
+PM authorizes the verifier's fixed, private Inventory observation through the
+existing owned preview process runner: execute the existing API Prisma client,
+parameterize validated captured movement IDs, assert their exact audit and
+capability effects, and return only bounded success/failure. No caller-provided
+code/query, new API, authorization change or general database executor is allowed.
+Errors and timeouts fail closed. This implements AMN-008 inside its accepted
+owned verification resource boundary; actual worker proof remains required.
+Presentation may additionally emit synthetic browser images and a concise record
+under `docs/acceptance/evidence/inventory-operations/task3-ui/`; these must be
+labelled separately from actual PostgreSQL-backed product acceptance.
+
+Remote CI run `35924474729` completes successfully for both Node 22.11.0 and
+22.x at delivered Inventory runtime commit
+`0ada5fd136b9cb3442c6e9498fe4062c5dd19e85`. This supersedes the pending checkpoint
+for Task 2 only; subsequent UI/worker work still needs its own applicable checks.
+
+### 2026-09-24 Inventory Task 3 verifier source acceptance
+
+The verifier owner freezes six owned files. Independent read-only
+`historical_booking_implementation` (not an Inventory author) verifies the six
+hashes and ADR, independently passes final 38/38 and closes new P0/P1/P2 0/0/0.
+The owner also passes 236/236 across nine affected suites before its final
+list-only assertion correction, and final build/typecheck/format checks. PM
+accepts the bounded verifier source and root-owned evidence/status updates for
+branch delivery. Preserve the separate active UI/index paths unstaged. Reuse
+Task 2 review; no new authority or public interface is introduced. Actual
+worker/API/PostgreSQL acceptance remains Task 4, not a claim from test doubles.
+See `docs/acceptance/evidence/inventory-operations/task3-worker/README.md`.
+
+Root inspects the first synthetic generated UI screenshot batch at 390/768/1440,
+including input, result, stale retry and dark long content. Quantity/primary
+phone action, full two-item summaries and desktop history are legible. One
+bounded correction removes generic button boxes from list names and ensures
+opening a form reveals/focuses its first field. The owner corrects a real label
+association defect found by browser tests. This UI work remains unaccepted until
+its scoped correction, independent review and root confirmation close.

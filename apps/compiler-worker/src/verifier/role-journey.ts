@@ -1,4 +1,5 @@
 import { VerificationContractError } from "@factory/graph";
+import type { InventoryOperationsProfile } from "@factory/compiler";
 
 import type {
   HttpMethod,
@@ -35,6 +36,8 @@ export type DeclaredJourneyHeader = {
 };
 
 export type RoleJourneyFixture = {
+  /** Worker-private witness supplied only by the exact compiler root selector. */
+  readonly inventory?: InventoryOperationsProfile;
   /** Only exact-selected directory plans declare this private bounded read proof. */
   readonly directoryRead?: Omit<DirectoryReadExpectation, "recordId">;
   /** Bounds into the verification step ID; `[a-z0-9-]{1,64}`. */

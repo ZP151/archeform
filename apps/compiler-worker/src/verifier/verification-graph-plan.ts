@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 
 import {
   selectContentDirectoryProfile,
+  selectInventoryOperationsProfile,
   type ContentDirectoryProfile,
   type PublishedGraphInput,
 } from "@factory/compiler";
@@ -23,6 +24,7 @@ import {
   type RoleJourneyFixture,
 } from "./role-journey.js";
 import type { VerificationProfile } from "./verification-profiles.js";
+import { inventoryVerificationProfile } from "./inventory-operations-verification.js";
 
 /**
  * The graph-derived verification plan. When a verification run carries no
@@ -779,6 +781,14 @@ export function deriveVerificationProfile(
     );
   }
 
+  try {
+    const inventory = selectInventoryOperationsProfile(graph, lock);
+    if (inventory) return inventoryVerificationProfile(inventory);
+  } catch {
+    throw new VerificationContractError(
+      "Inventory verification requires an exact immutable profile.",
+    );
+  }
   let directory: ContentDirectoryProfile | undefined;
   try {
     directory = selectContentDirectoryProfile(graph, lock);

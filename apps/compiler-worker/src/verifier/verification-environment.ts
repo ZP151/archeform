@@ -1,4 +1,12 @@
 import { posix } from "node:path";
+import {
+  compareInventoryResponse,
+  inventoryAuditObservationProgram,
+  validInventoryExpectation,
+  validInventoryObservation,
+  type InventoryReadExpectation,
+  type InventoryObservation,
+} from "./inventory-operations-verification.js";
 
 import {
   PreviewRunFailure,
@@ -15,9 +23,9 @@ import {
  * operation carries the run's operation timeout, never persists raw process
  * output or HTTP bodies, and returns only bounded status results — the probes
  * in the verifier turn those into allowlisted evidence summaries. The one
- * exception: a chain journey may ask to capture the pattern-validated
- * top-level `id` of a record the probe itself created (bounded read, never
- * persisted, never evidenced — see `request`).
+ * exceptions are bounded Directory/Inventory response comparisons and ephemeral,
+ * pattern-validated identifiers of records the probe itself created. Neither
+ * response bodies nor captured identifiers enter persisted evidence.
  */
 
 export class VerificationLifecycleError extends Error {
@@ -38,6 +46,9 @@ export type BoundedCommandResult = {
 };
 
 export type BoundedRequestResult = {
+  readonly inventoryReadMatches?: boolean;
+  /** Ephemeral identifier of this journey's movement; never evidence. */
+  readonly inventoryMovementId?: string;
   /** Directory-only bounded comparison; response content never crosses this boundary. */
   readonly directoryReadMatches?: boolean;
   readonly status: number;
@@ -58,6 +69,7 @@ export type BoundedRequestResult = {
  * neither is ever persisted or echoed into evidence.
  */
 export type RequestOptions = {
+  readonly inventoryRead?: InventoryReadExpectation;
   readonly directoryRead?: DirectoryReadExpectation;
   readonly headers?: readonly {
     readonly name: string;
@@ -372,9 +384,76 @@ export class VerificationEnvironment {
     return this.boundedFetch("GET", "/health", "web");
   }
 
+  /** Narrow AMN-008 observer inside this verifier's existing owned API service.
+   * No caller can supply a program, SQL, database URL, command or result shape. */
+  async observeInventoryAudit(
+    observation: InventoryObservation,
+  ): Promise<BoundedCommandResult> {
+    if (!validInventoryObservation(observation))
+      throw new VerificationLifecycleError(
+        "invalid_inventory_observation",
+        "Inventory observation requires bounded captured identities.",
+      );
+    if (!this.startedPreview)
+      throw new VerificationLifecycleError(
+        "environment_not_started",
+        "The isolated environment has not started.",
+      );
+    if (!this.options.processRunner)
+      throw new VerificationLifecycleError(
+        "process_runner_required",
+        "The observation runner is not configured.",
+      );
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(),
+      this.options.operationTimeoutMs,
+    );
+    const startedMs = this.options.nowMs?.() ?? performance.now();
+    try {
+      const output = await this.options.processRunner(
+        {
+          file: "docker",
+          args: [
+            "compose",
+            "--file",
+            "docker-compose.yml",
+            "--project-name",
+            this.options.composeProjectName,
+            "--project-directory",
+            posix.join(
+              this.options.artifactRoot,
+              ".preview-runs",
+              this.options.previewRunId,
+            ),
+            "exec",
+            "-T",
+            "api",
+            "node",
+            "-e",
+            inventoryAuditObservationProgram,
+            JSON.stringify(observation),
+          ],
+          environment: dockerHostLookupEnvironment(),
+        },
+        controller.signal,
+      );
+      return {
+        succeeded:
+          !controller.signal.aborted && (output === undefined || output === ""),
+        durationMs: this.elapsed(startedMs),
+      };
+    } catch {
+      return { succeeded: false, durationMs: this.elapsed(startedMs) };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   /**
-   * Sends one bounded HTTP request to the isolated API. The response body is
-   * never read or persisted — only the bounded status is returned. Declared
+   * Sends one bounded HTTP request to the isolated API. Declared comparisons
+   * may privately read bounded responses, returning only booleans and captured
+   * identifiers; bodies are never persisted. Declared
    * fixture options (role header, flat JSON body) are validated fail closed
    * before the request is sent.
    */
@@ -422,6 +501,18 @@ export class VerificationEnvironment {
       );
     }
     if (options) {
+      if (
+        options.inventoryRead !== undefined &&
+        (port !== "api" ||
+          captureRecordId ||
+          options.directoryRead !== undefined ||
+          !validInventoryExpectation(options.inventoryRead))
+      ) {
+        throw new VerificationLifecycleError(
+          "invalid_inventory_read",
+          "Inventory reads require bounded declared expectations.",
+        );
+      }
       if (
         options.directoryRead !== undefined &&
         (method !== "GET" ||
@@ -506,12 +597,31 @@ export class VerificationEnvironment {
               options.directoryRead,
               controller.signal,
             ));
+      const inventory =
+        options?.inventoryRead === undefined
+          ? undefined
+          : response.status >= 200 && response.status < 300
+            ? await compareInventoryResponse(
+                response,
+                options.inventoryRead,
+                controller.signal,
+              )
+            : { matches: false };
       return {
         status: response?.status ?? 0,
         ok: response?.ok ?? false,
         durationMs: this.elapsed(startedMs),
         ...(recordId === undefined ? {} : { recordId }),
         ...(directoryReadMatches === undefined ? {} : { directoryReadMatches }),
+        ...(inventory === undefined
+          ? {}
+          : {
+              inventoryReadMatches: inventory.matches,
+              ...(inventory.recordId ? { recordId: inventory.recordId } : {}),
+              ...(inventory.movementId
+                ? { inventoryMovementId: inventory.movementId }
+                : {}),
+            }),
       };
     } catch {
       // Network failures and timeouts are bounded results, never raw output.
@@ -520,6 +630,7 @@ export class VerificationEnvironment {
         ok: false,
         durationMs: this.elapsed(startedMs),
         ...(options?.directoryRead ? { directoryReadMatches: false } : {}),
+        ...(options?.inventoryRead ? { inventoryReadMatches: false } : {}),
       };
     } finally {
       clearTimeout(timer);
