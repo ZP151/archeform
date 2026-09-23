@@ -5,8 +5,10 @@ correction, independent affected QA and scoped final review at P0/P1/P2 0/0/0.
 Earlier task review and independent QA evidence remain valid outside that gap.
 Task 2 transactional runtime is accepted for bounded source delivery: 100 focused
 cases and five actual emitted PostgreSQL cases pass. Independent task review,
-Terra QA and Sol judgment close P0/P1/P2 0/0/0. No UI or complete-product
-acceptance has run.
+Terra QA and Sol judgment close P0/P1/P2 0/0/0. Task 3 source and synthetic
+emitted-browser evidence also pass their single independent review: 13 browser
+cases, 47 compatibility/export cases and 38 verifier cases. Actual PostgreSQL-backed
+worker/lifecycle and complete-product acceptance remain open.
 Authority: accepted ADR-0076 and the active PM ledger. This file defines the
 business and visual observations before implementation. It adds no approval gate.
 The catalogue remains nine locally accepted definitions across five demonstrated

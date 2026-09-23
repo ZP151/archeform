@@ -1,5 +1,9 @@
 import { renderInventoryFile } from "./inventory-operations-runtime.js";
 import { selectInventoryOperationsProfile } from "./inventory-operations-contract.js";
+import {
+  renderInventoryOperationsWorkspace,
+  renderInventoryOperationsStyles,
+} from "./inventory-operations-presentation.js";
 export {
   selectInventoryOperationsProfile,
   type InventoryOperationsProfile,
@@ -3557,6 +3561,7 @@ function renderWebStyles(
   profile: GeneratedPresentationProfile,
   approvalEntity?: string,
   directory = false,
+  inventory = false,
 ): string {
   // The generated application styles come entirely from the resolved
   // Experience Design System: every token group (colour, typography,
@@ -3565,7 +3570,10 @@ function renderWebStyles(
   // made in the Page Studio therefore survive Publish and compilation.
   const system = resolveExperienceDesignSystem(graph.experience);
   const usesPrivateApprovalCobalt =
-    (profile === "approval-v1" || profile === "task-v1" || directory) &&
+    (profile === "approval-v1" ||
+      profile === "task-v1" ||
+      directory ||
+      inventory) &&
     graph.experience.designSystem === undefined;
   const themeBlock = (mode: "light" | "dark"): string => {
     const tokenVars: string[] = [];
@@ -3619,6 +3627,7 @@ function renderWebStyles(
         )
       : []),
     ...(directory ? [renderContentDirectoryStyles()] : []),
+    ...(inventory ? [renderInventoryOperationsStyles()] : []),
     ...(profile === "approval-v1"
       ? [
           ...approvalWorkspaceStyles.map((style) =>
@@ -4164,7 +4173,8 @@ export function generateApplicationBundle(
   );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
-    ...(directoryProfile ||
+    ...(inventoryProfile ||
+    directoryProfile ||
     presentationProfile === "approval-v1" ||
     presentationProfile === "task-v1"
       ? [
@@ -4282,25 +4292,31 @@ export function generateApplicationBundle(
     {
       path: "web/app/page-runtime.tsx",
       render: () =>
-        directoryProfile
-          ? renderContentDirectoryWorkspace(
+        inventoryProfile
+          ? renderInventoryOperationsWorkspace(
               graph,
-              directoryProfile,
+              inventoryProfile,
               !!identityPolicy,
             )
-          : restaurantRuntimeEnabled
-            ? renderRestaurantPageRuntime(rendererGraph)
-            : taskEntity
-              ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
-              : renderPageRuntime(
-                  graph,
-                  orderEntityKey,
-                  !!identityPolicy,
-                  presentationProfile,
-                  approvalEntity,
-                  appointmentProfile,
-                  input.compositionLock,
-                ),
+          : directoryProfile
+            ? renderContentDirectoryWorkspace(
+                graph,
+                directoryProfile,
+                !!identityPolicy,
+              )
+            : restaurantRuntimeEnabled
+              ? renderRestaurantPageRuntime(rendererGraph)
+              : taskEntity
+                ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
+                : renderPageRuntime(
+                    graph,
+                    orderEntityKey,
+                    !!identityPolicy,
+                    presentationProfile,
+                    approvalEntity,
+                    appointmentProfile,
+                    input.compositionLock,
+                  ),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -4375,6 +4391,7 @@ export function generateApplicationBundle(
           presentationProfile,
           approvalEntity,
           !!directoryProfile,
+          !!inventoryProfile,
         ),
     },
     {

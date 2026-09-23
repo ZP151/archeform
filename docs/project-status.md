@@ -18,11 +18,14 @@ Independent affected QA passes 56 cases and Sol closes the reproduced P1 at
 Inventory Task 2 is delivered at `0ada5fd1`: 100 focused cases and
 five real emitted PostgreSQL cases pass, including the stock journey, concurrency
 and transaction rollback. Independent task review, Terra QA and Sol judgment
-close P0/P1/P2 0/0/0. Responsive UI and worker integration are active in disjoint
-owned paths. Its
+close P0/P1/P2 0/0/0. Task 3 verifier source is delivered at `20cb4519`; responsive
+UI source and its narrow compiler integration also pass one independent review.
+Browser tests pass 13/13 and root compatibility/export checks 47/47. These
+synthetic UI/runtime checks do not replace the next actual generated-product
+journey. Its
 [acceptance brief](acceptance/inventory-operations.md) freezes the receive 10 ->
 issue 3 -> correct -1 -> balance 6 journey and scenario-specific phone/desktop
-criteria before UI work. No tenth catalogue row, Inventory UI or complete Inventory
+criteria before implementation. No tenth catalogue row or complete Inventory
 product journey is accepted yet.
 
 The short-lane continuation now passes all eight steps, including 97 emitted

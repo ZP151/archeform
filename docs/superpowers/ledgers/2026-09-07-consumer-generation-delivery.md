@@ -7063,3 +7063,32 @@ bounded correction removes generic button boxes from list names and ensures
 opening a form reveals/focuses its first field. The owner corrects a real label
 association defect found by browser tests. This UI work remains unaccepted until
 its scoped correction, independent review and root confirmation close.
+
+### 2026-09-24 Inventory Task 3 presentation acceptance
+
+Verifier source is delivered as `20cb451916f588ed6365882c9784b15681f07f64`;
+root verifies remote equality. Its CI run `35926255343` is pending at this
+checkpoint. Presentation source freezes at SHA-256
+`3a346ef3f1ad73369f407ad657f2da93589dd1be2910108c46dfb276f03c2244`,
+test at `749a90fffd475029f7e322b754415b847f935f2a5aee1b9c4229124b9c182f69`,
+and root compiler facade at
+`a78462ec8cc470479236a41455a6d44d1ebcaf40d0dcc652e1ff4c8ca9605293`.
+Final browser tests pass 13/13 after label association, plain list links and
+first-field focus corrections. Root confirms corrected affected screenshots,
+passes final 47/47 contract/export checks, and verifies all nine historical
+outputs remain unchanged. Compiler build/typecheck and formatting pass.
+
+The same independent read-only reviewer inspects eight representative phone,
+tablet, desktop, dark, input and recovery images; reviews exact retry, explicit
+stale confirmation, role isolation, bounded reads, escaping, Graph design
+preservation and licensed icon delivery; independently passes two strict emitted
+TSX/escaping checks; and closes new P0/P1/P2 0/0/0. It retains the complete browser
+run without overwriting frozen images. Worker and Task 2 judgments remain valid.
+PM accepts the three presentation/integration source/test paths, synthetic image
+record and root docs for bounded branch delivery. No additional audit stage.
+
+Task 3 is source-complete. Task 4 next admits `supplies-stockroom` and exercises
+the actual generated PostgreSQL-backed app, worker, immutable lifecycle, restart
+replay, useful-job timing and owned cleanup. Counts remain nine/nine/five. No
+hosted deployment, main integration, repository release or complete Inventory
+product acceptance is claimed. The unbudgeted Goal remains active.

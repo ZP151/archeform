@@ -67,16 +67,20 @@ Do not apply its schema to an existing product database.
 After the interface freezes, assign disjoint private presentation and worker
 verification files. Root alone owns common compiler facade/style integration.
 
-- [ ] Search approved registries, recipes and existing generated assets first.
+- [x] Search approved registries, recipes and existing generated assets first.
       Compose stock identity, balance/unit, primary action and compact movement
       history; use pinned local icons and deliberate status/action color.
-- [ ] Render the complete workspace at 390/768/1440 with two authored SKUs.
+- [x] Render the complete workspace at 390/768/1440 with two authored SKUs.
       Prove mobile lookup/issue and desktop receive/correct/history, meaningful
       empty state, no results, invalid/insufficient stock, conflict and retry.
-- [ ] Preserve input on recoverable errors, prevent accidental double commands
+- [x] Preserve input on recoverable errors, prevent accidental double commands
       and use the authoritative server result after reload.
-- [ ] Derive actual bounded verifier probes through the one compiler selector.
+- [x] Derive actual bounded verifier probes through the one compiler selector.
       Keep payloads private; persist only existing safe evidence shapes.
+
+Source acceptance is complete after one independent review. UI evidence uses the
+actual emitted browser/runtime with fixture storage; the actual PostgreSQL-backed
+worker and complete immutable lifecycle remain Task 4.
 
 ## Task 4: admit the product and exercise the actual journey
 
