@@ -1,6 +1,46 @@
 # Market and ecosystem validation
 
-Updated: 2026-09-10
+Updated: 2026-09-24
+
+## 2026-09-24 customer-request family fit
+
+**Decision investigated:** whether the next family needs a customer conversation
+and ownership model beyond the existing technician Work Orders runtime. This is
+public product-behavior research, not user demand validation or source adoption.
+
+Sources observed on 2026-09-24; publication dates are not stated. Confidence is
+high for the documented behavior, not for market size or Archeform compatibility.
+
+| Direct official source                                                                                    | Observed fact                                                                                                                                                                 | Product decision affected                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Zammad ticket basics, versioned 7.0 page](https://user-docs.zammad.org/en/7.0/basics/ticket-basics.html) | A request contains a conversation, state and attributed history. The page is marked old-version.                                                                              | A status-changing work order alone does not establish a customer-support interaction. This is a behavioral reference, not a current-version recommendation. |
+| [osTicket agent tickets](https://docs.osticket.com/en/latest/Agent/Tickets/Tickets.html)                  | Open and Answered distinguish which side needs to respond. A reply can remain visible in the customer portal without being emailed; internal notes have different visibility. | Verify the original customer's fresh read of a persisted staff reply. Do not imply outbound delivery or expose staff-only content.                          |
+| [Zammad group settings](https://admin-docs.zammad.org/en/latest/manage/groups/settings.html)              | Follow-up after closure has explicit alternatives: reopen or create a new ticket, optionally depending on elapsed time.                                                       | Freeze one clear reopen rule and test retained conversation; do not leave it to an incidental status handler.                                               |
+| [osTicket user portal](https://docs.osticket.com/en/latest/User%20Portal.html)                            | Submission and subsequent status access are separate portal activities with documented access routes.                                                                         | Successful submission alone is insufficient; later access by the rightful requester belongs in the same acceptance journey.                                 |
+
+**Inference and proposed direction:** start with one canonical in-app customer
+request loop: submit, receive a meaningful reply, read it as the requester,
+resolve, and reopen when necessary. Reuse accepted transaction/retry/history and
+responsive controls where their semantics fit. Customer ownership and conversation
+visibility need an exact family decision before implementation. Local fixture
+principals do not establish private hosted accounts. No competitor source, asset,
+package, authentication mechanism or integration is adopted by these observations.
+
+The following are authored expansion hypotheses, not interviewed customers,
+registered definitions or separately validated products:
+
+| Candidate brief     | Useful job to validate                                                    | Material requirement that prevents automatic reuse                                                  |
+| ------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Product usage help  | Customer clarifies a problem, receives an answer and confirms resolution  | Attachments, external email and access to a purchased order must be explicit if requested.          |
+| After-sales inquiry | Customer and staff retain a conversation about a supplied order reference | A typed reference does not verify purchase, issue a refund or manage a return.                      |
+| Membership question | Member receives an explanation and can follow up on the same request      | Account reset, entitlement changes and sensitive identity verification need real integrations.      |
+| Event inquiry       | Prospective attendee asks a question and reads the organizer's answer     | Registration, capacity, check-in and payment belong to the separate event family.                   |
+| Facilities question | Occupant reports a question and receives an answer or closure explanation | Physical dispatch and technician assignment remain Work Orders semantics, not a conversation label. |
+
+Do not add five rows merely by renaming the canonical request. Admit a later
+definition only when its distinct supported fields/rules, required outcome and
+negative cases justify it. The next implementation target remains one complete
+customer-request family, with candidate breadth recorded separately from delivery.
 
 ## 2026-09-10 reusable assembly supply
 

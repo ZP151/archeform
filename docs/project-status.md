@@ -6,8 +6,10 @@ Updated: 2026-09-24
 
 An unbudgeted Goal now drives the [September 24 execution route](superpowers/plans/2026-09-24-family-expansion-and-delivery.md).
 The first new family is Resource Directory, followed by Inventory Operations.
-Work Orders has accepted source evidence and awaits actual acceptance; Customer
-Requests, Event Registration and Sales Pipeline remain candidate waves. These
+Work Orders has accepted source evidence and awaits actual acceptance. Customer
+Requests has an accepted technology decision and its exact contract source task
+is assigned; Event Registration and Sales
+Pipeline remain candidate waves. These
 four waves have not added an accepted delivered product.
 Mobile browsing/field work and desktop
 management are selected by actual use; dual-surface products must complete their
@@ -17,8 +19,14 @@ cross-role journey. The original eight-definition compatibility baseline is unch
 
 The combined source checkpoint now passes full tests and typechecks (29/29 tasks
 each). A full-suite export-allowlist omission is corrected with an exact scoped
-test update and added to the existing fast regression. The controller is preparing
-an explicitly unfinished branch checkpoint; actual delivery remains open. See the
+test update and added to the existing fast regression. The controller pushed
+the explicitly unfinished source checkpoint `22852e92`; local and remote tips
+match at handoff. Its [CI run](https://github.com/ZP151/archeform/actions/runs/35973664121)
+passes on Node 22.x but fails on Node 22.11.0 at CommonJS-to-ESM helper loading.
+The bounded test-module correction now passes local strict ESM helper execution
+(18 cases), full discovery (90 cases in 36 files), tracked types and formatting;
+independent review closes P0/P1/P2 0/0/0 and a new remote run remains pending.
+Actual delivery stays open. See the
 [source checkpoint](acceptance/evidence/consumer-source-checkpoint/README.md).
 
 | Outcome                       | Current evidence                                                                                                                              | Next acceptance                                                                                              |
@@ -52,10 +60,10 @@ review and independent QA, including 18 pure helper cases and tracked no-emit
 types. Actual execution is still pending. See the
 [definition and case-source checkpoint](acceptance/evidence/service-work-orders/definition-consumer-source.md).
 The expanded eight-step definition lane and
-retained source reviews remain valid. Latest pushed branch HEAD `7a85d6ef` has
+retained source reviews remain valid. Previous branch baseline `7a85d6ef` has
 [green CI](https://github.com/ZP151/archeform/actions/runs/35933220175) in both Node
-22.11.0 and 22.x jobs. That run covers the delivered base, not the current
-uncommitted ADR-0078/0079/0081 source. Accepted ADR-0078 now has implemented
+22.11.0 and 22.x jobs. That run covers the earlier base, not the subsequent
+source checkpoint above. Accepted ADR-0078 now has implemented
 context-preserving requirement recovery, passing focused checks/build and the
 root's eight-step definition regression. Task review and independent Terra
 deterministic QA close 0/0/0 (192 adapter and 129 Workbench cases); actual mobile
