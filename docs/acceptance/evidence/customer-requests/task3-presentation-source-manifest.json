@@ -1,0 +1,24 @@
+{
+  "base": "f003e12a04ce8ca7874426e0d25c0020a3c1286f",
+  "scope": "Task 3 presentation and compiler integration only",
+  "sources": [
+    {
+      "path": "packages/compiler/src/customer-requests-presentation.ts",
+      "sha256": "a48c4acd8c490acd9c2baac2788d505f327e4f1169f6d0a566c5f3cf5e9d9a69"
+    },
+    {
+      "path": "packages/compiler/test/customer-requests-presentation.test.ts",
+      "sha256": "7cc065243d86424ab23e0d9a74e183799cbdc0ff6dcf7276f2cf1550d9ded211"
+    },
+    {
+      "path": "packages/compiler/src/index.ts",
+      "sha256": "2161d1404fef03e30f84c7c713813204cd0c26776e0ff1f0cdd6d9d1b411da90"
+    },
+    {
+      "path": "packages/compiler/src/approval-workspace-presentation.ts",
+      "sha256": "36766331acda22c0419a772275bd2a5c79b315f552057ea9f039f18c932e2bd6"
+    }
+  ],
+  "reviewedSourceManifestSha256": "7a93a4aa972827fef9f074979e8a812d8ee56331e9f35c3c72e9ce2f35bd8451",
+  "repairManifestSha256": "9c2b9a5fdaa815dfff2f7b8aa2bc03adc2f43909ef6cccfb83fb952f7619d829"
+}

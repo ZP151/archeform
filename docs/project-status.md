@@ -39,8 +39,19 @@ at that exact revision; Task 2 is outside that run. Task 2 now has
 [accepted runtime source](acceptance/evidence/customer-requests/task2-source-acceptance.md):
 independent QA passes 147 focused cases, compiler types and twelve-definition
 immutable-output parity. A proxy error-sanitization finding is repaired and
-independently closed. Responsive conversation UI, worker verification and actual
-consumer delivery remain next; no delivered-definition count increases.
+independently closed. Task 2 is pushed at
+`f003e12a04ce8ca7874426e0d25c0020a3c1286f`; both Node jobs pass in
+[CI run 35984013856](https://github.com/ZP151/archeform/actions/runs/35984013856).
+Responsive conversation UI has
+[accepted source evidence](acceptance/evidence/customer-requests/task3-presentation-source-acceptance.md):
+19 emitted-component cases pass after scoped closure of history paging,
+read-cancellation and keyboard-focus findings. Actual emitted page/CSS captures
+cover phone, tablet, desktop, themes and recovery states.
+Worker verification's narrowly scoped compatibility decision for nested request
+IDs and command fixture bodies is independently accepted as ADR-0085; its private
+adapter has 115 passing focused tests and is under independent review, with
+generic probe behavior preserved. This verifier is not yet accepted for delivery.
+Actual consumer delivery remains open; no delivered-definition count increases.
 
 | Outcome                       | Current evidence                                                                                                                              | Next acceptance                                                                                             |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |

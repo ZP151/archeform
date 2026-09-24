@@ -1,0 +1,100 @@
+{
+  "reviewer": "work_orders_integrated_review",
+  "proposer": "customer_requests_verifier_tech_lead",
+  "independentFromProposerAndImplementation": true,
+  "reviewDate": "2026-09-24",
+  "decisionOnly": true,
+  "adr": "docs/adr/adr-0085-customer-requests-verifier-adaptation.md",
+  "sha256Before": "bcf5e50e79dce5c80a270fda6dc2bf7ca0399211d63bfaf4ed3a059b37224464",
+  "sha256After": "bcf5e50e79dce5c80a270fda6dc2bf7ca0399211d63bfaf4ed3a059b37224464",
+  "APPROVED_FOR_STANDING_ACCEPTANCE": "yes",
+  "findings": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "recommendation": "keep",
+  "authorityRead": [
+    "AGENTS.md",
+    "docs/tech-governance.md",
+    "docs/threat-model.md",
+    "docs/adr/adr-0084-customer-requests-family.md",
+    "generated/.customer-requests-task2/task-2-report.md",
+    "docs/superpowers/ledgers/2026-09-07-consumer-generation-delivery.md"
+  ],
+  "acceptedADR0084Sha256": "8a78888dd9f1996588f475188b4645664c06bf9e1a49561112cdfa89c6f954c6",
+  "evidence": [
+    {
+      "path": "apps/compiler-worker/src/verifier/verification-environment.ts",
+      "lines": [126, 149, 215, 241, 532, 614, 641, 819],
+      "finding": "Generic input envelopes and top-level ID capture cannot represent the accepted update/null-reply and nested mutation response. Existing loopback request boundary, timeout, safe path, headers and bounded comparator dispatch can host the private adaptation."
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/role-journey.ts",
+      "lines": [38, 393],
+      "finding": "RoleJourneyFixture already carries a private Inventory profile; registry/journey validation is a reusable entry gate. Proposed exclusive customerRequests branch can preserve generic declarations."
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/probes.ts",
+      "lines": [213, 461, 530],
+      "finding": "Inventory dispatch follows validation; generic stored-success relies on captured top-level IDs. A private runner avoids altering either behavior."
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/inventory-operations-verification.ts",
+      "lines": [37, 98, 269],
+      "finding": "Actual exact-profile plan, bounded private response comparator and sequential request runner exist. Its SQL observation path is separate and explicitly excluded by this ADR."
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+      "lines": [766, 787, 795],
+      "finding": "Exact compiler selectors already route family-specific verification before generic derivation and translate selection failures to bounded contract errors."
+    },
+    {
+      "path": "packages/compiler/src/customer-requests-runtime.ts",
+      "lines": [58, 75, 121, 184, 194, 208, 218, 234, 264],
+      "finding": "Current emitted code confirms exact request/event result, owner-bound roster, update envelope, mandatory nullable reply field, version/history/projection data and preserved stored-success receipt response."
+    },
+    {
+      "path": "generated/.customer-requests-task2/task-2-report.md",
+      "finding": "Read frozen command/read/error/roster handoff and repair limits; no runtime contract alteration is required."
+    }
+  ],
+  "decisionGate": {
+    "currentAndProposedProfile": "Specified; accepted runtime, Golden profile and serialization remain unchanged.",
+    "versionsAndAuthority": "Exact supported/resolved versions, private interface shape and existing runtime versions plus manifest/lock authorities identified.",
+    "alternativesAndRecommendation": "keep; generic nested-ID/null widening, runtime response changes, status-only fixtures and new transport/query engines rejected.",
+    "effects": "Worker-private request/comparison adaptation only; explicit API/data/licensing/supply-chain/security/operability limits.",
+    "rollbackAndOwnership": "Two private implementation paths and eight root-owned shared integration/test paths; backout leaves this family unsupported/fail-closed, with data and immutable artifacts preserved.",
+    "verification": "Concrete source commands, authentic emitted-runtime substituted transport, adversarial streams/identity/replay tests, unchanged 12-definition worker plans and safe evidence locations."
+  },
+  "bounds": {
+    "requests": 64,
+    "newRequests": 2,
+    "eventsPerRequest": 10,
+    "returnedHistoryRows": 10,
+    "responseBytes": 16384,
+    "bodyUtf8Bytes": 512,
+    "capturedIdMaximum": 64,
+    "timeouts": "Existing per-operation timeout spans fetch/body; abort cancels reader, before-accept signal checks; journey signal checked before every request.",
+    "evidence": "Only fixed bounded summaries/status/duration; IDs, event IDs, business data, sessions and comparison digests remain transient."
+  },
+  "judgment": "Actual seams support the private adaptation. Required authored sequence fits fixed runtime states/versions, supports same-role ownership and full receipt identity, and introduces no unresolved material product choice or unsupported public contract. Implementation is bounded and reversible.",
+  "limits": [
+    "This verdict is not implementation authorization; PM must record exact-hash standing acceptance and assign the frozen disjoint ownership.",
+    "No source, runtime, UI, actual worker/service/PostgreSQL, consumer, hosted or release acceptance is implied.",
+    "Narrow fixture/read limits intentionally do not prove runtime maxima, large pagination, concurrency/restart or production privacy.",
+    "Unfinished presentation changes were excluded."
+  ],
+  "verificationPerformed": "Read-only source/document investigation and exact hash confirmation; no tests or actual execution.",
+  "actionsNotPerformed": [
+    "tracked source or ADR edits",
+    "Git",
+    "actual server or service",
+    "database",
+    "Docker",
+    "provider",
+    "cloud",
+    "startup retry",
+    "cleanup"
+  ]
+}

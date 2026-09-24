@@ -117,19 +117,26 @@ owner creates `apps/compiler-worker/src/verifier/customer-requests-verification.
 and its tests. Root serially owns shared style/emitter/verifier routing. Parallel
 writers require an enumerated disjoint handoff, otherwise run serially.
 
+The executable verifier consumes accepted
+[ADR-0085](../../adr/adr-0085-customer-requests-verifier-adaptation.md), exact
+SHA-256 `bcf5e50e79dce5c80a270fda6dc2bf7ca0399211d63bfaf4ed3a059b37224464`.
+Its private exact-profile journey handles the accepted nested request response
+and command bodies without widening generic probes. The active ledger records
+independent standing acceptance and the disjoint implementation assignment.
+
 **Consumes:** Exact profile, roster, commands, read projection and error codes.
 **Produces:** Customer list/form/conversation at 390px, staff triage/conversation
 at 1440px, usable 768px; executable verification scenarios using the same IDs.
 
-- [ ] Record ordered reuse search and compose workspace styles, icon assets,
+- [x] Record ordered reuse search and compose workspace styles, icon assets,
       page projection, native controls and existing recovery patterns.
-- [ ] RED role-appropriate actions and principal-switch late-response isolation.
+- [x] RED role-appropriate actions and principal-switch late-response isolation.
       Keep an uncertain command's actor/body/version/key frozen; restore current
       authoritative state before consciously reapplying stale text.
-- [ ] Implement attributed transcript, linked corrections, status/next actor,
+- [x] Implement attributed transcript, linked corrections, status/next actor,
       pagination and clear local-demo label. Avoid duplicate icon/text controls
       where the icon's accessible name suffices; retain meaningful visual hierarchy.
-- [ ] Exercise emitted UI with loading/empty/error/denial/confirmation/recovery,
+- [x] Exercise emitted UI with loading/empty/error/denial/confirmation/recovery,
       keyboard/touch, long text and 390/768/1440 layouts using allowed isolated
       component harnesses. Do not substitute this for actual generated-app images.
 - [ ] Add worker scenarios for the exact contract; run focused checks and ordinary

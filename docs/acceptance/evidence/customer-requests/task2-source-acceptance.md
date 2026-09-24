@@ -35,6 +35,12 @@ The complete generated method/roster/response handoff remains at
 `952087b02ded9b729f68ee716c5d8137a2b74befae4ae22c584983d17001dd9f`.
 Portable JSON formatting does not change its recorded source identities.
 
+Controller delivery is commit `f003e12a04ce8ca7874426e0d25c0020a3c1286f`.
+[CI run 35984013856](https://github.com/ZP151/archeform/actions/runs/35984013856)
+passes both Node 22.11.0 and 22.x jobs at that exact revision. The retained watch
+exits 0 and a fresh run read confirms both conclusions. This evidence does not
+cover later uncommitted presentation/verifier work.
+
 These tests execute emitted modules with memory or substituted Prisma/fetch
 adapters. Actual PostgreSQL races, restart, rollback and faults, complete customer
 journeys, visually inspected generated UI, consumer effort and hosted upgrades

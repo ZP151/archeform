@@ -5,6 +5,196 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
+### Customer Requests presentation accepted for bounded source delivery — 2026-09-24
+
+The original independent reviewer accepts repair 1 and closes all three P2
+findings, with current/before source and evidence hashes verified. No P0/P1/P2
+remains in the presentation scope. Root PM accepts the four presentation/compiler
+integration paths. Fresh repair evidence is 19/19 emitted-component cases, compiler
+types/format and root's post-repair compiler build. Retained 91 integration cases,
+12/12 historical output parity and inspected layout/state/theme captures remain
+valid for unchanged scope. Portable acceptance, manifests, review/recheck and
+thirteen component images live under `docs/acceptance/evidence/customer-requests/`.
+
+Controller prepares a presentation-only source commit/push plus accepted ADR-0085
+decision documentation. Active verifier source and its pending findings are
+excluded. No actual-local/hosted count increases or main/release claim is made.
+
+### Customer Requests presentation repair frozen for scoped recheck — 2026-09-24
+
+The original owner reproduces all three P2 failures, then passes 19/19 emitted
+component tests with the repair, compiler types and changed-file formatting.
+The two-path repair manifest at `generated/.customer-requests-task3/repair-1/source-manifest.json`
+has SHA-256 `9c2b9a5fdaa815dfff2f7b8aa2bc03adc2f43909ef6cccfb83fb952f7619d829`.
+Root confirms shared compiler index/style hashes still match the original freeze.
+Original manifest, before files, visual captures and passing integration/history
+evidence remain retained. The original `customer_requests_presentation_review`
+now owns only scoped closure of the three findings and affected code/evidence.
+No additional ordinary-presentation QA/release review is introduced.
+
+### Customer Requests private verifier frozen for task review — 2026-09-24
+
+The six-source private verifier/shared integration manifest is
+`generated/.customer-requests-task3/verification/source-manifest.json`, SHA-256
+`45e7f196cf8c944432b2bf35fe6e737b828f7eb43fb7def84c912cc703ac237d`.
+Writer's fresh 115 cases, worker types/build and formatting pass. Its 62-request
+authored sequence executes the emitted in-memory runtime with canonical, renamed,
+swapped and maximum-length roles, exact ownership/replay and adversarial transport
+checks. Root's 274 historical cases pass and all twelve worker plans match the
+protected pre-edit capture. Earlier compiler emitted-byte evidence stays separate.
+
+Root assigns strongest-model `customer_requests_verifier_review` independent
+task specification/quality/security review of only those six source paths and
+their evidence, against accepted ADR-0085. The presentation repair is separate
+and excluded. No source writer may change the verifier freeze while reviewed.
+Independent QA, final judgment and PM acceptance still follow for this shared
+boundary; no actual database/product/hosted acceptance is inferred.
+
+### Customer Requests presentation grouped repair 1 — 2026-09-24
+
+The independent presentation review requests three P2 corrections, no P0/P1:
+same-request refresh can accept an earlier page from an obsolete cursor and omit
+a history event; principal switch suppresses late rendering but does not abort
+reads; mobile routes/editors lack focus restoration. Root verifies the actual
+source against ADR-0084 RDS-002, SEC-005 and UXR-003. Review is retained at
+`generated/.customer-requests-task3-presentation-review/task-3-review.md`.
+
+Root resumes the original `customer_requests_presentation` owner for these three
+issues only in its same presentation source/test paths. Preserve original source
+manifest/report and screenshots; before copies match the original hashes in
+`generated/.customer-requests-task3/repair-1/before/`. Add focused RED/GREEN cases
+for the actual interleaving, read cancellation and route/editor keyboard focus.
+Repair receipts and the new manifest belong in `repair-1/`. Existing compiler
+integration, historical output, unchanged visual and runtime evidence are reused;
+no new broad QA or release gate is added. The original reviewer handles only
+the repair and its affected evidence afterward. Presentation delivery waits.
+
+### Customer Requests presentation frozen for focused review — 2026-09-24
+
+The four-source presentation/integration manifest is
+`generated/.customer-requests-task3/presentation-source-manifest.json`, SHA-256
+`7a93a4aa972827fef9f074979e8a812d8ee56331e9f35c3c72e9ce2f35bd8451`.
+The presentation owner reports 14 passing emitted-component cases, strict emitted
+TSX, compiler types/build and formatting; root separately verifies 91 affected
+compilation/contract/export cases, compiler build and final twelve-definition
+immutable output equality. The writer report records exact source and image hashes.
+Root visually inspects canonical/dark/explicit, 390/768/1440, long content and
+empty/loading/error/denial/stale/uncertain/terminal states. Grouped corrections
+remove repeated mobile navigation/create controls, technical recovery wording
+and terminal duplication, and distinguish primary reply from secondary resolution.
+These remain intercepted component results, not actual product acceptance.
+
+Root assigns independent `customer_requests_presentation_review` a single
+proportionate specification/quality review of the four source paths and retained
+evidence. No new QA/release chain applies to this ordinary presentation slice.
+The separate accepted verifier shared-contract work remains in progress and is
+excluded from this freeze, review and any presentation-only delivery.
+
+### ADR-0085 accepted; bounded verifier implementation assigned — 2026-09-24
+
+Independent `work_orders_integrated_review`, neither proposer nor writer,
+returns `APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 0/0/0, at exact
+ADR-0085 SHA-256
+`bcf5e50e79dce5c80a270fda6dc2bf7ca0399211d63bfaf4ed3a059b37224464`.
+Reports are `generated/.customer-requests-task3-verifier-decision-review/review.md`
+and `review.json`. It confirms both authorities, actual compatibility, bounded
+reversibility, no security weakening or unresolved product choice. PM records
+founder acceptance through the exact September 1 standing independent-review
+authorization in `docs/tech-governance.md`. ADR bytes remain unchanged.
+
+PM assigns strongest-model `customer_requests_verifier_implementation` only
+`apps/compiler-worker/src/verifier/customer-requests-verification.ts` and
+`apps/compiler-worker/test/customer-requests-verification.test.ts` plus its owned
+`generated/.customer-requests-task3/verification/implementation/` evidence.
+The earlier bounded descriptor writer remains stopped and owns no active source.
+Root retains serial shared integration in the four verifier source and four
+existing test paths enumerated in ADR OWN-002. Freeze the concrete private helper
+signatures and meaningful seam RED before root integration. No other source paths
+are assigned. Presentation remains on its unchanged API and disjoint files.
+Normal shared-contract task review/QA/final judgment remain required; this
+decision is not implementation or actual-product acceptance.
+
+### Customer Requests verifier compatibility investigation — 2026-09-24
+
+Tech Lead proposes ADR-0085 at SHA-256
+`bcf5e50e79dce5c80a270fda6dc2bf7ca0399211d63bfaf4ed3a059b37224464`,
+recommendation `keep`: reuse the private Inventory journey seam and preserve
+generic capture/parser/idempotency behavior. The proposal uses exact-profile
+bounded comparison rather than altering accepted runtime responses. Root assigns
+independent `work_orders_integrated_review` only the standing-acceptance decision;
+it is neither this proposal's author nor an implementation writer. No source
+implementation proceeds before its verdict and PM's recorded exact-hash acceptance.
+
+Before any worker edits, root captures all twelve historical worker derivations
+in `generated/.customer-requests-task3/verification/historical-plans-before.json`,
+SHA-256 `dab1ba9ab76dfcaa422a2eb25eba078d24d0bdff093241561d26914c3e244438`.
+The comparator refuses recapture and verifies both the original immutable input
+digest and this new baseline digest. No historical evidence is replaced.
+
+The worker owner identifies an executable integration gap before source edits:
+existing chain capture reads top-level `id`, while the accepted request runtime
+returns `request.id`; the existing bounded fixture parser does not accept the
+Customer Requests correction envelope (or its nullable reply correction field).
+Do not fabricate top-level IDs or relax generic fixture parsing to claim success.
+The private worker implementation is stopped pending a bounded decision. The
+unchanged presentation/runtime contract remains independent and continues.
+
+Root dispatches `customer_requests_verifier_tech_lead` read-only except for new
+`docs/adr/adr-0085-customer-requests-verifier-adaptation.md`. It must propose the
+smallest exact-profile adapter with unchanged generic bounds and behavior,
+and assess it against both authority documents. No implementation is authorized
+by this investigation; any acceptance follows the existing founder standing
+independent-review policy and is recorded separately at an exact ADR hash.
+
+### Customer Requests Task 3 shared routing and verifier assignment — 2026-09-24
+
+Remote CI run `35984013856` completes successfully at exact delivered Task 2
+revision `f003e12a04ce8ca7874426e0d25c0020a3c1286f`: Node 22.11.0 and 22.x
+both pass. The retained watch terminates with exit 0; a fresh read confirms both
+job conclusions and the same head SHA. This covers the delivered source revision,
+not the in-progress Task 3 files, actual product operation or hosted delivery.
+
+The presentation owner reproduced the emitted-bundle RED. Root adds the private
+page/style routing and shared customer-request style prefix; historical branches
+are unchanged. Final presentation evidence must consume emitted page and CSS.
+
+With Task 2 interfaces frozen, root separately assigns
+`customer_requests_verification` only
+`apps/compiler-worker/src/verifier/customer-requests-verification.ts` and
+`apps/compiler-worker/test/customer-requests-verification.test.ts`.
+Its private export is `customerRequestsVerificationProfile(profile:
+CustomerRequestsProfile): VerificationProfile`, using the existing worker
+journey/probe contracts without changes. Root alone owns subsequent
+`verification-graph-plan.ts` routing. No environment/probe/schema edits are
+assigned. Stop for a concrete inability to represent a necessary check; report
+unproven response-content or durable behavior honestly. Presentation and worker
+paths are disjoint. Both consume the fixed Task 2 roster, commands and response
+contract. Provider-free tests only; no actual startup, service or database.
+The known Spark model unavailability also applies to this bounded private adapter;
+use explicit Sol, retaining strongest-model authority over shared integration.
+
+### Customer Requests Task 2 delivered; responsive workspace ownership — 2026-09-24
+
+Controller commits/pushes `f003e12a04ce8ca7874426e0d25c0020a3c1286f`;
+local/remote tips match and the worktree is clean at handoff. Current compiler
+build is refreshed for downstream consumers after the proxy repair. Source
+Task 2 is complete; no actual-local or hosted product count changes.
+
+Root assigns `customer_requests_presentation` only the new compiler presentation
+module and its focused test under Task 3. Root alone owns shared compiler index
+presentation/style routing and the shared workspace style-prefix union.
+The frozen private signatures and exact sequence are in
+`generated/.customer-requests-task3/presentation-contract.md`; runtime/profile/
+roster/API contracts remain unchanged at Task 2's accepted freeze. The existing
+design handoff requires final emitted page/CSS in the same component test batch.
+
+Spark is unavailable in the current model backend (confirmed by the failed role
+dispatch); this bounded presentation slice uses an explicit Sol implementation
+owner. Root retains shared integration authority. No simultaneous writers own a
+path. Begin with an emitted-bundle RED, then integrate the agreed private exports.
+Worker-verifier integration follows separately; no source writer can broaden its
+ownership or actual-execution authority. No additional visual approval stage.
+
 ### Customer Requests Task 2 accepted for source delivery — 2026-09-24
 
 Final independent judgment returns ACCEPTED - SOURCE ONLY, P0/P1/P2 0/0/0,

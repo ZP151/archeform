@@ -6,6 +6,10 @@ export {
 import { renderServiceWorkOrdersFile } from "./service-work-orders-runtime.js";
 import { renderCustomerRequestsFile } from "./customer-requests-runtime.js";
 import {
+  renderCustomerRequestsWorkspace,
+  renderCustomerRequestsStyles,
+} from "./customer-requests-presentation.js";
+import {
   renderServiceWorkOrdersWorkspace,
   renderServiceWorkOrdersStyles,
 } from "./service-work-orders-presentation.js";
@@ -3627,6 +3631,7 @@ function renderWebStyles(
   inventory = false,
   appointment = false,
   workOrders = false,
+  customerRequests = false,
 ): string {
   // The generated application styles come entirely from the resolved
   // Experience Design System: every token group (colour, typography,
@@ -3640,7 +3645,8 @@ function renderWebStyles(
       directory ||
       inventory ||
       appointment ||
-      workOrders) &&
+      workOrders ||
+      customerRequests) &&
     graph.experience.designSystem === undefined;
   const themeBlock = (mode: "light" | "dark"): string => {
     const tokenVars: string[] = [];
@@ -3697,6 +3703,7 @@ function renderWebStyles(
     ...(inventory ? [renderInventoryOperationsStyles()] : []),
     ...(appointment ? [renderAppointmentWorkspaceStyles()] : []),
     ...(workOrders ? renderServiceWorkOrdersStyles() : []),
+    ...(customerRequests ? renderCustomerRequestsStyles() : []),
     ...(profile === "approval-v1"
       ? [
           ...approvalWorkspaceStyles.map((style) =>
@@ -4383,43 +4390,49 @@ export function generateApplicationBundle(
     {
       path: "web/app/page-runtime.tsx",
       render: () =>
-        workOrdersProfile
-          ? renderServiceWorkOrdersWorkspace(
+        customerRequestsProfile
+          ? renderCustomerRequestsWorkspace(
               graph,
-              workOrdersProfile,
+              customerRequestsProfile,
               !!identityPolicy,
             )
-          : appointmentConsumer
-            ? renderAppointmentWorkspace(
+          : workOrdersProfile
+            ? renderServiceWorkOrdersWorkspace(
                 graph,
-                appointmentConsumer,
+                workOrdersProfile,
                 !!identityPolicy,
               )
-            : inventoryProfile
-              ? renderInventoryOperationsWorkspace(
+            : appointmentConsumer
+              ? renderAppointmentWorkspace(
                   graph,
-                  inventoryProfile,
+                  appointmentConsumer,
                   !!identityPolicy,
                 )
-              : directoryProfile
-                ? renderContentDirectoryWorkspace(
+              : inventoryProfile
+                ? renderInventoryOperationsWorkspace(
                     graph,
-                    directoryProfile,
+                    inventoryProfile,
                     !!identityPolicy,
                   )
-                : restaurantRuntimeEnabled
-                  ? renderRestaurantPageRuntime(rendererGraph)
-                  : taskEntity
-                    ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
-                    : renderPageRuntime(
-                        graph,
-                        orderEntityKey,
-                        !!identityPolicy,
-                        presentationProfile,
-                        approvalEntity,
-                        appointmentProfile,
-                        input.compositionLock,
-                      ),
+                : directoryProfile
+                  ? renderContentDirectoryWorkspace(
+                      graph,
+                      directoryProfile,
+                      !!identityPolicy,
+                    )
+                  : restaurantRuntimeEnabled
+                    ? renderRestaurantPageRuntime(rendererGraph)
+                    : taskEntity
+                      ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
+                      : renderPageRuntime(
+                          graph,
+                          orderEntityKey,
+                          !!identityPolicy,
+                          presentationProfile,
+                          approvalEntity,
+                          appointmentProfile,
+                          input.compositionLock,
+                        ),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -4497,6 +4510,7 @@ export function generateApplicationBundle(
           !!inventoryProfile,
           !!appointmentConsumer,
           !!workOrdersProfile,
+          !!customerRequestsProfile,
         ),
     },
     {

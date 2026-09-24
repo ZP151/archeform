@@ -51,7 +51,8 @@ export function renderWorkspaceShell(profile: "approval" | "task"): string {
 
 // This profile has one stylesheet owner; older approval grid rules must not be layered underneath.
 export function renderWorkspaceStyles(
-  profile: "approval" | "task" | "appointment" | "work-order",
+  profile:
+    "approval" | "task" | "appointment" | "work-order" | "customer-request",
 ): readonly string[] {
   const prefix = String(profile);
   return [

@@ -1,0 +1,40 @@
+{
+  "apiVersion": "factory.customer-requests-presentation-repair-manifest/v1",
+  "acceptedRuntimeCommit": "f003e12a04ce8ca7874426e0d25c0020a3c1286f",
+  "reviewedSourceManifestSha256": "7a93a4aa972827fef9f074979e8a812d8ee56331e9f35c3c72e9ce2f35bd8451",
+  "repair": "repair-1",
+  "changedPaths": [
+    {
+      "path": "packages/compiler/src/customer-requests-presentation.ts",
+      "beforeSha256": "b6497e2e024c6a8f491f46dcf56b36fe2395c4127f24b8d21802123bb955a853",
+      "currentSha256": "a48c4acd8c490acd9c2baac2788d505f327e4f1169f6d0a566c5f3cf5e9d9a69"
+    },
+    {
+      "path": "packages/compiler/test/customer-requests-presentation.test.ts",
+      "beforeSha256": "8f5c631013d27daf468ad3339879a724f9f55edd204170fb8fa353f53ed5efb9",
+      "currentSha256": "7cc065243d86424ab23e0d9a74e183799cbdc0ff6dcf7276f2cf1550d9ded211"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "generated/.customer-requests-task3/repair-1/presentation-red.log",
+      "sha256": "b721fa27a4954947d5c5f283f9ddaba5edca979397810f5b513d586113c0e5ba"
+    },
+    {
+      "path": "generated/.customer-requests-task3/repair-1/presentation-green.log",
+      "sha256": "0a25da3b7efac2f5d51d9488cf3f6b294fa0f4e6f9a0c96516e394f01788b66a"
+    },
+    {
+      "path": "generated/.customer-requests-task3/repair-1/compiler-typecheck.log",
+      "sha256": "079b60e51346d74b0fed0cdaa28ca68e4c96f4d1967aff478eeb95289b3410f0"
+    },
+    {
+      "path": "generated/.customer-requests-task3/repair-1/presentation-format.log",
+      "sha256": "f20510a9da4717c51c4cffee6d0dd88d6c9a723d0a83711d01216f5b48961283"
+    },
+    {
+      "path": "generated/.customer-requests-task3/repair-1/repair-report.md",
+      "sha256": "47ab6f6671b00d45d6df3907196fc6e28ba9a6b861e0b689d2c1f542f586a178"
+    }
+  ]
+}
