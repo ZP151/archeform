@@ -1,4 +1,4 @@
-import { assertRequirementInterpretationResult } from "../../packages/adapters/src/requirements/requirement-interpreter";
+import { assertRequirementInterpretationResult } from "../../packages/adapters/dist/index.js";
 
 /** Acceptance-only facts; provider-authored content must never be returned. */
 export function approvalIntakeFacts(input: unknown) {

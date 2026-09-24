@@ -1,4 +1,4 @@
-import { OpenAIRequirementInterpreterAdapter } from "@factory/adapters";
+import { OpenAIRequirementInterpreterAdapter } from "../packages/adapters/dist/index.js";
 
 /**
  * This is a selection replay, not an intent-classification test.  It drives

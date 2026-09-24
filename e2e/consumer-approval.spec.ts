@@ -22,7 +22,7 @@ import {
 } from "./approval-presentation";
 import { observeInterpretation } from "./helpers/interpretation-diagnostics";
 import { approvalIntakeFacts } from "./helpers/approval-intake-diagnostics";
-import { assertRequirementInterpretationResult } from "../packages/adapters/src/requirements/requirement-interpreter";
+import { assertRequirementInterpretationResult } from "../packages/adapters/dist/index.js";
 
 import {
   approvalFixtureBrief,

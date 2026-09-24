@@ -38,6 +38,7 @@ jobs:
       - run: node scripts/verify-product-definition-data.mjs
       - run: node scripts/definition-case-index.mjs --check
       - run: pnpm exec tsc -p e2e/tsconfig.consumer-delivery.json --noEmit
+      - run: pnpm exec playwright test --list
       - run: pnpm exec playwright test e2e/helpers/content-directory.test.ts e2e/helpers/inventory-operations.test.ts e2e/helpers/service-work-orders.test.ts --workers=1
       - run: pnpm verify:third-party
       - run: pnpm verify:source-studies

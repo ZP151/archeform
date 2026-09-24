@@ -5,7 +5,7 @@ import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { cleanRequestedPreview } from "../apps/workbench/lib/product-journey/preview-cleanup";
 import { normalizeReleaseDiagnosisCode } from "../apps/workbench/lib/product-journey/release-diagnosis";
-import { factoryClarificationDefault } from "../packages/adapters/src/requirements/clarification-policy";
+import { factoryClarificationDefault } from "../packages/adapters/dist/index.js";
 
 /**
  * Honest Requirement-to-Product Closure browser acceptance: two unrelated

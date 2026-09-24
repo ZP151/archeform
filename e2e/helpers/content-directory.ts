@@ -11,8 +11,8 @@ import { readFile } from "node:fs/promises";
 import {
   OpenAIRequirementInterpreterAdapter,
   assertRequirementInterpretationResult,
-} from "@factory/adapters";
-import { parseVerificationEvidence } from "@factory/graph";
+} from "../../packages/adapters/dist/index.js";
+import { parseVerificationEvidence } from "../../packages/graph/dist/index.js";
 import {
   controlPlaneUrl,
   currentPreview,
