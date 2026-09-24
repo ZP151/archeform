@@ -17,6 +17,7 @@
     "service-work-orders.spec.ts",
     "helpers/content-directory.test.ts",
     "helpers/service-work-orders.test.ts",
-    "helpers/inventory-operations.test.ts"
+    "helpers/inventory-operations.test.ts",
+    "helpers/workbench-module-loading.test.ts"
   ]
 }
