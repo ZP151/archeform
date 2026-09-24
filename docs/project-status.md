@@ -47,10 +47,18 @@ Responsive conversation UI has
 19 emitted-component cases pass after scoped closure of history paging,
 read-cancellation and keyboard-focus findings. Actual emitted page/CSS captures
 cover phone, tablet, desktop, themes and recovery states.
+The presentation checkpoint is pushed at `d94666ad`; both Node jobs pass in
+[CI run 35988762664](https://github.com/ZP151/archeform/actions/runs/35988762664).
+It excludes the following uncommitted verifier work.
 Worker verification's narrowly scoped compatibility decision for nested request
 IDs and command fixture bodies is independently accepted as ADR-0085; its private
-adapter has 115 passing focused tests and is under independent review, with
-generic probe behavior preserved. This verifier is not yet accepted for delivery.
+adapter now has [accepted source evidence](acceptance/evidence/customer-requests/task3-verifier-source-acceptance.md).
+Two findings concerning accessor/prototype validation and negative-zero response
+versions are repaired and independently closed. Fresh independent QA passes 141
+family and 100 generic regression cases, worker types and twelve-plan parity;
+final source judgment has no open findings. Root's worker build also passes.
+Task 4 is implementing the canonical definition and preparing automatic consumer
+entry using the existing family runtime and responsive presentation.
 Actual consumer delivery remains open; no delivered-definition count increases.
 
 | Outcome                       | Current evidence                                                                                                                              | Next acceptance                                                                                             |

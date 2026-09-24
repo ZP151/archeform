@@ -1,0 +1,50 @@
+{
+  "verdict": "PASS_SOURCE_SAFETY_WITH_LIMITS",
+  "findingCounts": { "p0": 0, "p1": 0, "p2": 0 },
+  "scope": "Independent read-only QA of Customer Requests verifier repair 1; source safety only.",
+  "acceptedAdr0085Sha256": "bcf5e50e79dce5c80a270fda6dc2bf7ca0399211d63bfaf4ed3a059b37224464",
+  "repairManifest": {
+    "path": "generated/.customer-requests-task3/verification/repair-1/implementation/source-manifest.json",
+    "sha256": "28e2629bb4449612476513fe08e69bff3056e1a4e12413af12994bb9730a0d0e",
+    "sixOfSixCurrentSourceHashesMatch": true
+  },
+  "checks": [
+    {
+      "command": "pnpm --filter @factory/compiler-worker test -- customer-requests-verification.test.ts",
+      "exitCode": 0,
+      "result": "1 test file; 141 passed; 0 failed"
+    },
+    {
+      "command": "pnpm --filter @factory/compiler-worker test -- verification-environment.test.ts verification-probes.test.ts",
+      "exitCode": 0,
+      "result": "3 test files (including calculated-verification-probes dependency selection); 100 passed; 0 failed"
+    },
+    {
+      "command": "pnpm --filter @factory/compiler-worker typecheck",
+      "exitCode": 0,
+      "result": "tsc -p tsconfig.json --noEmit"
+    },
+    {
+      "command": "node node_modules/.pnpm/vite-node@2.1.9_@types+node@22.20.1_terser@5.49.0/node_modules/vite-node/vite-node.mjs generated/.customer-requests-task3-verifier-qa/historical-plans.ts",
+      "exitCode": 0,
+      "result": "Historical worker plan equality: 12/12"
+    }
+  ],
+  "protectedInputs": {
+    "generated/.customer-requests-task1/before.json": "c9c6c0245de95ffb7176131e59206aa8ca0bceecb21b5ed70185ae6654f25eba",
+    "generated/.customer-requests-task3/verification/historical-plans-before.json": "dab1ba9ab76dfcaa422a2eb25eba078d24d0bdff093241561d26914c3e244438"
+  },
+  "historicalEquality": {
+    "definitionCount": 12,
+    "equal": true,
+    "output": "generated/.customer-requests-task3-verifier-qa/historical-plans-equality.json"
+  },
+  "executionBoundary": "Tests use emitted in-memory runtime with substituted fetch and stubbed process/start/stop hooks. No startup, listener, service, database, Docker, provider, cloud, cleanup, or Git operation was run.",
+  "limits": "This is source-level verification. It establishes no PostgreSQL, concurrency, restart, browser, actual-local product, hosted product, deployment, Product Publish, repository integration, or release result. Existing CI proof for commit d94666ad does not include these uncommitted worker sources.",
+  "qaWritesOnly": [
+    "generated/.customer-requests-task3-verifier-qa/historical-plans.ts",
+    "generated/.customer-requests-task3-verifier-qa/historical-plans-equality.json",
+    "generated/.customer-requests-task3-verifier-qa/report.json",
+    "generated/.customer-requests-task3-verifier-qa/report.md"
+  ]
+}

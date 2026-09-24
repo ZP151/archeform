@@ -1,0 +1,68 @@
+{
+  "scope": "Customer Requests verifier repair 1: CR-V-P2-001 and CR-V-P2-002",
+  "priorManifestSha256": "45e7f196cf8c944432b2bf35fe6e737b828f7eb43fb7def84c912cc703ac237d",
+  "adrSha256": "bcf5e50e79dce5c80a270fda6dc2bf7ca0399211d63bfaf4ed3a059b37224464",
+  "sources": [
+    {
+      "path": "apps/compiler-worker/src/verifier/customer-requests-verification.ts",
+      "sha256": "c2c641eaff03c8655b330d9f2ef7438efc951ed9df8a73c8e604a356b1c3fbca",
+      "previousSha256": "ccfd42ff2ebe57473fc7b6877495058feba054b67d664a42c75622622b3d0bec",
+      "changedFromOriginalFreeze": true
+    },
+    {
+      "path": "apps/compiler-worker/test/customer-requests-verification.test.ts",
+      "sha256": "fda7f4106287fa4b3f90bdb96ce1378ab688471924c62fcfaf999c7c0c031d3c",
+      "previousSha256": "eddbb450a17e93df43bab4ec4d895d9addf292a051032e723b776265b69f57e9",
+      "changedFromOriginalFreeze": true
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+      "sha256": "ea87bb8cd121385852d3011e68917ea7d0e788da70afcf378f3fd374032f310c",
+      "previousSha256": "ea87bb8cd121385852d3011e68917ea7d0e788da70afcf378f3fd374032f310c",
+      "changedFromOriginalFreeze": false
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/role-journey.ts",
+      "sha256": "d43f87d1f86ad5b54adb4c0cb5b9d88f0814f08a25a8e3c9a9239a83aa8593e2",
+      "previousSha256": "e5566383f1cae18ab99be51b32f115c6b6208df95b8a5869eae11e2bc27b1511",
+      "changedFromOriginalFreeze": true
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/probes.ts",
+      "sha256": "76fac629ef759b167b5492e511ea64490b8fd2359a21ee858f9a608d835716e7",
+      "previousSha256": "76fac629ef759b167b5492e511ea64490b8fd2359a21ee858f9a608d835716e7",
+      "changedFromOriginalFreeze": false
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/verification-environment.ts",
+      "sha256": "83f88ffe9df80bffc95696691dfe7b9ba2edc1ecb687127e6ed2551d42ee99ff",
+      "previousSha256": "83f88ffe9df80bffc95696691dfe7b9ba2edc1ecb687127e6ed2551d42ee99ff",
+      "changedFromOriginalFreeze": false
+    }
+  ],
+  "changedSources": [
+    {
+      "path": "apps/compiler-worker/src/verifier/customer-requests-verification.ts",
+      "sha256": "c2c641eaff03c8655b330d9f2ef7438efc951ed9df8a73c8e604a356b1c3fbca"
+    },
+    {
+      "path": "apps/compiler-worker/test/customer-requests-verification.test.ts",
+      "sha256": "fda7f4106287fa4b3f90bdb96ce1378ab688471924c62fcfaf999c7c0c031d3c"
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/role-journey.ts",
+      "sha256": "d43f87d1f86ad5b54adb4c0cb5b9d88f0814f08a25a8e3c9a9239a83aa8593e2"
+    }
+  ],
+  "verification": {
+    "redExit": 1,
+    "redFailed": 22,
+    "redPassed": 4,
+    "greenExit": 0,
+    "greenPassed": 31,
+    "greenSkipped": 110,
+    "typecheckExit": 0,
+    "formatExit": 0
+  },
+  "status": "Frozen for original reviewer scoped closure; no self-approval"
+}

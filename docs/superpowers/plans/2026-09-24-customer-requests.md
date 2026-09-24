@@ -139,7 +139,7 @@ at 1440px, usable 768px; executable verification scenarios using the same IDs.
 - [x] Exercise emitted UI with loading/empty/error/denial/confirmation/recovery,
       keyboard/touch, long text and 390/768/1440 layouts using allowed isolated
       component harnesses. Do not substitute this for actual generated-app images.
-- [ ] Add worker scenarios for the exact contract; run focused checks and ordinary
+- [x] Add worker scenarios for the exact contract; run focused checks and ordinary
       presentation review, preserving full contract gates where applicable.
 
 ## Task 4: definition, consumer entry and actual delivery evidence
@@ -149,6 +149,44 @@ definition admission/data tooling, family registry/matcher and focused tests.
 Root serially assigns Workbench `consumer-family`/`use-consumer-generation`
 integration, case binding/index/types, `e2e/customer-requests.spec.ts` and helpers.
 Freeze the concrete data and test path manifest before assigning writers.
+
+### Source execution batches
+
+The accepted runtime, UI and verifier contracts remain frozen. Task 4 changes
+selection, exact admission and consumer routing only; it introduces no new API,
+identity, runtime or presentation behavior.
+
+1. **Definition owner:** `packages/adapters/src/requirements/definition-family-registry.ts`,
+   `definition-selection-catalogue.ts`, `definitions/product-definitions.v1.json`;
+   new `packages/adapters/test/customer-requests-definition.test.ts`; existing
+   `product-definition-data.test.ts`, `requirement-interpreter.test.ts` and
+   `service-work-orders-definition.test.ts` for additive catalogue expectations.
+   Register `customer-support-desk@1.0.0`, family `customer-requests/v1`,
+   `none/v1`, compiler `customer-requests@1.0.0` and presentation
+   `customer-requests-presentation@1.0.0`. Use the accepted canonical fixture,
+   exact Blueprint/Graph witnesses and six physical capability locks. Primary
+   job is staff `complete` on the request, reaching `resolved`; customer creation,
+   follow-up, correction and reopen remain required journeys. Preserve all twelve
+   prior rows and semantics; reject label-only duplicates, malformed ownership
+   and materially unsupported private accounts, uploads, notifications, external
+   intake, assignment, internal notes and SLA requirements. No runtime/UI copies.
+2. **Root serialized consumer integration:** `packages/capabilities/src/plan-alternatives.ts`
+   and its test; `apps/workbench/lib/product-journey/consumer-family.ts` and test,
+   `use-consumer-generation.ts` and test. Extend the existing exact matcher and
+   phase latches only after focused RED. No definition-name shortcut may trigger
+   automatic application creation, Publish, compilation or navigation.
+3. **Case owner after explicit assignment:** new `e2e/customer-requests.spec.ts`,
+   `e2e/helpers/customer-requests.ts` and test. Root owns shared case binding/index,
+   `e2e/tsconfig.consumer-delivery.json`, existing family-label helper/test and
+   regression-lane/CI selections. Freeze the complete actual journey in VER-005;
+   run only no-listener helpers, discovery and types until execution is cleared.
+
+The data owner may work independently of verifier QA on these disjoint files.
+Root records assignments in the active ledger before each batch. Retain the raw
+pre-edit catalogue at `generated/.customer-requests-task4/catalogue-before.json`,
+SHA-256 `b05298aa6de6390910239edf6147af657f792142d37f275576f0c4d7982d4ebf`;
+the older immutable compiler and worker baselines remain untouched. A new row is
+source registration only; actual acceptance and hosted counts stay unchanged.
 
 - [ ] RED canonical admission, semantic deduplication and retained unsupported
       requirements. Connect exact witness admission to existing automatic immutable

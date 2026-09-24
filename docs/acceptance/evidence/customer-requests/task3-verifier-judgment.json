@@ -1,0 +1,24 @@
+{
+  "verdict": "ACCEPT_SOURCE_WITH_LIMITS",
+  "findingCounts": { "p0": 0, "p1": 0, "p2": 0 },
+  "scope": "Six frozen Customer Requests compiler-worker verifier source/test paths; source acceptance only",
+  "adr0085Sha256": "bcf5e50e79dce5c80a270fda6dc2bf7ca0399211d63bfaf4ed3a059b37224464",
+  "adr0084Sha256": "8a78888dd9f1996588f475188b4645664c06bf9e1a49561112cdfa89c6f954c6",
+  "repairManifestSha256": "28e2629bb4449612476513fe08e69bff3056e1a4e12413af12994bb9730a0d0e",
+  "sourceHashesMatchManifest": true,
+  "sourceSha256": {
+    "apps/compiler-worker/src/verifier/customer-requests-verification.ts": "c2c641eaff03c8655b330d9f2ef7438efc951ed9df8a73c8e604a356b1c3fbca",
+    "apps/compiler-worker/test/customer-requests-verification.test.ts": "fda7f4106287fa4b3f90bdb96ce1378ab688471924c62fcfaf999c7c0c031d3c",
+    "apps/compiler-worker/src/verifier/verification-graph-plan.ts": "ea87bb8cd121385852d3011e68917ea7d0e788da70afcf378f3fd374032f310c",
+    "apps/compiler-worker/src/verifier/role-journey.ts": "d43f87d1f86ad5b54adb4c0cb5b9d88f0814f08a25a8e3c9a9239a83aa8593e2",
+    "apps/compiler-worker/src/verifier/probes.ts": "76fac629ef759b167b5492e511ea64490b8fd2359a21ee858f9a608d835716e7",
+    "apps/compiler-worker/src/verifier/verification-environment.ts": "83f88ffe9df80bffc95696691dfe7b9ba2edc1ecb687127e6ed2551d42ee99ff"
+  },
+  "qa": {
+    "familyPassed": 141,
+    "genericPassed": 100,
+    "historicalPlanEqual": 12,
+    "typecheckExit": 0
+  },
+  "limits": "Source-level emitted in-memory runtime and stubbed process/start/stop evidence only; no PostgreSQL, concurrency, restart, browser, actual-local, hosted, Publish, integration, deployment or release proof."
+}

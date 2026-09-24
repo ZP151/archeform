@@ -5,6 +5,7 @@ import {
   selectContentDirectoryProfile,
   selectInventoryOperationsProfile,
   selectServiceWorkOrdersProfile,
+  selectCustomerRequestsProfile,
   type ContentDirectoryProfile,
   type PublishedGraphInput,
 } from "@factory/compiler";
@@ -27,6 +28,7 @@ import {
 import type { VerificationProfile } from "./verification-profiles.js";
 import { inventoryVerificationProfile } from "./inventory-operations-verification.js";
 import { serviceWorkOrdersVerificationProfile } from "./service-work-orders-verification.js";
+import { customerRequestsVerificationProfile } from "./customer-requests-verification.js";
 
 /**
  * The graph-derived verification plan. When a verification run carries no
@@ -783,6 +785,15 @@ export function deriveVerificationProfile(
     );
   }
 
+  try {
+    const customerRequests = selectCustomerRequestsProfile(graph, lock);
+    if (customerRequests)
+      return customerRequestsVerificationProfile(customerRequests);
+  } catch {
+    throw new VerificationContractError(
+      "Customer Requests verification requires an exact immutable profile.",
+    );
+  }
   try {
     const workOrders = selectServiceWorkOrdersProfile(graph, lock);
     if (workOrders) return serviceWorkOrdersVerificationProfile(workOrders);

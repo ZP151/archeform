@@ -1,5 +1,10 @@
 import { posix } from "node:path";
 import {
+  compareCustomerRequestsResponse,
+  validCustomerRequestsRequest,
+  type CustomerRequestsDescriptor,
+} from "./customer-requests-verification.js";
+import {
   compareInventoryResponse,
   inventoryAuditObservationProgram,
   validInventoryExpectation,
@@ -46,6 +51,10 @@ export type BoundedCommandResult = {
 };
 
 export type BoundedRequestResult = {
+  /** Private, transient comparison results; never persisted as evidence. */
+  readonly customerRequestsMatches?: boolean;
+  readonly customerRequestsEventId?: string;
+  readonly customerRequestsResponseDigest?: string;
   readonly inventoryReadMatches?: boolean;
   /** Ephemeral identifier of this journey's movement; never evidence. */
   readonly inventoryMovementId?: string;
@@ -55,10 +64,11 @@ export type BoundedRequestResult = {
   readonly ok: boolean;
   readonly durationMs: number;
   /**
-   * The pattern-validated top-level `id` of a record this probe itself
+   * The pattern-validated `id` of a record this probe itself
    * created, captured only when the caller requested it. It is never
    * persisted and never enters evidence — chain journeys use it to address
-   * the fresh record they created.
+   * the fresh record they created. Exact private comparators may capture their
+   * declared nested ID after validating the entire response.
    */
   readonly recordId?: string;
 };
@@ -69,6 +79,7 @@ export type BoundedRequestResult = {
  * neither is ever persisted or echoed into evidence.
  */
 export type RequestOptions = {
+  readonly customerRequests?: CustomerRequestsDescriptor;
   readonly inventoryRead?: InventoryReadExpectation;
   readonly directoryRead?: DirectoryReadExpectation;
   readonly headers?: readonly {
@@ -560,6 +571,32 @@ export class VerificationEnvironment {
         "The HTTP client is not configured.",
       );
     }
+    let customerRequests: CustomerRequestsDescriptor | undefined;
+    if (options && "customerRequests" in options) {
+      const field = Object.getOwnPropertyDescriptor(
+        options,
+        "customerRequests",
+      );
+      let valid = false;
+      try {
+        valid =
+          !!field &&
+          "value" in field &&
+          port === "api" &&
+          !captureRecordId &&
+          validCustomerRequestsRequest(field.value, method, path, options) &&
+          options.inventoryRead === undefined &&
+          options.directoryRead === undefined;
+      } catch {
+        valid = false;
+      }
+      if (!valid)
+        throw new VerificationLifecycleError(
+          "invalid_customer_requests_request",
+          "Customer Requests requires an exact private request descriptor.",
+        );
+      customerRequests = field!.value as CustomerRequestsDescriptor;
+    }
     if (options) {
       if (
         options.inventoryRead !== undefined &&
@@ -604,7 +641,11 @@ export class VerificationEnvironment {
           );
         }
       }
-      if (options.body !== undefined && !isFlatDeclaredJsonBody(options.body)) {
+      if (
+        options.body !== undefined &&
+        !customerRequests &&
+        !isFlatDeclaredJsonBody(options.body)
+      ) {
         throw new VerificationLifecycleError(
           "invalid_request_body",
           "Request bodies must be bounded declared fixtures.",
@@ -667,11 +708,42 @@ export class VerificationEnvironment {
                 controller.signal,
               )
             : { matches: false };
+      const customerRequestResult = customerRequests
+        ? await compareCustomerRequestsResponse(
+            response,
+            customerRequests,
+            controller.signal,
+          )
+        : undefined;
       return {
         status: response?.status ?? 0,
         ok: response?.ok ?? false,
         durationMs: this.elapsed(startedMs),
         ...(recordId === undefined ? {} : { recordId }),
+        ...(customerRequestResult === undefined
+          ? {}
+          : {
+              customerRequestsMatches: customerRequestResult.matches,
+              ...(customerRequestResult.matches
+                ? {
+                    ...(customerRequestResult.recordId
+                      ? { recordId: customerRequestResult.recordId }
+                      : {}),
+                    ...(customerRequestResult.eventId
+                      ? {
+                          customerRequestsEventId:
+                            customerRequestResult.eventId,
+                        }
+                      : {}),
+                    ...(customerRequestResult.responseDigest
+                      ? {
+                          customerRequestsResponseDigest:
+                            customerRequestResult.responseDigest,
+                        }
+                      : {}),
+                  }
+                : {}),
+            }),
         ...(directoryReadMatches === undefined ? {} : { directoryReadMatches }),
         ...(inventory === undefined
           ? {}
@@ -691,6 +763,7 @@ export class VerificationEnvironment {
         durationMs: this.elapsed(startedMs),
         ...(options?.directoryRead ? { directoryReadMatches: false } : {}),
         ...(options?.inventoryRead ? { inventoryReadMatches: false } : {}),
+        ...(customerRequests ? { customerRequestsMatches: false } : {}),
       };
     } finally {
       clearTimeout(timer);

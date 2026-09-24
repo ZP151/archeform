@@ -1,5 +1,6 @@
 import type { VerificationStepV1 } from "@factory/graph";
 import { runInventoryJourney } from "./inventory-operations-verification.js";
+import { runCustomerRequestsJourney } from "./customer-requests-verification.js";
 
 import type { VerificationStepPlanEntry } from "./verification-lifecycle.js";
 import type { VerificationEnvironment } from "./verification-environment.js";
@@ -216,6 +217,8 @@ export async function runRoleJourneyProbe(
   registry: readonly RegisteredApiAction[],
 ): Promise<VerificationStepV1> {
   const action = validateRoleJourney(journey, registry);
+  if (journey.customerRequests)
+    return runCustomerRequestsJourney(context, journey.customerRequests);
   if (journey.inventory) return runInventoryJourney(context, journey.inventory);
   let recordId: string | undefined;
   if (journey.chain !== undefined) {

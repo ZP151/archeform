@@ -1,5 +1,9 @@
 import { VerificationContractError } from "@factory/graph";
-import type { InventoryOperationsProfile } from "@factory/compiler";
+import type {
+  CustomerRequestsProfile,
+  InventoryOperationsProfile,
+} from "@factory/compiler";
+import { isCustomerRequestsProfile } from "./customer-requests-verification.js";
 
 import type {
   HttpMethod,
@@ -36,6 +40,8 @@ export type DeclaredJourneyHeader = {
 };
 
 export type RoleJourneyFixture = {
+  /** Exact-selected private witness; never supplied by serialized job input. */
+  readonly customerRequests?: CustomerRequestsProfile;
   /** Worker-private witness supplied only by the exact compiler root selector. */
   readonly inventory?: InventoryOperationsProfile;
   /** Only exact-selected directory plans declare this private bounded read proof. */
@@ -394,6 +400,43 @@ export function validateRoleJourney(
   journey: RoleJourneyFixture,
   registry: readonly RegisteredApiAction[],
 ): RegisteredApiAction {
+  // Private witnesses must be inspected as data before the generic reader can
+  // access fields. Keep the historical generic validation path unchanged.
+  if (journey && typeof journey === "object" && "customerRequests" in journey) {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      journey,
+      "customerRequests",
+    );
+    const keys = ["journeyId", "action", "sessionId", "customerRequests"];
+    const prototype = Object.getPrototypeOf(journey);
+    if (
+      (prototype !== Object.prototype && prototype !== null) ||
+      !descriptor ||
+      !("value" in descriptor) ||
+      !isCustomerRequestsProfile(descriptor.value) ||
+      Reflect.ownKeys(journey).length !== keys.length ||
+      !keys.every((key) => {
+        const field = Object.getOwnPropertyDescriptor(journey, key);
+        return field !== undefined && "value" in field;
+      }) ||
+      journey.journeyId !== "customer-requests-lifecycle" ||
+      journey.action !== "customer-requests.lifecycle" ||
+      journey.sessionId !== "fixture-session-customer-a"
+    )
+      throw new VerificationContractError(
+        "Customer Requests journeys require an exact private profile and fixture.",
+      );
+    const action = resolveRegistryAction(registry, journey.action);
+    if (
+      action.method !== "POST" ||
+      action.expectedStatus !== 201 ||
+      action.route !== `/api/${descriptor.value.requestEntity}`
+    )
+      throw new VerificationContractError(
+        "Customer Requests journeys require the exact lifecycle registration.",
+      );
+    return action;
+  }
   if (
     !journey ||
     typeof journey.journeyId !== "string" ||

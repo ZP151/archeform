@@ -5,6 +5,108 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
+### Customer Requests verifier accepted for bounded source delivery — 2026-09-24
+
+Independent Sol final judgment is `ACCEPT_SOURCE_WITH_LIMITS`, P0/P1/P2 0/0/0,
+after exact-hash reconciliation of all six worker source/test paths, ADR-0085,
+scoped finding closure and fresh independent QA. Original judgment Markdown
+SHA-256 is `3abbee2bca79ef6009c57d2ab94f956ec0e007623cfc441d443fe0b108d024b1`.
+Root's post-QA worker build exits 0. PM accepts this exact frozen source slice
+and marks Task 3 source complete alongside the separately delivered UI.
+
+Portable source acceptance, manifest, review/recheck, QA, historical equality
+and final judgment are under `docs/acceptance/evidence/customer-requests/`.
+Controller prepares a bounded worker source commit/push with these records.
+Active Task 4 adapter files are excluded and retain their assigned ownership.
+Actual consumer/PostgreSQL/hosted acceptance and main/release remain open;
+no delivered product count increases.
+
+### Verifier independent QA passed; final source judgment assigned — 2026-09-24
+
+Independent Terra QA returns `PASS_SOURCE_SAFETY_WITH_LIMITS`, P0/P1/P2 0/0/0.
+Fresh checks pass 141/141 family cases, 100/100 generic environment/probe cases,
+worker types and 12/12 protected historical-plan equality. It confirms all six
+repair hashes and unchanged ADR/input/baseline digests. Evidence is under
+`generated/.customer-requests-task3-verifier-qa/`; no actual service was started.
+
+Root assigns independent Sol `customer_requests_verifier_judgment` read-only
+final judgment of the six frozen worker paths and existing review/QA evidence.
+It may write only `generated/.customer-requests-task3-verifier-judgment/`.
+Reconcile the applicable contract/security acceptance and concrete residuals;
+do not repeat unchanged broad tests. Task 4 adapter work is disjoint and excluded.
+PM acceptance and controller source delivery follow only a clean judgment.
+
+### Task 4 definition batch assigned on disjoint paths — 2026-09-24
+
+While verifier QA reads its frozen six paths, root assigns strongest-model
+`customer_requests_definition` only the seven adapter source/test paths in the
+Task 4 source execution batch of the existing implementation plan, plus new
+`generated/.customer-requests-task4/definition/` evidence. The family/runtime/UI
+contracts and ADR-0084 stay unchanged. Root retains all capability, Workbench,
+case, script and delivery paths. No other writer owns the adapter paths.
+
+Before assignment root captures the exact twelve-row catalogue at
+`generated/.customer-requests-task4/catalogue-before.json`, SHA-256
+`b05298aa6de6390910239edf6147af657f792142d37f275576f0c4d7982d4ebf`.
+Require focused RED/GREEN, exact admission, retained unsupported requirements,
+semantic duplicate rejection and unchanged prior rows. The owner freezes the
+source identities and provider guide for serial consumer/case integration;
+it does not commit, push, call a provider or execute an actual product.
+
+### Verifier scoped review closed; independent QA assigned — 2026-09-24
+
+Original reviewer closes CR-V-P2-001/002, with open P0/P1/P2 0/0/0. Its new
+`generated/.customer-requests-task3-verifier-review/repair-1/review.md` has SHA-256
+`5c16ca41d6a1830093cbcd1053cef46dd5a206f96ae169a63302522f3e25061b`.
+Root assigns independent Terra `customer_requests_verifier_qa` the frozen six
+verifier paths and focused executable regression evidence only. Source is
+read-only; QA may write only `generated/.customer-requests-task3-verifier-qa/`.
+Run the current family suite, relevant generic journey/transport regressions,
+types and a twelve-plan comparison with new output paths. Reuse unaffected
+historical evidence; preserve both protected baseline digests and prior logs.
+No source, Git, service, database, provider, cloud or cleanup mutation is assigned.
+Required independent final judgment follows; this is not product acceptance.
+
+### Presentation CI passed; verifier repair frozen — 2026-09-24
+
+CI `35988762664` completes successfully for exact pushed presentation revision
+`d94666ada900e279349460ec4bbde581b776f736`, both Node 22.11.0 and 22.x.
+Controller's existing watch ends with exit 0 and a fresh read confirms the exact
+revision and both job conclusions. This run excludes the uncommitted verifier.
+
+Verifier repair 1 preserves the original freeze and adds 26 focused cases:
+22 fail before fixes, with four positive/control cases passing; the final scoped
+run passes all 31 selected repair, emitted-lifecycle and generic compatibility
+cases. Worker types and owned formatting pass. Root confirms all six current
+hashes in `generated/.customer-requests-task3/verification/repair-1/implementation/source-manifest.json`.
+Only three sources differ from the original freeze. The original independent
+reviewer now owns closure of CR-V-P2-001/002; unchanged 274 historical cases and
+twelve-plan parity are retained. No additional source changes are assigned.
+
+### Presentation delivered; verifier scoped repair 1 assigned — 2026-09-24
+
+Controller commits/pushes presentation and accepted decision documentation at
+`d94666ada900e279349460ec4bbde581b776f736`; local and remote branch tips match.
+CI `35988762664` starts at that exact revision. Six unfinished verifier source
+paths are deliberately excluded and remain owned in this worktree. Source-only
+presentation acceptance changes no actual-local/hosted product count.
+
+Independent verifier task review requests two bounded P2 corrections, no P0/P1:
+CR-V-P2-001 private journey validation reads accessors before its own-data guard
+and permits inherited generic fixture fields; CR-V-P2-002 response scalar equality
+accepts negative-zero versions and assigns the canonical digest. Its authored
+probe reproduces both without service execution. Review and safe probe outcomes
+are in `generated/.customer-requests-task3-verifier-review/`.
+
+Root assigns original strongest writer `customer_requests_verifier_implementation`
+only its private module/test for negative-zero comparison and focused regression
+cases for both findings. Root alone repairs `role-journey.ts` after the failing
+tests are retained. The remaining three shared files stay frozen. Before copies
+are in `generated/.customer-requests-task3/verification/repair-1/before/`; original
+six-source manifest and evidence remain untouched. Use one focused repair review,
+reuse unaffected evidence and then resume the required independent QA/judgment.
+This repair changes neither accepted ADR nor generated runtime/API behavior.
+
 ### Customer Requests presentation accepted for bounded source delivery — 2026-09-24
 
 The original independent reviewer accepts repair 1 and closes all three P2
