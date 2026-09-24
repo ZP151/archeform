@@ -828,6 +828,203 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     };
   }
 
+  it("offers the replacement Appointment and both bounded read-availability action schemas", async () => {
+    const candidate = approvalDefinitionSelection({
+      definitionKey: "appointment-booking-v2",
+    });
+    const { transport, requests } = capturingTransport(candidate);
+    const result = await new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    }).interpret({ brief: "Book and manage appointments", answers: {} });
+    expect(result.interpretation.blueprint.actors[0].permissions[1]).toEqual({
+      entityKey: "schedule",
+      actions: ["read-availability"],
+    });
+    const request = requests[0];
+    expect(
+      matchesSelectionJsonSchema(
+        request.jsonSchema as SelectionJsonSchema,
+        candidate,
+      ),
+    ).toBe(true);
+    expect(
+      matchesSelectionJsonSchema(
+        request.jsonSchema as SelectionJsonSchema,
+        approvalDefinitionSelection({
+          definitionKey: "appointment-booking-v1",
+        }),
+      ),
+    ).toBe(false);
+    const actionEnums: string[][] = [];
+    const visit = (value: unknown): void => {
+      if (!value || typeof value !== "object") return;
+      const record = value as Record<string, unknown>;
+      if (Array.isArray(record.enum) && record.enum.includes("reschedule"))
+        actionEnums.push(record.enum as string[]);
+      Object.values(record).forEach(visit);
+    };
+    visit(request.jsonSchema);
+    expect(actionEnums).toHaveLength(2);
+    for (const values of actionEnums) {
+      expect(values).toContain("read-availability");
+      expect(values).not.toContain("export-private-data");
+    }
+    expect(request.instructions).toContain("read-availability");
+    expect(request.instructions).not.toContain("appointment-booking-v1");
+  });
+
+  it("accepts the additive availability permission in generated output", async () => {
+    const candidate = openaiExpenseCandidate();
+    const blueprint = candidate.blueprint as {
+      actors: Array<{ permissions: Array<{ actions: string[] }> }>;
+    };
+    blueprint.actors[0].permissions[0].actions.push("read-availability");
+    const { transport } = capturingTransport(candidate);
+    const result = await new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    }).interpret({ brief: "A bounded generated workflow", answers: {} });
+    expect(
+      result.interpretation.blueprint.actors[0].permissions[0].actions,
+    ).toContain("read-availability");
+  });
+
+  it.each(["permission", "transition"] as const)(
+    "rejects an unknown generated %s action after bounded repair",
+    async (kind) => {
+      const candidate = openaiExpenseCandidate();
+      const blueprint = candidate.blueprint as {
+        actors: Array<{ permissions: Array<{ actions: string[] }> }>;
+        workflows: Array<{ transitions: Array<{ key: string }> }>;
+      };
+      if (kind === "permission")
+        blueprint.actors[0].permissions[0].actions.push("export-private-data");
+      else blueprint.workflows[0].transitions[0].key = "export-private-data";
+      const { transport, requests } = capturingTransport(candidate);
+      await expect(
+        new OpenAIRequirementInterpreterAdapter({
+          transport,
+          readEnvironment: () => "test-key",
+        }).interpret({ brief: "A bounded generated workflow", answers: {} }),
+      ).rejects.toMatchObject({ code: "output_invalid" });
+      expect(requests).toHaveLength(3);
+    },
+  );
+
+  it("retains material questions when selecting the replacement Appointment", async () => {
+    const question = {
+      category: "integration",
+      question: "Can external calendar synchronization be excluded?",
+    };
+    const { transport } = capturingTransport(
+      approvalDefinitionSelection({
+        definitionKey: "appointment-booking-v2",
+        disposition: "needs-clarification",
+        materialQuestions: [question],
+      }),
+    );
+    const result = await new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    }).interpret({
+      brief: "Appointments with external calendar synchronization",
+      answers: {},
+    });
+    expect(result.interpretation.spec.openQuestions).toEqual([question]);
+    expect(
+      result.interpretation.clarifications.flatMap((item) => item.questions),
+    ).toEqual([expect.objectContaining(question)]);
+  });
+
+  it.each(
+    [
+      "expense-approval",
+      "restaurant-ordering",
+      "purchase-request-approval",
+      "team-task-tracking",
+      "supplies-stockroom",
+    ].flatMap((definitionKey) => [
+      { definitionKey, malformedFirst: false },
+      { definitionKey, malformedFirst: true },
+    ]),
+  )(
+    "stops $definitionKey on its first fully valid unresolved selection (malformed first: $malformedFirst)",
+    async ({ definitionKey, malformedFirst }) => {
+      const materialQuestions = [
+        {
+          category: "visibility",
+          question: "Must private records remain required?",
+        },
+        {
+          category: "integration",
+          question: "Must external identity remain required?",
+        },
+      ];
+      const candidate =
+        definitionKey === "restaurant-ordering"
+          ? restaurantDefinitionSelection({
+              disposition: "needs-clarification",
+              materialQuestions,
+            })
+          : approvalDefinitionSelection({
+              definitionKey,
+              disposition: "needs-clarification",
+              materialQuestions,
+            });
+      const initialTransport = capturingTransport(candidate);
+      const prior = await new OpenAIRequirementInterpreterAdapter({
+        transport: initialTransport.transport,
+        readEnvironment: () => "test-key",
+      }).interpret({ brief: "Build a local application.", answers: {} });
+      const original = structuredClone(prior);
+      const questions = prior.interpretation.clarifications.flatMap(
+        ({ questions }) => questions,
+      );
+      let calls = 0;
+      const adapter = new OpenAIRequirementInterpreterAdapter({
+        readEnvironment: () => "test-key",
+        transport: {
+          async create() {
+            calls += 1;
+            return {
+              outputText:
+                malformedFirst && calls === 1 ? "{" : JSON.stringify(candidate),
+            };
+          },
+        },
+      });
+      const input = {
+        brief: "Build a local application.",
+        priorInterpretation: prior,
+        answers: {
+          [questions[0]!.key]: "Accept shared records only.",
+          [questions[1]!.key]: "External identity remains required.",
+        },
+        clarificationContext: questions.map((question, index) => ({
+          ...question,
+          answer:
+            index === 0
+              ? "Accept shared records only."
+              : "External identity remains required.",
+        })),
+      };
+      const failure = await adapter
+        .interpret(input)
+        .catch((error: unknown) => error);
+      expect(failure).toMatchObject({
+        code: "definition_scope_unresolved",
+        message: "The registered definition scope remains unresolved.",
+      });
+      expect(Object.keys(failure as object).sort()).toEqual(["code", "name"]);
+      expect(calls).toBe(malformedFirst ? 2 : 1);
+      expect(prior).toEqual(original);
+      expect(input.answers[questions[1]!.key]).toBe(
+        "External identity remains required.",
+      );
+    },
+  );
+
   it("projects Task through the public strict provider envelope and preserves material follow-up questions", async () => {
     const selection = approvalDefinitionSelection({
       definitionKey: "team-task-tracking",
@@ -993,10 +1190,14 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       ).toBe(false);
     }
   });
-  it("keeps seven historical and three append-only coherent registrations", () => {
+  it("keeps ten prior registrations, one explicit Appointment replacement and the Work Orders definition", () => {
     expect(
       definitionSelectionCatalogue.map((entry) => entry.definitionKey),
-    ).toEqual(admittedDefinitionKeys);
+    ).toEqual([
+      ...admittedDefinitionKeys,
+      "appointment-booking-v2",
+      "facilities-service-desk",
+    ]);
     expect(Object.isFrozen(definitionSelectionCatalogue)).toBe(true);
     expect(() =>
       validateDefinitionCatalogue([
@@ -1210,8 +1411,8 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
           },
         ],
       }),
-    ).rejects.toMatchObject({ code: "output_invalid" });
-    expect(requests).toHaveLength(4);
+    ).rejects.toMatchObject({ code: "definition_scope_unresolved" });
+    expect(requests).toHaveLength(2);
   });
 
   it("projects a registered Purchase selection through the unchanged approval planner", async () => {
@@ -1999,8 +2200,8 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
           },
         ],
       }),
-    ).rejects.toMatchObject({ code: "output_invalid" });
-    expect(failed.requests).toHaveLength(3);
+    ).rejects.toMatchObject({ code: "definition_scope_unresolved" });
+    expect(failed.requests).toHaveLength(1);
   });
 
   it("interprets a model candidate, computing the requirement checksum authoritatively", async () => {
@@ -2080,7 +2281,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       };
     };
     expect(schema.properties.definitionSelection.anyOf).toHaveLength(
-      admittedDefinitionKeys.length + 1,
+      admittedDefinitionKeys.length + 2,
     );
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({
@@ -2352,8 +2553,8 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
           },
         ],
       }),
-    ).rejects.toMatchObject({ code: "output_invalid" });
-    expect(requests).toHaveLength(3);
+    ).rejects.toMatchObject({ code: "definition_scope_unresolved" });
+    expect(requests).toHaveLength(1);
     expect(requests[0]?.instructions).toContain(
       "Explicit currency other than USD, stock, availability, preparation time, images, categories, options, tax, or service-charge requirements remain material data clarification; never discard these requirements, convert another currency, or relabel it USD.",
     );
@@ -2587,8 +2788,8 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
           },
         ],
       }),
-    ).rejects.toMatchObject({ code: "output_invalid" });
-    expect(requests).toHaveLength(3);
+    ).rejects.toMatchObject({ code: "definition_scope_unresolved" });
+    expect(requests).toHaveLength(1);
     expect(requests[0]?.instructions).toContain(
       "A Restaurant follow-up may return supported-default when the supplied answer resolves its material question and no unresolved material requirement remains: missing menu names or USD prices must become complete, and an unsupported-scope question requires explicit acceptance of the supported scope.",
     );

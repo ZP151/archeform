@@ -11,6 +11,7 @@ import {
   selectAppointmentRuntimeProfile,
   type AppointmentRuntimeProfile,
 } from "./appointment-mutation-contract.js";
+import { selectAppointmentConsumerProfile } from "./appointment-consumer-contract.js";
 const exactAppointmentLocks = [
   [
     "core.crud",
@@ -708,6 +709,12 @@ export function exactAppointmentNumericWitness(
   compositionLock: CapabilityCompositionLockV1,
   profile: AppointmentRuntimeProfile | undefined,
 ): boolean {
+  const consumer = selectAppointmentConsumerProfile(graph, compositionLock);
+  if (consumer) {
+    if (JSON.stringify(profile) !== JSON.stringify(consumer.runtime))
+      throw new Error("Appointment compiler profile is unsupported.");
+    return true;
+  }
   const appointmentSelection = compositionLock.packages.find(
     ({ lock }) => lock.key === "scheduling.appointment",
   );

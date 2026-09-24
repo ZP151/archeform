@@ -1,0 +1,476 @@
+{
+  "date": "2026-09-24",
+  "baseCommit": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "scope": "Reviewed source checkpoint; actual application acceptance pending",
+  "reviewer": "work_orders_integrated_review",
+  "sourcePathCount": 92,
+  "uncoveredSourcePaths": [],
+  "paths": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "b62210632cea82fb27bbffea28d7564a27c87abc73b81367d2dfcb79adaad6ce",
+      "ownershipSlice": "ADR-0080 Work Orders case source and root delivery checks"
+    },
+    {
+      "path": ".prettierignore",
+      "sha256": "6f325a9a44895de8c04b87d5967ef794dac29ef56fefa2711d33f1dc4caa0b25",
+      "ownershipSlice": "ADR-0080 Work Orders case source and root delivery checks"
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/service-work-orders-verification.ts",
+      "sha256": "25eab7fde496e3075cad9629a0f5d49d085b4cb895c0309ac5302b5549aab40f",
+      "ownershipSlice": "ADR-0080/0083 accepted verifier/runtime plus AST-equivalent formatting"
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/verification-environment.ts",
+      "sha256": "0b4d6645d9e2a2e313d0a5c066bbb986504638a74e7856944e6ab1f4dc3b1417",
+      "ownershipSlice": "ADR-0080/0083 Work Orders verifier"
+    },
+    {
+      "path": "apps/compiler-worker/src/verifier/verification-graph-plan.ts",
+      "sha256": "6bc0dfd3299577f41f671abbad56dbc1be12d072499d6233d042ccec283ca626",
+      "ownershipSlice": "ADR-0080/0083 Work Orders verifier"
+    },
+    {
+      "path": "apps/compiler-worker/test/service-work-orders-verification.test.ts",
+      "sha256": "4c597c8f7d33a2a6ae9c26cd1f2ca33aa9e9dc152382215486800965bbc6aab8",
+      "ownershipSlice": "ADR-0080/0083 accepted verifier/runtime plus AST-equivalent formatting"
+    },
+    {
+      "path": "apps/compiler-worker/test/verification-environment.test.ts",
+      "sha256": "fc4e138867578d696c85aba5899bfd3c1002d0a1f4c2e9bc44c56674d2d069d5",
+      "ownershipSlice": "ADR-0080/0083 Work Orders verifier"
+    },
+    {
+      "path": "apps/compiler-worker/test/verification-graph-plan.test.ts",
+      "sha256": "50abc7e94712f5aed686755eddae0e71317527f3919d8075e55e5a198a568369",
+      "ownershipSlice": "ADR-0080/0083 Work Orders verifier"
+    },
+    {
+      "path": "apps/workbench/app/api/requirements/interpret/route.test.ts",
+      "sha256": "fcb3881bea05e40a28ccff68ec0725f898705717919d6fd8c7a713591cca8720",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/components/journey/clarification-panel.test.tsx",
+      "sha256": "61376b8bf2e64e969bf1451664e378ac915d04e7e376729e6793d24e62449c81",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/components/journey/clarification-panel.tsx",
+      "sha256": "606da176df7a86d563b57fd25443f785b86eb1c56a85a777d336939ceb03ea4c",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/components/journey/requirement-composer.test.tsx",
+      "sha256": "58006d8b13f11e0667fc0cbf841cf5894d90755d8898c6a4bb50061043eb8285",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/components/journey/requirement-composer.tsx",
+      "sha256": "28406e37171bcd529699aeabfe9254f821fe66a4b84206c693297002be472eec",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/components/workbench-home.test.tsx",
+      "sha256": "62bd6dd77c589103367a3b82a7cf44b53dda8c41d0d311ae85f6a7335383836b",
+      "ownershipSlice": "ADR-0081 Appointment definition and consumer integration"
+    },
+    {
+      "path": "apps/workbench/components/workbench-home.tsx",
+      "sha256": "357fac4f12ee9c78d2155346e60e0d562e079e5fa46066707a98dc962c9017eb",
+      "ownershipSlice": "ADR-0081 Appointment definition and consumer integration"
+    },
+    {
+      "path": "apps/workbench/components/workbench.tsx",
+      "sha256": "06d932996400e0acfb3bc51e615d7b872a11591ec9f3bfa7ec60dd45a813f3c1",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/consumer-family.test.ts",
+      "sha256": "fdefa6d632049c5080360e923144b70b0f81363759615abb3a99711c3856e452",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/consumer-family.ts",
+      "sha256": "cec4634c0af1f7d01471c3d58b3b92406b39ef58e2f899400b5047dd075aa4b9",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/interpret-contract.test.ts",
+      "sha256": "10ab87f28fa04ae8f9c9efab07b89555ca60ed6c1d10d3290f324aa8d5b04ae4",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/interpret-contract.ts",
+      "sha256": "9426193fc1423db403ec28743c90c4edd7a82401fc928c9393dc0f30401b74cd",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/interpret-payload.ts",
+      "sha256": "20d0bb89951f54840c733697851d4d12c4b78861b707efe1ab3553dd20fd7578",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/journey-model.test.ts",
+      "sha256": "2d12cf56477e8460dab6aed0aff8aaabbb92961a52dbb77cb764106d886a572f",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/journey-model.ts",
+      "sha256": "93992b7407ee18516b71e8d447f0243d8f1960545dfbf042a78476777eafb2fe",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-consumer-generation.test.tsx",
+      "sha256": "cba774a3692eba5106df2e8c7e09846d7dedfb438becb80f003b63ecee435eb6",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-consumer-generation.ts",
+      "sha256": "cc7d1eadbfb04d7cccaf5e12f500e3bb075c99cf73b3283cb91f2a219cd4c2dc",
+      "ownershipSlice": "ADR-0081 Appointment definition and consumer integration"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-product-journey.test.tsx",
+      "sha256": "210606b7852cedb5a14d7d848ad0172a6b4c697f6b41bd8d13a190c1fabf51bd",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-product-journey.ts",
+      "sha256": "df1fb2b4a884a439fbec32de947d95a9c93835941735d1d7e4b72854c840da68",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "e2e/appointment-booking.spec.ts",
+      "sha256": "2bcbbcc7b0feb3d67afdd28e3f0c9d8e3e59a8d98cfa7c9161261fbbc3626e55",
+      "ownershipSlice": "ADR-0081/0082 Appointment case source and helper typing"
+    },
+    {
+      "path": "e2e/content-directory.spec.ts",
+      "sha256": "f88b012fed7e77810d69fcc6fb214f61daa785a54545bd140b9bc9bde29e7569",
+      "ownershipSlice": "ADR-0079 predicates and consumer cases"
+    },
+    {
+      "path": "e2e/helpers/content-directory.test.ts",
+      "sha256": "c4e64d380c74b90a005a85b70022af89b1c4f8e4efe1274e0e9c42ec41ee1402",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "e2e/helpers/content-directory.ts",
+      "sha256": "24dd2c417f60f1f646f25ce5880e5bd46b8312019bbbc333011887516eb6b592",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "e2e/helpers/inventory-operations.ts",
+      "sha256": "c39297951fdd2d7429617c88b851db795556ff1960173abd00291f8686d6de45",
+      "ownershipSlice": "ADR-0079 predicates and consumer cases"
+    },
+    {
+      "path": "e2e/helpers/restaurant-delivery.ts",
+      "sha256": "5ed94e4ebe87ff2f993f5656329fe87cfe8f83726be6bd08c8cd63bcb1d59007",
+      "ownershipSlice": "ADR-0081/0082 Appointment case source and helper typing"
+    },
+    {
+      "path": "e2e/helpers/service-work-orders.test.ts",
+      "sha256": "b270084db0a6b2f618f4a49909d59268d23be212bd4c0ce3166ddabc6c9ee01f",
+      "ownershipSlice": "ADR-0080 Work Orders case source and root delivery checks"
+    },
+    {
+      "path": "e2e/helpers/service-work-orders.ts",
+      "sha256": "befaaed230589271fd67c0d083e6d330e2d9f7c6b4b190b4c61189e8c8580b93",
+      "ownershipSlice": "ADR-0080 Work Orders case source and root delivery checks"
+    },
+    {
+      "path": "e2e/inventory-operations.spec.ts",
+      "sha256": "1f9166eba5f53d55c2a08c500d27d12db8c314d0954d8f44cd06ec40d25d597f",
+      "ownershipSlice": "ADR-0079 predicates and consumer cases"
+    },
+    {
+      "path": "e2e/service-work-orders.spec.ts",
+      "sha256": "d54da83429b03601093db659d7ebe28791d95346caa8aa172ce02b27522a9832",
+      "ownershipSlice": "ADR-0080 Work Orders case source and root delivery checks"
+    },
+    {
+      "path": "e2e/tsconfig.consumer-delivery.json",
+      "sha256": "6a7c6dce332a909bec01f98622abda2274a0581993fd1606a41e7fde692a304b",
+      "ownershipSlice": "ADR-0080 Work Orders case source and root delivery checks"
+    },
+    {
+      "path": "e2e/unresolved-requirement-follow-up.spec.ts",
+      "sha256": "6ceb60bdb94df6a17c3fd227c8cecafc7461249a5751034ea3c6907d879e00d0",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definition-family-registry.ts",
+      "sha256": "6529d27b01398a87ad80d1351e42c3eede06458f733e8ae25f66681caa9cdfcb",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definition-selection-catalogue.ts",
+      "sha256": "1b1bd1387b23a0445de43b8b708281cbd95e8b7ddb877a6a5d349aa45eb6c434",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+      "sha256": "b05298aa6de6390910239edf6147af657f792142d37f275576f0c4d7982d4ebf",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/src/requirements/openai-interpreter.ts",
+      "sha256": "f59554e4e45c307a0efa82b6966fcd4a253ebb834f3ab930256cca142aac8c45",
+      "ownershipSlice": "ADR-0081 Appointment definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/src/requirements/requirement-interpreter.ts",
+      "sha256": "9c022e748731cbab8de9bc9899ce98ed4dd94b66ae15244c5541c182e956dee3",
+      "ownershipSlice": "ADR-0078 recovery"
+    },
+    {
+      "path": "packages/adapters/test/appointment-consumer-definition.test.ts",
+      "sha256": "06aa2f1413db22727bdb5b3e25f770e3c73a57f6c5cf6273d4889ce39c98895d",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/test/content-directory-definition.test.ts",
+      "sha256": "6dc1d40d7f624a8d65fe076050a2f36f3bca12436c360f2af719992598f27a84",
+      "ownershipSlice": "ADR-0079 predicates and consumer cases"
+    },
+    {
+      "path": "packages/adapters/test/inventory-operations-definition.test.ts",
+      "sha256": "5676a9557900990ba04325b9fd1cc8d5828ac129a69e8c646f655412ced0ee6a",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/test/product-definition-data.test.ts",
+      "sha256": "3d0861ad623bbf7e3151fe995b26ef160e9de1a76854ce3d4e5023186fe2bde5",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/test/requirement-interpreter.test.ts",
+      "sha256": "8201aa633a392c47b7f66d88a1026f86f1d4d1f7f6d8a0d01b168c222840e1d8",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/test/service-work-orders-definition.test.ts",
+      "sha256": "debec6a4813d011cd7197185feee669c664c128b797eea00f57ddd0b433c4c1b",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/adapters/test/supplies-stockroom-definition.test.ts",
+      "sha256": "a06c290f6cb20a194d4326361a75ea4af2521e0d29118a245615ff5ea23346dc",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/capabilities/src/index.ts",
+      "sha256": "b093d830e51be728006c938d4f4cfe0601bb078f2ad6434d91d39a4ac5b2e0ee",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/capabilities/src/plan-alternatives.ts",
+      "sha256": "0702212c3264f6f9e82b69f8c8602daf0da40555c74224a505874fb622b2c1ee",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/capabilities/src/product-composer.ts",
+      "sha256": "39dd9e19cb913eca61dd2259fe8e0f299369925de11fc32e3a0d0e544156745d",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/capabilities/test/appointment-consumer-workspace.test.ts",
+      "sha256": "d6edd390fd84b4a1abe76ca8445c3585b3693b338adcec69a097cabecd480342",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/capabilities/test/plan-alternatives.test.ts",
+      "sha256": "4e8dae182e7497b57888741cd7fd268b65c8ddd4614a4960469dbbf1c6a78fe5",
+      "ownershipSlice": "ADR-0080 Work Orders definition and consumer integration"
+    },
+    {
+      "path": "packages/capabilities/test/service-work-orders-composition.test.ts",
+      "sha256": "a5a29314c2322f92e3c41768275343e98593a1e70577823a59bdb745939af0da",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/compiler/src/appointment-administrator-setup.ts",
+      "sha256": "3a512bb9a834b8015e8a58b09801177b5f98eee592708260c4fc4ba273d1d9f0",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/src/appointment-compilation-admission.ts",
+      "sha256": "4da2c09081eb4fa97bdec56a15925c234223aa1389451c446b86ee47b2e0eae0",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/src/appointment-consumer-contract.ts",
+      "sha256": "55865f29e5b85d1550f2ea4cd17e2ce33da53699b518193d05e546303500370d",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/src/appointment-consumer-read.ts",
+      "sha256": "c4a5865b4e5d8516d04bd9bff38dce6853b9f674432955b6ef089b38355fa468",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/src/appointment-workspace-presentation.ts",
+      "sha256": "0fc2789a2a4f93e5bb45195856a33f688eb6d837826d53d51d61203525aaeeca",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/src/approval-workspace-presentation.ts",
+      "sha256": "37062afd70e7ee7d26de2dbea1c5d208ea23ca0ae267633e2bbf61103e8ac06a",
+      "ownershipSlice": "ADR-0080 Work Orders runtime/presentation and regression selection"
+    },
+    {
+      "path": "packages/compiler/src/index.ts",
+      "sha256": "aa7b034fc3aca83869b04ca62a444ae5a87298ddc9d9f532e663a5818dd2d3ef",
+      "ownershipSlice": "ADR-0080 Work Orders runtime/presentation and regression selection"
+    },
+    {
+      "path": "packages/compiler/src/service-work-orders-contract.ts",
+      "sha256": "04832b56a9a4663a51694813a9e260c7272d0006686149b2a4108eefda137e9e",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/compiler/src/service-work-orders-presentation.ts",
+      "sha256": "61b2719699bdb9d9e261e4e976d990ea00dfa190e1ce830fbf1db507acb264c7",
+      "ownershipSlice": "ADR-0080 Work Orders runtime/presentation and regression selection"
+    },
+    {
+      "path": "packages/compiler/src/service-work-orders-runtime.ts",
+      "sha256": "6e9f49b27882f699c6289e70359c0011450ab7d73dce3653f0e0512595195f81",
+      "ownershipSlice": "ADR-0080 Work Orders runtime/presentation and regression selection"
+    },
+    {
+      "path": "packages/compiler/test/appointment-administrator-setup.test.ts",
+      "sha256": "ca91568e1fa6c0f7e09ead97f4341ed21583b8851c9036c7bc9e33f96e376a7e",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/test/appointment-consumer-compilation.test.ts",
+      "sha256": "5c473c3e480044f9bb91c09489df44e115108851f24bbdb45e7754ce65cd04e8",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/test/appointment-consumer-read.test.ts",
+      "sha256": "3bec05f466818ab55a33308a627775950e5569afb95b9ec8f2f5e7bbdb3899e4",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/test/appointment-consumer-workspace.test.ts",
+      "sha256": "9c936fe85c36a2ee5d07d4371d89b68edbff30aa0e2bef80b44777edcb72ab35",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/test/definition-data-compatibility.test.ts",
+      "sha256": "df9965ed38f5125393a1b99869c7bbed842128e60b1cf90e7abdd3f09e13da32",
+      "ownershipSlice": "ADR-0081/0082 Appointment admission, runtime and presentation"
+    },
+    {
+      "path": "packages/compiler/test/fixtures/service-work-orders-runtime.ts",
+      "sha256": "6ecd7b7d171cd7d8bf6f92e9aa2b22b1c1c3c809ba13cd3e1dc059aecbb7a8f4",
+      "ownershipSlice": "ADR-0080/0083 accepted verifier/runtime plus AST-equivalent formatting"
+    },
+    {
+      "path": "packages/compiler/test/fixtures/service-work-orders.ts",
+      "sha256": "0e33d0e51ee328c97c73630badbd36ede303cbd6f41b61843c216e74857a2515",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/compiler/test/service-work-orders-compilation.test.ts",
+      "sha256": "c3a7065e2b53e0897a1a9c484d8f710e9b0097bec2727a09f3144879e6a1a9a9",
+      "ownershipSlice": "ADR-0080 Work Orders runtime/presentation and regression selection"
+    },
+    {
+      "path": "packages/compiler/test/service-work-orders-contract.test.ts",
+      "sha256": "23c69b7d4cb5609d4bf34a5c44c2e8a0c4820400a5db9091a690428c492fff8f",
+      "ownershipSlice": "ADR-0080/0083 accepted verifier/runtime plus AST-equivalent formatting"
+    },
+    {
+      "path": "packages/compiler/test/service-work-orders-presentation.test.ts",
+      "sha256": "3194cf04153e808828faf53f7cd4a79823525040c143bc8187df9430f8f7d678",
+      "ownershipSlice": "ADR-0080 Work Orders runtime/presentation and regression selection"
+    },
+    {
+      "path": "packages/compiler/test/service-work-orders-runtime.test.ts",
+      "sha256": "270aa82774b08d61358cd6b9f287c20eb40c68543c607b54705e3171eab1411c",
+      "ownershipSlice": "ADR-0080 Work Orders runtime/presentation and regression selection"
+    },
+    {
+      "path": "packages/graph/src/index.ts",
+      "sha256": "5301bc614156729c92fa5c44ea0117fa5e9e9fe2b6b981b6772615411ed507fa",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/graph/src/model.ts",
+      "sha256": "1bb13be704955cf33be08b8550eedf7342ae50d489af4f41adde1403bb26cf8a",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/graph/src/product-blueprint.ts",
+      "sha256": "1a3285cc29c356fcbd3d9a495a56fbb9c32c809c04bc61716f721b4000ee2cf2",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/graph/src/service-work-orders-blueprint-witness.ts",
+      "sha256": "271701f1ee99c2ddb32c0112dc33fb0ecd4cd378fa1df820f74128407f396d72",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/graph/src/service-work-orders-graph-witness.ts",
+      "sha256": "c7cc5ad322547d468d5bbf9facf3a3ab5cac5939bc970930b11daa53acc8b27b",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/graph/test/fixtures/service-work-orders-blueprint.json",
+      "sha256": "1c59490e0540a6de2abcb0cf70e5c7fa0e41232f9b65f9e390caf74c67cf87a6",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/graph/test/product-blueprint.test.ts",
+      "sha256": "1cd914f1017c993a9b3404a6056089d1b53336e71e20fd672d8ec141d7690455",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/graph/test/service-work-orders-blueprint-witness.test.ts",
+      "sha256": "38996551322cabd52d00bb1511b764d38295710ee6459475888f37288f271ed8",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "packages/graph/test/service-work-orders-graph-witness.test.ts",
+      "sha256": "b8f76ea4eeb9ab1aa0fcab33621210e3cc8038642e17f1eaa0eedb8c225f6f2c",
+      "ownershipSlice": "ADR-0080 Work Orders admission"
+    },
+    {
+      "path": "scripts/definition-case-bindings.mjs",
+      "sha256": "bb11f5254f3095df6369e194b0c71760b9b384dc8becd93410fa8b4bc95ab6c9",
+      "ownershipSlice": "ADR-0080 Work Orders case source and root delivery checks"
+    },
+    {
+      "path": "scripts/definition-case-index.test.mjs",
+      "sha256": "910028f085223034af8b03b3b291936b415794dc1a736495c908df7983051515",
+      "ownershipSlice": "ADR-0081 Appointment definition and consumer integration"
+    },
+    {
+      "path": "packages/compiler/test/index-exports.test.ts",
+      "sha256": "5ab896604f2e92a75a324019c7e4c75e0666ef2f857195c91629052c0aebb1c1",
+      "ownershipSlice": "ADR-0080 accepted facade boundary and regression selection correction"
+    },
+    {
+      "path": "scripts/regression.mjs",
+      "sha256": "b994a69c1a45802e61b6fe7e836b0315ddbf217fdc858eb7f7592e099a386b9c",
+      "ownershipSlice": "ADR-0080 accepted facade boundary and regression selection correction"
+    },
+    {
+      "path": "scripts/regression.test.mjs",
+      "sha256": "d2acbfb904e7c5575a2b894b6fe46cdde01eec3573e774ef08ea00ca918d4dd6",
+      "ownershipSlice": "ADR-0080 accepted facade boundary and regression selection correction"
+    }
+  ],
+  "remaining": [
+    "Actual recovery and automatic consumer journeys",
+    "Generated PostgreSQL, responsive UI and cleanup acceptance",
+    "Hosted environment, identity and deployment",
+    "Main integration and repository release"
+  ]
+}

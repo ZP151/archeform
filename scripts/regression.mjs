@@ -37,6 +37,7 @@ const definitionAdapterTestArguments = [
   "test/product-definition-data.test.ts",
   "test/requirement-interpreter.test.ts",
   "test/supplies-stockroom-definition.test.ts",
+  "test/service-work-orders-definition.test.ts",
 ];
 const definitionCompatibilityTestArguments = [
   "--filter",
@@ -45,6 +46,9 @@ const definitionCompatibilityTestArguments = [
   "--",
   "test/definition-data-compatibility.test.ts",
   "test/inventory-operations-contract.test.ts",
+  "test/service-work-orders-contract.test.ts",
+  "test/service-work-orders-runtime.test.ts",
+  "test/index-exports.test.ts",
 ];
 const definitionEmittedControlTestArguments = [
   "--filter",
@@ -54,6 +58,8 @@ const definitionEmittedControlTestArguments = [
   "test/approval-numeric-domain.test.ts",
   "test/approval-calculated-total.test.ts",
   "test/inventory-operations-presentation.test.ts",
+  "test/service-work-orders-presentation.test.ts",
+  "test/service-work-orders-compilation.test.ts",
 ];
 const definitionPrismaGenerateArguments = [
   "--filter",

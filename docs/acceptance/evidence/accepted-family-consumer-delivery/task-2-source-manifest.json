@@ -1,0 +1,31 @@
+{
+  "baseCommit": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "comparisonBaseline": "generated/.consumer-family-task2-base-7a85d6ef/manifest.json",
+  "state": "source-reviewed-deterministic-qa-passed-actual-acceptance-pending",
+  "files": [
+    {
+      "path": "apps/workbench/lib/product-journey/consumer-family.ts",
+      "sha256": "e6f6e97c0d0dfec235e4cc4ece6017f0857d190525f7a194d7e74b57ef23d413"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/consumer-family.test.ts",
+      "sha256": "91ae1fd8d0f39041a11480dcbd056b3742f71daf4b66fa6f5bef81bcdb00fe65"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-consumer-generation.ts",
+      "sha256": "9d5ad97347f0956b0f4465632d47d6e78b4a618828e1882e49540bdec1df1e2f"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-consumer-generation.test.tsx",
+      "sha256": "b50cd94abca020276bd02d7f0f30fdf40750f82345f19a126f8bb33de787275b"
+    },
+    {
+      "path": "apps/workbench/components/workbench-home.tsx",
+      "sha256": "0f5ce6f980d8c8393b8c085a2e3e7d0afe1f7426d1b6d901fa69e4a23e396da0"
+    },
+    {
+      "path": "apps/workbench/components/workbench-home.test.tsx",
+      "sha256": "94172e75a5758c0f19f8bd5272ae2091530d2c205ed0744aaee274e8a39e4ee3"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import {
 } from "./journey-model";
 import {
   ERROR_API_VERSION,
+  UNRESOLVED_ERROR_API_VERSION,
   REQUIREMENT_FAILURE_STATUSES,
   type RequirementInterpretationFailureCode,
 } from "./interpret-contract";
@@ -160,7 +161,8 @@ export function classifyInterpretationError(error: unknown): {
   status: number;
   body: {
     readonly error: {
-      readonly apiVersion: typeof ERROR_API_VERSION;
+      readonly apiVersion:
+        typeof ERROR_API_VERSION | typeof UNRESOLVED_ERROR_API_VERSION;
       readonly code: RequirementInterpretationFailureCode;
     };
   };
@@ -184,13 +186,22 @@ export function interpretationError(
   readonly status: number;
   readonly body: {
     readonly error: {
-      readonly apiVersion: typeof ERROR_API_VERSION;
+      readonly apiVersion:
+        typeof ERROR_API_VERSION | typeof UNRESOLVED_ERROR_API_VERSION;
       readonly code: RequirementInterpretationFailureCode;
     };
   };
 } {
   return {
     status: REQUIREMENT_FAILURE_STATUSES[code],
-    body: { error: { apiVersion: ERROR_API_VERSION, code } },
+    body: {
+      error: {
+        apiVersion:
+          code === "requirement.definition_scope_unresolved"
+            ? UNRESOLVED_ERROR_API_VERSION
+            : ERROR_API_VERSION,
+        code,
+      },
+    },
   };
 }

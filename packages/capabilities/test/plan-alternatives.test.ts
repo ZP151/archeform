@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
+import * as capabilities from "@factory/capabilities";
+import { projectDefinitionSelection } from "../../adapters/src/requirements/definition-selection-catalogue.js";
 import { canonicalTeamTaskInterpretation } from "../../adapters/src/requirements/task-definition-selection.js";
 
 import {
   applyGraphDiffToDraft,
   assertCompositionPlan,
+  assertProductBlueprint,
   createBlankApplicationDraft,
   hashApplicationGraph,
   hashRequirementSpec,
+  matchServiceWorkOrdersBlueprintV1,
   type CompositionPlanV1,
   type DraftRevisionV1,
 } from "@factory/graph";
@@ -31,6 +35,246 @@ function blankDraft(applicationId: string, name: string): DraftRevisionV1 {
 function planKeys(plan: CompositionPlanV1): readonly string[] {
   return plan.capabilityLocks.map((lock) => lock.key);
 }
+
+describe("public exact consumer family plan matcher", () => {
+  const families = [
+    [
+      "appointment-booking-v2",
+      "appointment",
+      "isAppointmentConsumerWorkspaceBlueprint",
+    ],
+    [
+      "knowledge-resource-directory",
+      "content-directory",
+      "isContentDirectoryBlueprint",
+    ],
+    [
+      "supplies-stockroom",
+      "inventory-operations",
+      "isInventoryOperationsBlueprint",
+    ],
+    [
+      "facilities-service-desk",
+      "service-work-orders",
+      "matchServiceWorkOrdersBlueprintV1",
+    ],
+  ] as const;
+
+  for (const [definitionKey, family, predicate] of families) {
+    function accepted() {
+      const { spec: requirement, blueprint } = projectDefinitionSelection({
+        definitionKey,
+        disposition: "supported-default",
+        requirementId: "consumer-requirement",
+        title: "Accepted business product",
+        outcome: "Complete the accepted business operation.",
+        materialQuestions: [],
+        businessParameters: null,
+      });
+      const plan = planProductAlternatives({
+        requirement,
+        blueprint,
+        baseDraft: blankDraft(requirement.requirementId, blueprint.title),
+      }).find(({ key }) => key === "standard")!.plan;
+      return { requirement, blueprint, plan };
+    }
+
+    it(`exports the shared ${family} predicate and matches its accepted projection`, () => {
+      const { requirement, blueprint, plan } = accepted();
+      expect(
+        predicate === "matchServiceWorkOrdersBlueprintV1"
+          ? !!matchServiceWorkOrdersBlueprintV1(blueprint)
+          : capabilities[predicate](blueprint),
+      ).toBe(true);
+      expect(
+        capabilities.matchExactConsumerFamilyPlan(
+          blueprint,
+          requirement.requirementId,
+          plan,
+        ),
+      ).toBe(family);
+      const reorderProperties = <T>(value: T): T =>
+        JSON.parse(
+          JSON.stringify(value, (_key, item) =>
+            item && typeof item === "object" && !Array.isArray(item)
+              ? Object.fromEntries(Object.entries(item).reverse())
+              : item,
+          ),
+        );
+      expect(
+        capabilities.matchExactConsumerFamilyPlan(
+          assertProductBlueprint(reorderProperties(blueprint)),
+          requirement.requirementId,
+          reorderProperties(plan),
+        ),
+      ).toBe(family);
+      expect(
+        capabilities.matchExactConsumerFamilyPlan(
+          blueprint,
+          "database-graph-id",
+          plan,
+        ),
+      ).toBeNull();
+      plan.planId = "untrusted-display-identity";
+      blueprint.title = "A differently named business";
+      expect(
+        capabilities.matchExactConsumerFamilyPlan(
+          blueprint,
+          requirement.requirementId,
+          plan,
+        ),
+      ).toBe(family);
+    });
+
+    it(`rejects every changed ${family} lock coordinate and array shape`, () => {
+      const { requirement, blueprint, plan } = accepted();
+      const reject = (changed: CompositionPlanV1) =>
+        expect(
+          capabilities.matchExactConsumerFamilyPlan(
+            blueprint,
+            requirement.requirementId,
+            changed,
+          ),
+        ).toBeNull();
+      for (let index = 0; index < plan.capabilityLocks.length; index++) {
+        for (const [field, value] of [
+          ["key", "unapproved.capability"],
+          ["version", "0.0.0"],
+          ["manifestDigest", `sha256:${"0".repeat(64)}`],
+        ] as const) {
+          const changed = structuredClone(plan);
+          changed.capabilityLocks[index]![field] = value;
+          reject(changed);
+        }
+        const missing = structuredClone(plan);
+        missing.capabilityLocks.splice(index, 1);
+        reject(missing);
+        const duplicate = structuredClone(plan);
+        duplicate.capabilityLocks.splice(
+          index,
+          0,
+          duplicate.capabilityLocks[index]!,
+        );
+        reject(duplicate);
+      }
+      const extra = structuredClone(plan);
+      extra.capabilityLocks.push({
+        ...extra.capabilityLocks[0]!,
+        key: "unapproved.capability",
+      });
+      reject(extra);
+      const reordered = structuredClone(plan);
+      reordered.capabilityLocks.reverse();
+      reject(reordered);
+    });
+
+    it(`rejects every changed ${family} binding coordinate and array shape`, () => {
+      const { requirement, blueprint, plan } = accepted();
+      const reject = (changed: CompositionPlanV1) =>
+        expect(
+          capabilities.matchExactConsumerFamilyPlan(
+            blueprint,
+            requirement.requirementId,
+            changed,
+          ),
+        ).toBeNull();
+      for (let index = 0; index < plan.graphBindings.length; index++) {
+        for (const field of [
+          "capabilityKey",
+          "inputKey",
+          "graphSymbol",
+        ] as const) {
+          const changed = structuredClone(plan);
+          changed.graphBindings[index]![field] = "unapproved-symbol";
+          reject(changed);
+        }
+        const missing = structuredClone(plan);
+        missing.graphBindings.splice(index, 1);
+        reject(missing);
+        const duplicate = structuredClone(plan);
+        duplicate.graphBindings.splice(
+          index,
+          0,
+          duplicate.graphBindings[index]!,
+        );
+        reject(duplicate);
+        const rebound = structuredClone(plan);
+        rebound.graphBindings[index]!.graphSymbol =
+          plan.graphBindings[
+            (index + 1) % plan.graphBindings.length
+          ]!.graphSymbol;
+        if (
+          rebound.graphBindings[index]!.graphSymbol !==
+          plan.graphBindings[index]!.graphSymbol
+        )
+          reject(rebound);
+      }
+      const extra = structuredClone(plan);
+      extra.graphBindings.push({
+        ...extra.graphBindings[0]!,
+        inputKey: "extra",
+      });
+      reject(extra);
+      const reordered = structuredClone(plan);
+      reordered.graphBindings.reverse();
+      reject(reordered);
+    });
+
+    it(`rejects near-${family} structure despite accepted labels and plans`, () => {
+      const { requirement, blueprint, plan } = accepted();
+      const changed = structuredClone(blueprint);
+      changed.entities[0]!.fields[0]!.required = false;
+      expect(
+        predicate === "matchServiceWorkOrdersBlueprintV1"
+          ? !!matchServiceWorkOrdersBlueprintV1(changed)
+          : capabilities[predicate](changed),
+      ).toBe(false);
+      expect(
+        capabilities.matchExactConsumerFamilyPlan(
+          changed,
+          requirement.requirementId,
+          plan,
+        ),
+      ).toBeNull();
+      for (const [otherKey] of families.filter(
+        ([key]) => key !== definitionKey,
+      )) {
+        const other = projectDefinitionSelection({
+          definitionKey: otherKey,
+          disposition: "supported-default",
+          requirementId: requirement.requirementId,
+          title: blueprint.title,
+          outcome: "Complete the accepted business operation.",
+          materialQuestions: [],
+          businessParameters: null,
+        });
+        expect(
+          capabilities.matchExactConsumerFamilyPlan(
+            other.blueprint,
+            requirement.requirementId,
+            plan,
+          ),
+        ).toBeNull();
+      }
+    });
+  }
+
+  it("keeps the old broad Appointment fixture outside the accepted families", () => {
+    const { requirement, blueprint } = appointmentBookingPrompt();
+    const [{ plan }] = planProductAlternatives({
+      requirement,
+      blueprint,
+      baseDraft: blankDraft(requirement.requirementId, blueprint.title),
+    });
+    expect(
+      capabilities.matchExactConsumerFamilyPlan(
+        blueprint,
+        requirement.requirementId,
+        plan,
+      ),
+    ).toBeNull();
+  });
+});
 
 function safelyRenamedAppointmentV1() {
   const source = appointmentBookingV1Prompt();

@@ -30,6 +30,46 @@ const bindings = [
 ];
 
 describe("definition case index", () => {
+  it("routes the V2 replacement to its consumer case and retains an explicit V1 compatibility check", () => {
+    const previous = definitionCaseBindings.find(
+      (row) => row.definitionKey === "appointment-booking-v1",
+    );
+    const current = definitionCaseBindings.find(
+      (row) => row.definitionKey === "appointment-booking-v2",
+    );
+    assert.deepEqual(current, {
+      definitionKey: "appointment-booking-v2",
+      runtimeFamily: "appointment-booking/v2",
+      caseId: "appointment-booking-v2-consumer-local",
+      casePath: "e2e/appointment-booking.spec.ts",
+      evidencePath:
+        "docs/acceptance/evidence/accepted-family-consumer-delivery/appointment",
+      protectedFixture: false,
+    });
+    assert.equal(
+      previous.caseId,
+      "appointment-booking-v1-historical-compatibility",
+    );
+    assert.equal(
+      previous.casePath,
+      "packages/compiler/test/definition-data-compatibility.test.ts",
+    );
+    assert.equal(
+      previous.evidencePath,
+      "docs/acceptance/evidence/appointment-booking",
+    );
+    assert.equal(
+      createDefinitionCaseIndex({
+        definitions: [
+          { definitionKey: previous.definitionKey },
+          { definitionKey: current.definitionKey },
+        ],
+        bindings: [previous, current],
+      }).authoritative,
+      false,
+    );
+  });
+
   it("routes the admitted stockroom to its actual Inventory case without changing acceptance status", () => {
     assert.deepEqual(
       definitionCaseBindings.find(

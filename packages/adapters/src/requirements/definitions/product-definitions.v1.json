@@ -6117,6 +6117,1753 @@
         "reviewedOn": "2026-09-24",
         "decision": "ADR-0065"
       }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "appointment-booking-v2",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "appointment",
+        "version": "appointment-booking/v2"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "customer",
+        "operation": "create",
+        "entityKey": "appointment",
+        "successState": null
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "appointment-booking-v1",
+          "outcome": "Customers request open service schedules and staff manage appointments.",
+          "actors": [
+            {
+              "key": "customer",
+              "label": "Customer",
+              "description": "Requests appointments."
+            },
+            {
+              "key": "staff",
+              "label": "Staff",
+              "description": "Manages appointment state."
+            },
+            {
+              "key": "administrator",
+              "label": "Administrator",
+              "description": "Manages services and schedules."
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "service",
+              "label": "Service",
+              "description": "A bookable offer."
+            },
+            {
+              "key": "schedule",
+              "label": "Schedule",
+              "description": "A server-owned bookable interval."
+            },
+            {
+              "key": "appointment",
+              "label": "Appointment",
+              "description": "A requested, confirmed, or cancelled booking."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "appointment-booking",
+              "label": "Appointment booking",
+              "description": "A customer request is confirmed, rescheduled, or cancelled."
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "customer-requests-open-schedule",
+              "given": "an open schedule with positive capacity",
+              "when": "a customer requests an appointment",
+              "then": "the appointment is requested"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:bd0246f6c64ebe6fcd7ff336b7ba2b08700c97f95d21f8d850c6fac59cba4fc0",
+          "title": "Appointment Booking",
+          "actors": [
+            {
+              "key": "customer",
+              "label": "Customer",
+              "permissions": [
+                {
+                  "entityKey": "appointment",
+                  "actions": ["create", "read", "cancel"]
+                },
+                {
+                  "entityKey": "schedule",
+                  "actions": ["read-availability"]
+                }
+              ]
+            },
+            {
+              "key": "staff",
+              "label": "Staff",
+              "permissions": [
+                {
+                  "entityKey": "appointment",
+                  "actions": ["read", "confirm", "reschedule", "cancel"]
+                },
+                {
+                  "entityKey": "schedule",
+                  "actions": ["read-availability"]
+                }
+              ]
+            },
+            {
+              "key": "administrator",
+              "label": "Administrator",
+              "permissions": [
+                {
+                  "entityKey": "service",
+                  "actions": ["create", "read", "update", "manage"]
+                },
+                {
+                  "entityKey": "schedule",
+                  "actions": ["create", "read", "update", "manage"]
+                },
+                {
+                  "entityKey": "appointment",
+                  "actions": ["read", "cancel"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "service",
+              "label": "Service",
+              "description": "A bookable offer.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "durationMinutes",
+                  "label": "Duration minutes",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "active",
+                  "label": "Active",
+                  "type": "boolean",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "schedule",
+              "label": "Schedule",
+              "description": "A server-owned bookable interval.",
+              "fields": [
+                {
+                  "key": "serviceId",
+                  "label": "Service",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "service"
+                },
+                {
+                  "key": "startUtc",
+                  "label": "Start UTC",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "endUtc",
+                  "label": "End UTC",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "timezone",
+                  "label": "Timezone",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "capacity",
+                  "label": "Capacity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "closed"]
+                }
+              ]
+            },
+            {
+              "key": "appointment",
+              "label": "Appointment",
+              "description": "A requested, confirmed, or cancelled booking.",
+              "fields": [
+                {
+                  "key": "scheduleId",
+                  "label": "Schedule",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "schedule"
+                },
+                {
+                  "key": "customerName",
+                  "label": "Customer name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "notes",
+                  "label": "Notes",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "cancellationReason",
+                  "label": "Cancellation reason",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["requested", "confirmed", "cancelled"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "schedule-picker",
+              "label": "Schedule picker",
+              "intent": "calendar",
+              "entityKey": "schedule"
+            },
+            {
+              "key": "appointment-list",
+              "label": "Appointments",
+              "intent": "list",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "appointment-form",
+              "label": "New appointment",
+              "intent": "form",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "appointment-detail",
+              "label": "Appointment detail",
+              "intent": "detail",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "service-management",
+              "label": "Services",
+              "intent": "settings"
+            },
+            {
+              "key": "schedule-management",
+              "label": "Schedules",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "appointment-booking",
+              "label": "Appointment booking",
+              "entityKey": "appointment",
+              "states": [
+                {
+                  "key": "requested",
+                  "label": "Requested"
+                },
+                {
+                  "key": "confirmed",
+                  "label": "Confirmed"
+                },
+                {
+                  "key": "cancelled",
+                  "label": "Cancelled"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "confirm",
+                  "from": "requested",
+                  "to": "confirmed",
+                  "label": "Confirm",
+                  "actorKey": "staff"
+                },
+                {
+                  "key": "cancel",
+                  "from": "requested",
+                  "to": "cancelled",
+                  "label": "Cancel",
+                  "actorKey": "customer"
+                },
+                {
+                  "key": "reschedule",
+                  "from": "confirmed",
+                  "to": "requested",
+                  "label": "Reschedule",
+                  "actorKey": "staff"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "customer-requests-and-staff-confirms",
+              "description": "A customer requests an appointment and staff confirm it.",
+              "steps": [
+                {
+                  "actorKey": "customer",
+                  "action": "requests an appointment"
+                },
+                {
+                  "actorKey": "staff",
+                  "action": "confirms the appointment"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "definitionKey": "appointment-booking-v2",
+          "identity": "Use only the reviewed local Appointment Booking V1 structure.",
+          "requirementChecksum": "sha256:bd0246f6c64ebe6fcd7ff336b7ba2b08700c97f95d21f8d850c6fac59cba4fc0",
+          "title": "Appointment Booking",
+          "actors": [
+            {
+              "key": "customer",
+              "label": "Customer",
+              "permissions": [
+                {
+                  "entityKey": "appointment",
+                  "actions": ["create", "read", "cancel"]
+                },
+                {
+                  "entityKey": "schedule",
+                  "actions": ["read-availability"]
+                }
+              ]
+            },
+            {
+              "key": "staff",
+              "label": "Staff",
+              "permissions": [
+                {
+                  "entityKey": "appointment",
+                  "actions": ["read", "confirm", "reschedule", "cancel"]
+                },
+                {
+                  "entityKey": "schedule",
+                  "actions": ["read-availability"]
+                }
+              ]
+            },
+            {
+              "key": "administrator",
+              "label": "Administrator",
+              "permissions": [
+                {
+                  "entityKey": "service",
+                  "actions": ["create", "read", "update", "manage"]
+                },
+                {
+                  "entityKey": "schedule",
+                  "actions": ["create", "read", "update", "manage"]
+                },
+                {
+                  "entityKey": "appointment",
+                  "actions": ["read", "cancel"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "service",
+              "label": "Service",
+              "description": "A bookable offer.",
+              "fields": [
+                {
+                  "key": "name",
+                  "label": "Name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "durationMinutes",
+                  "label": "Duration minutes",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "active",
+                  "label": "Active",
+                  "type": "boolean",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "schedule",
+              "label": "Schedule",
+              "description": "A server-owned bookable interval.",
+              "fields": [
+                {
+                  "key": "serviceId",
+                  "label": "Service",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "service"
+                },
+                {
+                  "key": "startUtc",
+                  "label": "Start UTC",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "endUtc",
+                  "label": "End UTC",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "timezone",
+                  "label": "Timezone",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "capacity",
+                  "label": "Capacity",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": false
+                    }
+                  }
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "closed"]
+                }
+              ]
+            },
+            {
+              "key": "appointment",
+              "label": "Appointment",
+              "description": "A requested, confirmed, or cancelled booking.",
+              "fields": [
+                {
+                  "key": "scheduleId",
+                  "label": "Schedule",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "schedule"
+                },
+                {
+                  "key": "customerName",
+                  "label": "Customer name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "notes",
+                  "label": "Notes",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "cancellationReason",
+                  "label": "Cancellation reason",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["requested", "confirmed", "cancelled"]
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "schedule-picker",
+              "label": "Schedule picker",
+              "intent": "calendar",
+              "entityKey": "schedule"
+            },
+            {
+              "key": "appointment-list",
+              "label": "Appointments",
+              "intent": "list",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "appointment-form",
+              "label": "New appointment",
+              "intent": "form",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "appointment-detail",
+              "label": "Appointment detail",
+              "intent": "detail",
+              "entityKey": "appointment"
+            },
+            {
+              "key": "service-management",
+              "label": "Services",
+              "intent": "settings"
+            },
+            {
+              "key": "schedule-management",
+              "label": "Schedules",
+              "intent": "settings"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "appointment-booking",
+              "label": "Appointment booking",
+              "entityKey": "appointment",
+              "states": [
+                {
+                  "key": "requested",
+                  "label": "Requested"
+                },
+                {
+                  "key": "confirmed",
+                  "label": "Confirmed"
+                },
+                {
+                  "key": "cancelled",
+                  "label": "Cancelled"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "confirm",
+                  "from": "requested",
+                  "to": "confirmed",
+                  "label": "Confirm",
+                  "actorKey": "staff"
+                },
+                {
+                  "key": "cancel",
+                  "from": "requested",
+                  "to": "cancelled",
+                  "label": "Cancel",
+                  "actorKey": "customer"
+                },
+                {
+                  "key": "reschedule",
+                  "from": "confirmed",
+                  "to": "requested",
+                  "label": "Reschedule",
+                  "actorKey": "staff"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "customer-requests-and-staff-confirms",
+              "description": "A customer requests an appointment and staff confirm it.",
+              "steps": [
+                {
+                  "actorKey": "customer",
+                  "action": "requests an appointment"
+                },
+                {
+                  "actorKey": "staff",
+                  "action": "confirms the appointment"
+                }
+              ]
+            }
+          ]
+        },
+        "providerInstruction": "Select appointment-booking-v2 for the supported local Appointment workspace. Customers and staff discover offered service times through read-availability; administrators manage services and schedules. Local demo roles do not establish private accounts or tenant isolation. Ask material questions for recurring appointments, external calendar synchronization, payment, or unreviewed roles, entities, routes, and capabilities."
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "customer-cancels-request",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "appointment",
+                "operation": "cancel",
+                "fromState": "requested",
+                "toState": "cancelled",
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "customer-cancel-replay",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "appointment",
+                "operation": "cancel",
+                "fromState": "requested",
+                "toState": "cancelled",
+                "expectation": "retry-replay"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "staff-cannot-use-customer-transition",
+            "steps": [
+              {
+                "actorKey": "staff",
+                "entityKey": "appointment",
+                "operation": "cancel",
+                "fromState": "requested",
+                "toState": "cancelled",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          },
+          {
+            "key": "scheduling.appointment",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:d77a8ec2a8bcaba17510b7d6a7d073b26ccc6a2857fd6644c9d80700d672a9c7"
+          }
+        ],
+        "presentation": {
+          "key": "appointment-booking",
+          "version": "2.0.0"
+        },
+        "compilerProfile": "appointment-booking@2.0.0"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-24",
+        "decision": "ADR-0065"
+      }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "facilities-service-desk",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "service-work-orders",
+        "version": "service-work-orders/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "technician",
+        "operation": "resolve",
+        "entityKey": "work-order",
+        "successState": "resolved"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "work-orders-fixture",
+          "outcome": "Dispatch work and retain assigned technician resolution history.",
+          "actors": [
+            {
+              "key": "dispatcher",
+              "label": "Dispatcher"
+            },
+            {
+              "key": "technician",
+              "label": "Technician"
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "work-order",
+              "label": "Work order"
+            },
+            {
+              "key": "work-order-history",
+              "label": "Work order history"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "fulfil-order",
+              "label": "Fulfil work order"
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "resolve-order",
+              "given": "An assigned work order",
+              "when": "Its technician completes the work",
+              "then": "The resolution and actor remain in history"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:494a6897195f8b54a1ad8bce72d1a2da12f26cece999939318bb2b0b0777689b",
+          "title": "Facilities Service Desk",
+          "actors": [
+            {
+              "key": "dispatcher",
+              "label": "Dispatcher",
+              "permissions": [
+                {
+                  "entityKey": "work-order",
+                  "actions": [
+                    "create",
+                    "read",
+                    "update",
+                    "assign",
+                    "reassign",
+                    "reopen",
+                    "cancel"
+                  ]
+                },
+                {
+                  "entityKey": "work-order-history",
+                  "actions": ["read"]
+                }
+              ]
+            },
+            {
+              "key": "technician",
+              "label": "Technician",
+              "permissions": [
+                {
+                  "entityKey": "work-order",
+                  "actions": ["read", "start", "resolve"]
+                },
+                {
+                  "entityKey": "work-order-history",
+                  "actions": ["read"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "work-order",
+              "label": "Work order",
+              "fields": [
+                {
+                  "key": "title",
+                  "label": "title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "serviceLocation",
+                  "label": "serviceLocation",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "priority",
+                  "label": "priority",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["low", "medium", "high"]
+                },
+                {
+                  "key": "status",
+                  "label": "status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "in-progress", "resolved", "cancelled"]
+                },
+                {
+                  "key": "description",
+                  "label": "description",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "dueDate",
+                  "label": "dueDate",
+                  "type": "date",
+                  "required": false
+                },
+                {
+                  "key": "assigneePrincipalId",
+                  "label": "assigneePrincipalId",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "work-order-history",
+              "label": "Work order history",
+              "fields": [
+                {
+                  "key": "workOrder",
+                  "label": "workOrder",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "work-order"
+                },
+                {
+                  "key": "action",
+                  "label": "action",
+                  "type": "enum",
+                  "required": true,
+                  "options": [
+                    "create",
+                    "update",
+                    "assign",
+                    "reassign",
+                    "start",
+                    "resolve",
+                    "reopen",
+                    "cancel"
+                  ]
+                },
+                {
+                  "key": "orderVersion",
+                  "label": "orderVersion",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": true
+                    },
+                    "maximum": {
+                      "value": 2147483647,
+                      "inclusive": true
+                    }
+                  }
+                },
+                {
+                  "key": "toStatus",
+                  "label": "toStatus",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "in-progress", "resolved", "cancelled"]
+                },
+                {
+                  "key": "actorPrincipalId",
+                  "label": "actorPrincipalId",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "actorRole",
+                  "label": "actorRole",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "recordedAt",
+                  "label": "recordedAt",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "fromStatus",
+                  "label": "fromStatus",
+                  "type": "enum",
+                  "required": false,
+                  "options": ["open", "in-progress", "resolved", "cancelled"]
+                },
+                {
+                  "key": "fromAssigneePrincipalId",
+                  "label": "fromAssigneePrincipalId",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "toAssigneePrincipalId",
+                  "label": "toAssigneePrincipalId",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "note",
+                  "label": "note",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "beforeTitle",
+                  "label": "beforeTitle",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "beforeServiceLocation",
+                  "label": "beforeServiceLocation",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "beforePriority",
+                  "label": "beforePriority",
+                  "type": "enum",
+                  "required": false,
+                  "options": ["low", "medium", "high"]
+                },
+                {
+                  "key": "beforeDescription",
+                  "label": "beforeDescription",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "beforeDueDate",
+                  "label": "beforeDueDate",
+                  "type": "date",
+                  "required": false
+                },
+                {
+                  "key": "afterTitle",
+                  "label": "afterTitle",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "afterServiceLocation",
+                  "label": "afterServiceLocation",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "afterPriority",
+                  "label": "afterPriority",
+                  "type": "enum",
+                  "required": false,
+                  "options": ["low", "medium", "high"]
+                },
+                {
+                  "key": "afterDescription",
+                  "label": "afterDescription",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "afterDueDate",
+                  "label": "afterDueDate",
+                  "type": "date",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "dispatch",
+              "label": "Dispatch",
+              "intent": "list",
+              "entityKey": "work-order"
+            },
+            {
+              "key": "new-order",
+              "label": "New work order",
+              "intent": "form",
+              "entityKey": "work-order"
+            },
+            {
+              "key": "order-detail",
+              "label": "Work order detail",
+              "intent": "detail",
+              "entityKey": "work-order"
+            },
+            {
+              "key": "assigned-work",
+              "label": "Assigned work",
+              "intent": "queue",
+              "entityKey": "work-order"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "fulfil-order",
+              "label": "Fulfil work order",
+              "entityKey": "work-order",
+              "states": [
+                {
+                  "key": "open",
+                  "label": "open"
+                },
+                {
+                  "key": "in-progress",
+                  "label": "in-progress"
+                },
+                {
+                  "key": "resolved",
+                  "label": "resolved"
+                },
+                {
+                  "key": "cancelled",
+                  "label": "cancelled"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "start",
+                  "label": "start",
+                  "from": "open",
+                  "to": "in-progress",
+                  "actorKey": "technician"
+                },
+                {
+                  "key": "resolve",
+                  "label": "resolve",
+                  "from": "in-progress",
+                  "to": "resolved",
+                  "actorKey": "technician"
+                },
+                {
+                  "key": "reopen",
+                  "label": "reopen",
+                  "from": "resolved",
+                  "to": "open",
+                  "actorKey": "dispatcher"
+                },
+                {
+                  "key": "cancel",
+                  "label": "cancel",
+                  "from": "open",
+                  "to": "cancelled",
+                  "actorKey": "dispatcher"
+                },
+                {
+                  "key": "cancel",
+                  "label": "cancel",
+                  "from": "in-progress",
+                  "to": "cancelled",
+                  "actorKey": "dispatcher"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "resolve-order",
+              "description": "Dispatch and complete assigned work.",
+              "steps": [
+                {
+                  "actorKey": "dispatcher",
+                  "action": "Create, correct and assign an order."
+                },
+                {
+                  "actorKey": "technician",
+                  "action": "Start and resolve assigned work."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:494a6897195f8b54a1ad8bce72d1a2da12f26cece999939318bb2b0b0777689b",
+          "title": "Facilities Service Desk",
+          "actors": [
+            {
+              "key": "dispatcher",
+              "label": "Dispatcher",
+              "permissions": [
+                {
+                  "entityKey": "work-order",
+                  "actions": [
+                    "create",
+                    "read",
+                    "update",
+                    "assign",
+                    "reassign",
+                    "reopen",
+                    "cancel"
+                  ]
+                },
+                {
+                  "entityKey": "work-order-history",
+                  "actions": ["read"]
+                }
+              ]
+            },
+            {
+              "key": "technician",
+              "label": "Technician",
+              "permissions": [
+                {
+                  "entityKey": "work-order",
+                  "actions": ["read", "start", "resolve"]
+                },
+                {
+                  "entityKey": "work-order-history",
+                  "actions": ["read"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "work-order",
+              "label": "Work order",
+              "fields": [
+                {
+                  "key": "title",
+                  "label": "title",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "serviceLocation",
+                  "label": "serviceLocation",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "priority",
+                  "label": "priority",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["low", "medium", "high"]
+                },
+                {
+                  "key": "status",
+                  "label": "status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "in-progress", "resolved", "cancelled"]
+                },
+                {
+                  "key": "description",
+                  "label": "description",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "dueDate",
+                  "label": "dueDate",
+                  "type": "date",
+                  "required": false
+                },
+                {
+                  "key": "assigneePrincipalId",
+                  "label": "assigneePrincipalId",
+                  "type": "text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "work-order-history",
+              "label": "Work order history",
+              "fields": [
+                {
+                  "key": "workOrder",
+                  "label": "workOrder",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "work-order"
+                },
+                {
+                  "key": "action",
+                  "label": "action",
+                  "type": "enum",
+                  "required": true,
+                  "options": [
+                    "create",
+                    "update",
+                    "assign",
+                    "reassign",
+                    "start",
+                    "resolve",
+                    "reopen",
+                    "cancel"
+                  ]
+                },
+                {
+                  "key": "orderVersion",
+                  "label": "orderVersion",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": true
+                    },
+                    "maximum": {
+                      "value": 2147483647,
+                      "inclusive": true
+                    }
+                  }
+                },
+                {
+                  "key": "toStatus",
+                  "label": "toStatus",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "in-progress", "resolved", "cancelled"]
+                },
+                {
+                  "key": "actorPrincipalId",
+                  "label": "actorPrincipalId",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "actorRole",
+                  "label": "actorRole",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "recordedAt",
+                  "label": "recordedAt",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "fromStatus",
+                  "label": "fromStatus",
+                  "type": "enum",
+                  "required": false,
+                  "options": ["open", "in-progress", "resolved", "cancelled"]
+                },
+                {
+                  "key": "fromAssigneePrincipalId",
+                  "label": "fromAssigneePrincipalId",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "toAssigneePrincipalId",
+                  "label": "toAssigneePrincipalId",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "note",
+                  "label": "note",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "beforeTitle",
+                  "label": "beforeTitle",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "beforeServiceLocation",
+                  "label": "beforeServiceLocation",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "beforePriority",
+                  "label": "beforePriority",
+                  "type": "enum",
+                  "required": false,
+                  "options": ["low", "medium", "high"]
+                },
+                {
+                  "key": "beforeDescription",
+                  "label": "beforeDescription",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "beforeDueDate",
+                  "label": "beforeDueDate",
+                  "type": "date",
+                  "required": false
+                },
+                {
+                  "key": "afterTitle",
+                  "label": "afterTitle",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "afterServiceLocation",
+                  "label": "afterServiceLocation",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "afterPriority",
+                  "label": "afterPriority",
+                  "type": "enum",
+                  "required": false,
+                  "options": ["low", "medium", "high"]
+                },
+                {
+                  "key": "afterDescription",
+                  "label": "afterDescription",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "afterDueDate",
+                  "label": "afterDueDate",
+                  "type": "date",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "dispatch",
+              "label": "Dispatch",
+              "intent": "list",
+              "entityKey": "work-order"
+            },
+            {
+              "key": "new-order",
+              "label": "New work order",
+              "intent": "form",
+              "entityKey": "work-order"
+            },
+            {
+              "key": "order-detail",
+              "label": "Work order detail",
+              "intent": "detail",
+              "entityKey": "work-order"
+            },
+            {
+              "key": "assigned-work",
+              "label": "Assigned work",
+              "intent": "queue",
+              "entityKey": "work-order"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "fulfil-order",
+              "label": "Fulfil work order",
+              "entityKey": "work-order",
+              "states": [
+                {
+                  "key": "open",
+                  "label": "open"
+                },
+                {
+                  "key": "in-progress",
+                  "label": "in-progress"
+                },
+                {
+                  "key": "resolved",
+                  "label": "resolved"
+                },
+                {
+                  "key": "cancelled",
+                  "label": "cancelled"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "start",
+                  "label": "start",
+                  "from": "open",
+                  "to": "in-progress",
+                  "actorKey": "technician"
+                },
+                {
+                  "key": "resolve",
+                  "label": "resolve",
+                  "from": "in-progress",
+                  "to": "resolved",
+                  "actorKey": "technician"
+                },
+                {
+                  "key": "reopen",
+                  "label": "reopen",
+                  "from": "resolved",
+                  "to": "open",
+                  "actorKey": "dispatcher"
+                },
+                {
+                  "key": "cancel",
+                  "label": "cancel",
+                  "from": "open",
+                  "to": "cancelled",
+                  "actorKey": "dispatcher"
+                },
+                {
+                  "key": "cancel",
+                  "label": "cancel",
+                  "from": "in-progress",
+                  "to": "cancelled",
+                  "actorKey": "dispatcher"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "resolve-order",
+              "description": "Dispatch and complete assigned work.",
+              "steps": [
+                {
+                  "actorKey": "dispatcher",
+                  "action": "Create, correct and assign an order."
+                },
+                {
+                  "actorKey": "technician",
+                  "action": "Start and resolve assigned work."
+                }
+              ]
+            }
+          ],
+          "definitionKey": "facilities-service-desk",
+          "identity": "Local demo — synthetic staff: one dispatcher and two technicians; no private accounts or production authentication."
+        },
+        "providerInstruction": "Select facilities-service-desk for a bounded local facilities dispatch desk: create work orders with title, service location, priority, optional description and due date; correct saved metadata with a reason while open or in progress; assign and reassign synthetic technicians, start assigned work, resolve with a report, reopen with a reason, and cancel open or in-progress orders. Preserve complete immutable correction, assignment and resolution history. The store starts empty. Use the exact reviewed two-entity, two-role, four-page family; businessParameters must be null. This is a local demo with synthetic staff, not private identity. Requirements for private accounts, photo uploads, messaging, notifications, maps, external actions, customer visibility, tenant isolation, extra fields or roles, scheduling, offline synchronization, hosted deployment or other unsupported behavior remain materialQuestions with disposition needs-clarification. Never silently substitute fixture staff or claim outbound delivery. Use supported-default with no materialQuestions only when the requested local scope fits or the user explicitly accepts the supported local scope."
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "correct-and-resolve",
+            "steps": [
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "update",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "assign",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "technician",
+                "entityKey": "work-order",
+                "operation": "start",
+                "fromState": "open",
+                "toState": "in-progress",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "update",
+                "fromState": "in-progress",
+                "toState": "in-progress",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "reassign",
+                "fromState": "in-progress",
+                "toState": "in-progress",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "technician",
+                "entityKey": "work-order",
+                "operation": "resolve",
+                "fromState": "in-progress",
+                "toState": "resolved",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "reopen",
+                "fromState": "resolved",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "technician",
+                "entityKey": "work-order",
+                "operation": "start",
+                "fromState": "open",
+                "toState": "in-progress",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "technician",
+                "entityKey": "work-order",
+                "operation": "resolve",
+                "fromState": "in-progress",
+                "toState": "resolved",
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "cancel-mistaken-order",
+            "steps": [
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "cancel",
+                "fromState": "open",
+                "toState": "cancelled",
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "cancel-started-order",
+            "steps": [
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "cancel",
+                "fromState": "in-progress",
+                "toState": "cancelled",
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "replay-interrupted-correction",
+            "steps": [
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "update",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "retry-replay"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "technician-cannot-edit",
+            "steps": [
+              {
+                "actorKey": "technician",
+                "entityKey": "work-order",
+                "operation": "update",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "denied"
+              }
+            ]
+          },
+          {
+            "key": "stale-correction",
+            "steps": [
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "update",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "version-conflict"
+              }
+            ]
+          },
+          {
+            "key": "invalid-assignee",
+            "steps": [
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "assign",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "validation-error"
+              }
+            ]
+          },
+          {
+            "key": "non-assigned-technician-hidden",
+            "steps": [
+              {
+                "actorKey": "technician",
+                "entityKey": "work-order",
+                "operation": "read",
+                "fromState": "in-progress",
+                "toState": "in-progress",
+                "expectation": "not-found"
+              }
+            ]
+          },
+          {
+            "key": "history-is-read-only",
+            "steps": [
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order-history",
+                "operation": "read",
+                "fromState": null,
+                "toState": null,
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "cancelled-order-is-terminal",
+            "steps": [
+              {
+                "actorKey": "dispatcher",
+                "entityKey": "work-order",
+                "operation": "reopen",
+                "fromState": "cancelled",
+                "toState": "open",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "service-work-orders-presentation",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "service-work-orders@1.0.0"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-24",
+        "decision": "ADR-0065"
+      }
     }
   ]
 }

@@ -23,6 +23,12 @@ export const BRIEF_MAX_LENGTH = 12_000;
 export const ANSWER_MAX_LENGTH = 1_000;
 export const ANSWER_LIMIT = 30;
 
+export interface SubmittedRequirement {
+  readonly brief: string;
+  readonly answers: Readonly<Record<string, string>>;
+  readonly priorInterpretation: RequirementInterpretationResultV1;
+}
+
 export interface ProductJourneyReview {
   readonly id: string;
   readonly applicationGraphId: string;
@@ -37,6 +43,8 @@ export interface ProductJourneyState {
   /** Transient business brief. Never persisted, logged, or reported. */
   readonly brief: string;
   readonly answers: Readonly<Record<string, string>>;
+  readonly lastSubmitted: SubmittedRequirement | null;
+  readonly unresolvedRequest: SubmittedRequirement | null;
   readonly interpretationCycles: number;
   readonly interpretation: RequirementInterpretationResultV1 | null;
   readonly review: ProductJourneyReview | null;
@@ -49,6 +57,11 @@ export interface ProductJourneyState {
 
 export type ProductJourneyAction =
   | { type: "submit-brief"; brief: string }
+  | {
+      type: "submit-revised-requirement";
+      brief: string;
+      answers: Readonly<Record<string, string>>;
+    }
   | {
       type: "interpretation-accepted";
       interpretation: RequirementInterpretationResultV1;
@@ -70,6 +83,8 @@ export function beginProductJourney(): ProductJourneyState {
     stage: "brief",
     brief: "",
     answers: {},
+    lastSubmitted: null,
+    unresolvedRequest: null,
     interpretationCycles: 0,
     interpretation: null,
     review: null,
@@ -105,6 +120,11 @@ export function journeyTransition(
 ): ProductJourneyState {
   switch (action.type) {
     case "submit-brief": {
+      if (state.unresolvedRequest !== null) {
+        throw new Error(
+          "Revise the unresolved request or explicitly start over.",
+        );
+      }
       const brief = action.brief.trim();
       if (brief.length === 0) {
         throw new Error("The requirement brief must be non-empty prose.");
@@ -120,6 +140,30 @@ export function journeyTransition(
       return {
         ...beginProductJourney(),
         brief,
+      };
+    }
+    case "submit-revised-requirement": {
+      if (!canSubmitRevisedRequirement(state, action.brief, action.answers)) {
+        throw new Error(
+          "A revised request requires a valid changed requirement or answer.",
+        );
+      }
+      const snapshot = structuredClone({
+        brief: action.brief.trim(),
+        answers: action.answers,
+        priorInterpretation: state.unresolvedRequest!.priorInterpretation,
+      });
+      return {
+        ...state,
+        stage: "brief",
+        brief: snapshot.brief,
+        answers: snapshot.answers,
+        interpretation: snapshot.priorInterpretation,
+        interpretationCycles: 0,
+        lastSubmitted: snapshot,
+        unresolvedRequest: snapshot,
+        failure: null,
+        error: null,
       };
     }
     case "interpretation-accepted": {
@@ -163,6 +207,7 @@ export function journeyTransition(
       return {
         ...state,
         interpretation: action.interpretation,
+        unresolvedRequest: null,
         interpretationCycles,
         stage:
           action.interpretation.interpretation.clarifications.length > 0
@@ -192,6 +237,14 @@ export function journeyTransition(
       return {
         ...state,
         answers: { ...state.answers, ...action.answers },
+        lastSubmitted:
+          state.interpretation === null
+            ? null
+            : structuredClone({
+                brief: state.brief,
+                answers: { ...state.answers, ...action.answers },
+                priorInterpretation: state.interpretation,
+              }),
       };
     }
     case "review-created": {
@@ -250,6 +303,11 @@ export function journeyTransition(
       return {
         ...state,
         stage: "failed",
+        unresolvedRequest:
+          action.failure.code === "requirement.definition_scope_unresolved" ||
+          state.unresolvedRequest !== null
+            ? state.lastSubmitted
+            : null,
         failure: action.failure,
         error: action.failure.message,
       };
@@ -267,6 +325,40 @@ export function journeyTransition(
       return beginProductJourney();
     }
   }
+}
+
+/** Compare the exact bounded values sent by an explicit recovery submission. */
+export function canSubmitRevisedRequirement(
+  state: ProductJourneyState,
+  brief: string,
+  answers: Readonly<Record<string, string>>,
+): boolean {
+  const previous = state.unresolvedRequest;
+  if (
+    state.stage !== "failed" ||
+    previous === null ||
+    brief.trim().length === 0 ||
+    brief.length > BRIEF_MAX_LENGTH
+  )
+    return false;
+  const entries = Object.entries(answers);
+  if (
+    entries.length > ANSWER_LIMIT ||
+    entries.some(
+      ([key, answer]) => key.length === 0 || answer.length > ANSWER_MAX_LENGTH,
+    )
+  )
+    return false;
+  const keys = new Set([
+    ...Object.keys(previous.answers),
+    ...Object.keys(answers),
+  ]);
+  return (
+    brief.trim() !== previous.brief ||
+    [...keys].some(
+      (key) => (answers[key] ?? "") !== (previous.answers[key] ?? ""),
+    )
+  );
 }
 
 /** The open clarification questions of the current interpretation, if any. */

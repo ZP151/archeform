@@ -69,8 +69,8 @@ export const definitionCaseBindings = Object.freeze([
   binding({
     definitionKey: "appointment-booking-v1",
     runtimeFamily: "appointment-booking/v1",
-    caseId: "appointment-booking-v1-local",
-    casePath: "e2e/appointment-booking.spec.ts",
+    caseId: "appointment-booking-v1-historical-compatibility",
+    casePath: "packages/compiler/test/definition-data-compatibility.test.ts",
     evidencePath: "docs/acceptance/evidence/appointment-booking",
     protectedFixture: false,
   }),
@@ -88,6 +88,23 @@ export const definitionCaseBindings = Object.freeze([
     caseId: "supplies-stockroom-local",
     casePath: "e2e/inventory-operations.spec.ts",
     evidencePath: "docs/acceptance/evidence/inventory-operations",
+    protectedFixture: false,
+  }),
+  binding({
+    definitionKey: "appointment-booking-v2",
+    runtimeFamily: "appointment-booking/v2",
+    caseId: "appointment-booking-v2-consumer-local",
+    casePath: "e2e/appointment-booking.spec.ts",
+    evidencePath:
+      "docs/acceptance/evidence/accepted-family-consumer-delivery/appointment",
+    protectedFixture: false,
+  }),
+  binding({
+    definitionKey: "facilities-service-desk",
+    runtimeFamily: "service-work-orders/v1",
+    caseId: "facilities-service-desk-local",
+    casePath: "e2e/service-work-orders.spec.ts",
+    evidencePath: "docs/acceptance/evidence/service-work-orders",
     protectedFixture: false,
   }),
 ]);

@@ -21,6 +21,7 @@ export interface ClarificationPanelProps {
   readonly busy: boolean;
   readonly error: string | null;
   readonly onContinue: () => void;
+  readonly submittedAnswers?: Readonly<Record<string, string>>;
 }
 
 export function ClarificationPanel({
@@ -32,18 +33,38 @@ export function ClarificationPanel({
   busy,
   error,
   onContinue,
+  submittedAnswers,
 }: ClarificationPanelProps) {
   return (
-    <section aria-label="Clarify the requirement">
+    <section
+      aria-label={
+        submittedAnswers
+          ? "Previous questions and answers"
+          : "Clarify the requirement"
+      }
+    >
       <RequirementSummary
         requirement={requirement}
         blueprintTitle={blueprintTitle}
       />
-      <h3>Answer the open questions</h3>
+      <h3>
+        {submittedAnswers
+          ? "Previous questions and answers"
+          : "Answer the open questions"}
+      </h3>
+      {submittedAnswers && (
+        <p>
+          These are your earlier questions and submitted answers. Review and
+          edit them below.
+        </p>
+      )}
       <ol className="clarification-questions">
         {questions.map(({ key, category, defaultPolicy, question }) => (
           <li key={key}>
             <label htmlFor={`answer-${key}`}>{question}</label>
+            {submittedAnswers && (
+              <p>Submitted answer: {submittedAnswers[key] || "Unanswered"}</p>
+            )}
             <input
               id={`answer-${key}`}
               aria-label={key}
@@ -61,14 +82,16 @@ export function ClarificationPanel({
           {error}
         </p>
       )}
-      <button
-        type="button"
-        className="primary-action"
-        disabled={busy}
-        onClick={onContinue}
-      >
-        Continue
-      </button>
+      {!submittedAnswers && (
+        <button
+          type="button"
+          className="primary-action"
+          disabled={busy}
+          onClick={onContinue}
+        >
+          Continue
+        </button>
+      )}
     </section>
   );
 }

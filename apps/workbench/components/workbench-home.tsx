@@ -10,8 +10,14 @@ import type {
   WorkbenchApplicationSummary,
   WorkbenchCuratedTemplate,
 } from "../lib/control-plane-client";
-import type { ProductJourneyStage } from "../lib/product-journey/journey-model";
-import type { ConsumerFamily } from "../lib/product-journey/consumer-family";
+import type {
+  ProductJourneyStage,
+  SubmittedRequirement,
+} from "../lib/product-journey/journey-model";
+import {
+  consumerFamilyLabel,
+  type ConsumerFamily,
+} from "../lib/product-journey/consumer-family";
 import type { ProductJourneyFailure } from "../lib/product-journey/interpret-contract";
 import { ClarificationPanel } from "./journey/clarification-panel";
 import { GraphDiffReview } from "./journey/graph-diff-review";
@@ -50,8 +56,15 @@ export type WorkbenchHomeJourneyProps = {
   readonly onChoose: (key: string) => void;
   readonly diffChecksum: string | null;
   readonly onApply: () => void;
+  readonly recovery?: {
+    readonly submitted: SubmittedRequirement;
+    readonly canSubmit: boolean;
+    readonly onSubmit: () => void;
+    readonly onStartOver: () => void;
+  };
   /** The short-lived consumer delivery state, if this tab started it. */
   readonly consumer?: {
+    readonly manualReason?: string | null;
     readonly family: ConsumerFamily | null;
     readonly suppliedMenu?: boolean;
     readonly manualReview: boolean;
@@ -94,6 +107,50 @@ export function ProductConversation({
   if (journey.consumer?.active) {
     return <ConsumerDelivery journey={journey} />;
   }
+  if (journey.recovery) {
+    const { submitted, canSubmit, onSubmit, onStartOver } = journey.recovery;
+    const prior = submitted.priorInterpretation.interpretation;
+    return (
+      <section aria-label="Revise unresolved requirement">
+        {journey.error !== null && (
+          <p role="alert" className="error-banner">
+            {journey.error}
+          </p>
+        )}
+        <ClarificationPanel
+          requirement={prior.spec}
+          blueprintTitle={prior.blueprint.title}
+          questions={prior.clarifications.flatMap(({ questions }) => questions)}
+          answers={journey.answers}
+          submittedAnswers={submitted.answers}
+          onAnswerChange={journey.onAnswerChange}
+          busy={journey.busy}
+          error={null}
+          onContinue={onSubmit}
+        />
+        <p>Submitted requirement: {submitted.brief}</p>
+        <RequirementComposer
+          brief={journey.brief}
+          onBriefChange={journey.onBriefChange}
+          busy={journey.busy}
+          error={null}
+          onInterpret={onSubmit}
+          revision={{ canSubmit }}
+          examplePrompts={[]}
+          onApplyExample={journey.onApplyExample}
+          commandFocusToken={commandFocusToken}
+        />
+        <button
+          type="button"
+          className="secondary-action"
+          disabled={journey.busy}
+          onClick={onStartOver}
+        >
+          Start over with an unrelated request
+        </button>
+      </section>
+    );
+  }
   if (journey.stage === "clarifying" && journey.requirement !== null) {
     return (
       <ClarificationPanel
@@ -114,25 +171,35 @@ export function ProductConversation({
     journey.planAlternatives !== null
   ) {
     return (
-      <PlanReview
-        requirement={journey.requirement}
-        blueprintTitle={journey.blueprintTitle}
-        alternatives={journey.planAlternatives}
-        chosenKey={journey.chosenKey}
-        busy={journey.busy}
-        error={journey.error}
-        onChoose={journey.onChoose}
-      />
+      <>
+        {journey.consumer?.manualReason && (
+          <p role="status">{journey.consumer.manualReason}</p>
+        )}
+        <PlanReview
+          requirement={journey.requirement}
+          blueprintTitle={journey.blueprintTitle}
+          alternatives={journey.planAlternatives}
+          chosenKey={journey.chosenKey}
+          busy={journey.busy}
+          error={journey.error}
+          onChoose={journey.onChoose}
+        />
+      </>
     );
   }
   if (journey.stage === "reviewing") {
     return (
-      <GraphDiffReview
-        diffChecksum={journey.diffChecksum ?? "pending"}
-        busy={journey.busy}
-        error={journey.error}
-        onApply={journey.onApply}
-      />
+      <>
+        {journey.consumer?.manualReason && (
+          <p role="status">{journey.consumer.manualReason}</p>
+        )}
+        <GraphDiffReview
+          diffChecksum={journey.diffChecksum ?? "pending"}
+          busy={journey.busy}
+          error={journey.error}
+          onApply={journey.onApply}
+        />
+      </>
     );
   }
   // brief, applied, and failed all return to the composer; a failure keeps
@@ -165,7 +232,7 @@ function ConsumerDelivery({
   const paused = consumer.status?.startsWith("Delivery paused") ?? false;
   const approval = consumer.family === "approval";
   const task = consumer.family === "task";
-  const label = task ? "Task" : approval ? "Approval" : "Restaurant";
+  const label = consumerFamilyLabel(consumer.family);
   return (
     <section aria-label={`${label} delivery`} className="consumer-delivery">
       <h2>Your {label} app</h2>
@@ -184,6 +251,25 @@ function ConsumerDelivery({
           Select a demo role to submit requests, review them, and read results.
           Reviewers can approve or reject records according to declared role
           permissions.
+        </p>
+      ) : consumer.family === "appointment" ? (
+        <p>
+          This is a local demo with selectable customer, staff and administrator
+          roles. Customers book available appointments; staff confirm,
+          reschedule or cancel them. Administrators manage services and
+          schedules.
+        </p>
+      ) : consumer.family === "content-directory" ? (
+        <p>
+          This is a local demo with selectable reader and curator roles.
+          Curators create and correct entries, then show or hide them. Readers
+          browse and search listed resources.
+        </p>
+      ) : consumer.family === "inventory-operations" ? (
+        <p>
+          This is a local demo with selectable stockkeeper and observer roles.
+          Stockkeepers receive, issue and adjust stock, with a retained movement
+          history. Observers can read item quantities.
         </p>
       ) : (
         <p>

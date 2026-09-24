@@ -4,6 +4,7 @@ import {
 } from "@factory/adapters/requirements/browser";
 
 export type RequirementInterpretationFailureCode =
+  | "requirement.definition_scope_unresolved"
   | "requirement.request_invalid"
   | "requirement.output_invalid"
   | "requirement.provider_rejected"
@@ -46,10 +47,13 @@ export interface ProductJourneyFailure {
 
 const ERROR_API_VERSION =
   "factory.requirement-interpretation-error/v1" as const;
+const UNRESOLVED_ERROR_API_VERSION =
+  "factory.requirement-interpretation-error/v2" as const;
 
 const REQUIREMENT_FAILURE_STATUSES: Readonly<
   Record<RequirementInterpretationFailureCode, number>
 > = {
+  "requirement.definition_scope_unresolved": 422,
   "requirement.request_invalid": 400,
   "requirement.output_invalid": 422,
   "requirement.provider_rejected": 502,
@@ -62,6 +66,8 @@ const REQUIREMENT_FAILURE_STATUSES: Readonly<
 const REQUIREMENT_FAILURE_MESSAGES: Readonly<
   Record<RequirementInterpretationFailureCode, string>
 > = {
+  "requirement.definition_scope_unresolved":
+    "Some requirements are still outside the supported scope. Review your earlier questions and answers, then revise the requirement or an answer to start a new request. No app has been created.",
   "requirement.request_invalid": "Check the requirement and try again.",
   "requirement.output_invalid": "Requirement interpretation was rejected.",
   "requirement.provider_rejected":
@@ -153,7 +159,10 @@ export function parseInterpretationResponse(
   if (
     !isPlainRecord(error) ||
     !hasExactKeys(error, ["apiVersion", "code"]) ||
-    error.apiVersion !== ERROR_API_VERSION ||
+    error.apiVersion !==
+      (error.code === "requirement.definition_scope_unresolved"
+        ? UNRESOLVED_ERROR_API_VERSION
+        : ERROR_API_VERSION) ||
     !isRequirementFailureCode(error.code) ||
     REQUIREMENT_FAILURE_STATUSES[error.code] !== status
   ) {
@@ -165,4 +174,8 @@ export function parseInterpretationResponse(
   return { ok: false, failure: requirementFailure(phase, error.code) };
 }
 
-export { ERROR_API_VERSION, REQUIREMENT_FAILURE_STATUSES };
+export {
+  ERROR_API_VERSION,
+  UNRESOLVED_ERROR_API_VERSION,
+  REQUIREMENT_FAILURE_STATUSES,
+};

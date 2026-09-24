@@ -1,5 +1,6 @@
 import {
   CompositionError,
+  matchServiceWorkOrdersBlueprintV1,
   createCalculatedRequestTotalRuntime,
   isNumericFieldValueAllowed,
   assertCompositionPlan,
@@ -246,7 +247,11 @@ function derivedPages(
     });
   }
   // Inventory movement history is composed inside item detail, never an extra CRUD page.
-  if (isInventoryOperationsBlueprint(blueprint)) return pages;
+  if (
+    isInventoryOperationsBlueprint(blueprint) ||
+    matchServiceWorkOrdersBlueprintV1(blueprint)
+  )
+    return pages;
   for (const entity of blueprint.entities) {
     if (
       blueprint.pageIntents.some(
@@ -358,6 +363,13 @@ function derivedEntities(
           unique: true,
         });
     }
+    if (
+      matchServiceWorkOrdersBlueprintV1(blueprint)?.historyEntity === entity.key
+    )
+      mapped.indexes.push({
+        fields: ["workOrderId", "orderVersion"],
+        unique: true,
+      });
     entities.push(mapped);
   }
 
@@ -437,6 +449,108 @@ function isInventoryCandidate(blueprint: ProductBlueprintV1): boolean {
     )
   );
 }
+
+/** The accepted Directory blueprint semantics, independent of definition metadata. */
+export function isContentDirectoryBlueprint(
+  blueprint: ProductBlueprintV1,
+): boolean {
+  const [entity] = blueprint.entities;
+  const [reader, curator] = blueprint.actors;
+  const [workflow] = blueprint.workflows;
+  if (
+    !entity ||
+    !reader ||
+    !curator ||
+    !workflow ||
+    blueprint.entities.length !== 1 ||
+    blueprint.actors.length !== 2 ||
+    blueprint.workflows.length !== 1 ||
+    reader.key === curator.key
+  )
+    return false;
+  const options = entity.fields[3]?.options;
+  if (
+    !options ||
+    options.length < 2 ||
+    options.length > 12 ||
+    options.some(
+      (value) =>
+        value !== value.trim() ||
+        value.length < 1 ||
+        value.length > 40 ||
+        /[\u0000-\u001f\u007f]/.test(value),
+    )
+  )
+    return false;
+  const normalized = options.map((value) => value.trim().normalize("NFC"));
+  if (
+    normalized.some((value, index) => {
+      const literal = value.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+      const pattern = new RegExp(`^(?:${literal})$`, "iu");
+      return normalized.slice(index + 1).some((other) => pattern.test(other));
+    })
+  )
+    return false;
+  return (
+    [reader, curator].every((actor, index) =>
+      canonicalEquals(
+        actor.permissions.map(({ entityKey, actions }) => ({
+          entityKey,
+          actions: [...actions].sort(),
+        })),
+        [
+          {
+            entityKey: entity.key,
+            actions:
+              index === 0
+                ? ["read"]
+                : ["cancel", "create", "read", "submit", "update"],
+          },
+        ],
+      ),
+    ) &&
+    canonicalEquals(
+      entity.fields.map(
+        ({ label: _label, description: _description, ...field }) => field,
+      ),
+      [
+        { key: "title", type: "text", required: true },
+        { key: "summary", type: "text", required: true },
+        { key: "body", type: "long-text", required: true },
+        { key: "category", type: "enum", required: true, options },
+      ],
+    ) &&
+    canonicalEquals(
+      blueprint.pageIntents.map(({ intent, entityKey }) => ({
+        intent,
+        entityKey,
+      })),
+      ["list", "form", "detail"].map((intent) => ({
+        intent,
+        entityKey: entity.key,
+      })),
+    ) &&
+    workflow.entityKey === entity.key &&
+    canonicalEquals(
+      workflow.states.map(({ key }) => key),
+      ["hidden", "listed"],
+    ) &&
+    canonicalEquals(
+      workflow.transitions.map(({ key, from, to, actorKey, label }) => [
+        key,
+        from,
+        to,
+        actorKey,
+        label,
+      ]),
+      [
+        ["submit", "hidden", "listed", curator.key, "Show entry"],
+        ["cancel", "listed", "hidden", curator.key, "Hide entry"],
+      ],
+    )
+  );
+}
+
 export function isInventoryOperationsBlueprint(
   blueprint: ProductBlueprintV1,
   selectedKeys?: readonly string[],
@@ -597,6 +711,22 @@ export function isAppointmentBookingBlueprint(
   blueprint: ProductBlueprintV1,
   selectedKeys?: readonly string[],
 ): boolean {
+  return isAppointmentBlueprint(blueprint, false, selectedKeys);
+}
+
+/** ADR-0081 V2 witness; only customer/staff gain bounded availability reads. */
+export function isAppointmentConsumerWorkspaceBlueprint(
+  blueprint: ProductBlueprintV1,
+  selectedKeys?: readonly string[],
+): boolean {
+  return isAppointmentBlueprint(blueprint, true, selectedKeys);
+}
+
+function isAppointmentBlueprint(
+  blueprint: ProductBlueprintV1,
+  availability: boolean,
+  selectedKeys?: readonly string[],
+): boolean {
   if (
     blueprint.entities.length !== 3 ||
     blueprint.actors.length !== 3 ||
@@ -681,13 +811,19 @@ export function isAppointmentBookingBlueprint(
       customer.permissions.map(
         ({ entityKey, actions }) => `${entityKey}:${actions.join(",")}`,
       ),
-      [`${appointment.key}:create,read,cancel`],
+      [
+        `${appointment.key}:create,read,cancel`,
+        ...(availability ? [`${schedule.key}:read-availability`] : []),
+      ],
     ) ||
     !sameArray(
       staff.permissions.map(
         ({ entityKey, actions }) => `${entityKey}:${actions.join(",")}`,
       ),
-      [`${appointment.key}:read,confirm,reschedule,cancel`],
+      [
+        `${appointment.key}:read,confirm,reschedule,cancel`,
+        ...(availability ? [`${schedule.key}:read-availability`] : []),
+      ],
     ) ||
     !sameArray(
       administrator.permissions.map(
@@ -736,9 +872,12 @@ export function isAppointmentBookingBlueprint(
 export function appointmentBookingGraphBindings(
   blueprint: ProductBlueprintV1,
 ): readonly { readonly inputKey: string; readonly graphSymbol: string }[] {
-  if (!isAppointmentBookingBlueprint(blueprint))
+  if (
+    !isAppointmentBookingBlueprint(blueprint) &&
+    !isAppointmentConsumerWorkspaceBlueprint(blueprint)
+  )
     throw new CompositionError(
-      "Appointment Booking requires the closed V1 structural witness.",
+      "Appointment Booking requires a closed V1 or V2 structural witness.",
     );
   return appointmentBindingSlots.map(([inputKey, entityIndex, fieldIndex]) => {
     const entity = blueprint.entities[entityIndex]!;
@@ -819,7 +958,9 @@ function derivedFlows(
     entity: workflow.entityKey,
     initialState: workflow.states[0].key,
     states: workflow.states.map((state) => state.key),
-    events: workflow.transitions.map((transition) => transition.key),
+    events: matchServiceWorkOrdersBlueprintV1(blueprint)
+      ? [...new Set(workflow.transitions.map((transition) => transition.key))]
+      : workflow.transitions.map((transition) => transition.key),
     transitions: workflow.transitions.map((transition) => {
       const effects: { capability: string; operation: string }[] = [];
       // Audit is locked for every product (identity-policy requires its
@@ -850,8 +991,15 @@ function derivedFlows(
 function derivedSeedData(
   blueprint: ProductBlueprintV1,
 ): ApplicationGraphV1["domain"]["seedData"] {
-  if (isInventoryOperationsBlueprint(blueprint)) return [];
-  if (isAppointmentBookingBlueprint(blueprint)) {
+  if (
+    isInventoryOperationsBlueprint(blueprint) ||
+    matchServiceWorkOrdersBlueprintV1(blueprint)
+  )
+    return [];
+  if (
+    isAppointmentBookingBlueprint(blueprint) ||
+    isAppointmentConsumerWorkspaceBlueprint(blueprint)
+  ) {
     const [service, schedule, appointment] = blueprint.entities;
     const field = (
       entity: ProductBlueprintV1["entities"][number],
@@ -1071,10 +1219,28 @@ export function deriveProductOperations(
 ): GraphDiffV1 {
   const blueprint = assertProductBlueprint(input.blueprint);
   if (
+    matchServiceWorkOrdersBlueprintV1(blueprint) &&
+    !isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys)
+  )
+    throw new CompositionError(
+      "Service Work Orders requires exactly six core capability keys.",
+    );
+  if (
     isInventoryCandidate(blueprint) &&
     !isInventoryOperationsBlueprint(blueprint, input.selectedKeys)
   )
     throw new CompositionError("Unsupported Inventory Operations blueprint.");
+  if (
+    blueprint.actors.some((actor) =>
+      actor.permissions.some((permission) =>
+        permission.actions.includes("read-availability"),
+      ),
+    ) &&
+    !isAppointmentConsumerWorkspaceBlueprint(blueprint, input.selectedKeys)
+  )
+    throw new CompositionError(
+      "Availability reads require the exact Appointment V2 witness.",
+    );
   const calculations = blueprint.entities.flatMap((entity) =>
     entity.fields.filter((field) => field.calculation),
   );
@@ -1101,7 +1267,9 @@ export function deriveProductOperations(
     constrained.length &&
     !supportsNumericApprovalBlueprint(blueprint) &&
     !isAppointmentBookingBlueprint(blueprint, input.selectedKeys) &&
-    !isInventoryOperationsBlueprint(blueprint, input.selectedKeys)
+    !isAppointmentConsumerWorkspaceBlueprint(blueprint, input.selectedKeys) &&
+    !isInventoryOperationsBlueprint(blueprint, input.selectedKeys) &&
+    !isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",
@@ -1149,6 +1317,8 @@ export function deriveProductOperations(
     }
   }
 
+  if (isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys))
+    capabilities.push("audit.record");
   const operations: GraphDiffV1["operations"] = [
     { op: "replace", path: "/metadata/name", value: blueprint.title },
     {
@@ -1398,11 +1568,50 @@ export function composeProductDraft(input: {
     ) &&
     !supportsNumericApprovalBlueprint(blueprint, selectedKeys) &&
     !isAppointmentBookingBlueprint(blueprint, selectedKeys) &&
-    !isInventoryOperationsBlueprint(blueprint, selectedKeys)
+    !isAppointmentConsumerWorkspaceBlueprint(blueprint, selectedKeys) &&
+    !isInventoryOperationsBlueprint(blueprint, selectedKeys) &&
+    !isServiceWorkOrdersBlueprint(blueprint, selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",
     );
+  if (
+    isAppointmentConsumerWorkspaceBlueprint(blueprint) ||
+    isServiceWorkOrdersBlueprint(blueprint, selectedKeys)
+  ) {
+    const catalogue = currentCapabilityCatalogue();
+    const assets = [
+      ...catalogue.required,
+      ...catalogue.optional.map((entry) => entry.asset),
+    ];
+    const exactKeys = matchServiceWorkOrdersBlueprintV1(blueprint)
+      ? serviceWorkOrdersLockKeys
+      : appointmentLockKeys;
+    const locks = exactKeys.map((key) => {
+      const asset = assets.find((candidate) => candidate.key === key)!;
+      return {
+        key: asset.key,
+        version: asset.version,
+        manifestDigest: asset.manifestDigest,
+      };
+    });
+    if (
+      !canonicalEquals(plan.capabilityLocks, locks) ||
+      !canonicalEquals(
+        plan.graphBindings,
+        productGraphBindings(
+          blueprint,
+          input.baseDraft.graph.metadata.id,
+          new Set(exactKeys),
+        ),
+      )
+    )
+      throw new CompositionError(
+        matchServiceWorkOrdersBlueprintV1(blueprint)
+          ? "Service Work Orders requires the exact current locks and ordered owner bindings."
+          : "Appointment V2 requires the exact current locks and ordered owner bindings.",
+      );
+  }
   const derived = deriveProductOperations({
     blueprint,
     applicationId: input.baseDraft.graph.metadata.id,
@@ -1431,4 +1640,120 @@ export function composeProductDraft(input: {
     operations,
   };
   return { diff, checksum: hashProductCompositionDiff(diff) };
+}
+
+export function productGraphBindings(
+  blueprint: ProductBlueprintV1,
+  applicationId: string,
+  keys: ReadonlySet<string>,
+): CompositionPlanV1["graphBindings"] {
+  const bindings: CompositionPlanV1["graphBindings"] = [];
+  if (keys.has("core.crud")) {
+    const primary = blueprint.entities[0];
+    bindings.push(
+      {
+        capabilityKey: "core.crud",
+        inputKey: "entityKey",
+        graphSymbol: `graph.domain.${primary.key}`,
+      },
+      {
+        capabilityKey: "core.crud",
+        inputKey: "routeKey",
+        graphSymbol: `graph.page.${primaryListPage(blueprint, primary.key)}`,
+      },
+    );
+  }
+  if (keys.has("core.workflow")) {
+    bindings.push({
+      capabilityKey: "core.workflow",
+      inputKey: "flowKey",
+      graphSymbol: `graph.flow.${blueprint.workflows[0].key}`,
+    });
+  }
+  if (keys.has("core.identity-policy")) {
+    const [defaultRole, authenticatedRole = defaultRole] = blueprint.actors.map(
+      (actor) => actor.key,
+    );
+    bindings.push(
+      {
+        capabilityKey: "core.identity-policy",
+        inputKey: "principalEntity",
+        graphSymbol: `graph.domain.${applicationId}-principal`,
+      },
+      {
+        capabilityKey: "core.identity-policy",
+        inputKey: "sessionEntity",
+        graphSymbol: `graph.domain.${applicationId}-session`,
+      },
+      {
+        capabilityKey: "core.identity-policy",
+        inputKey: "defaultRole",
+        graphSymbol: `graph.policy.${defaultRole}`,
+      },
+      {
+        capabilityKey: "core.identity-policy",
+        inputKey: "authenticatedRole",
+        graphSymbol: `graph.policy.${authenticatedRole}`,
+      },
+    );
+  }
+  if (keys.has("core.audit")) {
+    // The audit actor is the approval-deciding role when the product has
+    // one; otherwise the primary actor is the audited actor. Every locked
+    // product binds `actorRole`, so the audit runtime always has a role.
+    const approver =
+      blueprint.actors.find((actor) =>
+        actor.permissions.some((permission) =>
+          permission.actions.some(
+            (action) => action === "approve" || action === "reject",
+          ),
+        ),
+      ) ?? blueprint.actors[0];
+    if (approver === undefined) {
+      throw new CompositionError(
+        "Audit capability requires at least one blueprint actor.",
+      );
+    }
+    bindings.push({
+      capabilityKey: "core.audit",
+      inputKey: "actorRole",
+      graphSymbol: `graph.policy.${approver.key}`,
+    });
+  }
+  if (keys.has("core.notification")) {
+    bindings.push({
+      capabilityKey: "core.notification",
+      inputKey: "recipientRole",
+      graphSymbol: `graph.policy.${blueprint.actors[0].key}`,
+    });
+  }
+  if (keys.has("scheduling.appointment")) {
+    for (const binding of appointmentBookingGraphBindings(blueprint)) {
+      bindings.push({
+        capabilityKey: "scheduling.appointment",
+        ...binding,
+      });
+    }
+  }
+  return bindings;
+}
+
+const serviceWorkOrdersLockKeys = [
+  "core.crud",
+  "core.workflow",
+  "core.identity-policy",
+  "core.policy-declarations",
+  "core.audit",
+  "core.notification",
+] as const;
+function isServiceWorkOrdersBlueprint(
+  blueprint: ProductBlueprintV1,
+  keys: readonly string[],
+): boolean {
+  return (
+    matchServiceWorkOrdersBlueprintV1(blueprint) !== undefined &&
+    keys.length === serviceWorkOrdersLockKeys.length &&
+    new Set(keys).size === keys.length &&
+    serviceWorkOrdersLockKeys.every((key) => keys.includes(key))
+  );
 }

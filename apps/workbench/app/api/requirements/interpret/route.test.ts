@@ -182,6 +182,22 @@ describe("Requirement interpret route", () => {
       classifyInterpretationError(
         new RequirementInterpreterError(
           "must-not-surface",
+          "definition_scope_unresolved",
+        ),
+      ),
+    ).toEqual({
+      status: 422,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v2",
+          code: "requirement.definition_scope_unresolved",
+        },
+      },
+    });
+    expect(
+      classifyInterpretationError(
+        new RequirementInterpreterError(
+          "must-not-surface",
           "provider_not_configured",
         ),
       ),

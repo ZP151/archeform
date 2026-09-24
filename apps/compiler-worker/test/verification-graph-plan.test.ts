@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { canonicalTeamTaskInterpretation } from "../../../packages/adapters/src/requirements/task-definition-selection.js";
+import { projectDefinitionSelection } from "../../../packages/adapters/src/requirements/definition-selection-catalogue.js";
 import {
   composeProductDraft,
   planProductAlternatives,
@@ -14,6 +15,7 @@ import {
 import { VerificationContractError } from "@factory/graph";
 
 import { deriveVerificationProfile } from "../src/verifier/verification-graph-plan.js";
+import { serviceWorkOrdersInput } from "../../../packages/compiler/test/fixtures/service-work-orders.js";
 import {
   appointmentBookingGraph,
   composedAppointmentProductGraph,
@@ -30,6 +32,50 @@ import {
 const identityPolicy = graphLock([{ key: "core.identity-policy" }]);
 
 describe("graph-derived verification plan", () => {
+  it("selects immutable Work Orders before generic seed and transition derivation", () => {
+    const input = JSON.parse(JSON.stringify(serviceWorkOrdersInput()));
+    const profile = deriveVerificationProfile(
+      input.graph,
+      input.compositionLock,
+    );
+    expect(profile.profileKey).toMatch(/^work-orders-[a-f0-9]{32}$/);
+    expect(profile.journeys["work-orders-resolve-reassigned"]).toBeDefined();
+    expect(profile.apiRegistry.map((action) => action.route)).not.toContain(
+      "/api/work-order-history",
+    );
+    expect(
+      deriveVerificationProfile(input.graph, input.compositionLock),
+    ).toEqual(profile);
+  });
+
+  it.each(["hash", "digest", "grant", "field", "seed"])(
+    "fails closed on a Work Orders %s near-match instead of generic fallback",
+    (mutation) => {
+      const input = JSON.parse(JSON.stringify(serviceWorkOrdersInput()));
+      if (mutation === "hash")
+        input.compositionLock.applicationGraphChecksum =
+          "sha256:" + "0".repeat(64);
+      if (mutation === "digest")
+        input.compositionLock.packages[0].lock.manifestDigest =
+          "sha256:" + "0".repeat(64);
+      if (mutation === "grant")
+        input.graph.policy.permissions[0].actions.push("delete");
+      if (mutation === "field")
+        input.graph.domain.entities[0].fields.push({
+          key: "extra",
+          type: "string",
+          required: false,
+        });
+      if (mutation === "seed")
+        input.graph.domain.seedData = [
+          { entity: "work-order", id: "seed-order", values: {} },
+        ];
+      expect(() =>
+        deriveVerificationProfile(input.graph, input.compositionLock),
+      ).toThrow(VerificationContractError);
+    },
+  );
+
   it("preserves the exact delivered Task verifier plan from baseline 5b65169e", () => {
     const baseline = JSON.parse(
       readFileSync(
@@ -1238,6 +1284,63 @@ function currentAppointmentRuntimeGraph(): ApplicationGraphV1 {
 }
 
 describe("appointment command verification protocol", () => {
+  it("derives unchanged command journeys from the exact V2 definition Graph and seven locks", () => {
+    const { spec, blueprint } = projectDefinitionSelection({
+      definitionKey: "appointment-booking-v2",
+      disposition: "supported-default",
+      requirementId: "appointment-v2-verifier",
+      title: "Appointments",
+      outcome: "Book and manage appointments.",
+      materialQuestions: [],
+      businessParameters: null,
+    });
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: spec.requirementId,
+      workspaceId: "local",
+      name: blueprint.title,
+    });
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    const graph = applyGraphDiffToDraft(
+      baseDraft,
+      composeProductDraft({ baseDraft, blueprint, plan: standard.plan }).diff,
+    ).graph;
+    const selections = graph.integration.compositionSelections!;
+    delete graph.integration.compositionSelections;
+    const lock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    });
+    expect(lock.packages).toHaveLength(7);
+    expect(
+      Object.keys(
+        lock.packages.find(({ lock }) => lock.key === "scheduling.appointment")!
+          .bindings,
+      ),
+    ).toHaveLength(17);
+    const profile = deriveVerificationProfile(graph, lock);
+    expect(profile.journeys["appointment-create"]).toMatchObject({
+      body: '{"values":{"scheduleId":"sample-schedule","customerName":"Verifier customerName"}}',
+      sessionId: "fixture-session-customer",
+    });
+    expect(profile.journeys["appointment-confirm"]).toMatchObject({
+      body: '{"expectedVersion":0}',
+      sessionId: "fixture-session-staff",
+      replayExpectation: "stored-success",
+    });
+    expect(profile.journeys["appointment-reschedule"]).toMatchObject({
+      body: '{"expectedVersion":1,"scheduleId":"sample-schedule-alt"}',
+    });
+    expect(profile.journeys["appointment-cancel"]).toMatchObject({
+      body: '{"expectedVersion":0,"cancellationReason":"Verifier cancellation reason"}',
+    });
+    expect(profile.journeys["appointment-denied-confirm"].sessionId).toBe(
+      "fixture-session-customer",
+    );
+  });
   it("derives command-shaped bodies, idempotency headers and an alternate reschedule slot", () => {
     const graph = currentAppointmentRuntimeGraph();
     const lock = graphLock([

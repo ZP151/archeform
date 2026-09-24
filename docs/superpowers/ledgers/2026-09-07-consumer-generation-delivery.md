@@ -5,6 +5,836 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
+### Reviewed source checkpoint prepared for the iteration branch — 2026-09-24
+
+Root's combined `pnpm test` initially exits 1 on two outdated export-allowlist
+assertions; the compiler passes 1,661 cases with six skipped and all other tasks
+succeed. The accepted Work Orders Task 1 already authorizes its root selector and
+profile. Root owns the three-path correction: `packages/compiler/test/index-exports.test.ts`,
+`scripts/regression.mjs` and its test. Preserve the immutable baseline and exact
+equality; register only those two exports, reject three private deep imports and
+include the suite in the existing eighth regression step. The runner goes from
+11/12 RED to 12/12 GREEN; exports pass 7/7. The same independent reviewer closes
+this scoped correction at P0/P1/P2 0/0/0 without reopening production reviews.
+
+The corrected full `pnpm test` exits 0 with 29/29 tasks successful and compiler
+1,663 passed / six skipped. Full `pnpm typecheck` passes 29/29 tasks. Source
+reconciliation covers the 92 reviewed source/test/check paths using existing accepted
+review/QA identities plus this correction; original snapshots and failed results
+are retained. Root reconciles the 35 related authority/plan/evidence documents
+and adds a portable digest/summary packet at
+`docs/acceptance/evidence/consumer-source-checkpoint/`.
+
+Root also owns two exact `.gitattributes` exceptions for immutable Appointment
+source manifests after staging exposed line-ending normalization. Both staged
+blobs now equal their unfiltered original bytes; the existing evidence-preservation
+convention is reused. No source content or historical evidence is rewritten and
+the mechanical packaging correction does not repeat functional review/QA.
+
+PM authorizes the controller to create one explicitly unfinished source checkpoint
+and push the existing iteration branch, then optionally open a draft PR and verify
+remote CI. Shared serial edits stay together. This is a reversible reviewable
+branch operation, not committing ADR-0078 as delivered, shipping the Appointment
+default, accepting Work Orders, changing counts, main integration or release.
+Actual application and cleanup gates remain open and the startup rejection is
+not retried. The original checkout's unrelated evaluation work is excluded.
+
+### Work Orders definition and case-source checkpoint accepted — 2026-09-24
+
+The existing Terra QA owner closes the final case integration at P0/P1/P2 0/0/0.
+All seven final hashes match before and after; tracked consumer-delivery no-emit
+types and the exact CI selection of eighteen pure helper tests pass. Discovery
+finds exactly one Work Orders case without executing it. Root accepts this source
+checkpoint using the existing independent review, definition QA, eight-step
+regression and full formatting results. No additional review chain is opened.
+The tracked summary is
+`docs/acceptance/evidence/service-work-orders/definition-consumer-source.md`;
+detailed QA is in `generated/.work-orders-task4-case/qa.md` and `qa.json`.
+
+The catalogue remains twelve physical rows / eleven logical definitions, with ten
+historically accepted local definitions across six demonstrated runtime families
+and the recorded reopened Appointment UI qualification. Work Orders is not yet
+an accepted actual application. Platform branch source delivery, pending actual
+consumer/PostgreSQL acceptance and the authorized hosted pilot remain separate
+next outcomes. The unbudgeted Goal remains active.
+
+### Integrated definition regression and formatting result — 2026-09-24
+
+Root observes `pnpm regression definitions` exit 0 with all eight prescribed
+steps succeeded. The bounded summary is
+`generated/.work-orders-task4-case/definition-regression.json`. Full
+`pnpm format:check` then exits 0. Its earlier failure identified only an unchanged
+immutable Inventory resource-proof JSON; that exact file is excluded while its
+SHA-256 remains `1fb2c1fc0abdd0a8546f9050b307cb318f1de55cda7177e8ccc5f300b19bf467`.
+No source is exempted and no historical evidence is rewritten.
+
+The same independent reviewer closes the seven-path case integration at
+P0/P1/P2 0/0/0 against final manifest SHA-256
+`ba0c5e31109ba9d3d2125b7a254b70443da48f8209b40d7781ea907ad67ed5fa`.
+Root resumes the existing Terra QA owner for tracked no-emit types, the exact
+three-file CI pure-helper selection and one-case discovery only. Runtime/UI and
+definition evidence remain valid; no broad audit or actual-case execution is
+added. Source delivery, actual acceptance and hosted deployment remain distinct.
+
+### Combined provider-free definition regression — 2026-09-24
+
+The case owner reports all three source files implemented, with seven pure helper
+tests, tracked consumer-case types, formatting and one-case discovery passing.
+Root now runs the prescribed eight-step definition lane against the integrated
+working catalogue. Its existing control-plane Prisma client generation is a local
+build prerequisite, not a generated-application database operation; the earlier
+Task 2 writer's validate-only permission is not expanded into database/service
+authority. No actual case, local server, database, cloud or cleanup command is
+included. Preserve a rejected or failed step instead of substituting a bypass.
+
+### Automate existing definition and case-source checks in CI — 2026-09-24
+
+Root owns a narrow `.github/workflows/ci.yml` addition after the existing build:
+run the current definition/regression tool tests, built-catalogue verifier, case
+index check, tracked consumer-case no-emit check and pure helper tests. This reuses
+already required checks; it adds no approval step, lifecycle runner, package,
+Action version, provider, service or deployment command. The actual service cases
+are not selected. Validate these exact commands after the new case source freezes,
+and include the five workflow lines in the same case-source review. Remote CI
+remains pending a reviewed source delivery/push; local checks do not claim it ran.
+
+### Work Orders definition source QA and delivery preparation — 2026-09-24
+
+Independent Terra closes Task 4 definition/consumer source QA at P0/P1/P2 0/0/0:
+290 adapter, 42 matcher, 181 consumer and eight shared helper cases pass, as do
+capabilities/adapters/Workbench no-emit types. All fifteen definition coordinates
+and two helper hashes remain stable. Evidence is in the existing Task 4 packet's
+`qa.md` and `qa.json`. Root retains acceptance within source scope; the actual case,
+full regression and product outcomes remain open.
+
+Formatting preflight now passes every changed source/document outside the three
+active case files. Four mechanical source changes retain equal parsed syntax
+trees (ignoring only redundant parenthesis wrappers); exact before/after identities
+and preserved originals are in `generated/.work-orders-format-handoff/receipt.json`.
+Earlier review/QA manifests remain unchanged. The receipt records current bytes
+without erasing their accepted pre-format evidence or starting another audit.
+
+### Delivery formatting preflight — 2026-09-24
+
+Root checks all changed source/docs except the three actively written case files.
+The check finds four source formatting issues: the Work Orders worker journey and
+its test, compiler runtime fixture and compiler contract test. Their owners are
+finished; root owns formatting only, with original accepted bytes copied first to
+`generated/.work-orders-format-handoff/before/`. Preserve original review/QA
+manifests and record a separate post-format identity receipt. This is mechanical
+delivery preparation, not a new runtime decision or a reason to restart QA.
+
+Root also formats four already-owned Appointment/expansion documents. Two accepted
+Appointment source-evidence JSON manifests retain exact bytes and receive narrow
+`.prettierignore` entries, following the existing immutable-evidence convention.
+No source code or new case is exempted from formatting. The CI workflow already
+installs Chromium and runs formatting, types, tests and builds without a deployment
+step; branch CI is distinct from application or hosted acceptance.
+
+### Work Orders definition review and case routing — 2026-09-24
+
+The existing integrated reviewer accepts the fifteen definition-manifest
+coordinates and two shared observer paths at P0/P1/P2 0/0/0. Reports are
+`generated/.work-orders-task4-definition/review.md` and JSON. Thirteen exact
+pre-change snapshots were found in the accepted Appointment source packet and
+matched the recorded hashes; the missing exact capability-matcher snapshot is
+disclosed, with its current seam reviewed against the prior accepted source.
+The same independent Terra QA owner now runs the bounded definition/consumer
+checks, retaining accepted runtime/presentation evidence.
+
+Root adds the single `facilities-service-desk-local` case binding and tracks the
+new case/helper test in `e2e/tsconfig.consumer-delivery.json`. The existing built
+definition verifier first failed on the missing binding, then passes all sixteen
+CLI cases with twelve physical catalogue rows. The six existing index-tool tests
+and scoped formatting pass. These prove routing/data tooling only; case source
+is still being implemented and the actual journey has not run. No count promotion.
+
+### Work Orders case-source handoff — 2026-09-24
+
+Root delegates only the three new paths `e2e/service-work-orders.spec.ts`,
+`e2e/helpers/service-work-orders.ts` and its `.test.ts` to
+`work_orders_case_source`, under `generated/.work-orders-task4-case/brief.md`.
+Root retains controller/integration authority, `scripts/definition-case-bindings.mjs`,
+`e2e/tsconfig.consumer-delivery.json`, shared docs and future actual execution.
+The existing lifecycle helper and frozen Graph/API/profile/UI contracts are
+read-only. No shared source writer is added. A required shared-contract change
+stops the wave. Pure helper tests, source typechecks and discovery are allowed;
+the actual case and all service/DB/cleanup activity remain unrun and restricted.
+
+### Work Orders definition/automatic entry frozen for review — 2026-09-24
+
+The definition owner returns its final manifest at
+`generated/.work-orders-task4-definition/final-manifest.json`, SHA-256
+`8f3c9ed7f9f2c8dfb0b5aeed3b4001620c8a4e635242fc375392c7d6af98125b`.
+Fourteen paths changed across fifteen authorized coordinates; optional
+`product-definition-data.ts` is unchanged. Focused adapters 290/290, exact matcher
+42/42, consumer 181/181, capabilities/adapters builds, Workbench typecheck and
+formatting pass. Root independently proves original eleven-row derivation and
+immutable output equality. No live model or actual service evidence is inferred.
+
+The same integrated reviewer now assesses this bounded definition/consumer
+extension plus root's two-line shared observer label case and its test. Keep the
+accepted runtime/presentation evidence frozen and reuse it. Root's helper hashes
+are `24dd2c417f60f1f646f25ce5880e5bd46b8312019bbbc333011887516eb6b592`
+and `c4e64d380c74b90a005a85b70022af89b1c4f8e4efe1274e0e9c42ec41ee1402`.
+The working catalogue has twelve physical rows and eleven logical definitions;
+the delivered baseline remains ten logical definitions and six runtime families.
+Case binding, complete actual-case source and combined regression remain pending.
+
+### Work Orders runtime/presentation source checkpoint accepted — 2026-09-24
+
+PM accepts the bounded runtime/presentation source checkpoint after independent
+combined source review and Terra QA close P0/P1/P2 0/0/0. The exact final component
+command passes 37/37 after a one-line readiness wait in the existing phone test;
+the prior failure stays preserved. Runtime/contract 137/137, regression-runner
+12/12 and compiler types pass. The other ten frozen paths are unchanged. See
+`docs/acceptance/evidence/service-work-orders/runtime-presentation-source.md`.
+This does not grant product acceptance, release or deployment authority; actual
+PostgreSQL and consumer cases remain open. Reuse this evidence in Task 4 instead
+of re-running a whole review or adding a separate source-release ceremony.
+
+Task 4 production source/data and capabilities/adapters builds are now frozen by
+their owner while final focused tests finish. Root's fresh comparator in
+`generated/.work-orders-task4-definition/` proves all eleven original rows retain
+their complete derivation metadata and immutable generated output, using exactly
+the original baseline keys. The baseline hash remains unchanged. New Work Orders
+registration is reviewed separately; no runtime/delivery count increases.
+
+### Narrow final QA and registration assertion corrections — 2026-09-24
+
+Final component QA preserves a 36/37 failure: the phone test counted cards after
+the synchronous heading appeared, before its asynchronous queue load finished.
+A later 30/30 rerun does not erase it. The UI owner now writes only its existing
+presentation test to await visible queue data; production presentation hashes
+remain frozen. Recheck the affected command with the same QA owner, retaining
+all other source review, runtime and visual evidence. No new audit cycle.
+
+The definition owner also receives the narrow existing
+`packages/adapters/test/requirement-interpreter.test.ts` registration assertions
+and title, alongside its fourteen assigned paths. Preserve the protected old
+definition set, explicitly account for Work Orders and Appointment V2, and retain
+all schema/selection rejection behavior. Root retains case bindings and source.
+
+### Work Orders source review closes after recovery repair — 2026-09-24
+
+The same integrated reviewer closes R1/R2/R3 with no open P0/P1/P2 findings.
+`generated/.work-orders-integrated-review/scoped-recheck.md` retains the original
+six runtime/integration hashes and accepts the five entries in
+`phase2-repair-manifest.json` (three presentation paths and two regression scripts).
+The correction adds proven exact replay after committed 502/504 and abort/503,
+pending staff/navigation locking, and persistent rejected-create feedback. The
+writer passes all 30 presentation cases, types and formatting. No shared contract
+changes or additional review gates were introduced.
+
+Independent Terra phase-one QA now passes 137 runtime/contract tests, compiler
+types and 12 regression-runner tests with all six runtime hashes unchanged.
+Evidence: `generated/.work-orders-integrated-qa/phase1-runtime-qa.md` and JSON.
+The configured QA role failed to dispatch because its backend requested an
+unavailable Spark model; explicit `gpt-5.6-terra` fallback supplies the required
+independent QA. The same QA agent now checks final presentation/public-bundle
+behavior and images. Actual PostgreSQL, consumer lifecycle and hosting remain open.
+
+Root's shared observer label extension passes its eight pure helper checks after
+a focused RED; the original unknown/historical rejection and ownership safeguards
+remain. This is preparation for Task 4, whose definition/consumer owner continues.
+
+### Disjoint Work Orders definition and consumer source implementation — 2026-09-24
+
+PM assigns `work_orders_definition_consumer` the fourteen exact paths in
+`generated/.work-orders-task4-definition/baseline-manifest.json`, SHA-256
+`19068599fa883eec5610ba05e5b1412eeb882b84434dd71346b15288c36dbe43`,
+under its sibling `brief.md`. This is the accepted ADR-0080 Task 4 registration
+and ADR-0079 exact automatic-entry extension. The shared Graph/profile/API/fixture
+contracts are frozen. Its capability matcher, adapter data/registry and Workbench
+consumer paths are disjoint from the UI owner's bounded recovery correction.
+Source work can proceed while that correction closes; product acceptance depends
+on both. A required shared-contract change stops the parallel wave.
+
+Root keeps definition-case bindings, actual case source, shared documents and
+historical comparison. Preserve all eleven historical physical rows, representing
+ten logical accepted definitions. A newly registered Work Orders row does not
+increase runtime-verified or delivered counts. No new service, identity, provider,
+hosting or deployment authority is implied. Actual execution remains pending.
+
+Root also owns the disjoint `scripts/regression.mjs` and `scripts/regression.test.mjs`
+selection update: include Work Orders definition, exact contract, recovery and
+public emitted UI checks in the existing steps, retaining failure propagation,
+Windows dispatch and the same eight-step lane. This adds no new approval gate.
+
+For the upcoming actual case, root also owns the narrow label extension in
+`e2e/helpers/content-directory.ts` and its existing helper test: map only
+`facilities-service-desk` to `Work Orders`, preserving the shared lifecycle
+observer and its ownership reconciliation. This does not run the actual case or
+broaden service execution authority.
+
+### Final Work Orders presentation review and recovery correction — 2026-09-24
+
+The presentation owner returns three frozen paths with 26/26 focused cases,
+compiler types and formatting passing. Root reruns the seven actual public-bundle
+component checks successfully and visually inspects the final 390/768/1440 output,
+retained-conflict draft, two resolution reports after reopen and dark empty state.
+Named creation/assignment history and first-viewport phone action are present.
+The Impeccable detector reports one side-border warning on report/cancellation
+emphasis; inspected semantic state emphasis is retained, without cosmetic churn.
+These are fully intercepted component tests, not service/PostgreSQL evidence.
+
+The same integrated reviewer retains its unchanged six-path phase-one verdict
+and identifies two concrete presentation recovery defects: ambiguous HTTP failures
+discard the exact command, and an in-flight command does not lock desktop staff
+or navigation before its response. The original UI owner resumes only its three
+paths to retain command identity across ambiguous responses and freeze navigation
+from dispatch through definitive resolution. Required regressions cover a committed
+create followed by 502/504, single-record exact replay, and attempted staff/route
+changes during a deferred request. Root's facade/test and runtime stay frozen.
+Use a scoped recheck by this reviewer; do not restart unrelated reviews. Final
+independent QA, actual generated application and consumer acceptance remain open.
+
+Task 4 definition/automatic-entry paths are being prepared under the accepted
+ADR-0080 scope. Registration and delivery counts remain ten logical definitions
+and six demonstrated runtime families. Continuous delivery still means the
+accepted narrow local upgrade/rollback rehearsal; no hosted availability claim.
+
+### Runtime completion handed back for integrated presentation — 2026-09-24
+
+`work_orders_runtime_completion` freezes its three paths and returns `index.ts`
+to root at SHA `2d044a0c1d62da910731814c69379557d754023226cfc8141851ade7d9e6aec5`.
+Its final report and manifest are in `generated/.work-orders-task2-completion/`;
+runtime/contract 137/137, adjacent database/Task/Inventory 185/185, compiler types
+and ten exact emitted Prisma schema validations pass. Root preserves unchanged
+canonical 62-file and historical eleven-row output evidence. This is implementation
+completion, not independent runtime or actual PostgreSQL acceptance.
+
+Root now alone owns `packages/compiler/src/index.ts` for the previously planned
+presentation facade connection, alongside its new compilation test. The source
+baseline is `generated/.work-orders-public-presentation/base-index.ts`. The runtime
+writer is stopped; the presentation writer retains its three disjoint paths and
+frozen private exports. Connect the approved workspace, loaded styles and local
+icon notice; preserve explicit design tokens and all older-family bytes. Root's
+three assembly checks and actual compiled phone component test are RED at this
+handoff. Review the completed runtime, UI and serial integration together under
+the existing ADR-0080 boundary, reusing accepted ADR-0083 evidence rather than
+restarting unrelated gates. All actual product and delivery outcomes remain open.
+
+The facade connection now passes all seven public-bundle checks. Root inspects
+390/768/1440 captures generated from the actual emitted client and stylesheet,
+with intercepted requests backed by the emitted in-memory runtime. Explicit
+light/dark tokens survive, icons and their notice ship, mobile actions fit the
+first viewport, and historical fresh/immutable outputs remain equal for all
+eleven prior rows. A first integrated run exposed an incorrect test assumption
+that mobile must use desktop grid display; the corrected check requires a single
+visible mobile detail pane and retains action-position/color/overflow checks.
+Both failed attempts are preserved. This remains component evidence, not an
+actual server/PostgreSQL application run. History-summary UX feedback is with
+the active UI owner.
+
+Root freezes its facade/test paths for phase-one read-only review alongside the
+runtime implementation: `generated/.work-orders-integrated-review/runtime-manifest.json`,
+SHA `2dca96a5b010bab6dcafebe7fc0de5239a5b9ffc125a792bfbaa439d6d5801c4`.
+`work_orders_integrated_review` starts the runtime/authority assessment while UI
+finishes. The same reviewer will consume the UI handoff and issue the combined
+verdict, retaining unchanged phase-one evidence. No separate product gate is added.
+
+Phase one now closes P0/P1/P2 0/0/0 over the six frozen runtime/integration paths,
+with all source, original baseline and ADR hashes stable. Notes are in
+`generated/.work-orders-integrated-review/phase1-review.md`. The reviewer withholds
+the combined verdict until the active UI writer returns its three final paths;
+independent final QA and actual PostgreSQL/product acceptance remain open.
+
+### Fixture correction accepted; disjoint runtime and UI resume — 2026-09-24
+
+PM accepts the bounded ADR-0083 source correction after independent source review,
+Terra QA and strongest-model final judgment, all P0/P1/P2 0/0/0. QA reruns compiler
+identity 27/27, worker 175/175 and both typechecks with all eight source coordinates
+stable. Evidence under `generated/.work-orders-fixture-identity/`:
+`implementation-review.json` SHA `05eec796147e5ec32900206b63285fc538268142a6c5e84c2a92ec5d7f04bdf2`,
+`qa-report.json` SHA `1a47416382ea9fbb534eaf2f85609c9149d988307549ff0a06376711e7772802`,
+`final-judgment.json` SHA `af2b7867fae520baa67aa8ec27799e8e92474668ccf3ed68d805651406487316`.
+The fixed dispatcher/technician-a/technician-b principal and session table is
+frozen; actual roles remain Graph-bound. Worker source acceptance closes again.
+The three unrelated compiler/UI failures remain open, with no product acceptance.
+
+Fresh ownership and baseline snapshots are in `generated/.work-orders-resume/manifest.json`,
+SHA `43594e65e4349273b657dce952198ea76d26cdf20b37f0ce58460cab95cdf07f`.
+`work_orders_runtime_completion` alone owns compiler `src/index.ts`,
+`src/service-work-orders-runtime.ts` and `test/service-work-orders-runtime.test.ts`
+to finish Task 2 under its completion resume brief. The original contract test
+and shared runtime test fixture are read-only; preserve their identity correction.
+`work_orders_presentation` alone resumes `src/service-work-orders-presentation.ts`,
+`src/approval-workspace-presentation.ts` and
+`test/service-work-orders-presentation.test.ts` under the UI resume brief.
+Both briefs are in their existing ignored completion/UI evidence directories.
+Root alone owns new `packages/compiler/test/service-work-orders-compilation.test.ts`
+for public-bundle integration regressions while those disjoint writers proceed.
+Its expected RED presentation assembly precedes the later serial facade handoff;
+root does not edit `index.ts` until the runtime owner returns it.
+Root retains facade presentation integration after runtime returns `index.ts`,
+shared documentation, visual inspection, historical evidence and controller delivery.
+No writer may change the frozen profile, fixture table, API, capability or authority
+contract; a required shared-contract change stops the wave. No service or deployment
+authority is added. The Goal stays active and delivered counts remain ten/six.
+
+### Work Orders fixture correction frozen for review — 2026-09-24
+
+The eight-path ADR-0083 implementation is frozen in
+`generated/.work-orders-fixture-identity/repair-manifest.json`, SHA-256
+`aeb686aa7738cc813e5228c5bf72a57f0cb9848804e5e1610eaadb0d59d5cab8`.
+The repair report and normalized baseline diff are alongside it. Focused compiler
+identity checks pass 27/27; nine worker variants exercise all 189 derived journeys,
+and the final four-suite worker selection passes 175/175 including two no-fetch
+overlong-header rejections. Both package typechecks pass. Root independently
+confirms the original reproduction improves from 16/21 rejects to 0/21, canonical
+62-file output equality, and eleven-row historical derivation/immutable-output
+equality against the untouched original baseline. This does not establish actual
+database or consumer acceptance.
+
+The required broad compiler selection has 214 passes and three preserved failures:
+long SQL identifier anchoring, phone primary-action placement and the conflict
+component harness. Root separately confirms the SQL failure at admitted entity
+lengths 52/64/128. The UI owner identifies further unfinished recovery coverage;
+the synthetic HTTP harness lacks `crypto.randomUUID`, while the new fully
+fulfilled HTTPS identity harness passes without any listener or network request.
+These are explicit follow-up repairs, not waived checks. The source writer has
+stopped; `work_orders_verifier_review` owns the independent bounded correction
+review. Existing runtime/presentation owners remain stopped until the shared
+handoff review and applicable QA close. No new family or delivery count is added.
+
+### ADR-0083 accepted; serialized fixture correction — 2026-09-24
+
+PM accepts ADR-0083 at SHA-256
+`e4932b817715d45a1df0bc7c7f03891752df797d9f1e22485482df8e5d712e5d`
+under the September 1 founder standing authorization. Independent read-only
+`work_orders_verifier_review`, neither proposer nor implementation writer,
+returns `APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 0/0/0. Its decision
+artifact is `generated/.work-orders-fixture-identity/decision-review.json`, SHA-256
+`27cbbe9d9b2d28c5faac50db13da7a69d6c08b311ae4a67b630e462e0f25c149`.
+The correction is bounded, reversible, within the active Goal and has no unresolved
+material choice or additional deployment/security authority. The proposed ADR
+bytes stay frozen; this entry records acceptance before implementation.
+
+`work_orders_fixture_identity_repair` is the sole implementation owner for the
+eight exact paths and fresh baseline hashes in
+`generated/.work-orders-fixture-identity/baseline-manifest.json`: compiler
+`src/index.ts`, `src/service-work-orders-presentation.ts`,
+`test/service-work-orders-contract.test.ts`,
+`test/service-work-orders-runtime.test.ts`,
+`test/service-work-orders-presentation.test.ts`,
+`test/fixtures/service-work-orders-runtime.ts`; worker
+`src/verifier/service-work-orders-verification.ts` and
+`test/service-work-orders-verification.test.ts`.
+Runtime and presentation writers remain stopped while this shared correction is
+implemented and checked. Preserve all unrelated edits and existing RED evidence.
+The long SQL index anchor and unfinished UI recovery cases remain separate work;
+their failures must not be hidden by this correction. No product count changes.
+
+Use fixed dispatcher/technician-a/technician-b fixture IDs in all three consumers;
+authorization and history roles remain bound to `profile.roles`. Preserve canonical
+fixture data, prior family output bytes and the current transport limits. Resume
+disjoint work only after the corrected handoff and applicable review are recorded.
+
+### Work Orders valid long-role regression and shared handoff hold — 2026-09-24
+
+Root identifies and reproduces a concrete P2 outside the canonical fixture cases:
+a valid 64-character technician Graph role is admitted by the exact compiler
+selector, but prefixing/suffixing it produces a fixture session longer than the
+existing 64-character verifier limit. Sixteen of the twenty-one derived journeys
+then fail validation. Reproduction is the non-listening ignored script
+`generated/.work-orders-task3-worker/long-role-repro.ts`; Graph keys permit up to
+128 characters. Prior source/QA verdicts remain evidence of their selected cases,
+but bounded verifier acceptance is reopened for this valid-coordinate gap.
+
+PM stops the parallel runtime and presentation writers using their live handles
+before changing the shared fixture coordinate contract. The Goal remains active;
+this is an implementation handoff hold, not a user-requested Goal pause. Keep all
+existing work. Reusing short fixed family-owned synthetic IDs can preserve actual
+role bindings and all canonical IDs without weakening transport limits or
+rejecting valid Graphs; this is a proposal, not an approved implementation yet.
+
+The named Tech Lead dispatch fails with an unavailable Spark backend and creates
+no agent/file. `work_orders_fixture_identity_proposal`, on the strongest available
+model, now owns only proposed
+`docs/adr/adr-0083-work-orders-fixture-identifiers.md`. It must read current
+technology/security authorities, resolve the exact compiler/verifier/UI contract,
+test long and swapped role coordinates and preserve older family bytes. The
+standing independent decision review is required before source correction/resume;
+no further founder interruption is needed if all standing conditions are met.
+
+### Work Orders bounded verifier source acceptance — 2026-09-24
+
+Independent Terra `work_orders_verifier_qa` reruns the exact four-file selection:
+164/164 tests and worker typecheck pass. All six source and four original baseline
+hashes remain stable before/after. Together with the separate source review,
+P0/P1/P2 0/0/0, PM accepts this bounded worker source slice. The QA report is
+persisted at `generated/.work-orders-task3-worker/qa-report.json`, SHA-256
+`24b942a7d319dfce237037663d7b0652e869817b19858f07f1f26d21f633de4d`.
+See the [source acceptance](../../acceptance/evidence/service-work-orders/task-3-worker-source.md).
+Runtime and presentation remain active; HTTP fixture outcomes do not establish
+stored history, transaction behavior or a delivered consumer product.
+
+### Work Orders verifier review closure and runtime evidence — 2026-09-24
+
+Independent `work_orders_verifier_review` closes P0/P1/P2 0/0/0 over all six paths,
+with source/original baseline/ADR hashes unchanged before/after. It confirms the
+twenty-one existing-chain journeys, accepted update envelope and unchanged
+probe/lifecycle/evidence contracts. Independent Terra `work_orders_verifier_qa`
+is assigned only the four named suites and worker typecheck; source stays frozen.
+
+Runtime writer reports 64 focused emitted checks and strict generated API/proxy
+TypeScript passing; this is interim implementation evidence, not source acceptance.
+Root authorizes ignored Task 2 completion artifacts and installed Prisma CLI
+validation of the exact emitted schema, with no database/network/generation action.
+Root supplies a separate Task 2 comparison script reading the untouched Task 1
+historical baseline and writing only Task 2 after/equality files. A tracked test
+must not depend on that ignored capture; existing original evidence remains intact.
+Presentation implementation continues independently on its three assigned paths.
+
+### Work Orders worker implementation frozen for integrated review — 2026-09-24
+
+`work_orders_verifier` completes its four assigned paths. Together with root's
+two-path validator delta, the worker selection passes 164 cases across new
+Work Orders, graph-plan, probes and environment tests, plus worker typecheck.
+There are 21 independent bounded journeys (maximum prologue six), including
+fourteen stored-success scenarios, five former-assignee 404 cases and two
+role-level 403 denials. These numbers describe tests, not products or actual
+database correctness. Exact byte-identical start replay after reassignment is
+included in the former-assignee denial cases.
+
+Root verifies all six source hashes and four declared original baselines, freezes
+`generated/.work-orders-task3-worker/review-manifest.json`, and assigns independent
+strongest-model `work_orders_verifier_review` the read-only integrated review.
+No worker source writer remains active. Runtime and presentation implementations
+continue on disjoint paths. Existing chain/probe/lifecycle/evidence schemas stay
+unchanged; history/report contents still require emitted runtime and actual app
+assertions. Source acceptance, actual acceptance and hosted delivery remain open.
+
+### Work Orders disjoint presentation ownership — 2026-09-24
+
+Fresh state confirms runtime and verifier agents running. The runtime owner now
+reports an initial emitted scenario passing through correction, assignment,
+reassignment/denial, resolution/reopen and cancellation; expanded evidence is
+still in progress and not accepted. Its stable detail seam exposes the latest
+resolution history event with a historical flag, with scalar mutation responses.
+
+PM assigns `work_orders_presentation` three exact paths in
+`generated/.work-orders-task3-ui/manifest.json`: new private presentation and
+focused test, plus the existing shared style helper solely for a `work-order`
+profile parameter. The shared helper baseline is snapshotted; all old rendered
+styles must stay byte-identical. Compiler facade ownership remains with runtime;
+root integrates presentation serially afterward. Private render exports, accepted
+fixture IDs, API fields, responsive composition and component-test restrictions
+are frozen in that directory's brief. Root already loaded Impeccable context and
+visually inspected incumbent Inventory phone/desktop captures. The existing visual
+world and accepted scene are settled; no new brand, package, deployment or count
+decision is introduced. Component harness evidence stays separate from actual
+generated PostgreSQL/consumer acceptance.
+
+### Work Orders bounded verifier parallel ownership — 2026-09-24
+
+Previous Goal turn completed Task 1 source acceptance and assigned Task 2;
+fresh agent state confirms `work_orders_runtime` is running. The runtime owner
+freezes dispatcher `fixture-{principal,session}-${dispatcherRole}` and technician
+`fixture-{principal,session}-${technicianRole}-{a,b}` coordinates, retaining the
+package tenant/expiry/resolver clock. No new serialized interface is introduced.
+
+PM activates the plan's disjoint Task 3 worker portion. Exact six-path original
+baselines and ownership are in `generated/.work-orders-task3-worker/manifest.json`.
+`work_orders_verifier` owns verification-graph-plan, new service-work-orders-
+verification, and their two tests. Root owns only verification-environment and
+its test to admit the accepted reasoned correction envelope with nullable cleared
+metadata; general depth/body/header restrictions remain. Existing role-journey,
+probes and lifecycle/evidence contracts stay frozen. Root's environment boundary
+and the four-path verifier share the same accepted ADR and one integrated review.
+Compiler source remains exclusively owned by the runtime writer. No actual
+service, provider, browser E2E, deployment or product-count change is authorized
+by this parallel source wave.
+
+Root's two-path validator extension is frozen in
+`generated/.work-orders-task3-worker/root-validator.json`. Focused RED reproduces
+two rejected accepted correction bodies (42 other tests pass), then GREEN passes
+44/44 with compiler-worker typecheck and scoped whitespace. The new branch admits
+only the exact three-key correction envelope and five metadata keys; nullable
+description/dueDate do not widen generic payloads. Existing 512-character body
+and 200-character fixture-string limits remain; title/location keep 160 and
+version retains the accepted 32-bit maximum. Invalid dates/partial metadata,
+state/assignment injection and malformed values still reject before mocked fetch.
+One integrated review remains pending with the four-path verifier implementation.
+All test environment boot/fetch functions are injected doubles; no service starts.
+
+The verifier writer identifies the existing authorization-denial probe's fixed
+403 expectation. PM confirms former-assignee 404 checks use the existing ordinary
+role-journey mechanism, while genuine role denials use authorization-denial.
+No probe, observation or serialized evidence contract is broadened.
+
+### Work Orders Task 1 source acceptance and Task 2 ownership — 2026-09-24
+
+Independent Terra `work_orders_admission_qa` returns bounded source QA pass,
+P0/P1/P2 0/0/0: 199 Graph, 112 capability and 110 compiler cases, plus all three
+typechecks. All seventeen source hashes, eight declared original baselines,
+accepted ADR and untouched historical capture match before/after. Retain the
+separate clean source review and eleven-row equality. PM accepts Task 1's bounded
+source result; no runtime, UI, consumer or hosted delivery is accepted.
+
+PM assigns `work_orders_runtime` sole Task 2 source ownership of the five exact
+paths in `generated/.work-orders-task2-preparation/manifest.json`, with the detailed
+handoff in that directory's `brief.md`: new compiler runtime, emitted-runtime
+test and fixture, serialized compiler facade, and the existing contract test's
+temporary runtime-unavailable assertions. Root rechecks both existing baselines
+before assignment. All Graph/capability/selector files remain frozen; additional
+paths require an explicit ownership handoff. No presentation or worker writer is
+active yet. The writer must return the concrete three-principal fixture/interface
+handoff before dependent presentation integration. Root owns process fixtures,
+evidence, plans and Git; recorded startup restrictions remain in force.
+
+### Work Orders Task 1 frozen source review — 2026-09-24
+
+The sole writer returns sixteen frozen paths with 199 Graph, 43 capability and
+110 compiler/compatibility cases passing, all three affected package builds and
+typechecks, and owned formatting. Root independently verifies all current and
+original baseline hashes and scoped whitespace; it includes its separate
+69-case Appointment assertion correction as the seventeenth review path.
+`work_orders_admission_review` owns the independent read-only integrated source
+review using `generated/.work-orders-task1-review/{brief.md,manifest.json}`.
+No source writer is active during this review. Required deterministic QA follows;
+Task 2 ownership is not yet assigned. The existing private readonly selector is
+concrete and frozen, and the runtime handoff is prepared. See the
+[source evidence](../../acceptance/evidence/service-work-orders/task-1-source.md).
+Actual runtime/UI/consumer acceptance and delivery counts remain unchanged.
+
+Independent strongest-model `work_orders_admission_review` closes P0/P1/P2
+0/0/0 over all seventeen paths, verifying source/original baseline hashes,
+ten handoff snapshots and accepted ADR bytes before/after. It confirms full
+exact admission, physical-lock checks and unchanged eleven-row evidence.
+`work_orders_admission_qa` now owns the bounded independent Terra deterministic
+checks in `generated/.work-orders-task1-review/qa-brief.md`; it may write only
+the named ignored QA report/logs. Source remains frozen. Root prepares, but
+does not yet assign, five Task 2 paths with original baselines under
+`generated/.work-orders-task2-preparation/manifest.json`.
+
+### Work Orders Task 1 expanded regression correction — 2026-09-24
+
+The serialized writer now owns sixteen paths. Root snapshots and adds
+`packages/graph/test/product-blueprint.test.ts` to its existing manifest at
+original SHA-256 `7d35eae1f760162bd8323bb61a46506dec51a3a16248ad60a8156878f0e679ef`.
+Its old global `assign` rejection predates accepted ADR-0080. Replace it with
+unknown-verb rejection and exact non-Work-Orders semantic rejection. The reserved
+roster coordinate is corrected to `work-order-assignees` in both witnesses.
+Root verifies the untouched historical baseline SHA-256 and the writer's
+eleven-row fresh-composition and immutable-input output equality report.
+
+Separately, root owns the single stale expectation in
+`packages/capabilities/test/appointment-consumer-workspace.test.ts`. The expanded
+run exposes the earlier V2 test's `null` expectation, superseded by the accepted
+Task 4 matcher/default-selection change. Root reproduces 30 passes/one failure
+and confirms both alternative plans use the exact accepted seven locks/bindings;
+the current matcher correctly returns `appointment`. Baseline is
+`generated/.appointment-v2-stale-test-correction/appointment-consumer-workspace.test.ts`,
+SHA-256 `7f9b54b68309740961552678e1f6d946ba7298249fbc128a3340b6ac7ccfcb04`.
+Correct only that expectation, retain all original witness/lock/domain assertions,
+and include its focused result in the next ordinary review. No production code
+or product count changes arise from this correction. This newly discovered
+failure was outside the previously reported focused Task 4 selection; preserve
+that limitation instead of describing all capabilities tests as previously green.
+
+The corrected Appointment 31-case suite and adjacent plan-alternatives 38-case
+suite pass together, exit 0 (69 cases). Root does not rerun unaffected consumer
+UI or historical runtime acceptance for this assertion-only repair.
+
+### Appointment Task 3 scoped review correction — 2026-09-24
+
+Final scoped recheck closes all five findings, P0/P1/P2 0/0/0. Root verifies all
+four exact hashes and records bounded source/UI-component acceptance. The last
+full run passes 31/31; the final two-guard correction passes 3/3 including strict
+emitted TypeScript (30 skipped), compiler build and whitespace. Actual Preview,
+PostgreSQL and hosted acceptance remain open. No product coverage is added.
+
+Historical correction ownership (superseded by the final acceptance above):
+
+Correction round 1 closes four findings. One P2 remains in pagination clock
+recovery. Root resumes the same two source paths for round 2: guard cursor
+navigation until authenticated-list/offset-zero recovery, with retained-cursor
+tests. Other paths remain frozen; the same reviewer owns the narrow recheck.
+
+Independent UI review completed with P0/P1/P2 0/0/5. Root resumes sole write
+ownership of `packages/compiler/src/appointment-workspace-presentation.ts` and
+`packages/compiler/test/appointment-consumer-workspace.test.ts` for the five
+verified findings: staff availability navigation, recovery guards, complete
+schedule conflict values, history freshness/races, and current-service provenance.
+The other two facade/helper paths remain frozen. Add focused failing behavior
+cases before corrections, then return the exact snapshot to the same reviewer
+for one scoped recheck. Task 4 production activation remains pending this gate.
+
+### Appointment Task 4 serialized implementation — 2026-09-24
+
+Task 4 identifies the physical-row case-index prerequisite. Root separately owns
+`scripts/definition-case-bindings.mjs` and `scripts/definition-case-index.test.mjs`,
+baseline `generated/.appointment-v2-task4-case-index-base/manifest.json`. Add V2's
+actual-case route with explicitly pending evidence. Keep V1 registration/evidence,
+but route its historical check to existing immutable compatibility tests, because
+the migrated consumer case no longer exercises V1. No index schema or acceptance
+authority changes. These paths are disjoint from both source writers.
+
+Root assigns `appointment_v2_default_selection` sole source write ownership of
+the 21 exact paths in
+`generated/.appointment-v2-task4-base-7a85d6ef/manifest.json`, against the accepted
+ADR-0081 default-selection contract and prepared handoff. The baseline includes
+previously reviewed in-flight changes; compare against it, not HEAD. The existing
+six-case RED test is handed to this writer. The parallel Task 5 writer below owns
+only its E2E case; root owns shared helper/index changes, roadmap and evidence.
+Compiler presentation/read/setup paths remain frozen. Any extra write path or
+contract change returns to root before mutation. One integrated task review/QA
+follows the complete default-selection slice, not a gate per catalogue field.
+
+Root freezes the case-index delta after 6/6 Node tests and a successful 11-row
+case-index check. V2 actual evidence remains explicitly pending.
+
+Task 4 writer freezes 18 changed paths after 306 adapter, 38 capability, 33 worker
+and 175 Workbench focused checks, affected types and Workbench production build.
+The first combined lane attempt stops when Task 5's in-flight rewrite briefly
+removes its case path; root verifies restoration and all 18 index/runner tests
+pass before retry. This is an integration prerequisite failure, not a reason to
+weaken path validation. Root freezes 23 scoped files (20 changed) in
+`generated/.appointment-v2-task4-review`, and assigns the independent existing
+`scope_recovery_task_review` agent the read-only Task 4 integrated source review.
+The combined definitions retry passes all eight steps at exit 0. Independent
+`scope_recovery_task_review` verifies all 23 source/baseline hashes and closes
+Task 4 source review at P0/P1/P2 0/0/0. Required deterministic QA and actual
+consumer acceptance remain separate; no product count or delivery is promoted.
+ADR-0081 standing acceptance is recorded at exact SHA-256
+`65f867c7afeeefc892b8493e508d86d5d212302fcc247e927843ce05b6672adc`,
+corroborated by the Appointment implementation plan and independent
+`appointment_ui_decision_review`. This checkpoint synchronizes that existing
+decision; it introduces no new approval.
+
+Independent `appointment_default_qa` (Terra) owns a bounded read-only deterministic
+QA pass over the frozen Task 4 snapshot. It now passes 306 adapter, 175 combined
+Workbench and 33 worker cases, with all 23 hashes unchanged before/after and
+clean scoped whitespace. Retain the successful definitions lane and affected
+build evidence. Task 4 source acceptance closes at 0/0/0; actual consumer
+acceptance and delivery stay open. No startup, Docker or actual E2E was performed.
+
+### Appointment Task 5 source preparation in parallel — 2026-09-24
+
+The previous turn made source/verification progress; the Task 4 writer is freshly
+confirmed running. Root now owns `e2e/helpers/content-directory.ts` and its focused
+test only to parameterize the existing ready-family label for Appointment V2.
+Baseline: `generated/.appointment-v2-task5-base-7a85d6ef/manifest.json`.
+After that tiny helper contract is frozen, a separate writer may own only
+`e2e/appointment-booking.spec.ts` against the already accepted V2 UI/API contract.
+These paths are disjoint from Task 4. Actual E2E execution and source acceptance
+remain dependent on Task 4 completion; no rejected startup is authorized here.
+
+Root's helper delta is frozen at
+`generated/.appointment-v2-task5-helper-frozen/manifest.json`: 8/8 non-listening
+helper tests pass after RED. Existing Directory/Inventory labels are unchanged;
+`deliverDirectory` accepts the V2 selection and expects Appointment delivery.
+Fresh Task 5 dispatch failed because the engineer role's Spark model is unavailable;
+the explicit fallback also hit the agent thread limit. No new writer started.
+Root reuses completed `appointment_v2_workspace_prepare` for this separate bounded
+source task, assigning it sole write ownership of
+`e2e/appointment-booking.spec.ts`, following the prepared Task 5 handoff. No helper,
+compiler, adapter, Workbench or documentation writes belong to that agent.
+Root retains helper/evidence ownership and prepares the combined review package.
+
+Root rejects the first Task 5 source handoff after inspection: its uncertain
+retry phase performs no action, command status and schedule targeting are wrong,
+and conflict, Published identity and cleanup-ownership checks are incomplete.
+The same writer owns one corrective round in the same E2E file, including real
+fault/retry assertions, observed effort metrics and checkbox-label target checks.
+Test discovery is not behavioral acceptance. Actual execution remains blocked;
+the prepared case cannot be reported as accepted or used to promote coverage.
+
+The first correction adds real committed-response retry and identity/cleanup
+checks, but root finds conditional cursor coverage can silently skip and UI
+conflict preservation is still absent. Prior writer freezes SHA-256
+`8a74b26dd47a116309c017882c2b44fa6a1c15805d10e675044eda50c2a8e2d7`
+and returns ownership. Root assigns the now-completed Task 4 strongest-model
+owner `appointment_v2_default_selection` sole ownership of the same E2E file
+for completion. No parallel writer remains on it. Required repairs include
+deterministic cursor fixtures/Date recovery, actual UI conflicts, stale receipt
+refresh, setup updates and exact safe source identities. Other source stays frozen.
+Work Orders preparation captures five shared source baselines under
+`generated/.work-orders-task1-preparation`; it assigns no implementation owner.
+
+Root separately owns a mechanical type correction in
+`e2e/helpers/restaurant-delivery.ts`, preserving its public/runtime contract.
+Strict RED finds five diagnostics: nullable diagnostic strings and TypeScript's
+closure narrowing of the phase marker. Exact string guards and direct boolean
+expectation resolve them. The original helper is preserved under
+`generated/.appointment-v2-task5-helper-type-base`; include the delta in the same
+Task 5 source review. An ignored focused Bundler-mode configuration now checks the
+Appointment case and shared helper tests against actual built workspace package
+types with strict mode; it passes without previous diagnostic exemptions.
+The two shared helper test files pass 11/11 without browsers or services. Root
+also executes an ignored synthetic Work Orders Blueprint preflight under the
+accepted ADR: intended RED identifies unsupported `assign` admission. The
+prepared full fixture is retained with the five source baselines for the next
+serialized owner; production contracts and product counts remain unchanged.
+
+Root adds owned `e2e/tsconfig.consumer-delivery.json` to make that strict check
+reproducible from tracked source for Appointment, Directory, Inventory and their
+two helper test files. It uses the existing TypeScript/Bundler resolution and
+built workspace declarations, adding no dependency or runtime configuration.
+Its first invocation intersects the Appointment writer's unfinished edit and
+reports syntax errors; the final frozen source must pass before acceptance.
+Include this config and the helper correction in the same Task 5 review.
+
+Task 5 strongest writer freezes the case at
+`2bcbbcc7b0feb3d67afdd28e3f0c9d8e3e59a8d98cfa7c9161261fbbc3626e55`.
+Tracked strict consumer-delivery types, one-case discovery, format and whitespace
+pass. Root verifies and snapshots all five owned files in
+`generated/.appointment-v2-task5-review`; independent
+`appointment_case_source_review` now owns the integrated read-only review.
+Actual execution remains unrun and no delivery count changes.
+
+### Work Orders isolated matcher preparation — 2026-09-24
+
+Root refines scheduling within accepted ADR-0080: while the frozen Appointment
+case is reviewed, root alone may implement the unused pure Blueprint matcher
+and focused tests in three new disjoint paths:
+`packages/graph/src/service-work-orders-blueprint-witness.ts`,
+`packages/graph/test/service-work-orders-blueprint-witness.test.ts`, and
+`packages/graph/test/fixtures/service-work-orders-blueprint.json`.
+The accepted family shape is frozen. No existing schema, export, composer,
+compiler, runtime or catalogue path may change during this preparation. Shared
+contract integration still waits for the Appointment source handoff. This is
+an implementation scheduling refinement, not a new contract or acceptance gate.
+These isolated changes join the existing Work Orders Task 1 review after
+integration; do not add a separate release review or count an unused matcher.
+
+The pure matcher progresses from two RED failures to 25/25 focused successes,
+including renamed coordinates, malformed permissions, numeric bounds and the
+exact cancellation pair. Graph typecheck passes. It remains unused pending the
+shared-schema handoff; these tests are not public-schema or runtime admission.
+
+Appointment Task 5 independent source review now closes 0/0/0. Reviewer
+`appointment_case_source_review` verifies all five source/four baseline hashes
+before and after inspecting the actual controller/UI contracts. This completes
+the preceding source gate; actual browser/PostgreSQL/visual acceptance stays open.
+Root assigns `work_orders_admission` sole serialized ownership of the 14 exact
+paths in `generated/.work-orders-task1-base-7a85d6ef/manifest.json`, transferring
+the three matcher-preparation paths. The five pre-Work-Orders shared baselines
+remain unchanged and retained. The accepted ADR and Task 1 plan govern the full
+Graph/Blueprint/composition/private-profile integration; no runtime, UI, worker,
+catalogue or hosting work belongs to this owner. Extra paths require a handoff.
+
+Task 1 preflight confirms a necessary existing composition seam:
+`packages/capabilities/src/plan-alternatives.ts` otherwise offers an unsupported
+five-core minimal plan before the required six-lock Work Orders plan. Root
+snapshots and assigns this one additional path to the same serialized owner;
+the manifest now contains 15 paths. Scope is an exact-matcher branch preserving
+the accepted six mandatory locks, with regression in the already owned focused
+composition test. This implements the accepted REU/FAM requirement and makes no
+new capability, effect, delivery promise or ADR choice.
+
+Task 1 captures all eleven physical definition inputs, composition locks and
+per-file output digests before integration. Root records the untouched
+`generated/.work-orders-task1-completion/before.json` SHA-256
+`6a2b1429f43ec358eea69e43085386ea0925f731be3b8fbe1e174afcc63b3b81`
+and bounded summaries under the preparation directory. Never rerun the capture
+over this original artifact. Public-admission RED reports 17 failures and three
+passes while the new Graph/composition witness implementation is in progress;
+it is not final regression evidence. The next comparison must reuse the saved
+immutable inputs and preserve the ten logical-product accounting.
+
 - **Delivered:** Inventory runtime `0ada5fd1`, verifier `20cb4519`, presentation
   `7c3a4960` and definition/acceptance source `58d305de`, all pushed.
   Ten registered / ten locally accepted definitions / six demonstrated
@@ -13,21 +843,624 @@ product-scorecard owner. The task and approval started on September 7.
   `b73f303c780e371ef9afa146b5940153fa84d9e5e87b433c16bf91aaad446800`.
   Terra QA and Sol final family judgment close 0/0/0; exact current runtime cleanup
   is complete. Acceptance/evidence is delivered at `63c7b12c`, with both CI jobs green.
-- **Active:** `unresolved_scope_implementation` implements accepted ADR-0078 under
-  the exact manifest below. Root owns runtime/evidence/shared docs and delivery.
-- **Next:** ADR-0079 is accepted for exact-family consumer entry; source work waits
-  for ADR-0078's overlapping implementation to close. Then advance Work Orders.
+- **Active:** ADR-0078's reviewed source snapshot is retained; task review and independent Terra
+  deterministic QA close 0/0/0 (192 adapter and 129 Workbench cases). Focused implementation
+  checks and production build pass; root's eight-step definition regression passes.
+  Actual 390/1440 Home acceptance is pending: automatic approval rejected the
+  root-owned local Workbench startup command with `blocked by policy`. No service
+  started and no alternate startup was attempted. Root owns evidence and delivery.
+- **Active source:** ADR-0079 Task 1's reviewed snapshot is retained; independent source review and Terra
+  deterministic QA close 0/0/0 (476 capability and 370 adapter cases). The same implementer
+  completes the serial Task 2 Workbench handoff below after ADR-0078's writer
+  finished and its source review/QA passed. Task 2 is frozen: writer's 274 checks,
+  typecheck and production build pass; independent source review and Terra QA
+  close 0/0/0; root's full provider-free product regression succeeds.
+  Appointment diagnosis confirms an existing P1 generated UI/API
+  mismatch plus missing slot/history controls. ADR-0081 now has exact-hash standing
+  acceptance after one scoped clock/identifier repair. Task 1 admission is frozen
+  after independent source review and Terra QA at 0/0/0;
+  Task 2 reads pass independent source review and Terra QA after one correction;
+  Task 2b setup now passes independent source review and Terra QA at 0/0/0,
+  with 240 focused checks, compiler types and all frozen hashes verified.
+  Root completes Task 3 presentation and facade integration after the writer
+  handoff. Independent UI review reports five P2 findings; root completes the
+  first correction with all 31 emitted-browser/strict frontend type cases passing.
+  The final pagination guard repair passes three scoped cases and compiler build;
+  the same reviewer closes all five issues at 0/0/0. Task 3 source is accepted and
+  frozen; `appointment_v2_default_selection` owns the next serialized source slice.
+  The earlier 133-case lane remains historical.
+  Actual acceptance remains open.
+  [Appointment consumer UI acceptance is reopened](../../acceptance/evidence/appointment-booking/consumer-ui-gap.md).
+  Directory/Inventory actual-case source and its cleanup-race correction pass
+  focused checks and independent review. Actual browser acceptance for both
+  slices remains pending; neither is marked accepted or delivered.
+- **Work Orders decision:** repair review now returns
+  `APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 0/0/0, for ADR-0080 SHA-256
+  `e35fa837394b66909af0063ab29714a0f9bcd800d06ad677a1d78bc761e093b6`.
+  Independent reviewer `work_orders_decision_review` is neither proposer nor
+  writer. PM records founder acceptance through the September 1 standing policy
+  before any implementation. Prior P1/P2 are addressed; the correction/cancellation
+  and exact numeric admission repair leaves no material choice open. This accepts
+  the decision only; Work Orders source remains unassigned behind consumer delivery.
+  The [queued implementation plan](../plans/2026-09-24-service-work-orders.md)
+  includes exact admission, transactional recovery, scenario surfaces, existing
+  worker verification and the actual persisted consumer journey.
+  PM clarifies scheduling only: after Appointment default/case source checks and
+  existing reviews close, accepted Work Orders source may proceed serially while
+  actual startup remains externally blocked. Every actual acceptance/delivery
+  gate and count stays open until proven; no ADR or runtime requirement changes.
 - **Working documents:** [Inventory plan](../plans/2026-09-24-inventory-operations.md),
   [acceptance brief](../../acceptance/inventory-operations.md),
   [current status](../../project-status.md). Root alone edits these documents.
 - **Delivery:** local compatible upgrade/rollback/restore passes. A concrete
   hosted environment and accepted adapter remain outstanding; Preview is disposable.
+  Root freshly verifies latest pushed HEAD `7a85d6ef` CI `35933220175` succeeds
+  in both Node 22.11.0 and 22.x jobs; uncommitted source is not covered by that run.
 - **Residuals:** historical policy-blocked scratch/worker cleanup stays open.
   Later successful scoped cleanup does not close it or authorize a whole-branch
   release. Preserve separately owned Eval V2 work in the original checkout.
 
 The dated entries below retain authority and evidence history. Older task boards
 are historical; use this checkpoint and the latest dated ownership entry to resume.
+
+### ADR-0079 Task 3 Directory/Inventory source preparation — 2026-09-24
+
+Task 2 writer has frozen all six files; independent source review reports
+spec/quality PASS and P0/P1/P2 0/0/0. Independent Terra deterministic QA is
+running against that frozen source. PM assigns `accepted_family_case_entry`
+only `e2e/helpers/content-directory.ts`, its new focused `.test.ts`,
+`e2e/helpers/inventory-operations.ts`, `e2e/content-directory.spec.ts` and
+`e2e/inventory-operations.spec.ts`. This bounded Task 3 source preparation
+replaces manual lifecycle clicks in the existing helper with observed automatic
+entry, retains ownership and finally cleanup, and records actual bounded effort
+counts. No new lifecycle harness, application source, service startup, live case,
+provider or Docker execution is authorized to this writer. Static helper tests
+and case discovery are permitted; actual acceptance remains pending.
+
+Appointment's entry migration remains assigned to a later serial handoff while
+the generated UI/API mismatch is diagnosed. Preserve its historical evidence and
+do not label its API-driven business checks as a completed UI journey. Root owns
+all documents, runtime actions and Git; no shared contract changes in this wave.
+
+Task 3's first frozen five-file source passes 8 helper tests and discovers both
+actual cases; no live execution occurs. `accepted_family_case_review` returns
+0/1/0: a Preview POST not yet observed as a response can commit after failure
+cleanup's single empty current-run read, yielding false `no-preview-created`.
+The same writer receives this one correction: track the attempt before headers,
+retain unresolved cleanup ownership, and test delayed creation. Other scoped
+business/identity/cleanup assertions remain intact. Source review remains open;
+the root's verified pre-correction snapshot supports a scoped recheck.
+
+Fix round 1 closes that P1: `accepted_family_case_review` confirms addressed,
+P0/P1/P2 0/0/0, with no new issue. Pre-response request tracking retains
+`cleanup-required` after an empty lookup until ownership is reconciled. The
+covering helper run passes 10 tests, both actual cases still list, and formatting
+passes. The updated source manifest records this reviewed correction. Actual
+browser and cleanup acceptance remain pending; no delivery claim follows.
+
+### ADR-0081 Task 1 serialized source authorization — 2026-09-24
+
+The repaired exact ADR is accepted as recorded below. ADR-0079 Task 1/2 source
+review and deterministic QA pass; Task 3's bounded source correction/re-review
+now closes 0/0/0. Its writer has finished. Actual browser acceptance remains
+pending and is not waived by this handoff. Under ADR-0081 IMP-001, PM assigns
+`appointment_v2_admission` the following Task 1 paths only:
+
+- `packages/graph/src/product-blueprint.ts` and `test/product-blueprint.test.ts`;
+- `packages/capabilities/src/product-composer.ts`, `src/plan-alternatives.ts`,
+  `src/index.ts`;
+- `packages/capabilities/test/product-composer.test.ts`,
+  `test/plan-alternatives.test.ts`, new `test/appointment-consumer-workspace.test.ts`.
+
+Root verifies the accepted SHA and seven pre-edit files against ignored snapshot
+`generated/.appointment-v2-task1-base-7a85d6ef/manifest.json`. This preserves
+the earlier ADR-0079 predicate work for a scoped delta review. Add the accepted
+action and complete V2 Blueprint/composition witness with focused RED/GREEN.
+Keep V1 planning and current consumer matcher behavior unchanged; switching fresh
+defaults/consumer eligibility waits for the compiled V2 workspace and Task 4.
+No adapter data, compiler/runtime/UI, Workbench, capability assets, dependency,
+environment, E2E, shared-document or Git mutation is assigned. No services,
+browser, Docker or provider calls; only affected provider-free tests/types/builds
+and read-only compatibility checks. Stop for an unrepresentable accepted contract
+or another required source path. Root retains docs, runtime and delivery ownership.
+
+Task 1 writer freezes six files with separate public
+`isAppointmentConsumerWorkspaceBlueprint`; V1/V2 share the complete witness,
+and only V2 adds the two ordered Schedule grants. Planner/composer reuse seven
+locks and 17 Appointment bindings. The internal binding derivation moves without
+becoming a public index export; V1 consumer eligibility remains unchanged and V2
+stays disabled there. Writer full Graph 861/861, capabilities 507/507, new V2
+31/31, historical compiler compatibility 77/77, types/builds/format and static
+browser bundle pass. `appointment_v2_admission_review` and independent Terra
+`appointment_v2_admission_qa` are reviewing/testing that frozen source. See the
+[V2 evidence record](../../acceptance/evidence/appointment-consumer-workspace/README.md).
+No runtime/default/UI or product-count change is accepted by this source handoff.
+
+Independent Task 1 source review and Terra QA now both close P0/P1/P2 0/0/0.
+Terra reproduces Graph 48/48, capability admission/planner/composer 94/94,
+historical compiler compatibility 77/77 and both typechecks. ADR/source hashes
+match before/after; retained tests match the pre-edit snapshot. PM accepts this
+bounded source-admission task for the next serialized integration, not as a
+usable or delivered V2 product.
+
+### ADR-0081 Task 2 compiler read integration — 2026-09-24
+
+PM assigns `appointment_v2_compiler_reads` only these paths:
+
+- `packages/compiler/src/index.ts`, `src/appointment-compilation-admission.ts`;
+- new `src/appointment-consumer-contract.ts`, `src/appointment-consumer-read.ts`;
+- new `test/appointment-consumer-compilation.test.ts`,
+  `test/appointment-consumer-read.test.ts`;
+- `test/definition-data-compatibility.test.ts`, additive checks only.
+
+The pre-edit snapshot is
+`generated/.appointment-v2-task2-base-7a85d6ef/manifest.json`: three existing
+files and four explicitly absent paths. Task 1 Graph/capability source is frozen
+for this consumer. Implement the exact private immutable V2 witness and bounded
+API/summary/store/proxy/date integration from the accepted ADR. Reuse unchanged
+atomic mutation rendering, schema and capability assets; keep all historical
+output byte-identical. No new UI, adapter/default switch or public export-map
+change. Freeze the private profile/read interfaces for the subsequent workspace.
+Run focused RED/GREEN, emitted-type and historical-compatibility checks, compiler
+types/build and format. No service/browser/Docker/network/provider execution or
+blocked-operation retry. Root owns evidence, runtime and Git. Stop for any
+required path or shared-contract change outside this manifest.
+
+Task 2 writer freezes all seven assigned paths. Root verifies all three baseline
+copies, captures the complete delta and source hashes, and confirms agreement
+with the final writer report. Focused checks pass 160/160 (32 compilation,
+38 emitted reads, 12 existing commands, 78 compatibility including all original
+77); compiler types/build, formatting and whitespace pass. No source outside
+the manifest is assigned. Independent `appointment_v2_reads_review` receives
+the frozen delta for spec/quality review, followed by affected deterministic QA.
+Interface source, default replacement and actual
+PostgreSQL/browser acceptance remain open; no delivery or product-count change.
+
+`appointment_v2_reads_review` returns spec/quality changes required, P0/P1/P2
+0/0/1. At `appointment-consumer-read.ts:99`, the in-memory schedule index
+materializes, filters and sorts the whole collection before slicing, so the
+500-candidate budget bounds output rather than work. Its read-only 2,000-row
+reproduction performs 10,262 timestamp parses. API-005 requires the budget inside
+the store. Root verifies and preserves all seven frozen files under
+`generated/.appointment-v2-task2-review-base-7a85d6ef/manifest.json` before repair.
+The same writer owns this one correction in `appointment-consumer-read.ts` and
+its focused `.test.ts` only: bounded indexed reads, truthful visited-record
+regression and relevant update/rollback behavior. All other source remains
+frozen. Recheck this delta with the same reviewer, then run affected independent
+QA. No new decision, broader gate, runtime or provider action is introduced.
+
+Fix round 1 is frozen after 163 focused passes and types/build/format. Root
+verifies exactly the two assigned changes and five unchanged source hashes.
+`appointment_v2_reads_review` confirms the P2 addressed, spec/quality approved,
+P0/P1/P2 0/0/0. `appointment_v2_reads_qa` is the independent explicit Terra
+owner for the four focused suites and compiler typecheck; the earlier role-based
+dispatch failed unavailable Spark resolution before creating an agent. Task 3
+brief and its two-existing/two-absent baseline are prepared but not authorized
+for implementation until this QA handoff completes. Actual acceptance remains
+pending and is not implied by source sequencing.
+
+Independent Terra Task 2 QA now closes 0/0/0, reproducing 163/163 and compiler
+typecheck with unchanged ADR/seven source hashes. PM accepts this bounded source
+task for the next serialized implementation. Its private read interfaces remain
+frozen; actual runtime and consumer closure are still pending.
+
+### ADR-0081 Task 3 presentation handoff — 2026-09-24
+
+Root revalidates all Task 2 accepted hashes and the two existing/two absent Task 3
+paths against `generated/.appointment-v2-task3-base-7a85d6ef/manifest.json`.
+PM assigns `appointment_v2_workspace` these source paths only:
+
+- New `packages/compiler/src/appointment-workspace-presentation.ts`;
+- new `packages/compiler/test/appointment-consumer-workspace.test.ts`;
+- `packages/compiler/src/index.ts`, V2-only page/style/notice integration;
+- `packages/compiler/src/approval-workspace-presentation.ts`, necessary private
+  helper parameterization only, preserving historical emitted bytes.
+
+The brief is
+`generated/.appointment-v2-task3-preparation-7a85d6ef/task-3-brief.md`, with the
+tracked reuse/interaction handoff linked by the implementation plan. Root owns
+tracked documents, evidence and Git. The writer may place synthetic captures
+and its report under ignored `generated/.appointment-v2-task3-ui/` without
+overwriting earlier attempts. The source writer is now sole owner of these
+paths; Task 2 writer and QA are finished. No read/command contract, Graph,
+capability assets, package, adapter/default, Workbench or E2E source is assigned.
+
+Use failing real-emitted React control tests, existing locally fulfilled browser
+test patterns and strict frontend typechecks; inspect phone/tablet/desktop and
+recovery states. No application server, provider/external network, Docker or
+alternate retry of the rejected Workbench startup. Focused component evidence
+does not replace actual persisted Preview acceptance. Stop for an additional
+path or contract change; do not silently broaden ownership.
+
+Task 3 preflight identifies a missing prerequisite before source edits:
+the generic generated controller/runtime supports list/read/create and events,
+but has no Service/Schedule update entry. `RecordStore.update` alone is not an
+authorized HTTP/application operation. ADR-0081 UIR-005 assumes existing CRUD;
+its read-only projection scope cannot silently authorize a new mutation API.
+PM pauses Task 3 source mutation pending a narrow proposed amendment. Preserve
+the accepted ADR bytes and Task 1/2 source evidence; do not reduce the requested
+administrator correction capability to create-only.
+
+PM assigns `appointment_admin_update_decision` only new
+`docs/adr/adr-0082-appointment-administrator-setup-updates.md`. Read both current
+technology/security authorities, confirm actual emitted create/read/update
+seams, and propose the smallest complete V2-only administrator correction
+contract. Define exact fields/envelope/authorization/errors, service/schedule
+validation, booked-slot/history effects, write concurrency/recovery limits,
+compatibility and tests. No implementation, accepted ADR edit, source/package,
+provider, runtime, Git or external action is assigned. Independent exact-hash
+standing-eligibility review must precede acceptance/implementation. This is a
+confirmed functional prerequisite, not an additional per-component gate.
+
+Tech Lead completes proposed ADR-0082 with recommendation `migrate`, SHA-256
+`30c32c432fbbca51d2343419855a061db4925240d381b69a158525f4374655eb`.
+It proposes V2-only expected/desired setup PATCH, stricter setup POST, reuse of
+transaction/audit/receipt primitives in a disjoint setup scope, used-slot identity
+protection and capacity floor. It explicitly amends ADR-0081's assumption about
+existing CRUD and its disclaimer of new setup guarantees; accepted ADR-0081
+bytes are unchanged. The proposer compares the smaller reconcile-only option
+and resolves its choices, but cannot determine founder acceptance. Independent
+`appointment_admin_update_decision_review` receives the exact proposal to assess
+feasibility, scope, security and materiality under the standing policy. No source
+implementation is authorized from this proposal.
+
+Independent `appointment_admin_update_decision_review` returns standing
+acceptance **no**, P0/P1/P2 **0/1/0**, for that exact hash. Permanently locking
+a Schedule after historical-only use is a material business restriction:
+existing immutable slot snapshots already preserve historical evidence. PM
+returns this one finding to the same proposer for a smaller correction backed
+by the accepted booking/summary behavior. Protect current booking references;
+do not assume history alone requires permanent setup locking. Acceptance remains
+pending independent review of the revised exact hash. The reviewer confirms
+pre-init scoped authentication/raw-path handling is feasible and requires a
+setup-scoped JSON-parser error boundary; controller catches alone are insufficient.
+No source implementation, default switch or runtime execution is authorized.
+
+The proposer narrows the restriction to current Appointment references and
+preserves history snapshots without using them as a permanent edit lock.
+Revised ADR-0082 SHA-256 is
+`5734bacdd01d4b27475ea861ed94f97011191a587eddfe73ad68e8900473a7d9`.
+Root verifies the hash and dispatches the same independent reviewer for the
+scoped correction and consequential consistency check. The prepared four-path
+baseline is `generated/.appointment-v2-setup-base-7a85d6ef/manifest.json`;
+all seven accepted Task 2 source hashes match before that snapshot. This records
+preparation only and grants no source authority while re-review is pending.
+
+The independent scoped recheck now returns
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 **0/0/0**, for SHA-256
+`5734bacdd01d4b27475ea861ed94f97011191a587eddfe73ad68e8900473a7d9`.
+Reviewer `appointment_admin_update_decision_review` is separate from the proposer
+and implementer. It classifies current-reference protection as bounded integrity
+within correction scope, with no remaining material choice or security weakening.
+PM records founder acceptance of this exact decision under the September 1
+standing policy before implementation. Preserve its accepted bytes.
+
+### ADR-0082 serialized setup implementation — 2026-09-24
+
+PM assigns fresh implementer `appointment_v2_setup_runtime` only:
+
+- new `packages/compiler/src/appointment-administrator-setup.ts`;
+- new `packages/compiler/test/appointment-administrator-setup.test.ts`;
+- `packages/compiler/src/index.ts` for narrow exact-V2 integration;
+- `packages/compiler/src/appointment-consumer-read.ts` only for shared store hooks.
+
+Use the preserved four-path setup baseline above and exact accepted ADR-0082.
+Start with failing focused tests. Reuse the existing transaction, audit and receipt
+primitives; preserve old booking rendering and every historical output. Prove
+the emitted bootstrap's scoped auth/parser ordering, direct-runtime admission,
+current-reference/occupancy integrity, race outcomes and replay/rollback. Existing
+Task 2 acceptance remains evidence for its earlier source snapshot; this overlap
+needs its own scoped delta review. No Graph, capability, schema, dependency,
+adapter/default, UI, fixture or other test-path ownership is assigned. Stop for
+an extra required path or unrepresentable accepted contract before changing it.
+
+Only provider-free deterministic checks, emitted-module tests and strict types
+are assigned. No service startup/listening socket, browser, Docker, network,
+provider, blocked-operation retry, shared-doc or Git mutation is authorized.
+Bootstrap tests can execute emitted registration with non-listening dependencies;
+do not relabel those tests as actual framework/HTTP/Preview acceptance. Root owns
+evidence and delivery. Freeze source/report before independent review and QA.
+Task 3 remains paused until this prerequisite's accepted source/interface handoff.
+
+Implementation preflight identifies a necessary narrow test-harness extension:
+the accepted read test mocks omit the new Nest `Patch` decorator and type
+`NestFactory.create` with only one argument. Root verifies the original read-test
+hash `2b4781bb64a28a2bdb84c6f53b7a1c7270e5e6830c4dba6b45ffa8ea696fa35c`
+and preserves it in the setup baseline with `supplement-read-test.json`.
+PM adds only `packages/compiler/test/appointment-consumer-read.test.ts` to the
+same writer's ownership for those harness declarations (Patch mock and optional
+create options). Preserve every existing assertion and runtime/read behavior.
+This does not change the accepted contract or recapture any protected fixture;
+review this fifth path's small delta with the setup implementation. Do not add
+production fallbacks to accommodate obsolete test doubles.
+
+Task 2b writer now freezes the five assigned paths, with read-renderer source
+restored exactly to its accepted hash. The reference index lives in the new setup
+module, preserving the explicit emitted-file boundary. Writer checks pass 230/230
+(67 setup, 41 reads, 32 compilation, 12 booking and 78 compatibility), compiler
+types/build, strict emitted types and formatting. Final self-inspection added
+two RED/GREEN cases for case-insensitive static route prefixes before this freeze.
+The preserved-source comparison verifies exactly five emitted paths change,
+60 files and old order remain unchanged, and all 13 named original methods exist
+and remain byte-identical. These are deterministic source checks, not actual
+HTTP/PostgreSQL/UI acceptance.
+
+Root verifies all five source hashes, three preserved baseline copies, final
+report and emitted-delta hashes. The complete scoped diff is
+`generated/.appointment-v2-setup-base-7a85d6ef/task-2b-review.diff`; the tracked
+`task-2b-source-manifest.json` records this frozen snapshot. Independent
+`appointment_v2_setup_review` receives spec/quality review of this exact delta.
+No source acceptance or Task 3 restart follows until review and affected QA pass.
+
+Independent `appointment_v2_setup_review` returns spec changes required and
+quality acceptable except for one P2, P0/P1/P2 **0/0/1**. Default JSON parsing
+collapses duplicate Service fields and duplicate PATCH `values` members before
+the validator can enforce API-003's exactly-once rule. Its non-listening real
+parser/emitted-helper reproduction accepts both and writes two audits/receipts
+against a bounded store double. Other scoped source findings are clean; the
+230-case suite is not redundantly rerun by the reviewer.
+
+Root preserves all five frozen files and initial reports in
+`generated/.appointment-v2-setup-review-base-7a85d6ef/`. Fix round 1 returns to
+`appointment_v2_setup_runtime`, limited to the setup renderer and its new test:
+reject duplicate JSON members at the setup wire boundary before evidence is
+discarded, including escaped-key equivalence, while retaining auth-first,
+bounded 400/no-store errors and ordinary-route/default-parser behavior. Keep
+unaffected source hashes fixed. Preserve initial evidence; report the scoped
+RED/GREEN and final affected checks before the same reviewer's delta recheck.
+No ADR change, new dependency, service or extra source path is authorized.
+
+Fix round 1 freezes only the setup renderer/test. Root verifies all five hashes
+and captures `generated/.appointment-v2-setup-review-base-7a85d6ef/fix-1-review.diff`.
+The existing public adapter decodes setup JSON text before duplicate-member
+scanning; native charset/type/size/inflation and ordinary-route behavior are
+covered by parity regressions. Writer checks pass 240/240 (77 setup plus the
+prior 163), compiler types/build, emitted strict types and formatting. Only
+generated `api/src/main.ts` changes relative to the first review snapshot;
+64 emitted files remain identical. The same independent reviewer confirms P2
+addressed, spec/quality pass and P0/P1/P2 **0/0/0**. Earlier unaffected conclusions
+stand. Independent deterministic QA remains the next prerequisite gate.
+
+### ADR-0081 Task 3 disjoint presentation preparation — 2026-09-24
+
+PM narrows the prior whole-task pause to shared-facade integration and acceptance.
+The accepted ADR-0081/0082 read, setup and booking interfaces are frozen; the
+remaining P2 repair changes duplicate-wire validation only, not those interfaces.
+Independent initial source review found no other defect. To avoid idle sequencing,
+`appointment_v2_workspace` may now implement only these disjoint paths:
+
+- new `packages/compiler/src/appointment-workspace-presentation.ts`;
+- new `packages/compiler/test/appointment-consumer-workspace.test.ts`;
+- `packages/compiler/src/approval-workspace-presentation.ts`, only necessary
+  private helper parameterization with old output unchanged.
+
+The setup writer retains only its setup renderer/test fix paths. Neither writer
+may edit `packages/compiler/src/index.ts` during this preparation wave. Existing
+read, setup and booking protocols are the frozen shared contract; an interface
+change stops this parallel wave. Presentation tests may invoke the new renderer
+directly and execute real emitted runtime behavior in the established fully
+fulfilled local component harness. That is preparation evidence, not integration
+or actual PostgreSQL/Preview acceptance. No invented endpoint or envelope adapter
+is permitted. Root owns the later serialized facade integration handoff after
+setup review and QA pass; ordinary UI work keeps its existing single review.
+
+Preserve the original Task 3 baseline: its two new source paths remain absent,
+and the shared helper must match its recorded pre-edit hash before dispatch.
+Use the updated reuse handoff and Task 3 brief with accepted setup recovery.
+No adapter/default, E2E, dependency, Graph, source outside these paths, Git, live
+service, network or policy-rejected startup is authorized. Root owns evidence.
+This is an in-scope ownership/scheduling adjustment, not a waived acceptance gate.
+
+Resuming the old UI worker and one fresh explicit Terra fallback dispatch both
+return `agent thread limit reached`; neither starts a UI writer. Root therefore
+owns the three disjoint preparation paths above locally. The setup writer keeps
+its two-path correction and the independent reviewer remains separate. No other
+writer is authorized for the UI paths. This records tool-capacity recovery, not
+a new source contract or an additional approval stage.
+
+Root completes a partial UI foundation in the three owned paths: direct renderer,
+parameterized shared stylesheet and two emitted React/runtime tests. Both start
+RED (missing controls), then pass for exact mobile booking and missing-server-Date
+recovery. A Service select accessible-name defect is corrected; the saved-list
+assertion is scoped to its heading rather than matching its navigation button.
+No screenshot, complete admin/staff/recovery or frontend strict-type acceptance is
+claimed. Preserve this intermediate state at
+`generated/.appointment-v2-task3-local-prep/manifest.json`.
+
+The setup writer is now complete, the same reviewer's correction check is clean,
+and explicit Terra `appointment_v2_setup_qa` successfully starts. PM transfers
+the three UI preparation paths to `appointment_v2_workspace_prepare` for completing
+the same task; root stops source edits on them at dispatch. Retain the accepted
+interfaces and no-facade boundary. The worker must finish remaining behavior,
+tests, responsive images and strict types rather than treating the two passing
+foundation cases as task acceptance. A failed dispatch leaves ownership with root.
+
+### ADR-0082 source acceptance and Task 3 facade handoff — 2026-09-24
+
+Independent `appointment_v2_setup_qa` reports P0/P1/P2 0/0/0. ADR-0082 and
+all five frozen source hashes match before and after verification. Setup 77,
+reads 41, compilation 32, booking 12 and compatibility 78 pass: 240/240, plus
+compiler typecheck. The combined command output reached the host time boundary;
+QA obtains authoritative exit-zero summaries by running each declared file
+individually. No source mutation, service, network or browser action occurs.
+PM accepts this bounded source checkpoint, not actual HTTP/PostgreSQL or product
+acceptance. The tracked Task 2b manifest retains its accepted source snapshot.
+
+PM extends `appointment_v2_workspace_prepare` ownership to
+`packages/compiler/src/index.ts` for exact V2 presentation/style/manifest wiring
+only, after the setup writer and QA finish. Its pre-integration SHA-256 is
+`2a782be0bb8505aa089ac314b434f59e154679724b19cf2e4713cef1238099ef`.
+Root preserves a fresh facade snapshot before notifying the writer. The original
+Task 3 and setup manifests remain historical evidence, never overwritten.
+No setup/read/booking behavior, adapter defaults, schema, dependencies or other
+paths are added to ownership. Existing three UI paths retain the same writer.
+Complete the accepted business/recovery/visual scope and one independent UI
+review; reuse unchanged setup QA rather than repeat that gate for facade wiring.
+
+### ADR-0081 Task 3 source/test split — 2026-09-24
+
+The UI writer explicitly freezes and transfers
+`packages/compiler/test/appointment-consumer-workspace.test.ts` to root after
+its seventh setup-conflict case is green. Root owns complete control/fault/state
+coverage and generated frontend strict typing. The same writer retains only
+the presentation renderer, shared helper and narrow compiler facade source.
+The frozen shared contracts remain ADR-0081/0082; no production API change is
+authorized. Root finds a concrete UI/test mismatch: command URLs omit the
+existing `/events/` segment while the harness accepts that invented route.
+Root repairs the harness to enforce actual controller routes; the source writer
+repairs callers. Root also adds a non-UTC browser setup test for labelled UTC
+fields and capacity-only edits preserving timestamps. Seven control cases and
+234 combined checks are an intermediate checkpoint, not Task 3 completion.
+
+The source worker completes with remaining explicit UTC labels and broader
+control evidence unfinished. Root resumes all four Task 3 paths after that
+terminal handoff; no parallel source writer remains. The 12-case integrated
+emitted-browser/type run passes ten and identifies two failures: cached visible
+history after the complete command chain and missing explicit UTC labels. The
+worker supplies the history correction; root completes remaining source/test
+work locally. The earlier 234-case result is historical and never full acceptance.
+
+Root finishes the same four paths and freezes
+`docs/acceptance/evidence/appointment-consumer-workspace/task-3-source-manifest.json`.
+The preserved review copy is `generated/.appointment-v2-task3-review-1/`;
+the complete scoped report and final capture directory are linked from the
+Appointment evidence README. The 23 final cases exercise real emitted frontend
+and runtime, strict generated TypeScript, complete visible commands/history,
+setup UTC/conflicts/protection, exact uncertain replay, stale role reads, clock
+and cursor recovery, status filtering and more than twenty saved appointments.
+Root visually inspects all six final images across 390/768/1440 and the relevant
+light/dark/conflict/denied/empty states. Types/build/format/whitespace pass.
+
+The affected combined lane passes 133 cases; later presentation-only details and
+theme repairs rerun all 23 affected workspace cases and compiler types/build.
+Unchanged facade/helper compatibility evidence is retained. Root dispatches
+`appointment_v2_workspace_review` for the existing single read-only spec/quality
+UI review against the exact manifest and pre-task baselines. No separate Terra
+or release gate is introduced for this ordinary presentation slice. Source stays
+frozen during review; actual Preview/PostgreSQL/default/hosted outcomes stay open.
+
+### ADR-0081 Task 4 disjoint regression preparation — 2026-09-24
+
+While the UI writer completes its four owned paths, root owns only new
+`packages/adapters/test/appointment-consumer-definition.test.ts` for focused
+RED cases against accepted replacement/default-selection requirements. No
+adapter, catalogue, matcher, provider or Workbench production source is assigned
+in this preparation wave. Tests must use real registered projection and plan
+composition, preserve explicit V1 behavior and detect the current default gap.
+They intentionally remain RED until the later serialized Task 4 implementation;
+do not count them as accepted regression or weaken existing historical checks.
+The ignored Task 4 handoff records source seams and the eventual integration
+scope; actual source activation still follows complete Task 3 integration/review.
+
+The first real focused adapter run executes all six cases: historical explicit
+projection passes, and five expected failures demonstrate missing V2 registration,
+fresh provider offering/projection and the still-active V1 consumer match. These
+are behavior failures, not an import or test-discovery failure. The pending test
+is not counted as accepted; the UI writer is informed of this disjoint RED work.
+
+### Appointment consumer workspace decision dispatch — 2026-09-24
+
+Independent `appointment_consumer_diagnosis` confirms the existing P1 and its
+historical template/access boundary; see the linked evidence record above.
+Tech Lead `appointment_ui_decision` proposes ADR-0081 at SHA-256
+`040ebde17ea674c5c78be6a13eac761ecb39d127210ba83b950daa9fb1dd2264`.
+It proposes a V2 replacement workspace/default selection, additive bounded
+availability permission and availability/record-summary projections while
+retaining V1 bytes and existing atomic mutation capability. The physical
+replacement row must not count as additional logical product coverage.
+`appointment_ui_decision_review` returns standing acceptance **no**, P0/P1/P2
+0/1/1, for this initial hash. The bounded new projection is eligible in principle
+and is not classified as security weakening. P1 requires a defined clock/window
+renewal contract after ordinary user delay; P2 requires exact bounded identifier
+rules instead of a nonexistent validator reference. The reviewer also confirms
+future-only discovery is advisory: unchanged atomic mutation semantics do not
+reject past starts. PM returns these specific corrections to the same proposer;
+no material founder choice is required for this repair. Re-review the revised
+exact hash before acceptance. No implementation authorization is recorded. The active
+Directory/Inventory E2E writer retains its disjoint assignment.
+
+The scoped repair changes only the proposal's clock/window recovery and exact
+identifier rules, and clarifies unchanged past-start mutation behavior.
+Independent `appointment_ui_decision_review` now returns
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 **0/0/0**, for SHA-256
+`65f867c7afeeefc892b8493e508d86d5d212302fcc247e927843ce05b6672adc`.
+It explicitly classifies the bounded new V2 projection as eligible for standing
+acceptance without security weakening or an unresolved material founder choice.
+PM records founder acceptance of this exact decision under the September 1
+standing policy before implementation. The accepted ADR bytes remain unchanged.
+Follow the [queued implementation plan](../plans/2026-09-24-appointment-consumer-workspace.md);
+source ownership will be assigned after the active Task 3 source review handoff.
+This decision acceptance is not consumer acceptance, deployment or release.
+
+### ADR-0079 Task 1 disjoint source authorization — 2026-09-24
+
+Accepted ADR SHA-256 remains
+`c3977b14ba87e8134e75d50feda48496f2765778b6ea0bae579ebb54360e2460`.
+Root verified its IMP-001 serializes overlapping Workbench paths, not independent
+predicate work. Those Task 1 paths are clean at source base `7a85d6ef`; ADR-0078's
+21-file source manifest still matches and its writer has finished. PM assigns
+`accepted_family_predicates` these files only:
+
+- `packages/capabilities/src/product-composer.ts`, `plan-alternatives.ts`, `index.ts`;
+- `packages/capabilities/test/product-composer.test.ts`, `plan-alternatives.test.ts`,
+  `appointment-scheduling.test.ts`, `inventory-operations-composition.test.ts`;
+- `packages/adapters/src/requirements/definition-family-registry.ts`;
+- `packages/adapters/test/appointment-definition-admission.test.ts`,
+  `content-directory-definition.test.ts`, `inventory-operations-definition.test.ts`.
+
+Start RED, implement the exact shared matcher/export/predicate move from Task 1,
+then focused tests and affected package typechecks/builds. No Workbench, Graph,
+compiler, definition data, lifecycle, environment, dependency or Git changes.
+In particular do not edit `supplies-stockroom-definition.test.ts` or any path in
+ADR-0078's frozen manifest. Do not start any service or retry blocked operations.
+If a shared-contract adjustment or another path is necessary, stop for PM scope
+resolution. Root retains existing evidence; Task 2, actual cases and final slice
+acceptance remain pending. No task is marked delivered merely to unblock another.
+
+### ADR-0079 Task 2 serial source handoff — 2026-09-24
+
+The ADR-0078 implementer is finished, and its source review and Terra deterministic
+QA close 0/0/0. Root confirmed all 21 frozen source hashes before the handoff.
+The local startup rejection affects actual browser execution; it does not
+authorize an alternative startup or establish acceptance. There is no concurrent
+Workbench writer. Under accepted ADR IMP-001, PM now assigns
+`accepted_family_predicates` these six files for Task 2 only:
+
+- `apps/workbench/lib/product-journey/consumer-family.ts` and new `consumer-family.test.ts`;
+- `apps/workbench/lib/product-journey/use-consumer-generation.ts` and its `.test.tsx`;
+- `apps/workbench/components/workbench-home.tsx` and its `.test.tsx`.
+
+The five existing files' exact pre-edit source/hashes and the new test path's
+explicit absence are retained in ignored
+`generated/.consumer-family-task2-base-7a85d6ef/`. ADR-0078's manifest records its
+original reviewed source, not a claim that subsequent shared-file edits are
+unchanged. Preserve its recovery behavior; review Task 2 against the captured
+baseline and run relevant combined recovery checks. Keep Task 1's six files frozen
+during independent QA; do not alter them without stopping for coordinated repair.
+No E2E fixture/harness, other source, runtime, environment, package or Git writes.
+One worker owns package builds; QA runs tests only. Root retains final actual
+recovery and three-family entry acceptance, final judgment and delivery as open.
+
+### Work Orders decision and verification seam — 2026-09-24
+
+Tech Lead `work_orders_decision` owned only ADR-0080 and read the technology/threat
+authorities. Independent `work_orders_decision_review` rejected initial SHA-256
+`a760ee6049bde2668e000551ec3239d44ceb3b775083a125a8b68779138b1fdf` at 0/1/1:
+ordinary metadata correction was absent and the exact seedless numeric admission
+was unspecified. One repair added those contracts and PM-required cancellation of
+mistaken/duplicate orders without deleting history or fabricating resolution.
+Scoped re-review accepts the exact revised hash above at 0/0/0, retaining unchanged
+evidence and confirming synthetic identity fits the approved local stage. No real
+staff/private identity, hosted deployment or product-count increase follows.
+
+A subsequent read-only Tech Lead seam check confirms the existing worker chain
+types already support fresh IDs, per-step sessions and idempotency. The queued
+plan identifies a Work Orders profile and exact update-envelope validator change,
+using the existing evidence/lifecycle contract. PM will assign worker paths before
+writes; no new serialized observation interface is authorized. History contents
+still require emitted-runtime/PostgreSQL/actual browser assertions. Accepted ADR
+bytes remain unchanged; no additional architecture decision is needed for this
+bounded verification implementation.
 
 ## Approved objective and authority
 

@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import {
   selectContentDirectoryProfile,
   selectInventoryOperationsProfile,
+  selectServiceWorkOrdersProfile,
   type ContentDirectoryProfile,
   type PublishedGraphInput,
 } from "@factory/compiler";
@@ -25,6 +26,7 @@ import {
 } from "./role-journey.js";
 import type { VerificationProfile } from "./verification-profiles.js";
 import { inventoryVerificationProfile } from "./inventory-operations-verification.js";
+import { serviceWorkOrdersVerificationProfile } from "./service-work-orders-verification.js";
 
 /**
  * The graph-derived verification plan. When a verification run carries no
@@ -781,6 +783,14 @@ export function deriveVerificationProfile(
     );
   }
 
+  try {
+    const workOrders = selectServiceWorkOrdersProfile(graph, lock);
+    if (workOrders) return serviceWorkOrdersVerificationProfile(workOrders);
+  } catch {
+    throw new VerificationContractError(
+      "Service Work Orders verification requires an exact immutable profile.",
+    );
+  }
   try {
     const inventory = selectInventoryOperationsProfile(graph, lock);
     if (inventory) return inventoryVerificationProfile(inventory);

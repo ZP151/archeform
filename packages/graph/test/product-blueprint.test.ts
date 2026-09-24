@@ -8,6 +8,17 @@ import {
   hashProductBlueprint,
 } from "../src/product-blueprint.js";
 
+describe("Appointment availability action", () => {
+  it("admits the bounded read verb and rejects invented availability verbs", () => {
+    expect(blueprintActionSchema.safeParse("read-availability").success).toBe(
+      true,
+    );
+    expect(blueprintActionSchema.safeParse("manage-availability").success).toBe(
+      false,
+    );
+  });
+});
+
 describe("Blueprint numeric domains", () => {
   const numericDomain = {
     apiVersion: "factory.numeric-field-domain/v1",
@@ -80,13 +91,27 @@ describe("Blueprint numeric domains", () => {
 });
 
 describe("canonical Task action vocabulary", () => {
+  it.each(["assign", "reassign", "resolve"])(
+    "restricts %s to the complete Work Orders family",
+    (action) => {
+      expect(blueprintActionSchema.safeParse(action).success).toBe(true);
+      const blueprint = validBlueprint();
+      const actors = blueprint.actors as Array<{
+        permissions: Array<{ actions: string[] }>;
+      }>;
+      actors[0]!.permissions[0]!.actions.push(action);
+      expect(() => assertProductBlueprint(blueprint)).toThrow(
+        /complete Service Work Orders/,
+      );
+    },
+  );
   it.each(["start", "complete", "reopen"])(
     "accepts %s without an approval alias",
     (action) => {
       expect(blueprintActionSchema.safeParse(action).success).toBe(true);
     },
   );
-  it.each(["finish", "assign", "archive"])(
+  it.each(["finish", "delegate", "archive"])(
     "keeps unknown Task verb %s invalid",
     (action) => {
       expect(blueprintActionSchema.safeParse(action).success).toBe(false);

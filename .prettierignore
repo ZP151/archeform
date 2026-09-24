@@ -20,6 +20,10 @@ packages/compiler/test/generated-runtime-*/
 packages/capabilities/assets/core.audit/1.0.2/tests/contract.json
 # Exact accepted ADR bytes are the recorded decision authority.
 docs/adr/adr-0074-content-directory-family.md
+# Preserve accepted source-evidence manifests; later source identities use new receipts.
+docs/acceptance/evidence/appointment-consumer-workspace/task-1-source-manifest.json
+docs/acceptance/evidence/appointment-consumer-workspace/task-3-source-manifest.json
+docs/acceptance/evidence/inventory-operations/attempt-f0cfb8f9-b769-4bec-8955-8580a14693ee/root-resource-proof.json
 # Preserve the executed capture script identified by the eight-product receipt.
 packages/compiler/test/fixtures/capture-eight-definition-baseline.mjs
 # Published appointment manifests bind these exact asset bytes by digest.

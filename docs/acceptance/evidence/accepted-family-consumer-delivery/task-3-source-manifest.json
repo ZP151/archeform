@@ -1,0 +1,26 @@
+{
+  "baseCommit": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "state": "source-review-passed-actual-acceptance-pending",
+  "files": [
+    {
+      "path": "e2e/helpers/content-directory.ts",
+      "sha256": "fa5687e59f38b4834b2012d754d9691e4498a80c9f7cb7e947c2a1b08599420c"
+    },
+    {
+      "path": "e2e/helpers/inventory-operations.ts",
+      "sha256": "c39297951fdd2d7429617c88b851db795556ff1960173abd00291f8686d6de45"
+    },
+    {
+      "path": "e2e/content-directory.spec.ts",
+      "sha256": "f88b012fed7e77810d69fcc6fb214f61daa785a54545bd140b9bc9bde29e7569"
+    },
+    {
+      "path": "e2e/inventory-operations.spec.ts",
+      "sha256": "1f9166eba5f53d55c2a08c500d27d12db8c314d0954d8f44cd06ec40d25d597f"
+    },
+    {
+      "path": "e2e/helpers/content-directory.test.ts",
+      "sha256": "e963450c50c5d498f848fd594f5f563aa3f12db6aede0d7bf583e0504623a677"
+    }
+  ]
+}

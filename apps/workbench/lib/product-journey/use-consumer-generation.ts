@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { consumerFamilyFor, type ConsumerFamily } from "./consumer-family";
+import {
+  consumerFamilyFor,
+  consumerFamilyLabel,
+  consumerManualReasonFor,
+  type ConsumerFamily,
+} from "./consumer-family";
 
 import type { ProductJourneyController } from "./use-product-journey";
 import type {
@@ -14,6 +19,7 @@ import type {
  * controllers after their preceding authoritative state has succeeded.
  */
 export interface ConsumerGenerationController {
+  readonly manualReason: string | null;
   readonly family: ConsumerFamily | null;
   readonly suppliedMenu: boolean;
   readonly manualReview: boolean;
@@ -54,12 +60,7 @@ function statusFor(
   release: ReleaseJourneyController["release"],
   family: ConsumerFamily | null,
 ): string {
-  const label =
-    family === "task"
-      ? "Task"
-      : family === "approval"
-        ? "Approval"
-        : "Restaurant";
+  const label = consumerFamilyLabel(family);
   switch (release?.phase) {
     case "publishing":
       return `Preparing your ${label} app…`;
@@ -293,15 +294,11 @@ export function useConsumerGeneration({
         applyingSessionRef.current === sessionKey));
 
   const activeFamily = target !== null ? targetFamily : family;
-  const label =
-    activeFamily === "task"
-      ? "Task"
-      : activeFamily === "approval"
-        ? "Approval"
-        : "Restaurant";
+  const label = consumerFamilyLabel(activeFamily);
 
   return {
     family: activeFamily,
+    manualReason: consumerManualReasonFor(journey),
     suppliedMenu:
       target !== null
         ? targetSuppliedMenu

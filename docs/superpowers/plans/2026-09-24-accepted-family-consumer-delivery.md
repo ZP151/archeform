@@ -3,9 +3,14 @@
 Decision: accepted ADR-0079, SHA-256
 `c3977b14ba87e8134e75d50feda48496f2765778b6ea0bae579ebb54360e2460`.
 Independent `scope_decision_review` approves standing acceptance at P0/P1/P2 0/0/0;
-PM records it before implementation. Source work waits for closure of overlapping
-ADR-0078 source work. Root owns this plan,
-evidence, runtime processes and Git; source ownership is assigned after that point.
+PM records it before implementation. Per ADR IMP-001, Workbench ownership is
+serialized after the ADR-0078 implementer has finished. Its source review and
+deterministic QA pass; actual browser acceptance remains pending. Task 1 is now
+frozen and source-reviewed. Task 2's serial handoff preserves the recorded
+six-file baseline and earlier recovery change; source review and independent
+Terra QA now pass, as does root's product regression. No task is accepted or
+delivered on that basis; combined actual browser evidence remains required.
+Root owns this plan, evidence, runtime processes and Git.
 
 ## Outcome
 
@@ -19,7 +24,7 @@ coverage separately.
 
 ## Task 1: share exact admission with the existing planner
 
-One serialized strongest-model owner changes the ADR IMP-002 paths:
+`accepted_family_predicates`, one serialized strongest-model owner, changes the ADR IMP-002 paths:
 `packages/capabilities/src/product-composer.ts`, `plan-alternatives.ts`,
 `index.ts`, their focused predicate/plan/export tests, and
 `packages/adapters/src/requirements/definition-family-registry.ts` with affected
@@ -48,9 +53,11 @@ all accepted historical outputs. Prove the root import remains browser-safe.
 
 ## Task 2: extend the existing consumer path
 
-The same owner changes only `apps/workbench/lib/product-journey/consumer-family.ts`,
+After PM's recorded serial source handoff, the same owner changes only `apps/workbench/lib/product-journey/consumer-family.ts`,
 `use-consumer-generation.ts`, their tests, `components/workbench-home.tsx` and
-its tests. Wait for ADR-0078 to finish these shared files.
+its tests. The prior ADR-0078 writer has finished these shared files; preserve
+its recovery behavior and include the still-pending recovery browser case in
+the final combined acceptance run when startup is allowed.
 
 RED cases use accepted `appointment-booking-v1`, `knowledge-resource-directory`
 and `supplies-stockroom` projections with real compatible standard plans. After
@@ -76,6 +83,14 @@ the client. Run `node scripts/regression.mjs product`; retain existing definitio
 and immutable-output regression where its paths are unchanged.
 
 ## Task 3: replace technical entry in the three actual cases
+
+Execution split, 2026-09-24: prepare Directory/Inventory in their existing helper
+and specs first. Appointment's source diagnosis confirms an existing generated
+UI/API mismatch and missing usable slot/history controls. Its business case is
+API-driven and cannot establish the useful-app outcome below. Keep Appointment
+consumer closure open; proposed ADR-0081 owns the required template/availability
+decision before any repair. This plan does not authorize that separate change or
+reinterpret historical runtime evidence as a completed UI journey.
 
 Use the existing Appointment, Directory and Inventory specs and their helpers;
 no new lifecycle harness. Arm response/identity observations before the business

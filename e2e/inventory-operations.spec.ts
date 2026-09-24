@@ -41,7 +41,7 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
   expect(testInfo.project.use.baseURL).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/u);
   const attempt = randomUUID(),
     output = resolve(
-      "docs/acceptance/evidence/inventory-operations",
+      "docs/acceptance/evidence/accepted-family-consumer-delivery/inventory-operations",
       "attempt-" + attempt,
     );
   await mkdir(output, { recursive: true });
@@ -59,8 +59,8 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
     authoredItems: 2,
     modelCalls: 0,
     ordinaryUserStudies: 0,
-    technicalHandoffs: 0,
     inRunManualRescues: 0,
+    businessRetries: 0,
     readyTargetMs: 300_000,
     outerPreparation: "root-owned; excluded from prepared-local timer",
     outcome: "running",
@@ -188,9 +188,10 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
     expect(
       (await inventoryApi(request, origin, base, "observer")).body.records,
     ).toEqual([]);
-    generated = await context.newPage();
     let remoteRequests = 0;
-    await generated.route("**/*", async (route) => {
+    // Context routing covers the popup's first request from Open local app.
+    await context.route("**/*", async (route) => {
+      if (route.request().frame().page() === page) return route.continue();
       const url = new URL(route.request().url());
       if (
         ["http:", "https:"].includes(url.protocol) &&
@@ -200,7 +201,11 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
         await route.abort();
       } else await route.continue();
     });
-    await generated.goto(origin);
+    [generated] = await Promise.all([
+      context.waitForEvent("page"),
+      page.getByRole("link", { name: "Open local app", exact: true }).click(),
+    ]);
+    object(evidence.consumerEntry).openAppActions = 1;
     await expect(generated.locator("main.inventory-v1")).toBeVisible({
       timeout: 120_000,
     });
@@ -242,6 +247,9 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
       unit: "each",
       version: 0,
     });
+    object(evidence.consumerEntry).firstUsefulActionMs =
+      Date.now() - Number(object(evidence.consumerEntry).startedAtMs);
+    object(evidence.consumerEntry).firstUsefulAction = "stockkeeper-added-item";
     const cableId = String(cable.id),
       cablePath = base + "/" + encodeURIComponent(cableId),
       detailUrl = generated.url();
@@ -344,6 +352,7 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
       (req) =>
         req.method() === "POST" && new URL(req.url()).pathname === receivePath,
     );
+    evidence.businessRetries = Number(evidence.businessRetries) + 1;
     expect(
       await saved("Retry same change", "POST", receivePath, false),
     ).toEqual(received);
@@ -1063,6 +1072,10 @@ test("Supplies Stockroom completes immutable delivery, stock corrections and exa
           resources: ownedResources(preview, factoryProject),
         };
       } else evidence.cleanup = { outcome: "no-preview-created" };
+      if (evidence.consumerOwnershipRecovery === "cleanup-required")
+        throw new Error(
+          "Consumer Preview ownership recovery requires cleanup.",
+        );
       if (!businessError) evidence.outcome = "passed";
     } catch {
       evidence.cleanup = {

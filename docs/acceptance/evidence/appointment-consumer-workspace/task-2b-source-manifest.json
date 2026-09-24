@@ -1,0 +1,27 @@
+{
+  "state": "source-review-and-independent-deterministic-qa-accepted",
+  "base": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "files": [
+    {
+      "path": "packages/compiler/src/appointment-administrator-setup.ts",
+      "sha256": "3a512bb9a834b8015e8a58b09801177b5f98eee592708260c4fc4ba273d1d9f0"
+    },
+    {
+      "path": "packages/compiler/src/index.ts",
+      "sha256": "2a782be0bb8505aa089ac314b434f59e154679724b19cf2e4713cef1238099ef"
+    },
+    {
+      "path": "packages/compiler/src/appointment-consumer-read.ts",
+      "sha256": "c4a5865b4e5d8516d04bd9bff38dce6853b9f674432955b6ef089b38355fa468"
+    },
+    {
+      "path": "packages/compiler/test/appointment-administrator-setup.test.ts",
+      "sha256": "ca91568e1fa6c0f7e09ead97f4341ed21583b8851c9036c7bc9e33f96e376a7e"
+    },
+    {
+      "path": "packages/compiler/test/appointment-consumer-read.test.ts",
+      "sha256": "3bec05f466818ab55a33308a627775950e5569afb95b9ec8f2f5e7bbdb3899e4"
+    }
+  ],
+  "adr0082Sha256": "5734bacdd01d4b27475ea861ed94f97011191a587eddfe73ad68e8900473a7d9"
+}

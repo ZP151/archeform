@@ -424,3 +424,6 @@ export {
   matchInventoryOperationsGraphV1,
   type InventoryOperationsGraphWitnessV1,
 } from "./inventory-operations-graph-witness.js";
+
+export * from "./service-work-orders-blueprint-witness.js";
+export * from "./service-work-orders-graph-witness.js";

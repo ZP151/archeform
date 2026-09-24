@@ -134,6 +134,7 @@ export interface RequirementInterpreterAdapterV1 {
 }
 
 export type RequirementInterpreterErrorCode =
+  | "definition_scope_unresolved"
   | "request_invalid"
   | "output_invalid"
   | "provider_rejected"

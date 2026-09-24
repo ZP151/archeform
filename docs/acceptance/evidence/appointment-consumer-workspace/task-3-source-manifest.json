@@ -1,0 +1,43 @@
+{
+  "captures": "generated/.appointment-v2-task3-ui/root-interaction-63100b70-dc01-4186-9cf6-89b540eef004",
+  "helperBaseline": "generated/.appointment-v2-task3-base-7a85d6ef/packages/compiler/src/approval-workspace-presentation.ts",
+  "state": "source-scoped-ui-review-accepted",
+  "componentTests": 33,
+  "files": [
+    {
+      "path": "packages/compiler/src/appointment-workspace-presentation.ts",
+      "sha256": "0fc2789a2a4f93e5bb45195856a33f688eb6d837826d53d51d61203525aaeeca"
+    },
+    {
+      "path": "packages/compiler/test/appointment-consumer-workspace.test.ts",
+      "sha256": "9c936fe85c36a2ee5d07d4371d89b68edbff30aa0e2bef80b44777edcb72ab35"
+    },
+    {
+      "path": "packages/compiler/src/approval-workspace-presentation.ts",
+      "sha256": "43f8b2956189246bb08808bbbe40b3d5fe14b8287cec1e4c446f36a75fa8c58e"
+    },
+    {
+      "path": "packages/compiler/src/index.ts",
+      "sha256": "2dc871084ff9c7f9cdff60b984123647f893650535e388c9928dc027369ff32c"
+    }
+  ],
+  "actualPreviewAcceptance": "pending",
+  "base": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "facadeBaseline": "generated/.appointment-v2-task3-facade-base-7a85d6ef/index.ts",
+  "reviewCorrection": "task-3-review-correction.md",
+  "reviewSnapshot": "generated/.appointment-v2-task3-review-correction-2",
+  "lastCompleteRun": 31,
+  "lastScopedRun": {
+    "passed": 3,
+    "skipped": 30,
+    "scope": "retained cursor clock recovery plus strict emitted TypeScript"
+  },
+  "reviewResult": {
+    "reviewer": "appointment_v2_workspace_review",
+    "p0": 0,
+    "p1": 0,
+    "p2": 0,
+    "correctionRounds": 2,
+    "actualPreviewAcceptance": "pending"
+  }
+}

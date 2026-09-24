@@ -39,7 +39,7 @@ test("Knowledge Resource Directory completes immutable delivery and reader/curat
   expect(testInfo.project.use.baseURL).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/u);
   const attempt = randomUUID();
   const output = resolve(
-    "docs/acceptance/evidence/content-directory",
+    "docs/acceptance/evidence/accepted-family-consumer-delivery/content-directory",
     `attempt-${attempt}`,
   );
   await mkdir(output, { recursive: true });
@@ -56,8 +56,8 @@ test("Knowledge Resource Directory completes immutable delivery and reader/curat
     authoredEntries: 2,
     modelCalls: 0,
     ordinaryUserStudies: 0,
-    technicalHandoffs: 0,
     inRunManualRescues: 0,
+    businessRetries: 0,
     readyTargetMs: 300_000,
     outcome: "running",
     visualReview: "pending-human-inspection",
@@ -166,9 +166,10 @@ test("Knowledge Resource Directory completes immutable delivery and reader/curat
     expect(beforeIdentity.inputGraphHash).toBe(evidence.inputGraphHash);
     evidence.compilation = beforeIdentity;
     phase("curator-create");
-    generated = await context.newPage();
     let remoteRequests = 0;
-    await generated.route("**/*", async (route) => {
+    // Context routing covers the popup's first request from Open local app.
+    await context.route("**/*", async (route) => {
+      if (route.request().frame().page() === page) return route.continue();
       const url = new URL(route.request().url());
       if (
         ["http:", "https:"].includes(url.protocol) &&
@@ -178,7 +179,11 @@ test("Knowledge Resource Directory completes immutable delivery and reader/curat
         await route.abort();
       } else await route.continue();
     });
-    await generated.goto(origin);
+    [generated] = await Promise.all([
+      context.waitForEvent("page"),
+      page.getByRole("link", { name: "Open local app", exact: true }).click(),
+    ]);
+    object(evidence.consumerEntry).openAppActions = 1;
     await expect(generated.locator("main.directory-v1")).toBeVisible({
       timeout: 120_000,
     });
@@ -208,6 +213,9 @@ test("Knowledge Resource Directory completes immutable delivery and reader/curat
     await capture("curator-editor");
     const first = await saved("Create hidden entry", "POST", "/api/resource");
     expect(first).toMatchObject({ status: "hidden", version: 0, ...valuesA });
+    object(evidence.consumerEntry).firstUsefulActionMs =
+      Date.now() - Number(object(evidence.consumerEntry).startedAtMs);
+    object(evidence.consumerEntry).firstUsefulAction = "curator-created-entry";
     const firstId = String(first.id);
     const firstPath = `/api/resource/${encodeURIComponent(firstId)}`;
     const detailUrl = generated.url();
@@ -290,6 +298,7 @@ test("Knowledge Resource Directory completes immutable delivery and reader/curat
       (r) =>
         r.method() === "POST" && new URL(r.url()).pathname === "/api/resource",
     );
+    evidence.businessRetries = Number(evidence.businessRetries) + 1;
     const second = await saved("Retry save", "POST", "/api/resource");
     const retried = await retryRequest;
     expect(retried.headers()["x-factory-idempotency-key"]).toBe(
@@ -748,6 +757,10 @@ test("Knowledge Resource Directory completes immutable delivery and reader/curat
           resources: ownedResources(preview, factoryProject),
         };
       } else evidence.cleanup = { outcome: "no-preview-created" };
+      if (evidence.consumerOwnershipRecovery === "cleanup-required")
+        throw new Error(
+          "Consumer Preview ownership recovery requires cleanup.",
+        );
       if (!businessError) evidence.outcome = "passed";
     } catch {
       evidence.cleanup = {

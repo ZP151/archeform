@@ -17,6 +17,10 @@ import {
   openClarificationQuestions,
   planAlternativeSummary,
   createRequirementInput,
+  canSubmitRevisedRequirement,
+  BRIEF_MAX_LENGTH,
+  ANSWER_MAX_LENGTH,
+  ANSWER_LIMIT,
   type ProductJourneyState,
 } from "./journey-model";
 
@@ -52,6 +56,76 @@ function blankDraftFor(interpretation: RequirementInterpretationResultV1) {
 }
 
 describe("Product journey model", () => {
+  it("bounds explicit recovery inputs and starts only a changed new attempt", async () => {
+    const prior = await interpretedBrief(vagueBrief);
+    let state = journeyTransition(beginProductJourney(), {
+      type: "submit-brief",
+      brief: vagueBrief,
+    });
+    state = journeyTransition(state, {
+      type: "interpretation-accepted",
+      interpretation: prior,
+    });
+    state = journeyTransition(state, {
+      type: "clarify-answered",
+      answers: { scope: "Keep the requirement." },
+    });
+    state = journeyTransition(state, {
+      type: "fail",
+      failure: {
+        phase: "clarification",
+        code: "requirement.definition_scope_unresolved",
+        message: "Unresolved scope.",
+      },
+    });
+    expect(
+      canSubmitRevisedRequirement(state, ` ${vagueBrief} `, state.answers),
+    ).toBe(false);
+    for (const [brief, answers] of [
+      [" ", state.answers],
+      ["x".repeat(BRIEF_MAX_LENGTH + 1), state.answers],
+      [vagueBrief, { scope: "x".repeat(ANSWER_MAX_LENGTH + 1) }],
+      [
+        vagueBrief,
+        Object.fromEntries(
+          Array.from({ length: ANSWER_LIMIT + 1 }, (_, index) => [
+            `key-${index}`,
+            "yes",
+          ]),
+        ),
+      ],
+      [vagueBrief, { "": "yes" }],
+    ] as const) {
+      expect(canSubmitRevisedRequirement(state, brief, answers)).toBe(false);
+      expect(() =>
+        journeyTransition(state, {
+          type: "submit-revised-requirement",
+          brief,
+          answers,
+        }),
+      ).toThrow();
+    }
+    const revised = journeyTransition(state, {
+      type: "submit-revised-requirement",
+      brief: vagueBrief,
+      answers: { scope: "Accept only this difference." },
+    });
+    expect(revised.interpretationCycles).toBe(0);
+    expect(revised.interpretation).toEqual(prior);
+    expect(state.unresolvedRequest?.answers.scope).toBe(
+      "Keep the requirement.",
+    );
+    const first = journeyTransition(revised, {
+      type: "interpretation-accepted",
+      interpretation: prior,
+    });
+    const second = journeyTransition(first, {
+      type: "interpretation-accepted",
+      interpretation: prior,
+    });
+    expect(second.failure?.code).toBe("journey.clarification_exhausted");
+    expect(second.interpretationCycles).toBe(2);
+  });
   it("begins in the brief stage over an empty workspace", () => {
     const state = beginProductJourney();
     expect(state.kind).toBe("product-journey");

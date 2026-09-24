@@ -1,9 +1,4 @@
-import {
-  expect,
-  type APIRequestContext,
-  type Page,
-  type Response,
-} from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { selectInventoryOperationsProfile } from "../../packages/compiler/dist/index.js";
@@ -14,11 +9,13 @@ import {
 import { type CapabilityCompositionLockV1 } from "../../packages/capabilities/dist/index.js";
 import {
   deliverDirectory,
+  consumerSourcePaths,
   digest,
   directoryFailureDiagnostic,
   object,
   type Json,
   type OwnedPreview,
+  verifiedConsumerEvidence,
 } from "./content-directory";
 import { controlPlaneUrl } from "./restaurant-delivery";
 
@@ -87,9 +84,11 @@ export function inventoryFailureDiagnostic(error: unknown) {
 }
 export async function inventorySourceIdentity() {
   const paths = [
+    ...consumerSourcePaths,
     "e2e/inventory-operations.spec.ts",
     "e2e/helpers/inventory-operations.ts",
     "e2e/helpers/content-directory.ts",
+    "e2e/helpers/content-directory.test.ts",
     "docs/adr/adr-0076-inventory-operations-family.md",
     "packages/compiler/src/index.ts",
     "packages/compiler/src/inventory-operations-contract.ts",
@@ -292,121 +291,86 @@ export async function deliverInventory(
   phase: (name: string) => void,
   remember: (id: string, preview?: OwnedPreview) => void,
 ) {
-  let published: Json | undefined, verificationId: string | undefined;
-  let observationFailed = false;
-  const pending: Promise<void>[] = [];
-  const observe = (response: Response) => {
-    const path = new URL(response.url()).pathname;
-    if (response.request().method() !== "POST") return;
-    if (/\/application-graphs\/[^/]+\/published-revisions$/u.test(path))
-      pending.push(
-        response
-          .json()
-          .then((value) => {
-            published = object(value);
-          })
-          .catch(() => {
-            observationFailed = true;
-          }),
-      );
-    if (/\/compilations\/[^/]+\/verification-runs$/u.test(path))
-      pending.push(
-        response
-          .json()
-          .then((value) => {
-            const data = object(value);
-            if (typeof data.verificationRunId === "string")
-              verificationId = data.verificationRunId;
-          })
-          .catch(() => {
-            observationFailed = true;
-          }),
-      );
+  const preview = await deliverDirectory(
+    page,
+    request,
+    evidence,
+    phase,
+    remember,
+    inventorySelection,
+  );
+  const publishedPath =
+    "/application-graphs/" +
+    encodeURIComponent(String(object(evidence.applied).applicationGraphId)) +
+    "/published-revisions";
+  const readPublished = async () => {
+    const response = await request.get(controlPlaneUrl(publishedPath));
+    expect(response.ok()).toBe(true);
+    const rows = (await response.json()) as Json[];
+    const match = rows.find((row) => row.id === evidence.publishedRevisionId);
+    if (!match) throw new Error("Inventory Published revision missing.");
+    return match;
   };
-  page.on("response", observe);
-  try {
-    const preview = await deliverDirectory(
-      page,
-      request,
-      evidence,
-      phase,
-      remember,
-      inventorySelection,
+  const published = await readPublished();
+  const graph = applicationGraphSchema.parse(published.graph),
+    profile = selectInventoryOperationsProfile(
+      graph,
+      published.compositionLock as CapabilityCompositionLockV1,
     );
-    await Promise.all(pending);
-    if (observationFailed)
-      throw new Error("Inventory lifecycle observation failed.");
-    if (!published)
-      throw new Error("Inventory Published witness was not observed.");
-    const graph = applicationGraphSchema.parse(published.graph),
-      profile = selectInventoryOperationsProfile(
-        graph,
-        published.compositionLock as CapabilityCompositionLockV1,
-      );
-    expect(profile).toBeDefined();
-    expect(profile!.itemEntity).toBe("stock-item");
-    expect(profile!.movementEntity).toBe("stock-movement");
-    expect(graph.domain.seedData).toEqual([]);
-    expect(hashApplicationGraph(graph)).toBe(published.graphHash);
-    expect(published.sourceDraftRevisionId).toEqual(expect.any(String));
-    evidence.published = {
-      id: published.id,
-      applicationGraphId: published.applicationGraphId,
-      sourceDraftRevisionId: published.sourceDraftRevisionId,
-      graphHash: published.graphHash,
-      compositionLockHash: published.compositionLockHash,
-      emptySeeds: true,
-    };
-    if (!verificationId)
-      throw new Error("Inventory worker verification was not observed.");
-    const verified = await request.get(
-      controlPlaneUrl(
-        "/verification-runs/" + encodeURIComponent(verificationId),
-      ),
+  expect(profile).toBeDefined();
+  expect(profile!.itemEntity).toBe("stock-item");
+  expect(profile!.movementEntity).toBe("stock-movement");
+  expect(graph.domain.seedData).toEqual([]);
+  expect(hashApplicationGraph(graph)).toBe(published.graphHash);
+  expect(published.sourceDraftRevisionId).toEqual(expect.any(String));
+  evidence.published = {
+    id: published.id,
+    applicationGraphId: published.applicationGraphId,
+    sourceDraftRevisionId: published.sourceDraftRevisionId,
+    graphHash: published.graphHash,
+    compositionLockHash: published.compositionLockHash,
+    emptySeeds: true,
+  };
+  const verificationId = evidence.verificationRunId;
+  if (typeof verificationId !== "string")
+    throw new Error("Inventory worker verification was not observed.");
+  const verified = await request.get(
+    controlPlaneUrl("/verification-runs/" + encodeURIComponent(verificationId)),
+  );
+  expect(verified.ok()).toBe(true);
+  const run = object(await verified.json()),
+    result = object(run.evidence),
+    steps = result.steps;
+  expect(
+    verifiedConsumerEvidence(run, preview.compilationId, verificationId),
+  ).toBe(evidence.verificationStepCount);
+  expect(Array.isArray(steps)).toBe(true);
+  expect(
+    (steps as Json[]).some(
+      (step) =>
+        step.stepId === "inventory-stock-lifecycle" && step.status === "passed",
+    ),
+  ).toBe(true);
+  evidence.worker = {
+    verificationRunId: verificationId,
+    evidenceDigest: digest(JSON.stringify(result)),
+    inventoryJourneyPassed: true,
+  };
+  const fingerprint = async () => {
+    const match = await readPublished();
+    return digest(
+      JSON.stringify({
+        graph: match.graph,
+        compositionLock: match.compositionLock,
+        graphHash: match.graphHash,
+        compositionLockHash: match.compositionLockHash,
+      }),
     );
-    expect(verified.ok()).toBe(true);
-    const run = object(await verified.json()),
-      result = object(run.evidence),
-      steps = result.steps;
-    expect(Array.isArray(steps)).toBe(true);
-    expect(
-      (steps as Json[]).some(
-        (step) =>
-          step.stepId === "inventory-stock-lifecycle" &&
-          step.status === "passed",
-      ),
-    ).toBe(true);
-    evidence.worker = {
-      verificationRunId: verificationId,
-      evidenceDigest: digest(JSON.stringify(result)),
-      inventoryJourneyPassed: true,
-    };
-    const publishedPath =
-      "/application-graphs/" +
-      encodeURIComponent(String(published.applicationGraphId)) +
-      "/published-revisions";
-    const fingerprint = async () => {
-      const response = await request.get(controlPlaneUrl(publishedPath));
-      expect(response.ok()).toBe(true);
-      const rows = (await response.json()) as Json[];
-      const match = rows.find((row) => row.id === published!.id);
-      if (!match) throw new Error("Inventory Published revision missing.");
-      return digest(
-        JSON.stringify({
-          graph: match.graph,
-          compositionLock: match.compositionLock,
-          graphHash: match.graphHash,
-          compositionLockHash: match.compositionLockHash,
-        }),
-      );
-    };
-    return {
-      preview,
-      profile: profile!,
-      publishedFingerprint: await fingerprint(),
-      fingerprint,
-    };
-  } finally {
-    page.off("response", observe);
-  }
+  };
+  return {
+    preview,
+    profile: profile!,
+    publishedFingerprint: await fingerprint(),
+    fingerprint,
+  };
 }

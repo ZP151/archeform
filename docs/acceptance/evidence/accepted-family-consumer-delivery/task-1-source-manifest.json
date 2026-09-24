@@ -1,0 +1,30 @@
+{
+  "baseCommit": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "state": "source-reviewed-deterministic-qa-passed-actual-acceptance-pending",
+  "files": [
+    {
+      "path": "packages/capabilities/src/product-composer.ts",
+      "sha256": "61363688be8a5f399651d0b116712512dc71957639c080e0a14b221ccefc33c6"
+    },
+    {
+      "path": "packages/capabilities/src/plan-alternatives.ts",
+      "sha256": "1c12bdcc0faaae9c8f4e4e44e9a6d299333be35a3b6c782f9adc7a669602ad15"
+    },
+    {
+      "path": "packages/capabilities/src/index.ts",
+      "sha256": "3fc892f15bdfa9ed8a8163e0ea28a901562ff9837c42ab307e8325c91facf4c0"
+    },
+    {
+      "path": "packages/capabilities/test/plan-alternatives.test.ts",
+      "sha256": "dc773bcef2dac2e9c75d26cee2fc3419292b83ef8829ef2758b0a4babf4b3955"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definition-family-registry.ts",
+      "sha256": "4e70d742bfef607c5f163a39ad3000e2ab8eff19799b650b4c67dc9be87fa21d"
+    },
+    {
+      "path": "packages/adapters/test/content-directory-definition.test.ts",
+      "sha256": "6dc1d40d7f624a8d65fe076050a2f36f3bca12436c360f2af719992598f27a84"
+    }
+  ]
+}

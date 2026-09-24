@@ -1,0 +1,53 @@
+{
+  "controllerRoutes": [
+    "@Get('appointment-availability')",
+    "@Get(':entity/:recordId/appointment-summary')",
+    "@Get(':entity/:recordId/appointment-history')",
+    "@Get(\"health\") health() { return { application: \"Definition Data Baseline\", status: \"ok\" }; }",
+    "@Get('audit')",
+    "@Get('capability-events')",
+    "@Get(':entity')",
+    "@Get(':entity/:recordId')",
+    "@Post(':entity')",
+    "@Post(':entity/:recordId/events/:event')"
+  ],
+  "hasUpdateRoute": false,
+  "hasRuntimeUpdate": false,
+  "setupPermissions": [
+    {
+      "role": "administrator",
+      "resource": "service",
+      "actions": ["create", "read", "update", "manage"]
+    },
+    {
+      "role": "administrator",
+      "resource": "schedule",
+      "actions": ["create", "read", "update", "manage"]
+    },
+    {
+      "role": "administrator",
+      "resource": "appointment",
+      "actions": ["read", "cancel"]
+    },
+    {
+      "role": "administrator",
+      "resource": "data-baseline-appointment-booking-v1-principal",
+      "actions": ["read"]
+    },
+    {
+      "role": "administrator",
+      "resource": "data-baseline-appointment-booking-v1-session",
+      "actions": ["read"]
+    }
+  ],
+  "files": [
+    {
+      "path": "api/src/main.ts",
+      "sha256": "9b7f9e517f57eab023ae3fed7597c90b97ff74bb057e2d0c806849166d7cad96"
+    },
+    {
+      "path": "api/src/application-runtime.ts",
+      "sha256": "981161d192524b6e4c994f0667f84c2b07ee6f30a9a0a22843bbf2110821d2ce"
+    }
+  ]
+}

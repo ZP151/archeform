@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Lightbulb, Sparkles } from "lucide-react";
+import { BRIEF_MAX_LENGTH } from "../../lib/product-journey/journey-model";
 
 /**
  * The primary creation decision: a free-form business requirement. The brief
@@ -17,6 +18,7 @@ export interface RequirementComposerProps {
   readonly onInterpret: () => void;
   readonly examplePrompts: readonly string[];
   readonly onApplyExample: (brief: string) => void;
+  readonly revision?: { readonly canSubmit: boolean };
   /** Retains the existing plan and lifecycle review for this one run. */
   readonly manualReview?: boolean;
   readonly onManualReviewChange?: (manual: boolean) => void;
@@ -35,6 +37,7 @@ export function RequirementComposer({
   onInterpret,
   examplePrompts,
   onApplyExample,
+  revision,
   manualReview = false,
   onManualReviewChange,
   commandFocusToken,
@@ -44,7 +47,11 @@ export function RequirementComposer({
   const [examplesOpen, setExamplesOpen] = useState(false);
   const briefRef = useRef<HTMLTextAreaElement>(null);
   const lastAutoFocusRequest = useRef(0);
-  const canInterpret = brief.trim().length > 0 && !busy;
+  const canInterpret =
+    brief.trim().length > 0 &&
+    brief.length <= BRIEF_MAX_LENGTH &&
+    !busy &&
+    (revision?.canSubmit ?? true);
 
   useEffect(() => {
     if (autoFocusRequest > lastAutoFocusRequest.current) {
@@ -62,10 +69,11 @@ export function RequirementComposer({
 
   return (
     <section aria-label="Describe a product">
-      <h2>Describe a product</h2>
+      <h2>{revision ? "Revise the requirement" : "Describe a product"}</h2>
       <p>
-        Tell us who it is for and what they need to accomplish; Archeform will
-        shape a complete first Draft.
+        {revision
+          ? "Earlier answers will be included. Change the requirement or an answer to start a new request."
+          : "Tell us who it is for and what they need to accomplish; Archeform will shape a complete first Draft."}
       </p>
       <textarea
         ref={briefRef}
@@ -74,18 +82,21 @@ export function RequirementComposer({
         onChange={(event) => onBriefChange(event.target.value)}
         placeholder="e.g. Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes…"
         rows={7}
+        maxLength={BRIEF_MAX_LENGTH}
       />
       <div className="composer-meta">
         <span className="composer-count">{brief.length} characters</span>
-        <button
-          type="button"
-          className="secondary-action"
-          aria-expanded={examplesOpen}
-          onClick={() => setExamplesOpen((open) => !open)}
-        >
-          <Lightbulb size={14} aria-hidden="true" />
-          Example prompts
-        </button>
+        {!revision && (
+          <button
+            type="button"
+            className="secondary-action"
+            aria-expanded={examplesOpen}
+            onClick={() => setExamplesOpen((open) => !open)}
+          >
+            <Lightbulb size={14} aria-hidden="true" />
+            Example prompts
+          </button>
+        )}
       </div>
       {examplesOpen && examplePrompts.length > 0 && (
         <ul className="example-prompts">
@@ -107,18 +118,20 @@ export function RequirementComposer({
           {error}
         </p>
       )}
-      <details className="composer-advanced-options">
-        <summary>Advanced options</summary>
-        <label>
-          <input
-            type="checkbox"
-            checked={manualReview}
-            disabled={busy}
-            onChange={(event) => onManualReviewChange?.(event.target.checked)}
-          />
-          Review the plan and delivery steps myself
-        </label>
-      </details>
+      {!revision && (
+        <details className="composer-advanced-options">
+          <summary>Advanced options</summary>
+          <label>
+            <input
+              type="checkbox"
+              checked={manualReview}
+              disabled={busy}
+              onChange={(event) => onManualReviewChange?.(event.target.checked)}
+            />
+            Review the plan and delivery steps myself
+          </label>
+        </details>
+      )}
       <button
         type="button"
         className="primary-action"
@@ -126,7 +139,7 @@ export function RequirementComposer({
         onClick={onInterpret}
       >
         <Sparkles size={16} aria-hidden="true" />
-        Create product
+        {revision ? "Start revised request" : "Create product"}
       </button>
     </section>
   );

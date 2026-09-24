@@ -11,16 +11,50 @@ Independent Terra QA and Sol final judgment close 0/0/0. The failed first attemp
 is preserved; the successful run proves concurrency, recovery and API restart
 replay. Exact owned runtime cleanup is complete; historical residuals stay open.
 
-Next, resolve the shared follow-up UX gap: an unsupported requirement that the
-user still needs currently produces a generic rejection. Preserve requirements
-and fail-closed behavior while proposing an understandable next action through
-the existing decision process. Next connect the already accepted Appointment,
+First close the shared follow-up UX gap under accepted ADR-0078: its source is
+implemented, focused checks/build and the eight-step definition regression pass,
+and independent task review/Terra deterministic QA close 0/0/0. Actual responsive Home acceptance is
+pending because automatic approval rejected local Workbench startup. Preserve
+that evidence gap. Next connect the already accepted Appointment,
 Directory and Inventory families to the consumer automatic-delivery flow. Their
 current actual acceptance uses technical Choose/Apply/Publish/Compile/Verify
 controls; runtime acceptance does not prove those user steps were removed.
-Proposed ADR-0079 must preserve exact family and immutable lifecycle safeguards.
-Then advance Work Orders with real assignment and resolution semantics; do not
-inflate coverage with renamed Task records.
+Accepted ADR-0079 preserves exact family and immutable lifecycle safeguards.
+Its shared-predicate and Workbench integration pass source review and deterministic
+QA; Directory/Inventory actual-case source now passes its scoped review after
+the cleanup-race correction, with actual execution still pending.
+Both slices' actual browser acceptance remains pending. Appointment's generated
+UI has a confirmed existing P1: API-only business acceptance missed incompatible
+form/action payloads and absent useful slot/history controls. ADR-0081 is accepted
+after a scoped clock/identifier repair. Its Graph/capability admission passes
+independent source review and deterministic QA; compiler availability/summary
+reads now pass both source gates with 163 focused checks. Presentation preflight
+found missing administrator setup updates. ADR-0082 is now accepted after removing
+the unjustified permanent lock on historically used schedules. Setup source review
+and independent Terra QA now pass at 0/0/0, with 240 checks and compiler types.
+Root completes customer/staff/admin controls and responsive evidence. Independent
+UI review closes its five P2 issues after two scoped corrections. The full 31-case
+run and final three-case pagination/type recheck pass. Task 3 source/component
+acceptance closes at 0/0/0. Task 4 default-selection source is frozen after the
+eight-step combined lane and independent source review at 0/0/0; independent
+deterministic QA passes 514 cases and closes source acceptance. Task 5 case-source
+review also closes at 0/0/0 after concrete retry, conflict, identity and cleanup
+repairs, with strict tracked types and 11 helper tests passing. Earlier 133-case
+integration evidence is retained; actual acceptance and shipped default
+replacement remain pending.
+Close that consumer source repair and case-source review before expanding the next
+family's source; keep blocked actual acceptance separate without promoting counts.
+The recorded startup restriction does not block other accepted local source work. Retain old
+immutable artifacts and narrower runtime evidence. ADR-0080 is accepted after correcting ordinary metadata recovery,
+mistaken-order cancellation and exact numeric admission. Work Orders Task 1 is now
+source-accepted after independent review and QA: 421 focused and compatibility
+checks pass, preserving all eleven physical historical outputs. The serialized
+Task 2 runtime, coordinated phone/desktop presentation, canonical definition and
+automatic-entry source now pass independent review and QA. The integrated
+definition regression passes all eight steps; the complete consumer-case source
+passes strict types, eighteen pure helper checks and independent review/QA.
+Actual PostgreSQL and browser execution remain pending. Preserve assignment,
+resolution and correction history; do not inflate coverage with renamed Task records.
 
 Choose mobile lookup/field actions and desktop management by the business job.
 Continuous delivery remains a separate outcome: remote CI and a compatible local

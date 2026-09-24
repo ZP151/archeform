@@ -61,6 +61,31 @@ describe("ClarificationPanel", () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
+  it("shows every prior submitted answer separately from editable values", () => {
+    act(() =>
+      root.render(
+        <ClarificationPanel
+          requirement={vagueSpec}
+          blueprintTitle="Approval"
+          questions={questions}
+          answers={{ "approval-object": "Edited" }}
+          submittedAnswers={{ "approval-object": "Submitted" }}
+          onAnswerChange={vi.fn()}
+          busy={false}
+          error={null}
+          onContinue={vi.fn()}
+        />,
+      ),
+    );
+    expect(container.textContent).toContain("Previous questions and answers");
+    expect(container.textContent).toContain("Submitted answer: Submitted");
+    expect(container.textContent).toContain("Submitted answer: Unanswered");
+    expect(
+      container.querySelector<HTMLInputElement>("#answer-approval-object")
+        ?.value,
+    ).toBe("Edited");
+    expect(container.querySelector("button")).toBeNull();
+  });
 
   it("asks every open question with a bounded answer field", () => {
     act(() => {

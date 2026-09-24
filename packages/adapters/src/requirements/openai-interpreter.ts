@@ -734,6 +734,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
                           "reject",
                           "confirm",
                           "reschedule",
+                          "read-availability",
                           "cancel",
                           "audit",
                           "manage",
@@ -853,6 +854,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
                         "reject",
                         "confirm",
                         "reschedule",
+                        "read-availability",
                         "cancel",
                         "audit",
                         "manage",
@@ -948,7 +950,7 @@ const interpretationInstructions = [
   "For generated-blueprint results, do not repeat, rephrase, or progressively reveal additional questions after answers are supplied. Leave only a genuinely new safety-critical ambiguity open; use conventional product defaults for any remaining noncritical detail.",
   "Classify every open question using its narrow Factory category. Use experience.visual-style only for optional aesthetic direction; authorization, visibility, role, business-rule, data, and integration questions are never optional visual preferences.",
   "Every workflow must be internally consistent with the actors and permissions: each transition's from and to must be states declared in the same workflow, the transition's actor must be a declared actor, and that actor's permissions must grant the transition's event as an action on the workflow's entity.",
-  "Transition events and permission grants may only use the bounded action vocabulary: create, read, update, delete, submit, approve, reject, confirm, reschedule, cancel, audit, manage, start, complete, reopen — never invent a verb outside this vocabulary.",
+  "Transition events and permission grants may only use the bounded action vocabulary: create, read, update, delete, submit, approve, reject, confirm, reschedule, read-availability, cancel, audit, manage, start, complete, reopen — never invent a verb outside this vocabulary.",
   "Every enum-typed field must include its options as a list of at least two distinct business values; every reference-typed field must name an entity declared in the same blueprint.",
   "Never duplicate any key: actors, entities, fields, workflows, states, transitions, page intents, and journeys must each be unique.",
   "Keys that become graph symbols — the requirementId and every actor, entity, workflow, page-intent, and workflow-state key — must be lowercase kebab-case: lowercase letters, digits, and hyphens only, starting with a lowercase letter. Never use camelCase for these keys (for example expense-approval, not expenseApproval).",
@@ -1316,16 +1318,9 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
             repairNote = FIXED_REPAIR_INSTRUCTION;
             continue;
           }
-          if (
-            (input.clarificationContext?.length ?? 0) > 0 &&
-            interpretation.clarifications.length > 0
-          ) {
-            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
-            repairNote = FIXED_REPAIR_INSTRUCTION;
-            continue;
-          }
+          let result: RequirementInterpretationResultV1;
           try {
-            return assertRequirementInterpretationResult({
+            result = assertRequirementInterpretationResult({
               apiVersion: "factory.requirement-interpretation-result/v1",
               interpretation,
               businessParameters:
@@ -1336,6 +1331,16 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
             repairNote = FIXED_REPAIR_INSTRUCTION;
             continue;
           }
+          if (
+            (input.clarificationContext?.length ?? 0) > 0 &&
+            result.interpretation.clarifications.length > 0
+          ) {
+            throw new RequirementInterpreterError(
+              "The registered definition scope remains unresolved.",
+              "definition_scope_unresolved",
+            );
+          }
+          return result;
         }
 
         const spec = reconcileClarificationAnswers(

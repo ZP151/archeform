@@ -1,0 +1,90 @@
+{
+  "baseCommit": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "state": "frozen-pending-browser-acceptance",
+  "files": [
+    {
+      "path": "apps/workbench/app/api/requirements/interpret/route.test.ts",
+      "sha256": "fcb3881bea05e40a28ccff68ec0725f898705717919d6fd8c7a713591cca8720"
+    },
+    {
+      "path": "apps/workbench/components/journey/clarification-panel.test.tsx",
+      "sha256": "61376b8bf2e64e969bf1451664e378ac915d04e7e376729e6793d24e62449c81"
+    },
+    {
+      "path": "apps/workbench/components/journey/clarification-panel.tsx",
+      "sha256": "606da176df7a86d563b57fd25443f785b86eb1c56a85a777d336939ceb03ea4c"
+    },
+    {
+      "path": "apps/workbench/components/journey/requirement-composer.test.tsx",
+      "sha256": "58006d8b13f11e0667fc0cbf841cf5894d90755d8898c6a4bb50061043eb8285"
+    },
+    {
+      "path": "apps/workbench/components/journey/requirement-composer.tsx",
+      "sha256": "28406e37171bcd529699aeabfe9254f821fe66a4b84206c693297002be472eec"
+    },
+    {
+      "path": "apps/workbench/components/workbench-home.test.tsx",
+      "sha256": "cd9cd0cabc709d9c0f2b10ea8d79d066236d8c8fcda4838f658e8e9764800203"
+    },
+    {
+      "path": "apps/workbench/components/workbench-home.tsx",
+      "sha256": "17c782671f457b5f9f428f5e2f6b87fa6588e0733418dc91e3ab981b906e5d26"
+    },
+    {
+      "path": "apps/workbench/components/workbench.tsx",
+      "sha256": "06d932996400e0acfb3bc51e615d7b872a11591ec9f3bfa7ec60dd45a813f3c1"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/interpret-contract.test.ts",
+      "sha256": "10ab87f28fa04ae8f9c9efab07b89555ca60ed6c1d10d3290f324aa8d5b04ae4"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/interpret-contract.ts",
+      "sha256": "9426193fc1423db403ec28743c90c4edd7a82401fc928c9393dc0f30401b74cd"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/interpret-payload.ts",
+      "sha256": "20d0bb89951f54840c733697851d4d12c4b78861b707efe1ab3553dd20fd7578"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/journey-model.test.ts",
+      "sha256": "2d12cf56477e8460dab6aed0aff8aaabbb92961a52dbb77cb764106d886a572f"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/journey-model.ts",
+      "sha256": "93992b7407ee18516b71e8d447f0243d8f1960545dfbf042a78476777eafb2fe"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-consumer-generation.test.tsx",
+      "sha256": "7f91811926dabe72c53c2b754ce5fb4f283dfdd505b90299334fd156bc2fe25e"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-product-journey.test.tsx",
+      "sha256": "210606b7852cedb5a14d7d848ad0172a6b4c697f6b41bd8d13a190c1fabf51bd"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-product-journey.ts",
+      "sha256": "df1fb2b4a884a439fbec32de947d95a9c93835941735d1d7e4b72854c840da68"
+    },
+    {
+      "path": "packages/adapters/src/requirements/openai-interpreter.ts",
+      "sha256": "d82627b5cb79461295ddd8c28baef2ebc90ab5f0e186184b7d505e71bc6cfcbe"
+    },
+    {
+      "path": "packages/adapters/src/requirements/requirement-interpreter.ts",
+      "sha256": "9c022e748731cbab8de9bc9899ce98ed4dd94b66ae15244c5541c182e956dee3"
+    },
+    {
+      "path": "packages/adapters/test/requirement-interpreter.test.ts",
+      "sha256": "eaff80af5776b0c8fe67a16fa9ba018611627f8646e02a27f11f4292161f9015"
+    },
+    {
+      "path": "packages/adapters/test/supplies-stockroom-definition.test.ts",
+      "sha256": "f2e7f7145a9c86e813b5827285fce49e85ed389395c2d0c702579ed0c3427c5d"
+    },
+    {
+      "path": "e2e/unresolved-requirement-follow-up.spec.ts",
+      "sha256": "6ceb60bdb94df6a17c3fd227c8cecafc7461249a5751034ea3c6907d879e00d0"
+    }
+  ]
+}

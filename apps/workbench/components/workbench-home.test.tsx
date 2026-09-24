@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FixtureRequirementInterpreter } from "@factory/adapters";
+import { projectDefinitionSelection } from "../../../packages/adapters/src/requirements/definition-selection-catalogue";
 
 import { metadata } from "../app/layout";
 import type { WorkbenchApplicationSummary } from "../lib/control-plane-client";
@@ -322,6 +323,62 @@ describe("WorkbenchHome", () => {
     expect(delivery?.textContent).toMatch(/reopened before correction/);
     expect(delivery?.textContent).not.toMatch(/Restaurant|approval workflow/);
   });
+
+  it.each([
+    ["appointment", "Appointment", /book.*confirm.*reschedule.*cancel/i],
+    ["content-directory", "Directory", /curator.*show.*hide/i],
+    ["inventory-operations", "Inventory", /receive.*issue.*adjust/i],
+  ] as const)(
+    "reuses the delivery status and recovery controls for %s",
+    (family, label, businessCopy) => {
+      const retry = vi.fn();
+      const render = (ready: boolean) =>
+        act(() =>
+          root.render(
+            <WorkbenchHome
+              applications={[]}
+              loading={false}
+              onCompile={vi.fn()}
+              onOpen={vi.fn()}
+              journey={briefJourney({
+                consumer: {
+                  family,
+                  manualReview: false,
+                  setManualReview: vi.fn(),
+                  active: true,
+                  status: ready
+                    ? `Your local ${label} app is ready.`
+                    : "Delivery paused. Review the delivery and try again.",
+                  readyUrl: ready ? "http://127.0.0.1:34123" : null,
+                  retry,
+                },
+              })}
+            />,
+          ),
+        );
+      render(false);
+      const delivery = container.querySelector(
+        `[aria-label="${label} delivery"]`,
+      );
+      expect(delivery?.querySelector("h2")?.textContent).toBe(
+        `Your ${label} app`,
+      );
+      expect(delivery?.textContent).toMatch(businessCopy);
+      expect(delivery?.textContent).toMatch(/local demo/);
+      expect(delivery?.textContent).not.toMatch(
+        /Restaurant|simulated payments|sample menu/,
+      );
+      expect(delivery?.querySelector("a")).toBeNull();
+      act(() => delivery?.querySelector<HTMLButtonElement>("button")?.click());
+      expect(retry).toHaveBeenCalledTimes(1);
+      render(true);
+      expect(
+        container
+          .querySelector(`[aria-label="${label} delivery"] a`)
+          ?.getAttribute("href"),
+      ).toBe("http://127.0.0.1:34123");
+    },
+  );
 
   it("communicates curated-template loading, empty, and bounded retry states", () => {
     const onRetryTemplates = vi.fn();
@@ -647,6 +704,54 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("2 acceptance journeys");
   });
 
+  it.each(["planning", "reviewing"] as const)(
+    "keeps the historical Appointment explanation visible during %s",
+    (stage) => {
+      const interpretation = projectDefinitionSelection({
+        definitionKey: "appointment-booking-v1",
+        disposition: "supported-default",
+        requirementId: "historical-appointment",
+        title: "Historical appointments",
+        outcome: "Inspect the historical application.",
+        materialQuestions: [],
+        businessParameters: null,
+      });
+      const manualReason =
+        "Historical Appointment V1 is available for manual inspection without the supported consumer workspace.";
+      act(() =>
+        root.render(
+          <WorkbenchHome
+            applications={[]}
+            loading={false}
+            onCompile={vi.fn()}
+            onOpen={vi.fn()}
+            journey={briefJourney({
+              stage,
+              requirement: interpretation.spec,
+              planAlternatives,
+              consumer: {
+                family: null,
+                active: false,
+                manualReview: false,
+                setManualReview: vi.fn(),
+                status: null,
+                readyUrl: null,
+                retry: vi.fn(),
+                manualReason,
+              },
+            })}
+          />,
+        ),
+      );
+      expect(container.querySelector('[role="status"]')?.textContent).toBe(
+        manualReason,
+      );
+      expect(container.textContent).toContain(
+        stage === "planning" ? "Choose Standard" : "Apply to Draft",
+      );
+    },
+  );
+
   it("reviews the approved plan Diff before applying it to the Draft", () => {
     act(() => {
       root.render(
@@ -666,6 +771,62 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("Plan Diff accepted");
     expect(container.textContent).toContain("sha256:diff");
     expect(container.textContent).toContain("Apply to Draft");
+  });
+
+  it("keeps submitted questions and answers visible beside one explicit revision action", async () => {
+    const prior = await new FixtureRequirementInterpreter().interpret({
+      brief: vagueBrief,
+      answers: {},
+    });
+    const questions = prior.interpretation.clarifications.flatMap(
+      ({ questions }) => questions,
+    );
+    const onRevise = vi.fn();
+    const onInterpret = vi.fn();
+    act(() =>
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            stage: "failed",
+            brief: vagueBrief,
+            requirement: prior.interpretation.spec,
+            blueprintTitle: prior.interpretation.blueprint.title,
+            openQuestions: questions,
+            answers: { [questions[0]!.key]: "Edited answer" },
+            onInterpret,
+            recovery: {
+              submitted: {
+                brief: vagueBrief,
+                priorInterpretation: prior,
+                answers: { [questions[0]!.key]: "Submitted answer" },
+              },
+              canSubmit: true,
+              onSubmit: onRevise,
+              onStartOver: vi.fn(),
+            },
+          })}
+        />,
+      ),
+    );
+    expect(container.textContent).toContain("Previous questions and answers");
+    expect(container.textContent).toContain("Submitted answer");
+    expect(container.textContent).toContain("Unanswered");
+    expect(
+      container.querySelector<HTMLInputElement>(`#answer-${questions[0]!.key}`)
+        ?.value,
+    ).toBe("Edited answer");
+    const primary = container.querySelectorAll<HTMLButtonElement>(
+      "button.primary-action",
+    );
+    expect(primary).toHaveLength(1);
+    expect(primary[0]!.textContent).toContain("Start revised request");
+    act(() => primary[0]!.click());
+    expect(onRevise).toHaveBeenCalledOnce();
+    expect(onInterpret).not.toHaveBeenCalled();
   });
 
   it("returns to the composer with the bounded error after a failed journey", () => {

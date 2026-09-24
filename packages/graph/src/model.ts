@@ -1,3 +1,4 @@
+import { matchServiceWorkOrdersGraphV1 } from "./service-work-orders-graph-witness.js";
 import { matchInventoryOperationsGraphV1 } from "./inventory-operations-graph-witness.js";
 import {
   quantityUnitPriceTotalSchema,
@@ -533,6 +534,7 @@ function numericFieldDomainIssues(
 ): GraphValidationIssue[] {
   const issues: GraphValidationIssue[] = [];
   const inventory = matchInventoryOperationsGraphV1(graph);
+  const workOrders = matchServiceWorkOrdersGraphV1(graph);
   graph.domain.entities.forEach((entity, entityIndex) => {
     entity.fields.forEach((field, fieldIndex) => {
       if (field.numericDomain === undefined) return;
@@ -580,7 +582,10 @@ function numericFieldDomainIssues(
       });
       if (
         !hasWitness &&
-        !inventory?.numericFields.some(
+        ![
+          ...(inventory?.numericFields ?? []),
+          ...(workOrders?.numericFields ?? []),
+        ].some(
           (coordinate) =>
             coordinate.entityKey === entity.key &&
             coordinate.fieldKey === field.key,

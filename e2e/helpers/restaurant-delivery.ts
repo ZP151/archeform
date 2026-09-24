@@ -194,11 +194,13 @@ export async function readProductCreationDiagnostic(
     });
   return {
     failureCode:
-      raw?.failureCode !== null && allowedFailureCodes.has(raw?.failureCode)
+      typeof raw?.failureCode === "string" &&
+      allowedFailureCodes.has(raw.failureCode)
         ? raw.failureCode
         : "unknown",
     failurePhase:
-      raw?.failurePhase !== null && allowedFailurePhases.has(raw?.failurePhase)
+      typeof raw?.failurePhase === "string" &&
+      allowedFailurePhases.has(raw.failurePhase)
         ? raw.failurePhase
         : "unknown",
     journeyOutcome: raw?.journeyOutcome === "failed" ? "failed" : "unknown",
@@ -321,5 +323,5 @@ export async function expectCompletedPhase(
       { timeout },
     )
     .not.toBe(false);
-  expect(marker === true).toBe(true);
+  expect(marker).toBe(true);
 }

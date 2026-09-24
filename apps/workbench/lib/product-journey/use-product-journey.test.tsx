@@ -20,6 +20,7 @@ import {
 } from "./use-product-journey";
 import { ANSWER_MAX_LENGTH } from "./journey-model";
 import type { WorkbenchProductApplied } from "../control-plane-client";
+import type { InterpretPayload } from "./interpret-payload";
 
 const fixtureInterpreter = new FixtureRequirementInterpreter();
 
@@ -323,6 +324,161 @@ describe("useProductJourney", () => {
     container.remove();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("revises an unresolved request explicitly with independent answers and immutable submitted context", async () => {
+    const initial = await fixtureInterpreter.interpret({
+      brief: vagueBrief,
+      answers: {},
+    });
+    const requests: InterpretPayload[] = [];
+    let networkFailure = false;
+    const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.endsWith("/api/requirements/interpret"))
+        throw new Error("Unexpected lifecycle call");
+      requests.push(JSON.parse(String(init?.body)));
+      if (requests.length === 1)
+        return new Response(JSON.stringify(initial), { status: 200 });
+      if (networkFailure) throw new Error("Network unavailable");
+      return new Response(
+        JSON.stringify({
+          error: {
+            apiVersion: "factory.requirement-interpretation-error/v2",
+            code: "requirement.definition_scope_unresolved",
+          },
+        }),
+        { status: 422 },
+      );
+    });
+    vi.stubGlobal("fetch", fetcher);
+    act(() => controller().setBriefDraft(vagueBrief));
+    await act(async () => controller().submitBrief());
+    const [first, second] = controller().openQuestions;
+    act(() => {
+      controller().setAnswer(first!.key, "First need remains required.");
+      controller().setAnswer(second!.key, "Second need remains required.");
+    });
+    await act(async () => controller().answerQuestions());
+    expect(controller().state.failure?.code).toBe(
+      "requirement.definition_scope_unresolved",
+    );
+    expect(controller().state.unresolvedRequest?.answers[first!.key]).toBe(
+      "First need remains required.",
+    );
+    expect(controller().canSubmitRevisedRequirement).toBe(false);
+    await act(async () => controller().submitRevisedRequirement());
+    await act(async () => controller().submitBrief());
+    expect(requests).toHaveLength(2);
+    act(() =>
+      controller().setAnswer(
+        first!.key,
+        "Accept the first supported scope only.",
+      ),
+    );
+    expect(controller().state.unresolvedRequest?.answers[first!.key]).toBe(
+      "First need remains required.",
+    );
+    await act(async () => {
+      await Promise.all([
+        controller().submitRevisedRequirement(),
+        controller().submitRevisedRequirement(),
+      ]);
+    });
+    expect(requests).toHaveLength(3);
+    expect(requests[2]!.priorInterpretation).toEqual(initial);
+    expect(requests[2]!.answers).toEqual({
+      [first!.key]: "Accept the first supported scope only.",
+      [second!.key]: "Second need remains required.",
+    });
+    expect(requests[2]!.clarificationContext).toHaveLength(2);
+    expect(controller().state.stage).toBe("failed");
+    networkFailure = true;
+    act(() => controller().setAnswer(first!.key, ""));
+    await act(async () => controller().submitRevisedRequirement());
+    expect(requests[3]!.answers[first!.key]).toBeUndefined();
+    expect(requests[3]!.clarificationContext).toHaveLength(1);
+    expect(requests[3]!.priorInterpretation).toEqual(initial);
+    expect(
+      controller().state.unresolvedRequest?.answers[first!.key],
+    ).toBeUndefined();
+    expect(controller().state.unresolvedRequest?.answers[second!.key]).toBe(
+      "Second need remains required.",
+    );
+    expect(controller().canSubmitRevisedRequirement).toBe(false);
+    expect(fetcher).toHaveBeenCalledTimes(requests.length);
+    act(() => controller().reset());
+    expect(controller().state.unresolvedRequest).toBeNull();
+    expect(controller().answers).toEqual({});
+  });
+
+  it("preserves pending revision edits and suppresses a stale refusal after explicit reset", async () => {
+    const prior = await fixtureInterpreter.interpret({
+      brief: vagueBrief,
+      answers: {},
+    });
+    const refusal = () =>
+      new Response(
+        JSON.stringify({
+          error: {
+            apiVersion: "factory.requirement-interpretation-error/v2",
+            code: "requirement.definition_scope_unresolved",
+          },
+        }),
+        { status: 422 },
+      );
+    let finish: ((response: Response) => void) | undefined;
+    let count = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        count += 1;
+        if (count === 1)
+          return new Response(JSON.stringify(prior), { status: 200 });
+        if (count === 2) return refusal();
+        return new Promise<Response>((resolve) => {
+          finish = resolve;
+        });
+      }),
+    );
+    act(() => controller().setBriefDraft(vagueBrief));
+    await act(async () => controller().submitBrief());
+    const key = controller().openQuestions[0]!.key;
+    act(() => controller().setAnswer(key, "Keep the requirement."));
+    await act(async () => controller().answerQuestions());
+    act(() => controller().setBriefDraft("x".repeat(12_001)));
+    await act(async () => controller().submitRevisedRequirement());
+    expect(count).toBe(2);
+    act(() => controller().setBriefDraft(`${vagueBrief} Changed scope.`));
+    let pending: Promise<void> | undefined;
+    act(() => {
+      pending = controller().submitRevisedRequirement();
+    });
+    act(() => controller().setAnswer(key, "Editing while pending."));
+    expect(controller().state.unresolvedRequest?.answers[key]).toBe(
+      "Keep the requirement.",
+    );
+    await act(async () => controller().submitRevisedRequirement());
+    expect(count).toBe(3);
+    await act(async () => {
+      finish!(refusal());
+      await pending;
+    });
+    expect(controller().answers[key]).toBe("Editing while pending.");
+    expect(controller().state.unresolvedRequest?.answers[key]).toBe(
+      "Keep the requirement.",
+    );
+    act(() => {
+      pending = controller().submitRevisedRequirement();
+    });
+    act(() => controller().reset());
+    await act(async () => {
+      finish!(refusal());
+      await pending;
+    });
+    expect(controller().state.stage).toBe("brief");
+    expect(controller().state.unresolvedRequest).toBeNull();
+    expect(controller().state.failure).toBeNull();
+    expect(controller().briefDraft).toBe("");
   });
 
   it("interprets a brief into the planning stage with a checksum-bound blueprint", async () => {

@@ -1,0 +1,36 @@
+{
+  "baseCommit": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "adrSha256": "65f867c7afeeefc892b8493e508d86d5d212302fcc247e927843ce05b6672adc",
+  "state": "source-review-and-deterministic-qa-passed",
+  "writer": "appointment_v2_compiler_reads",
+  "files": [
+    {
+      "path": "packages/compiler/src/index.ts",
+      "sha256": "ddc902d453c8564d4e809e67bad94e9ef59550748c1ee267dbdbb44aeb915cd4"
+    },
+    {
+      "path": "packages/compiler/src/appointment-compilation-admission.ts",
+      "sha256": "4da2c09081eb4fa97bdec56a15925c234223aa1389451c446b86ee47b2e0eae0"
+    },
+    {
+      "path": "packages/compiler/test/definition-data-compatibility.test.ts",
+      "sha256": "df9965ed38f5125393a1b99869c7bbed842128e60b1cf90e7abdd3f09e13da32"
+    },
+    {
+      "path": "packages/compiler/src/appointment-consumer-contract.ts",
+      "sha256": "55865f29e5b85d1550f2ea4cd17e2ce33da53699b518193d05e546303500370d"
+    },
+    {
+      "path": "packages/compiler/src/appointment-consumer-read.ts",
+      "sha256": "c4a5865b4e5d8516d04bd9bff38dce6853b9f674432955b6ef089b38355fa468"
+    },
+    {
+      "path": "packages/compiler/test/appointment-consumer-compilation.test.ts",
+      "sha256": "5c473c3e480044f9bb91c09489df44e115108851f24bbdb45e7754ce65cd04e8"
+    },
+    {
+      "path": "packages/compiler/test/appointment-consumer-read.test.ts",
+      "sha256": "2b4781bb64a28a2bdb84c6f53b7a1c7270e5e6830c4dba6b45ffa8ea696fa35c"
+    }
+  ]
+}

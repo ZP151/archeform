@@ -8,6 +8,37 @@ const brief =
   "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
 
 describe("interpretation response contract", () => {
+  it("accepts only the new code-only V2 refusal pair", () => {
+    const error = {
+      apiVersion: "factory.requirement-interpretation-error/v2",
+      code: "requirement.definition_scope_unresolved",
+    };
+    expect(
+      parseInterpretationResponse(422, { error }, "clarification"),
+    ).toMatchObject({ ok: false, failure: { code: error.code } });
+    for (const [status, candidate] of [
+      [400, error],
+      [
+        422,
+        { ...error, apiVersion: "factory.requirement-interpretation-error/v1" },
+      ],
+      [422, { ...error, code: "requirement.output_invalid" }],
+      [422, { ...error, message: "untrusted" }],
+      [422, { ...error, details: {} }],
+      [
+        422,
+        { ...error, apiVersion: "factory.requirement-interpretation-error/v3" },
+      ],
+    ] as const) {
+      expect(
+        parseInterpretationResponse(
+          status,
+          { error: candidate },
+          "clarification",
+        ),
+      ).toMatchObject({ ok: false, failure: { code: "requirement.failed" } });
+    }
+  });
   it("accepts only an exact, strictly revalidated success envelope", async () => {
     const interpretation = await new FixtureRequirementInterpreter().interpret({
       brief,

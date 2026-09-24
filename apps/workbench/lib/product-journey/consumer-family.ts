@@ -6,10 +6,49 @@ import {
   type CompositionPlanV1,
   type ProductBlueprintV1,
 } from "@factory/graph";
+import {
+  isAppointmentBookingBlueprint,
+  matchExactConsumerFamilyPlan,
+} from "@factory/capabilities";
 
 import type { ProductJourneyController } from "./use-product-journey";
 
-export type ConsumerFamily = "restaurant-ordering" | "approval" | "task";
+export type ConsumerFamily =
+  | "restaurant-ordering"
+  | "approval"
+  | "task"
+  | "appointment"
+  | "content-directory"
+  | "service-work-orders"
+  | "inventory-operations";
+
+export function consumerManualReasonFor(
+  journey: ProductJourneyController,
+): string | null {
+  try {
+    const blueprint = parseProductBlueprint(
+      journey.state.interpretation?.interpretation.blueprint,
+    );
+    return isAppointmentBookingBlueprint(blueprint)
+      ? "This historical Appointment V1 revision is available for manual inspection. It does not include the supported consumer workspace. Start a new Appointment request to use the current workspace; existing revisions stay unchanged."
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function consumerFamilyLabel(family: ConsumerFamily | null): string {
+  const labels: Record<ConsumerFamily, string> = {
+    "restaurant-ordering": "Restaurant",
+    approval: "Approval",
+    task: "Task",
+    appointment: "Appointment",
+    "content-directory": "Directory",
+    "inventory-operations": "Inventory",
+    "service-work-orders": "Work Orders",
+  };
+  return labels[family ?? "restaurant-ordering"];
+}
 
 const approvalLocks = new Map([
   ["core.crud", "1.0.1"],
@@ -209,11 +248,18 @@ export function consumerFamilyFor(
     const blueprint = parseProductBlueprint(interpretation?.blueprint);
     const checksum = hashRequirementSpec(spec);
     if (
+      spec.openQuestions.length !== 0 ||
       blueprint.requirementChecksum !== checksum ||
       plan.requirementChecksum !== checksum ||
       plan.compatibility.result !== "compatible"
     )
       return null;
+    const acceptedFamily = matchExactConsumerFamilyPlan(
+      blueprint,
+      spec.requirementId,
+      plan,
+    );
+    if (acceptedFamily !== null) return acceptedFamily;
     if (
       plan.capabilityLocks.length !== approvalLocks.size ||
       new Set(plan.capabilityLocks.map(({ key }) => key)).size !==

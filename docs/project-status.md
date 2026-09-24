@@ -6,10 +6,31 @@ Updated: 2026-09-24
 
 An unbudgeted Goal now drives the [September 24 execution route](superpowers/plans/2026-09-24-family-expansion-and-delivery.md).
 The first new family is Resource Directory, followed by Inventory Operations.
-Work Orders, Customer Requests, Event Registration and Sales Pipeline are candidate
-waves, not registered or accepted products. Mobile browsing/field work and desktop
+Work Orders has accepted source evidence and awaits actual acceptance; Customer
+Requests, Event Registration and Sales Pipeline remain candidate waves. These
+four waves have not added an accepted delivered product.
+Mobile browsing/field work and desktop
 management are selected by actual use; dual-surface products must complete their
 cross-role journey. The original eight-definition compatibility baseline is unchanged.
+
+### Immediate product and delivery outcomes
+
+The combined source checkpoint now passes full tests and typechecks (29/29 tasks
+each). A full-suite export-allowlist omission is corrected with an exact scoped
+test update and added to the existing fast regression. The controller is preparing
+an explicitly unfinished branch checkpoint; actual delivery remains open. See the
+[source checkpoint](acceptance/evidence/consumer-source-checkpoint/README.md).
+
+| Outcome                       | Current evidence                                                                                                                              | Next acceptance                                                                                              |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Scenario-appropriate surfaces | Work Orders source review and independent QA pass, including 137 runtime/contract and 37 component checks                                     | Run the actual shared-data job; component tests do not establish PostgreSQL acceptance                       |
+| Ordinary-user generation      | Work Orders definition and automatic entry pass independent source review and QA: 513 focused cases plus eight shared helper cases            | Supported brief to useful app without technical lifecycle actions; retain material unsupported requirements  |
+| Reusable regression           | Integrated definition lane passes all eight steps; complete repository formatting passes; CI now selects definition and case-source checks    | Push reviewed source and verify remote CI; execute actual consumer cases when the startup restriction clears |
+| Continuous delivery           | Prior immutable local A/B rehearsal proves compatible update, data retention, failed-readiness recovery, rollback and separate backup restore | One authorized hosted pilot with a stable HTTPS address and the same retention/recovery evidence             |
+
+Component evidence is not actual PostgreSQL or hosted availability. Work Orders
+does not increase delivered counts. The current automatic-approval startup block
+still prevents the pending actual local consumer cases; source work continues.
 
 **Current execution:** Inventory Operations is locally accepted after its actual
 PostgreSQL-backed worker and complete product journey. Readiness is 199,288 ms;
@@ -21,13 +42,92 @@ desktop, recovery and dark images; Sol final judgment closes P0/P1/P2 0/0/0.
 Exact current Preview and outer resources are removed. The failed first test
 locator attempt is preserved. See [Inventory acceptance](acceptance/inventory-operations.md).
 
-Coverage is now ten registered and locally accepted definitions across six
-demonstrated runtime families. The expanded eight-step definition lane and
-retained source reviews remain valid. Next, proposed ADR-0078 addresses the
-shared unresolved-requirement follow-up experience. Proposed ADR-0079 next connects
+The delivered baseline remains ten logical definitions across six demonstrated
+runtime families, subject to the reopened Appointment UI acceptance below. The
+working catalogue now has twelve physical rows, representing eleven logical
+definitions with the explicit Appointment V1/V2 replacement. Work Orders is a new
+source registration with accepted definition/runtime/UI evidence and does not
+increase delivered counts. Its complete actual-case source passes independent
+review and independent QA, including 18 pure helper cases and tracked no-emit
+types. Actual execution is still pending. See the
+[definition and case-source checkpoint](acceptance/evidence/service-work-orders/definition-consumer-source.md).
+The expanded eight-step definition lane and
+retained source reviews remain valid. Latest pushed branch HEAD `7a85d6ef` has
+[green CI](https://github.com/ZP151/archeform/actions/runs/35933220175) in both Node
+22.11.0 and 22.x jobs. That run covers the delivered base, not the current
+uncommitted ADR-0078/0079/0081 source. Accepted ADR-0078 now has implemented
+context-preserving requirement recovery, passing focused checks/build and the
+root's eight-step definition regression. Task review and independent Terra
+deterministic QA close 0/0/0 (192 adapter and 129 Workbench cases); actual mobile
+and desktop Home acceptance remains pending because automatic approval rejected
+the local Workbench startup command (`blocked by policy`). No server started.
+Accepted ADR-0079 next connects
 accepted Appointment/Directory/Inventory to automatic consumer delivery; their
-current runtime cases still use technical lifecycle controls. Work Orders then
-advances real assignment and resolution behavior. No implementation starts from an
+current runtime cases still use technical lifecycle controls. Its shared predicate
+implementation passes independent source review and Terra deterministic QA.
+Workbench integration is now implemented and frozen after the serial handoff:
+274 focused cases, typecheck and production build pass; independent source review
+and Terra deterministic QA close 0/0/0. Recovery and three-family actual browser
+acceptance remain open. A source diagnosis confirms an existing P1 in Appointment:
+its generic UI sends incompatible API payloads and lacks usable slot selection
+and history. [Consumer UI acceptance is reopened](acceptance/evidence/appointment-booking/consumer-ui-gap.md);
+its old API/runtime evidence remains valid within that narrower scope. ADR-0081
+is now accepted after its clock/identifier repair, with independent standing
+review at 0/0/0. Directory/Inventory case-source review now closes after correcting
+a delayed Preview-creation ownership race. Its 10 helper tests pass; actual cases
+remain unrun. V2 Graph/capability admission now passes independent source review
+and Terra deterministic QA at 0/0/0: 48 Graph, 94 capability and 77 historical
+compiler compatibility checks, plus both typechecks. Compiler reads now pass
+independent source review and Terra QA, 163 focused checks and compiler types,
+after correcting an unbounded in-memory scan. Presentation preflight confirms
+that administrator setup editing has no generated API/runtime entry despite
+declared update grants. ADR-0082 now has exact-hash standing acceptance after
+removing a permanent history-only slot lock. Its setup implementation and duplicate
+JSON correction now pass independent source review and Terra QA at 0/0/0:
+240 focused checks and compiler typecheck, with all five source hashes stable.
+Root completes V2 customer/staff/admin presentation and facade integration after
+correcting concrete route, recovery and responsive defects. The independent UI
+review finds five P2 issues; the same reviewer closes all five after two scoped
+corrections at 0/0/0. Root's full 31-case run plus final three-case pagination/
+strict-TypeScript recheck pass, with compiler build and whitespace checks. Task 3
+source/component acceptance closes; the earlier 133-case run remains historical.
+See [correction evidence](acceptance/evidence/appointment-consumer-workspace/task-3-review-correction.md). Runtime acceptance,
+and shipped default replacement remain open. The serialized 21-path default
+integration is now frozen: focused checks and affected builds pass, the combined
+definitions lane passes all eight steps, and independent source review closes
+0/0/0. Independent Terra QA now passes 514 focused cases with all 23 frozen
+hashes unchanged; Task 4 source acceptance closes. The working catalogue has eleven
+physical rows but ten logical definitions and six demonstrated runtime families.
+The migrated Appointment case now passes strict tracked types and independent
+source review at 0/0/0 after correcting retry, conflict, identity and cleanup gaps.
+The review verifies five current and four baseline hashes; 11 shared helper tests
+pass. Actual consumer/runtime/visual execution remains open. Discovery and
+component checks do not establish actual consumer delivery.
+Work Orders ADR-0080 is accepted after one scoped repair for ordinary correction,
+cancellation and exact numeric admission. Its sixteen-path Graph/composition/
+private compiler admission implementation passes independent source review and QA:
+199 Graph, 43 capability and 110 compiler/compatibility checks pass, with all
+affected builds/types and eleven historical outputs unchanged. Root's separate
+obsolete Appointment assertion correction passes 69 related checks and joins the
+same review. Independent QA reruns all 421 cases and three typechecks at 0/0/0.
+The serialized five-path Task 2 transactional runtime implementation is now
+assigned to `work_orders_runtime`. See the [source report](acceptance/evidence/service-work-orders/task-1-source.md).
+The disjoint bounded worker implementation passes 164 selected checks and types
+plus independent source review/QA at 0/0/0; presentation implementation is assigned
+against the frozen three-principal/API contract. Neither is actual product evidence.
+Root subsequently reproduces a valid long-role fixture-ID failure outside those
+canonical tests. Verifier source acceptance was reopened; runtime/presentation
+writers stopped for the bounded shared identifier correction in ADR-0083. That
+repair now passes independent source review, Terra QA and final judgment at 0/0/0:
+27 compiler identity and 175 worker checks, including renamed, swapped and
+64/128-character roles. Runtime completion then repairs allocated SQL names;
+137 runtime/contract and 185 adjacent checks pass, with ten emitted Prisma schemas
+validated. Root connects the new UI through the public compiler: seven assembly
+and actual emitted-client component checks pass at 390/768/1440, with all eleven
+historical outputs unchanged. UI recovery/history work and the combined independent
+review continue. These source/component results do not increase delivered counts.
+Runtime acceptance, UI and definition admission remain later work, with no
+product-count increase. No implementation starts from an
 unaccepted proposal. Real-model, ordinary-user and hosted outcomes stay separate.
 
 | Business runtime     | Accepted definitions | Consumer delivery evidence boundary                                                                          |
@@ -35,7 +135,7 @@ unaccepted proposal. Real-model, ordinary-user and hosted outcomes stay separate
 | Restaurant Ordering  |                    1 | Existing automatic lifecycle path; local fixture scope                                                       |
 | Approval             |                    5 | Existing shared automatic eligibility; per-definition runtime acceptance is not a fresh automatic-entry test |
 | Task                 |                    1 | Existing automatic lifecycle path; local fixture scope                                                       |
-| Appointment          |                    1 | Accepted runtime; current consumer selector does not admit this family                                       |
+| Appointment          |                    1 | Accepted API/runtime; generated UI acceptance reopened for P1; automatic entry source awaits actual evidence |
 | Resource Directory   |                    1 | Accepted runtime; actual case uses explicit technical lifecycle controls                                     |
 | Inventory Operations |                    1 | Accepted runtime; actual case uses explicit technical lifecycle controls                                     |
 

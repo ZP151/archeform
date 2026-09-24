@@ -134,6 +134,10 @@ export {
   composeProductIntegration,
   deriveProductOperations,
   hasApprovalDecision,
+  isAppointmentBookingBlueprint,
+  isAppointmentConsumerWorkspaceBlueprint,
+  isContentDirectoryBlueprint,
+  isInventoryOperationsBlueprint,
   primaryListPage,
 } from "./product-composer.js";
 export type {
@@ -144,6 +148,7 @@ export type {
 } from "./product-composer.js";
 export {
   planProductAlternatives,
+  matchExactConsumerFamilyPlan,
   planProductRecipeAlternative,
 } from "./plan-alternatives.js";
 export type {

@@ -1,0 +1,400 @@
+{
+  "spec": {
+    "apiVersion": "factory.requirement-spec/v1",
+    "requirementId": "work-orders-fixture",
+    "outcome": "Dispatch work and retain assigned technician resolution history.",
+    "actors": [
+      {
+        "key": "dispatcher",
+        "label": "Dispatcher"
+      },
+      {
+        "key": "technician",
+        "label": "Technician"
+      }
+    ],
+    "domainConcepts": [
+      {
+        "key": "work-order",
+        "label": "Work order"
+      },
+      {
+        "key": "work-order-history",
+        "label": "Work order history"
+      }
+    ],
+    "workflows": [
+      {
+        "key": "fulfil-order",
+        "label": "Fulfil work order"
+      }
+    ],
+    "constraints": [],
+    "openQuestions": [],
+    "acceptanceScenarios": [
+      {
+        "key": "resolve-order",
+        "given": "An assigned work order",
+        "when": "Its technician completes the work",
+        "then": "The resolution and actor remain in history"
+      }
+    ]
+  },
+  "blueprint": {
+    "apiVersion": "factory.product-blueprint/v1",
+    "requirementChecksum": "sha256:494a6897195f8b54a1ad8bce72d1a2da12f26cece999939318bb2b0b0777689b",
+    "title": "Facilities Service Desk",
+    "actors": [
+      {
+        "key": "dispatcher",
+        "label": "Dispatcher",
+        "permissions": [
+          {
+            "entityKey": "work-order",
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "assign",
+              "reassign",
+              "reopen",
+              "cancel"
+            ]
+          },
+          {
+            "entityKey": "work-order-history",
+            "actions": ["read"]
+          }
+        ]
+      },
+      {
+        "key": "technician",
+        "label": "Technician",
+        "permissions": [
+          {
+            "entityKey": "work-order",
+            "actions": ["read", "start", "resolve"]
+          },
+          {
+            "entityKey": "work-order-history",
+            "actions": ["read"]
+          }
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "key": "work-order",
+        "label": "Work order",
+        "fields": [
+          {
+            "key": "title",
+            "label": "title",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "serviceLocation",
+            "label": "serviceLocation",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "priority",
+            "label": "priority",
+            "type": "enum",
+            "required": true,
+            "options": ["low", "medium", "high"]
+          },
+          {
+            "key": "status",
+            "label": "status",
+            "type": "enum",
+            "required": true,
+            "options": ["open", "in-progress", "resolved", "cancelled"]
+          },
+          {
+            "key": "description",
+            "label": "description",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "dueDate",
+            "label": "dueDate",
+            "type": "date",
+            "required": false
+          },
+          {
+            "key": "assigneePrincipalId",
+            "label": "assigneePrincipalId",
+            "type": "text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "key": "work-order-history",
+        "label": "Work order history",
+        "fields": [
+          {
+            "key": "workOrder",
+            "label": "workOrder",
+            "type": "reference",
+            "required": true,
+            "referenceTo": "work-order"
+          },
+          {
+            "key": "action",
+            "label": "action",
+            "type": "enum",
+            "required": true,
+            "options": [
+              "create",
+              "update",
+              "assign",
+              "reassign",
+              "start",
+              "resolve",
+              "reopen",
+              "cancel"
+            ]
+          },
+          {
+            "key": "orderVersion",
+            "label": "orderVersion",
+            "type": "number",
+            "required": true,
+            "numericDomain": {
+              "apiVersion": "factory.numeric-field-domain/v1",
+              "minimum": {
+                "value": 0,
+                "inclusive": true
+              },
+              "maximum": {
+                "value": 2147483647,
+                "inclusive": true
+              }
+            }
+          },
+          {
+            "key": "toStatus",
+            "label": "toStatus",
+            "type": "enum",
+            "required": true,
+            "options": ["open", "in-progress", "resolved", "cancelled"]
+          },
+          {
+            "key": "actorPrincipalId",
+            "label": "actorPrincipalId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "actorRole",
+            "label": "actorRole",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "recordedAt",
+            "label": "recordedAt",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "key": "fromStatus",
+            "label": "fromStatus",
+            "type": "enum",
+            "required": false,
+            "options": ["open", "in-progress", "resolved", "cancelled"]
+          },
+          {
+            "key": "fromAssigneePrincipalId",
+            "label": "fromAssigneePrincipalId",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "toAssigneePrincipalId",
+            "label": "toAssigneePrincipalId",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "note",
+            "label": "note",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "beforeTitle",
+            "label": "beforeTitle",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "beforeServiceLocation",
+            "label": "beforeServiceLocation",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "beforePriority",
+            "label": "beforePriority",
+            "type": "enum",
+            "required": false,
+            "options": ["low", "medium", "high"]
+          },
+          {
+            "key": "beforeDescription",
+            "label": "beforeDescription",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "beforeDueDate",
+            "label": "beforeDueDate",
+            "type": "date",
+            "required": false
+          },
+          {
+            "key": "afterTitle",
+            "label": "afterTitle",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "afterServiceLocation",
+            "label": "afterServiceLocation",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "afterPriority",
+            "label": "afterPriority",
+            "type": "enum",
+            "required": false,
+            "options": ["low", "medium", "high"]
+          },
+          {
+            "key": "afterDescription",
+            "label": "afterDescription",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "afterDueDate",
+            "label": "afterDueDate",
+            "type": "date",
+            "required": false
+          }
+        ]
+      }
+    ],
+    "pageIntents": [
+      {
+        "key": "dispatch",
+        "label": "Dispatch",
+        "intent": "list",
+        "entityKey": "work-order"
+      },
+      {
+        "key": "new-order",
+        "label": "New work order",
+        "intent": "form",
+        "entityKey": "work-order"
+      },
+      {
+        "key": "order-detail",
+        "label": "Work order detail",
+        "intent": "detail",
+        "entityKey": "work-order"
+      },
+      {
+        "key": "assigned-work",
+        "label": "Assigned work",
+        "intent": "queue",
+        "entityKey": "work-order"
+      }
+    ],
+    "workflows": [
+      {
+        "key": "fulfil-order",
+        "label": "Fulfil work order",
+        "entityKey": "work-order",
+        "states": [
+          {
+            "key": "open",
+            "label": "open"
+          },
+          {
+            "key": "in-progress",
+            "label": "in-progress"
+          },
+          {
+            "key": "resolved",
+            "label": "resolved"
+          },
+          {
+            "key": "cancelled",
+            "label": "cancelled"
+          }
+        ],
+        "transitions": [
+          {
+            "key": "start",
+            "label": "start",
+            "from": "open",
+            "to": "in-progress",
+            "actorKey": "technician"
+          },
+          {
+            "key": "resolve",
+            "label": "resolve",
+            "from": "in-progress",
+            "to": "resolved",
+            "actorKey": "technician"
+          },
+          {
+            "key": "reopen",
+            "label": "reopen",
+            "from": "resolved",
+            "to": "open",
+            "actorKey": "dispatcher"
+          },
+          {
+            "key": "cancel",
+            "label": "cancel",
+            "from": "open",
+            "to": "cancelled",
+            "actorKey": "dispatcher"
+          },
+          {
+            "key": "cancel",
+            "label": "cancel",
+            "from": "in-progress",
+            "to": "cancelled",
+            "actorKey": "dispatcher"
+          }
+        ]
+      }
+    ],
+    "acceptanceJourneys": [
+      {
+        "key": "resolve-order",
+        "description": "Dispatch and complete assigned work.",
+        "steps": [
+          {
+            "actorKey": "dispatcher",
+            "action": "Create, correct and assign an order."
+          },
+          {
+            "actorKey": "technician",
+            "action": "Start and resolve assigned work."
+          }
+        ]
+      }
+    ]
+  }
+}

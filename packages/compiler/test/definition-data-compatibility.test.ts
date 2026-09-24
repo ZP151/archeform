@@ -24,6 +24,29 @@ import {
 } from "../src/appointment-mutation-contract.js";
 
 describe("Product definition data compatibility", () => {
+  it("keeps the V2 bounded reads and Date forwarding absent from historical Appointment V1", () => {
+    const input = appointmentDefinitionCompilationInput();
+    const files = generateApplicationBundle({
+      publishedRevisionId: "v1-read-absence",
+      graph: input.graph,
+      compositionLock: input.compositionLock,
+    }).files;
+    expect(
+      files.some(
+        (file) => file.path === "api/src/appointment-consumer-read.ts",
+      ),
+    ).toBe(false);
+    expect(
+      files.find((file) => file.path === "api/src/main.ts")!.content,
+    ).not.toContain("appointment-availability");
+    expect(
+      files.find((file) => file.path === "api/src/main.ts")!.content,
+    ).not.toContain("appointment-summary");
+    expect(
+      files.find((file) => file.path === "web/app/api/[...path]/route.ts")!
+        .content,
+    ).not.toContain("response.headers.get('date')");
+  });
   function appointmentField(
     graph: any,
     lock: any,

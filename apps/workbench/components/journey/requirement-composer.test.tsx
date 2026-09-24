@@ -70,6 +70,35 @@ describe("RequirementComposer", () => {
       ),
     ).toBe(true);
   });
+  it("offers a bounded explicit revision without a second creation control", () => {
+    const submit = vi.fn();
+    render({
+      brief: "Changed request",
+      revision: { canSubmit: false },
+      onInterpret: submit,
+    });
+    expect(
+      container.querySelector<HTMLButtonElement>(".primary-action")?.disabled,
+    ).toBe(true);
+    render({
+      brief: "Changed request",
+      revision: { canSubmit: true },
+      onInterpret: submit,
+    });
+    const button =
+      container.querySelector<HTMLButtonElement>(".primary-action")!;
+    expect(button.textContent).toContain("Start revised request");
+    expect(container.textContent).toContain(
+      "Earlier answers will be included.",
+    );
+    expect(container.textContent).not.toContain("Create product");
+    act(() => button.click());
+    expect(submit).toHaveBeenCalledOnce();
+    render({ brief: "x".repeat(12_001), revision: { canSubmit: true } });
+    expect(
+      container.querySelector<HTMLButtonElement>(".primary-action")?.disabled,
+    ).toBe(true);
+  });
 
   it("records typed brief text through the change handler", () => {
     const onBriefChange = vi.fn();

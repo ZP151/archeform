@@ -1,3 +1,4 @@
+import { matchServiceWorkOrdersBlueprintV1 } from "./service-work-orders-blueprint-witness.js";
 import {
   quantityUnitPriceTotalSchema,
   isCalculatedFieldSetValid,
@@ -70,6 +71,10 @@ export const blueprintActionVerbs = [
   "start",
   "complete",
   "reopen",
+  "read-availability",
+  "assign",
+  "reassign",
+  "resolve",
 ] as const;
 
 /** Approved business actions a blueprint actor may hold over an entity. */
@@ -281,6 +286,25 @@ function assertFieldShape(
  */
 export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
   const blueprint = parseStrict(productBlueprintSchema, input);
+  const workOrders = matchServiceWorkOrdersBlueprintV1(blueprint);
+  if (
+    !workOrders &&
+    (blueprint.actors.some((actor) =>
+      actor.permissions.some((permission) =>
+        permission.actions.some((action) =>
+          ["assign", "reassign", "resolve"].includes(action),
+        ),
+      ),
+    ) ||
+      blueprint.workflows.some((workflow) =>
+        workflow.transitions.some((transition) =>
+          ["assign", "reassign", "resolve"].includes(transition.key),
+        ),
+      ))
+  )
+    throw new CompositionError(
+      "Assignment and resolution require the complete Service Work Orders Blueprint.",
+    );
   for (const entity of blueprint.entities) {
     if (
       entity.fields.some((field) =>
@@ -359,7 +383,17 @@ export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
       );
     }
     assertUniqueKeys(workflow.states, `state`);
-    assertUniqueKeys(workflow.transitions, `transition`);
+    assertUniqueKeys(
+      workOrders
+        ? workflow.transitions.filter(
+            (transition, index) =>
+              transition.key !== "cancel" ||
+              index ===
+                workflow.transitions.findIndex((item) => item.key === "cancel"),
+          )
+        : workflow.transitions,
+      `transition`,
+    );
     const stateKeys = new Set(workflow.states.map((state) => state.key));
     for (const transition of workflow.transitions) {
       if (!stateKeys.has(transition.from)) {

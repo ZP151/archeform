@@ -141,6 +141,14 @@ function isFlatDeclaredJsonBody(body: string): boolean {
   if (keys.length === 1 && keys[0] === "values") {
     return isFlatDeclaredValues(envelope.values);
   }
+  if (
+    keys.length === 3 &&
+    keys.includes("values") &&
+    keys.includes("expectedVersion") &&
+    keys.includes("reason")
+  ) {
+    return isDeclaredWorkOrderCorrection(envelope);
+  }
   return (
     keys.length === 2 &&
     keys.includes("values") &&
@@ -149,6 +157,58 @@ function isFlatDeclaredJsonBody(body: string): boolean {
     Number.isSafeInteger(envelope.expectedVersion) &&
     envelope.expectedVersion >= 0 &&
     isFlatDeclaredValues(envelope.values)
+  );
+}
+
+/** Exact ADR-0080 fixture envelope; nullable fields do not broaden generic bodies. */
+function isDeclaredWorkOrderCorrection(
+  envelope: Record<string, unknown>,
+): boolean {
+  const { expectedVersion, reason, values } = envelope;
+  const text = (value: unknown, maximum: number): value is string =>
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= maximum;
+  if (
+    typeof expectedVersion !== "number" ||
+    !Number.isSafeInteger(expectedVersion) ||
+    expectedVersion < 0 ||
+    expectedVersion > 2147483647 ||
+    !text(reason, maximumBodyStringValueLength) ||
+    !values ||
+    typeof values !== "object" ||
+    Array.isArray(values)
+  )
+    return false;
+  const replacement = values as Record<string, unknown>;
+  const fields = [
+    "title",
+    "serviceLocation",
+    "priority",
+    "description",
+    "dueDate",
+  ];
+  if (
+    Object.keys(replacement).length !== fields.length ||
+    !fields.every((field) => Object.hasOwn(replacement, field)) ||
+    !text(replacement.title, 160) ||
+    !text(replacement.serviceLocation, 160) ||
+    !["low", "medium", "high"].includes(replacement.priority as string) ||
+    !(
+      replacement.description === null ||
+      (typeof replacement.description === "string" &&
+        replacement.description.length <= maximumBodyStringValueLength)
+    )
+  )
+    return false;
+  const dueDate = replacement.dueDate;
+  if (dueDate === null) return true;
+  if (typeof dueDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate))
+    return false;
+  const instant = Date.parse(dueDate + "T00:00:00.000Z");
+  return (
+    Number.isFinite(instant) &&
+    new Date(instant).toISOString().slice(0, 10) === dueDate
   );
 }
 

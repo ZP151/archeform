@@ -39,6 +39,14 @@ route. A new family contract is implemented only after its exact ADR is accepted
 Cloud execution waits for a concrete environment and its applicable authority;
 the environment question does not block local product work.
 
+Execution clarification after the local-startup rejection: close the Appointment
+default-selection source and migrated actual-case source with their existing
+focused review first, then allow accepted Work Orders source development to
+proceed serially on the shared paths. Pending actual execution is tracked for
+each slice and still blocks its delivery/acceptance claim; it is not a blanket
+block on independent, already-authorized family implementation. Do not retry the
+rejected operation, waive a runtime gate, or count an unexecuted family as delivered.
+
 ## Global constraints
 
 - English code, tests, UI and repository documentation.
@@ -56,14 +64,14 @@ the environment question does not block local product work.
 
 ## Ordered business waves
 
-| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                          |
-| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Accepted local journey; delivered at e0c0f467; nine definitions / five families |
-| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Accepted actual local journey; ten definitions / six families                   |
-| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen; validate the actual assignment/access and evidence requirements before admission                                                                                | Candidate; not a renamed task definition                                        |
-| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit                 |
-| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics           |
-| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                         |
+| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                                               |
+| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Accepted local journey; delivered at e0c0f467; nine definitions / five families                      |
+| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Accepted actual local journey; ten definitions / six families                                        |
+| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen, correct and cancel with enforced assignment access and retained history                                                                                         | Source and case-source accepted; eight-step regression passes; actual application acceptance pending |
+| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Candidate; identity and response delivery gaps must be explicit                                      |
+| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics                                |
+| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                                              |
 
 After each new reusable family, assess 3-5 real domain briefs. Admit supported,
 semantically distinct jobs through data and bindings. Reject or queue unsupported
@@ -80,9 +88,10 @@ questions. Historical tests and ADR-0065 preserve the refusal, so Inventory data
 admission must not silently change it. No unsupported feature may be dropped or
 reported as implemented.
 
-After the actual Inventory family closes, dispatch the Tech Lead to specify a
-compatible, understandable unresolved-requirement outcome and its minimal user
-action before increasing catalogue volume. Prove that prior material requirements
+ADR-0078 now has exact-hash acceptance and a frozen implementation; focused
+checks/build and the eight-step definition regression pass. Independent task
+review and Terra deterministic QA close 0/0/0. Actual Home browser evidence remains pending after
+automatic approval rejected local Workbench startup. Prove that prior material requirements
 survive, explicit scope acceptance resolves only accepted differences, and the
 ordinary user sees a useful next action. Keep existing fail-closed safety until
 that decision is accepted. Source evidence: the definition-selection guard in
@@ -93,14 +102,17 @@ cases in `packages/adapters/test/requirement-interpreter.test.ts`, and the fixed
 ### Next shared-flow correction: accepted-family automatic delivery
 
 Inventory is now locally accepted and delivered as `63c7b12c`. Before Work Orders,
-proposed ADR-0079 addresses the existing consumer selector's omission of accepted
+accepted ADR-0079 addresses the existing consumer selector's omission of accepted
 Appointment, Directory and Inventory semantics. Their actual business cases use
 technical plan and lifecycle buttons; do not count those as automatic consumer
 delivery. Reuse the existing phase latches, immutable lifecycle and exact validated
 family witnesses. Require actual consumer-entry evidence, explicit manual opt-out,
 retained failure/cleanup behavior and measured technical actions. No new provider,
 cloud environment or permissive definition-label shortcut is implied. Source work
-waits for the independent exact-hash decision review and PM acceptance.
+proceeds first in disjoint shared predicates under accepted ADR IMP-001. After the
+ADR-0078 writer finishes and its source review/QA pass, PM records a serial handoff
+of shared Workbench paths with a preserved baseline. Both actual browser acceptance
+outcomes remain open; source sequencing does not establish delivery acceptance.
 
 ## Next-wave reuse evidence: Work Orders
 
@@ -115,13 +127,15 @@ a new family contract or another accepted definition.
 | Limit technician operations to assigned work | Existing Task business grants use one modifying member role and one read-only viewer role                                                                             | Decide and test record-level assignment authority before promising a technician-specific queue or privacy                                                          |
 | Resolve with evidence, then reopen           | Current Task completion takes only `expectedVersion`; its exact five-field business shape has no resolution evidence contract                                         | Decide the minimum useful resolution record and whether reassignment/reopen preserves it; avoid pretending a free-form description is verified completion evidence |
 
-The next Tech Lead proposal must resolve these concrete gaps before source work.
-Preserve old Task byte compatibility and reuse its established write protection;
-do not broaden Task admission to accept a renamed unsupported Work Order. Mobile
-technician work and desktop dispatch must complete the same persisted job. Any
-private identity, outbound notification or new data boundary remains subject to
-the existing technology/security authority. Inventory stays the active delivery
-slice; this assessment introduces no parallel source owner or additional gate.
+Accepted ADR-0080 now resolves these gaps for the bounded local Work Orders
+family; its exact acceptance and queued implementation ownership are in the PM
+ledger. Preserve old Task byte compatibility and reuse its established write
+protection; do not broaden Task admission to accept a renamed unsupported Work
+Order. Mobile technician work and desktop dispatch must complete the same
+persisted job. Any private identity, outbound notification or new data boundary
+outside that accepted scope remains subject to existing technology/security
+authority. Appointment consumer source repair under ADR-0081 precedes this source wave;
+the reuse assessment introduces no parallel writer or additional gate.
 
 ## Task 1: finish the existing cheap preflight
 
@@ -211,6 +225,38 @@ while its data survives. Passing CI or pushing this branch proves neither a
 hosted rollout nor the second outcome. The rehearsal establishes the narrow
 compatible-revision foundation; selecting the hosted pilot environment and
 implementing its accepted adapter remain explicit follow-up work.
+
+### Next delivery increments
+
+Keep delivery work visible alongside family coverage; do not wait for hundreds
+of definitions before proving one durable application. These are existing
+outcomes sequenced into reviewable increments, not a new provider contract or
+additional acceptance gate.
+
+1. Finish the current consumer repair and its applicable actual checks. Deliver
+   accepted source in bounded commits, verify the remote revision and its CI,
+   and state separately any source-only acceptance. A pending browser case is
+   not an accepted usable application.
+2. Prepare one hosted pilot against a concrete authorized environment. Resolve
+   the account/environment, intended audience/access, persistent data and
+   operating owner before proposing its adapter decision. Do not request or
+   record secrets in the plan. The outstanding environment question remains
+   open; local family implementation continues independently.
+3. On the accepted adapter, promote one immutable application revision to a
+   stable HTTPS address. Prove a real business action, reload and service restart
+   against the same saved records, then a compatible update that retains them.
+4. Inject failed readiness, demonstrate retention of the working release and
+   compatible rollback with post-update writes intact, and restore a separate
+   backup. Record the live and previous revision and the actual recovery result.
+5. Reuse that proven delivery path for later families. Users receive the working
+   address and useful progress/retry states; the platform owns build, checks,
+   promotion and recovery. Reopen only checks affected by a new family or a
+   changed data/deployment contract.
+
+Track platform revision delivered, generated app locally accepted, hosted app
+available, update retained data and recovery proven as separate scorecard fields.
+Current evidence establishes CI and the narrow local rehearsal only; hosted
+availability and routine promotion remain unimplemented and unverified.
 
 Evidence sources: `apps/compiler-worker/src/preview-runner.ts`, generated Compose
 in `packages/compiler/src/index.ts`, V3 Compose in

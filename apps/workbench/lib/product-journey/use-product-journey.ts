@@ -24,6 +24,7 @@ import type { PlanReviewAlternative } from "../../components/journey/plan-review
 import {
   ANSWER_MAX_LENGTH,
   beginProductJourney,
+  canSubmitRevisedRequirement as canRevise,
   journeyTransition,
   openClarificationQuestions,
   planAlternativeSummary,
@@ -62,6 +63,8 @@ export interface ProductJourneyController {
   readonly blueprintTitle: string;
   readonly planAlternatives: readonly PlanReviewAlternative[] | null;
   submitBrief: () => Promise<void>;
+  readonly canSubmitRevisedRequirement: boolean;
+  submitRevisedRequirement: () => Promise<void>;
   /** Re-interprets with the current answers buffer. */
   answerQuestions: () => Promise<void>;
   createProduct: () => Promise<void>;
@@ -349,6 +352,7 @@ export function useProductJourney(
   }, []);
 
   const submitBrief = useCallback(async (): Promise<void> => {
+    if (state.unresolvedRequest !== null) return;
     await run(async (isCurrent) => {
       try {
         const brief = briefDraft.trim();
@@ -375,7 +379,52 @@ export function useProductJourney(
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run, briefDraft]);
+  }, [run, briefDraft, state.unresolvedRequest]);
+
+  const canSubmitRevisedRequirement =
+    canRevise(state, briefDraft, answers) && !busy;
+  const submitRevisedRequirement = useCallback(async (): Promise<void> => {
+    if (!canRevise(state, briefDraft, answers)) return;
+    await run(async (isCurrent) => {
+      const prior = state.unresolvedRequest!.priorInterpretation;
+      const submittedAnswers = { ...answers };
+      const brief = briefDraft.trim();
+      const clarificationContext = prior.interpretation.clarifications.flatMap(
+        ({ questions }) =>
+          questions.flatMap((question) => {
+            const answer = submittedAnswers[question.key];
+            return answer?.trim() ? [{ ...question, answer }] : [];
+          }),
+      );
+      dispatch({
+        type: "submit-revised-requirement",
+        brief: briefDraft,
+        answers: submittedAnswers,
+      });
+      try {
+        const interpretation = await interpretRoute(
+          brief,
+          submittedAnswers,
+          "interpretation",
+          clarificationContext,
+          prior,
+        );
+        if (!isCurrent()) return;
+        dispatch({ type: "interpretation-accepted", interpretation });
+      } catch (error) {
+        if (!isCurrent()) return;
+        dispatch({
+          type: "fail",
+          failure: boundedProductFailure({
+            error,
+            phase: "interpretation",
+            fallbackCode: "requirement.failed",
+            fallbackMessage: "Requirement interpretation failed.",
+          }),
+        });
+      }
+    });
+  }, [run, state, briefDraft, answers]);
 
   const answerQuestions = useCallback(async (): Promise<void> => {
     await run(async (isCurrent) => {
@@ -394,8 +443,8 @@ export function useProductJourney(
         const cumulativeAnswers = { ...state.answers, ...answers };
         const priorQuestions = openClarificationQuestions(state);
         const clarificationContext = priorQuestions.flatMap((question) => {
-          const answer = cumulativeAnswers[question.key]?.trim();
-          return answer ? [{ ...question, answer }] : [];
+          const answer = cumulativeAnswers[question.key];
+          return answer?.trim() ? [{ ...question, answer }] : [];
         });
         dispatch({ type: "clarify-answered", answers: cumulativeAnswers });
         const proposed = await interpretRoute(
@@ -438,6 +487,11 @@ export function useProductJourney(
   }, [run, state, answers]);
 
   const createProduct = useCallback(async (): Promise<void> => {
+    if (
+      state.stage !== "planning" ||
+      state.interpretation?.interpretation.clarifications.length !== 0
+    )
+      return;
     await run(async (isCurrent) => {
       let review: ProductJourneyState["review"];
       try {
@@ -626,6 +680,8 @@ export function useProductJourney(
     blueprintTitle,
     planAlternatives,
     submitBrief,
+    canSubmitRevisedRequirement,
+    submitRevisedRequirement,
     answerQuestions,
     createProduct,
     chooseAlternative,

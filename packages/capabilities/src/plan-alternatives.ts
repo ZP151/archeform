@@ -1,9 +1,10 @@
-import { isInventoryOperationsBlueprint } from "./product-composer.js";
 import {
   CompositionError,
+  matchServiceWorkOrdersBlueprintV1,
   assertCompositionPlan,
   assertProductBlueprint,
   assertRequirementSpec,
+  canonicalEquals,
   hashApplicationGraph,
   hashRequirementSpec,
   type CompositionPlanV1,
@@ -24,9 +25,11 @@ import {
   composeProductIntegration,
   deriveProductOperations,
   hasApprovalDecision,
-  appointmentBookingGraphBindings,
+  productGraphBindings,
+  isAppointmentConsumerWorkspaceBlueprint,
   isAppointmentBookingBlueprint,
-  primaryListPage,
+  isContentDirectoryBlueprint,
+  isInventoryOperationsBlueprint,
 } from "./product-composer.js";
 
 /**
@@ -59,6 +62,43 @@ export function planProductRecipeAlternative(
   input: SelectProductRecipeForIntentInput,
 ) {
   return selectProductRecipeForIntent(input);
+}
+
+/**
+ * Match only accepted family structure and the exact current standard plan
+ * locks/bindings. The caller supplies parsed inputs and checks requirement
+ * checksums, compatibility and clarification gates. applicationId is the
+ * requirement composition identity used by the planner, not a stored Graph ID.
+ */
+export function matchExactConsumerFamilyPlan(
+  blueprint: ProductBlueprintV1,
+  applicationId: string,
+  plan: CompositionPlanV1,
+):
+  | "appointment"
+  | "content-directory"
+  | "inventory-operations"
+  | "service-work-orders"
+  | null {
+  const family = isAppointmentConsumerWorkspaceBlueprint(blueprint)
+    ? "appointment"
+    : isContentDirectoryBlueprint(blueprint)
+      ? "content-directory"
+      : isInventoryOperationsBlueprint(blueprint)
+        ? "inventory-operations"
+        : matchServiceWorkOrdersBlueprintV1(blueprint)
+          ? "service-work-orders"
+          : null;
+  if (family === null) return null;
+  const catalogue = currentCapabilityCatalogue();
+  const keys = selectedKeysFor(catalogue, blueprint, "standard");
+  return canonicalEquals(plan.capabilityLocks, locksForKeys(catalogue, keys)) &&
+    canonicalEquals(
+      plan.graphBindings,
+      productGraphBindings(blueprint, applicationId, new Set(keys)),
+    )
+    ? family
+    : null;
 }
 
 function assertBlankBase(draft: DraftRevisionV1): void {
@@ -109,114 +149,24 @@ function locksForKeys(
   });
 }
 
-function bindingsForKeys(
-  blueprint: ProductBlueprintV1,
-  applicationId: string,
-  keys: ReadonlySet<string>,
-): CompositionPlanV1["graphBindings"] {
-  const bindings: CompositionPlanV1["graphBindings"] = [];
-  if (keys.has("core.crud")) {
-    const primary = blueprint.entities[0];
-    bindings.push(
-      {
-        capabilityKey: "core.crud",
-        inputKey: "entityKey",
-        graphSymbol: `graph.domain.${primary.key}`,
-      },
-      {
-        capabilityKey: "core.crud",
-        inputKey: "routeKey",
-        graphSymbol: `graph.page.${primaryListPage(blueprint, primary.key)}`,
-      },
-    );
-  }
-  if (keys.has("core.workflow")) {
-    bindings.push({
-      capabilityKey: "core.workflow",
-      inputKey: "flowKey",
-      graphSymbol: `graph.flow.${blueprint.workflows[0].key}`,
-    });
-  }
-  if (keys.has("core.identity-policy")) {
-    const [defaultRole, authenticatedRole = defaultRole] = blueprint.actors.map(
-      (actor) => actor.key,
-    );
-    bindings.push(
-      {
-        capabilityKey: "core.identity-policy",
-        inputKey: "principalEntity",
-        graphSymbol: `graph.domain.${applicationId}-principal`,
-      },
-      {
-        capabilityKey: "core.identity-policy",
-        inputKey: "sessionEntity",
-        graphSymbol: `graph.domain.${applicationId}-session`,
-      },
-      {
-        capabilityKey: "core.identity-policy",
-        inputKey: "defaultRole",
-        graphSymbol: `graph.policy.${defaultRole}`,
-      },
-      {
-        capabilityKey: "core.identity-policy",
-        inputKey: "authenticatedRole",
-        graphSymbol: `graph.policy.${authenticatedRole}`,
-      },
-    );
-  }
-  if (keys.has("core.audit")) {
-    // The audit actor is the approval-deciding role when the product has
-    // one; otherwise the primary actor is the audited actor. Every locked
-    // product binds `actorRole`, so the audit runtime always has a role.
-    const approver =
-      blueprint.actors.find((actor) =>
-        actor.permissions.some((permission) =>
-          permission.actions.some(
-            (action) => action === "approve" || action === "reject",
-          ),
-        ),
-      ) ?? blueprint.actors[0];
-    if (approver === undefined) {
-      throw new CompositionError(
-        "Audit capability requires at least one blueprint actor.",
-      );
-    }
-    bindings.push({
-      capabilityKey: "core.audit",
-      inputKey: "actorRole",
-      graphSymbol: `graph.policy.${approver.key}`,
-    });
-  }
-  if (keys.has("core.notification")) {
-    bindings.push({
-      capabilityKey: "core.notification",
-      inputKey: "recipientRole",
-      graphSymbol: `graph.policy.${blueprint.actors[0].key}`,
-    });
-  }
-  if (keys.has("scheduling.appointment")) {
-    for (const binding of appointmentBookingGraphBindings(blueprint)) {
-      bindings.push({
-        capabilityKey: "scheduling.appointment",
-        ...binding,
-      });
-    }
-  }
-  return bindings;
-}
-
 function selectedKeysFor(
   catalogue: ProductCapabilityCatalogueV1,
   blueprint: ProductBlueprintV1,
   key: ProductPlanAlternativeKey,
 ): readonly string[] {
   const required = catalogue.required.map((asset) => asset.key);
-  if (isInventoryOperationsBlueprint(blueprint)) {
+  if (
+    isInventoryOperationsBlueprint(blueprint) ||
+    matchServiceWorkOrdersBlueprintV1(blueprint)
+  ) {
     const mandatory = [...required, "core.notification"];
     assertSelectionClosure(catalogue, mandatory);
     return mandatory;
   }
-  if (isAppointmentBookingBlueprint(blueprint)) {
+  if (
+    isAppointmentBookingBlueprint(blueprint) ||
+    isAppointmentConsumerWorkspaceBlueprint(blueprint)
+  ) {
     const mandatory = [
       ...required,
       "core.notification",
@@ -308,7 +258,7 @@ function buildPlan(input: {
   const selectedKeys = selectedKeysFor(catalogue, blueprint, key);
   const selected = new Set(selectedKeys);
   const locks = locksForKeys(catalogue, selectedKeys);
-  const bindings = bindingsForKeys(blueprint, applicationId, selected);
+  const bindings = productGraphBindings(blueprint, applicationId, selected);
   const derived = deriveProductOperations({
     blueprint,
     applicationId,
@@ -378,7 +328,9 @@ export function planProductAlternatives(
       ? currentCapabilityCatalogue()
       : assertProductCapabilityCatalogue(input.catalogue);
 
-  const exactAppointment = isAppointmentBookingBlueprint(blueprint);
+  const exactAppointment =
+    isAppointmentBookingBlueprint(blueprint) ||
+    isAppointmentConsumerWorkspaceBlueprint(blueprint);
   const keys = [
     selectedKeysFor(catalogue, blueprint, "standard"),
     selectedKeysFor(catalogue, blueprint, "minimal"),

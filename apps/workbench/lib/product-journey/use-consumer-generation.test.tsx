@@ -30,6 +30,7 @@ import {
 import { consumerFamilyFor } from "./consumer-family";
 import { canonicalTeamTaskInterpretation } from "../../../../packages/adapters/src/requirements/task-definition-selection";
 import { purchaseRequestInterpretationFixture } from "../../test/consumer-generation-fixture";
+import { projectDefinitionSelection } from "../../../../packages/adapters/src/requirements/definition-selection-catalogue";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -76,6 +77,8 @@ function journeyFor(
       ...overrides,
     } as ProductJourneyController["state"],
     busy: false,
+    canSubmitRevisedRequirement: false,
+    submitRevisedRequirement: vi.fn(),
     briefDraft: "Build a restaurant ordering application.",
     setBriefDraft: vi.fn(),
     answers: {},
@@ -172,6 +175,430 @@ async function waitFor(assertion: () => void): Promise<void> {
 }
 
 describe("useConsumerGeneration", () => {
+  it("keeps historical V1 manual after rerender and explains the missing consumer workspace", async () => {
+    const journey = acceptedJourney("appointment-booking-v1");
+    const release = releaseFor();
+    const apply = vi.fn();
+    for (let index = 0; index < 2; index++) {
+      await act(async () =>
+        root.render(
+          <Harness
+            journey={journey}
+            release={release}
+            applyComposedProduct={apply}
+          />,
+        ),
+      );
+    }
+    expect(globalThis.__consumerGeneration).toMatchObject({
+      active: false,
+      family: null,
+      manualReason: expect.stringMatching(
+        /historical.*Appointment V1.*manual.*consumer workspace/i,
+      ),
+    });
+    expect(journey.chooseAlternative).not.toHaveBeenCalled();
+    expect(apply).not.toHaveBeenCalled();
+    expect(release.publishRelease).not.toHaveBeenCalled();
+    expect(
+      journey.state.interpretation!.interpretation.blueprint.actors[0]
+        .permissions,
+    ).toHaveLength(1);
+  });
+  const acceptedFamilies = [
+    ["appointment-booking-v2", "appointment", "Appointment"],
+    ["knowledge-resource-directory", "content-directory", "Directory"],
+    ["supplies-stockroom", "inventory-operations", "Inventory"],
+    ["facilities-service-desk", "service-work-orders", "Work Orders"],
+  ] as const;
+  function acceptedJourney(definitionKey: string) {
+    const interpretation = projectDefinitionSelection({
+      definitionKey,
+      disposition: "supported-default",
+      requirementId: "consumer-requirement",
+      title: "Business application",
+      outcome: "Complete the accepted business operation.",
+      materialQuestions: [],
+      businessParameters: null,
+    });
+    return journeyFor({
+      interpretation: {
+        apiVersion: "factory.requirement-interpretation-result/v1",
+        interpretation,
+        businessParameters: null,
+      },
+      alternatives: planProductAlternatives({
+        requirement: interpretation.spec,
+        blueprint: interpretation.blueprint,
+        baseDraft: createBlankApplicationDraft({
+          applicationId: interpretation.spec.requirementId,
+          workspaceId: "local-workspace",
+          name: interpretation.blueprint.title,
+        }),
+      }),
+    });
+  }
+
+  it("starts Work Orders delivery from the final business answer without a technical user action", async () => {
+    const definitionKey = "facilities-service-desk";
+    const supported = acceptedJourney(definitionKey);
+    const interpretation = supported.state.interpretation!.interpretation;
+    const unresolved = projectDefinitionSelection({
+      definitionKey,
+      disposition: "needs-clarification",
+      requirementId: interpretation.spec.requirementId,
+      title: interpretation.blueprint.title,
+      outcome: interpretation.spec.outcome,
+      materialQuestions: [
+        {
+          category: "authorization",
+          question:
+            "Is local synthetic staff acceptable instead of private accounts?",
+        },
+      ],
+      businessParameters: null,
+    });
+    const calls: string[] = [];
+    const businessActions: string[] = [];
+    let interpretations = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input), "http://workbench.test");
+        const method = init?.method ?? "GET";
+        calls.push(`${method} ${url.pathname}`);
+        const json = (value: unknown) =>
+          new Response(JSON.stringify(value), {
+            headers: { "content-type": "application/json" },
+          });
+        if (url.pathname === "/api/requirements/interpret") {
+          interpretations++;
+          if (interpretations === 2) {
+            const request = JSON.parse(String(init?.body));
+            expect(Object.values(request.answers)).toContain(
+              "Use local synthetic staff only.",
+            );
+            expect(request.clarificationContext).toHaveLength(1);
+          }
+          return json({
+            apiVersion: "factory.requirement-interpretation-result/v1",
+            interpretation: interpretations === 1 ? unresolved : interpretation,
+            businessParameters: null,
+          });
+        }
+        if (method === "POST" && url.pathname === "/product/requirements")
+          return json({
+            review: {
+              id: "review-work-orders",
+              applicationGraphId: TARGET.applicationGraphId,
+              status: "planning",
+              requirementChecksum: hashRequirementSpec(interpretation.spec),
+              draftBaseChecksum: "sha256:base",
+            },
+          });
+        if (url.pathname.endsWith("/plan"))
+          return json({ alternatives: supported.state.alternatives });
+        if (url.pathname.endsWith("/choices")) {
+          expect(JSON.parse(String(init?.body))).toEqual({
+            alternativeKey: "standard",
+          });
+          return json({ checksum: "sha256:work-orders-diff" });
+        }
+        if (url.pathname.endsWith("/apply"))
+          return json({
+            draftRevision: {
+              id: TARGET.draftRevisionId,
+              revisionNumber: 2,
+              graph: createBlankApplicationDraft({
+                applicationId: interpretation.spec.requirementId,
+                workspaceId: "local-workspace",
+                name: interpretation.blueprint.title,
+              }).graph,
+            },
+            review: {
+              applicationGraphId: TARGET.applicationGraphId,
+              status: "applied",
+            },
+          });
+        return new Response("Unexpected route", { status: 500 });
+      }),
+    );
+    const release = releaseFor();
+    const apply = vi.fn(async () => {
+      await globalThis.__freshJourney?.applyProduct();
+      return TARGET;
+    });
+    await act(async () =>
+      root.render(
+        <FreshDescribeHarness release={release} applyComposedProduct={apply} />,
+      ),
+    );
+    act(() =>
+      globalThis.__freshJourney?.setBriefDraft(
+        "Build a facilities dispatch desk.",
+      ),
+    );
+    businessActions.push("Create");
+    await act(async () => globalThis.__freshJourney?.submitBrief());
+    expect(globalThis.__freshJourney?.openQuestions).toHaveLength(1);
+    expect(calls).toEqual(["POST /api/requirements/interpret"]);
+    expect(apply).not.toHaveBeenCalled();
+    expect(release.publishRelease).not.toHaveBeenCalled();
+    const question = globalThis.__freshJourney!.openQuestions[0]!;
+    act(() =>
+      globalThis.__freshJourney?.setAnswer(
+        question.key,
+        "Use local synthetic staff only.",
+      ),
+    );
+    businessActions.push("Answer business scope");
+    await act(async () => globalThis.__freshJourney?.answerQuestions());
+    await waitFor(() =>
+      expect(release.publishRelease).toHaveBeenCalledTimes(1),
+    );
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(globalThis.__consumerGeneration).toMatchObject({
+      active: true,
+      family: "service-work-orders",
+      status: "Preparing your Work Orders app…",
+    });
+    expect(businessActions).toEqual(["Create", "Answer business scope"]);
+    expect(calls).toEqual([
+      "POST /api/requirements/interpret",
+      "POST /api/requirements/interpret",
+      "POST /product/requirements",
+      "POST /product/requirements/review-work-orders/plan",
+      "POST /product/requirements/review-work-orders/choices",
+      "POST /product/requirements/review-work-orders/apply",
+    ]);
+  });
+
+  it.each(acceptedFamilies)(
+    "delivers %s once per phase under StrictMode and preserves readiness/recovery gates",
+    async (definitionKey, family, label) => {
+      const journey = acceptedJourney(definitionKey);
+      const apply = vi.fn().mockResolvedValue(TARGET);
+      let release = releaseFor();
+      const render = async (current: ProductJourneyController) => {
+        await act(async () =>
+          root.render(
+            <React.StrictMode>
+              <Harness
+                journey={current}
+                release={release}
+                applyComposedProduct={apply}
+              />
+            </React.StrictMode>,
+          ),
+        );
+      };
+      await render(journey);
+      await render(journey);
+      expect(journey.chooseAlternative).toHaveBeenCalledTimes(1);
+      expect(journey.chooseAlternative).toHaveBeenCalledWith("standard");
+      const reviewing = {
+        ...journey,
+        state: {
+          ...journey.state,
+          stage: "reviewing" as const,
+          selectedAlternativeKey: "standard",
+        },
+      };
+      await render(reviewing);
+      await render(reviewing);
+      expect(apply).toHaveBeenCalledTimes(1);
+      expect(apply).toHaveBeenCalledWith({ resetJourney: false });
+      const idle = journeyFor({
+        stage: "brief",
+        interpretation: null,
+        alternatives: null,
+        review: null,
+      });
+      await render(idle);
+      expect(globalThis.__consumerGeneration).toMatchObject({
+        family,
+        active: true,
+        status: `Preparing your ${label} app…`,
+      });
+      expect(release.publishRelease).toHaveBeenCalledTimes(1);
+      for (const [phase, status] of [
+        ["compiling", `Building your ${label} app…`],
+        ["verifying", `Checking your ${label} app…`],
+        ["starting-preview", `Starting your local ${label} app…`],
+      ] as const) {
+        release = { ...release, release: { ...release.release!, phase } };
+        await render(idle);
+        await render(idle);
+        expect(globalThis.__consumerGeneration?.status).toBe(status);
+      }
+      expect(release.compileRelease).toHaveBeenCalledTimes(1);
+      expect(release.verifyRelease).toHaveBeenCalledTimes(1);
+      expect(release.previewRelease).toHaveBeenCalledTimes(1);
+      for (const [previewUrl, evidenceSummary] of [
+        ["https://example.com/app", { steps: 3, passed: 3, failed: 0 }],
+        [
+          "http://user:password@127.0.0.1:3210",
+          { steps: 3, passed: 3, failed: 0 },
+        ],
+        ["http://127.0.0.1:3210", undefined],
+        ["http://127.0.0.1:3210", { steps: 0, passed: 0, failed: 0 }],
+      ] as const) {
+        release = {
+          ...release,
+          release: {
+            ...release.release!,
+            phase: "preview",
+            previewUrl,
+            evidenceSummary,
+          },
+        };
+        await render(idle);
+        expect(globalThis.__consumerGeneration?.readyUrl).toBeNull();
+      }
+      release = {
+        ...release,
+        release: {
+          ...release.release!,
+          phase: "failed",
+          previewUrl: null,
+          evidenceSummary: { steps: 3, passed: 2, failed: 1 },
+        },
+      };
+      await render(idle);
+      await render(idle);
+      expect(globalThis.__consumerGeneration?.readyUrl).toBeNull();
+      expect(release.previewRelease).toHaveBeenCalledTimes(1);
+      await act(async () => globalThis.__consumerGeneration?.retry());
+      expect(release.resetRelease).toHaveBeenCalledTimes(1);
+      release = {
+        ...release,
+        release: { ...release.release!, phase: "verifying" },
+      };
+      await render(idle);
+      await render(idle);
+      expect(release.verifyRelease).toHaveBeenCalledTimes(2);
+      release = {
+        ...release,
+        release: {
+          ...release.release!,
+          phase: "preview",
+          previewUrl: "http://127.0.0.1:3210",
+          evidenceSummary: { steps: 3, passed: 3, failed: 0 },
+        },
+      };
+      await render(idle);
+      expect(globalThis.__consumerGeneration).toMatchObject({
+        family,
+        readyUrl: "http://127.0.0.1:3210",
+        status: `Your local ${label} app is ready.`,
+      });
+      release = {
+        ...release,
+        release: {
+          ...release.release!,
+          applicationGraphId: "different-target",
+          phase: "publishing",
+        },
+      };
+      await render(idle);
+      expect(globalThis.__consumerGeneration).toMatchObject({
+        active: false,
+        readyUrl: null,
+      });
+      expect(release.publishRelease).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(acceptedFamilies)(
+    "keeps %s manual opt-out from selecting and applying",
+    async (definitionKey) => {
+      const accepted = acceptedJourney(definitionKey);
+      const apply = vi.fn().mockResolvedValue(TARGET);
+      const release = releaseFor();
+      const render = async (journey: ProductJourneyController) => {
+        await act(async () =>
+          root.render(
+            <Harness
+              journey={journey}
+              release={release}
+              applyComposedProduct={apply}
+            />,
+          ),
+        );
+      };
+      await render(
+        journeyFor({
+          stage: "brief",
+          interpretation: null,
+          alternatives: null,
+          review: null,
+        }),
+      );
+      act(() => globalThis.__consumerGeneration?.setManualReview(true));
+      await render(accepted);
+      await render({
+        ...accepted,
+        state: {
+          ...accepted.state,
+          stage: "reviewing",
+          selectedAlternativeKey: "standard",
+        },
+      });
+      expect(accepted.chooseAlternative).not.toHaveBeenCalled();
+      expect(apply).not.toHaveBeenCalled();
+      expect(release.publishRelease).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(acceptedFamilies)(
+    "ignores stale %s application responses after a new Describe session",
+    async (definitionKey) => {
+      const accepted = acceptedJourney(definitionKey);
+      let resolveTarget: ((value: ReleaseTarget) => void) | undefined;
+      const apply = vi.fn(
+        () =>
+          new Promise<ReleaseTarget>((resolve) => {
+            resolveTarget = resolve;
+          }),
+      );
+      const release = releaseFor();
+      await act(async () =>
+        root.render(
+          <Harness
+            journey={{
+              ...accepted,
+              state: {
+                ...accepted.state,
+                stage: "reviewing",
+                selectedAlternativeKey: "standard",
+              },
+            }}
+            release={release}
+            applyComposedProduct={apply}
+          />,
+        ),
+      );
+      expect(apply).toHaveBeenCalledTimes(1);
+      await act(async () =>
+        root.render(
+          <Harness
+            journey={journeyFor({
+              stage: "brief",
+              interpretation: null,
+              alternatives: null,
+              review: null,
+            })}
+            release={release}
+            applyComposedProduct={apply}
+          />,
+        ),
+      );
+      await act(async () => resolveTarget?.(TARGET));
+      expect(accepted.reset).not.toHaveBeenCalled();
+      expect(release.publishRelease).not.toHaveBeenCalled();
+      expect(globalThis.__consumerGeneration?.active).toBe(false);
+    },
+  );
   function taskJourney(
     mutate?: (
       interpretation: ReturnType<typeof canonicalTeamTaskInterpretation>,
@@ -1030,112 +1457,148 @@ describe("useConsumerGeneration", () => {
     }
   });
 
-  it("does not advance release after an unmounted consumer apply resolves", async () => {
-    const journey = journeyFor({
-      stage: "reviewing",
-      selectedAlternativeKey: "standard",
-    });
-    let resolveTarget: ((target: ReleaseTarget) => void) | undefined;
-    const applyComposedProduct = vi.fn(
-      () =>
-        new Promise<ReleaseTarget>((resolve) => {
-          resolveTarget = resolve;
-        }),
-    );
-    const release = releaseFor();
-    await act(async () => {
-      root.render(
-        <Harness
-          journey={journey}
-          release={release}
-          applyComposedProduct={applyComposedProduct}
-        />,
+  it.each(["restaurant-ordering", ...acceptedFamilies.map(([key]) => key)])(
+    "does not advance release after an unmounted %s consumer apply resolves",
+    async (definitionKey) => {
+      const base =
+        definitionKey === "restaurant-ordering"
+          ? journeyFor()
+          : acceptedJourney(definitionKey);
+      const journey = {
+        ...base,
+        state: {
+          ...base.state,
+          stage: "reviewing",
+          selectedAlternativeKey: "standard",
+        },
+      } as ProductJourneyController;
+      let resolveTarget: ((target: ReleaseTarget) => void) | undefined;
+      const applyComposedProduct = vi.fn(
+        () =>
+          new Promise<ReleaseTarget>((resolve) => {
+            resolveTarget = resolve;
+          }),
       );
-      await Promise.resolve();
-    });
-    expect(applyComposedProduct).toHaveBeenCalledTimes(1);
+      const release = releaseFor();
+      await act(async () => {
+        root.render(
+          <Harness
+            journey={journey}
+            release={release}
+            applyComposedProduct={applyComposedProduct}
+          />,
+        );
+        await Promise.resolve();
+      });
+      expect(applyComposedProduct).toHaveBeenCalledTimes(1);
 
-    act(() => root.unmount());
-    await act(async () => {
-      resolveTarget?.(TARGET);
-      await Promise.resolve();
-    });
+      act(() => root.unmount());
+      await act(async () => {
+        resolveTarget?.(TARGET);
+        await Promise.resolve();
+      });
 
-    expect(release.publishRelease).not.toHaveBeenCalled();
-  });
+      expect(release.publishRelease).not.toHaveBeenCalled();
+    },
+  );
 
-  it("pauses a failed Draft adoption without permanently consuming the session", async () => {
-    const journey = journeyFor({
-      stage: "reviewing",
-      selectedAlternativeKey: "standard",
-    });
-    const applyComposedProduct = vi.fn().mockResolvedValue(null);
-    await act(async () => {
-      root.render(
-        <Harness
-          journey={journey}
-          release={releaseFor()}
-          applyComposedProduct={applyComposedProduct}
-        />,
-      );
-      await Promise.resolve();
-    });
-    await waitFor(() => {
-      expect(globalThis.__consumerGeneration?.status).toBe(
-        "Delivery paused. Start a new Restaurant request to try again.",
-      );
-    });
-    expect(applyComposedProduct).toHaveBeenCalledTimes(1);
+  it.each(["restaurant-ordering", ...acceptedFamilies.map(([key]) => key)])(
+    "pauses a failed %s Draft adoption without permanently consuming the session",
+    async (definitionKey) => {
+      const base =
+        definitionKey === "restaurant-ordering"
+          ? journeyFor()
+          : acceptedJourney(definitionKey);
+      const label =
+        acceptedFamilies.find(([key]) => key === definitionKey)?.[2] ??
+        "Restaurant";
+      const journey = {
+        ...base,
+        state: {
+          ...base.state,
+          stage: "reviewing",
+          selectedAlternativeKey: "standard",
+        },
+      } as ProductJourneyController;
+      const applyComposedProduct = vi.fn().mockResolvedValue(null);
+      await act(async () => {
+        root.render(
+          <Harness
+            journey={journey}
+            release={releaseFor()}
+            applyComposedProduct={applyComposedProduct}
+          />,
+        );
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(globalThis.__consumerGeneration?.status).toBe(
+          `Delivery paused. Start a new ${label} request to try again.`,
+        );
+      });
+      expect(applyComposedProduct).toHaveBeenCalledTimes(1);
 
-    await act(async () => globalThis.__consumerGeneration?.retry());
-    expect(journey.reset).toHaveBeenCalledTimes(1);
-  });
+      await act(async () => globalThis.__consumerGeneration?.retry());
+      expect(journey.reset).toHaveBeenCalledTimes(1);
+    },
+  );
 
-  it("returns to Describe when immutable creation cannot be safely retried", async () => {
-    const journey = journeyFor({
-      stage: "reviewing",
-      selectedAlternativeKey: "standard",
-    });
-    const failed = releaseFor({
-      release: { ...releaseFor().release!, phase: "failed" },
-      resetRelease: vi.fn().mockResolvedValue("start-over"),
-    });
-    await act(async () => {
-      root.render(
-        <Harness
-          journey={journey}
-          release={failed}
-          applyComposedProduct={vi.fn().mockResolvedValue(TARGET)}
-        />,
-      );
-    });
-    expect(globalThis.__consumerGeneration?.active).toBe(true);
-    // Model the real journey reset after Draft adoption.
-    const idleJourney = {
-      ...journey,
-      state: {
-        ...journey.state,
-        stage: "brief" as const,
-        review: null,
-        interpretation: null,
-        alternatives: null,
-      },
-    };
-    await act(async () => {
-      root.render(
-        <Harness
-          journey={idleJourney}
-          release={failed}
-          applyComposedProduct={vi.fn().mockResolvedValue(TARGET)}
-        />,
-      );
-    });
-    await act(async () => globalThis.__consumerGeneration?.retry());
-    expect(failed.resetRelease).toHaveBeenCalledTimes(1);
-    expect(journey.reset).toHaveBeenCalledTimes(2);
-    expect(globalThis.__consumerGeneration?.active).toBe(false);
-    expect(failed.publishRelease).not.toHaveBeenCalled();
-  });
+  it.each(["restaurant-ordering", ...acceptedFamilies.map(([key]) => key)])(
+    "returns %s to Describe when immutable creation cannot be safely retried",
+    async (definitionKey) => {
+      const base =
+        definitionKey === "restaurant-ordering"
+          ? journeyFor()
+          : acceptedJourney(definitionKey);
+      const journey = {
+        ...base,
+        state: {
+          ...base.state,
+          stage: "reviewing",
+          selectedAlternativeKey: "standard",
+        },
+      } as ProductJourneyController;
+      const failed = releaseFor({
+        release: { ...releaseFor().release!, phase: "failed" },
+        resetRelease: vi.fn().mockResolvedValue("start-over"),
+      });
+      await act(async () => {
+        root.render(
+          <Harness
+            journey={journey}
+            release={failed}
+            applyComposedProduct={vi.fn().mockResolvedValue(TARGET)}
+          />,
+        );
+      });
+      expect(globalThis.__consumerGeneration?.active).toBe(true);
+      // Model the real journey reset after Draft adoption.
+      const idleJourney = {
+        ...journey,
+        state: {
+          ...journey.state,
+          stage: "brief" as const,
+          review: null,
+          interpretation: null,
+          alternatives: null,
+        },
+      };
+      await act(async () => {
+        root.render(
+          <Harness
+            journey={idleJourney}
+            release={failed}
+            applyComposedProduct={vi.fn().mockResolvedValue(TARGET)}
+          />,
+        );
+      });
+      await act(async () => globalThis.__consumerGeneration?.retry());
+      expect(failed.resetRelease).toHaveBeenCalledTimes(1);
+      expect(journey.reset).toHaveBeenCalledTimes(2);
+      expect(globalThis.__consumerGeneration?.active).toBe(false);
+      expect(failed.publishRelease).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([false, true])(
     "starts from this tab's Describe submission and retains supplied menu %s",

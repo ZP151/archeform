@@ -93,7 +93,7 @@ describe("Inventory authored definition admission", () => {
       ),
     );
     expect(parsed.definitions).toHaveLength(1);
-    expect(definitionSelectionCatalogue).toHaveLength(10);
+    expect(definitionSelectionCatalogue).toHaveLength(12);
     expect(
       definitionSelectionCatalogue.some(
         (e) => e.definitionKey === "supplies-stockroom",

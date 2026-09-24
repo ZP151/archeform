@@ -3,3 +3,6 @@
 * text=auto eol=lf
 # Preserve the exact executed capture bytes bound to its immutable receipt.
 packages/compiler/test/fixtures/capture-nine-definition-baseline.executed.txt -text whitespace=cr-at-eol
+# Preserve the exact historical source-evidence manifests across checkouts.
+docs/acceptance/evidence/appointment-consumer-workspace/task-1-source-manifest.json -text whitespace=cr-at-eol
+docs/acceptance/evidence/appointment-consumer-workspace/task-3-source-manifest.json -text whitespace=cr-at-eol

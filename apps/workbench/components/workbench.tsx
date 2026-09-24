@@ -76,6 +76,17 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     busy: journey.busy,
     error: journey.state.error,
     failure: journey.state.failure,
+    recovery:
+      journey.state.unresolvedRequest === null
+        ? undefined
+        : {
+            submitted: journey.state.unresolvedRequest,
+            canSubmit: journey.canSubmitRevisedRequirement,
+            onSubmit: () => {
+              void journey.submitRevisedRequirement();
+            },
+            onStartOver: journey.reset,
+          },
     brief: journey.briefDraft,
     onBriefChange: journey.setBriefDraft,
     onInterpret: () => {

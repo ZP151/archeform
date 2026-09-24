@@ -1,3 +1,17 @@
+import { renderServiceWorkOrdersFile } from "./service-work-orders-runtime.js";
+import {
+  renderServiceWorkOrdersWorkspace,
+  renderServiceWorkOrdersStyles,
+} from "./service-work-orders-presentation.js";
+import { selectServiceWorkOrdersProfile } from "./service-work-orders-contract.js";
+export {
+  selectServiceWorkOrdersProfile,
+  type ServiceWorkOrdersProfile,
+} from "./service-work-orders-contract.js";
+import {
+  renderAppointmentAdministratorSetup,
+  renderAppointmentSetupFile,
+} from "./appointment-administrator-setup.js";
 import { renderInventoryFile } from "./inventory-operations-runtime.js";
 import { selectInventoryOperationsProfile } from "./inventory-operations-contract.js";
 import {
@@ -132,6 +146,15 @@ import {
   exactAppointmentNumericWitness,
   registerAppointmentPageRuntimeForTest,
 } from "./appointment-compilation-admission.js";
+import { selectAppointmentConsumerProfile } from "./appointment-consumer-contract.js";
+import {
+  renderAppointmentWorkspace,
+  renderAppointmentWorkspaceStyles,
+} from "./appointment-workspace-presentation.js";
+import {
+  renderAppointmentConsumerFile,
+  renderAppointmentConsumerRead,
+} from "./appointment-consumer-read.js";
 
 /**
  * The facade-owned deterministic target registry. Migrated targets register
@@ -379,6 +402,7 @@ function assertCanonicalCompositionLock(
 export function buildCompilationPlan(
   input: PublishedGraphInput,
 ): CompilationPlan {
+  selectServiceWorkOrdersProfile(input.graph, input.compositionLock);
   if (!input.publishedRevisionId) {
     throw new Error("Published revision id is required for compilation.");
   }
@@ -1103,12 +1127,32 @@ function resolveIdentityPolicyRuntimeContribution(
     throw new Error("Locked identity policy fixture has no valid session.");
   }
 
+  const workOrders = selectServiceWorkOrdersProfile(
+    input.graph,
+    input.compositionLock,
+  );
+  const fixtureRoles = workOrders
+    ? [
+        {
+          role: workOrders.roles.dispatcher,
+          suffix: "dispatcher",
+        },
+        {
+          role: workOrders.roles.technician,
+          suffix: "technician-a",
+        },
+        {
+          role: workOrders.roles.technician,
+          suffix: "technician-b",
+        },
+      ]
+    : input.graph.policy.roles.map((role) => ({ role, suffix: role }));
   return Object.freeze({
     fixtureSessions: Object.freeze(
-      input.graph.policy.roles.map((role) =>
+      fixtureRoles.map(({ role, suffix }) =>
         Object.freeze({
-          principalId: `fixture-principal-${role}`,
-          sessionId: `fixture-session-${role}`,
+          principalId: `fixture-principal-${suffix}`,
+          sessionId: `fixture-session-${suffix}`,
           tenantId: template.tenantId,
           roles: Object.freeze([role]),
           expiresAt: template.expiresAt,
@@ -2870,7 +2914,8 @@ function renderPageRuntime(
   const numericIdentity =
     calculatedIdentity ||
     appointmentNumeric ||
-    selectInventoryOperationsProfile(graph, compositionLock)
+    selectInventoryOperationsProfile(graph, compositionLock) ||
+    selectServiceWorkOrdersProfile(graph, compositionLock)
       ? undefined
       : selectNumericApproval(graph, correctionEntity);
   const recordIdentity =
@@ -3562,6 +3607,8 @@ function renderWebStyles(
   approvalEntity?: string,
   directory = false,
   inventory = false,
+  appointment = false,
+  workOrders = false,
 ): string {
   // The generated application styles come entirely from the resolved
   // Experience Design System: every token group (colour, typography,
@@ -3573,7 +3620,9 @@ function renderWebStyles(
     (profile === "approval-v1" ||
       profile === "task-v1" ||
       directory ||
-      inventory) &&
+      inventory ||
+      appointment ||
+      workOrders) &&
     graph.experience.designSystem === undefined;
   const themeBlock = (mode: "light" | "dark"): string => {
     const tokenVars: string[] = [];
@@ -3628,6 +3677,8 @@ function renderWebStyles(
       : []),
     ...(directory ? [renderContentDirectoryStyles()] : []),
     ...(inventory ? [renderInventoryOperationsStyles()] : []),
+    ...(appointment ? [renderAppointmentWorkspaceStyles()] : []),
+    ...(workOrders ? renderServiceWorkOrdersStyles() : []),
     ...(profile === "approval-v1"
       ? [
           ...approvalWorkspaceStyles.map((style) =>
@@ -3939,6 +3990,7 @@ export function buildCompilationInput(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): PublishedCompilationInput {
+  selectServiceWorkOrdersProfile(input.graph, input.compositionLock);
   const graph = assertValidApplicationGraph(input.graph);
   if (
     graph.domain.entities.some((entity) =>
@@ -4051,6 +4103,10 @@ export function generateApplicationBundle(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): GeneratedApplicationBundle {
+  const workOrdersProfile = selectServiceWorkOrdersProfile(
+    input.graph,
+    input.compositionLock,
+  );
   const inventoryProfile = selectInventoryOperationsProfile(
     input.graph,
     input.compositionLock,
@@ -4074,7 +4130,16 @@ export function generateApplicationBundle(
     input.compositionLock,
     appointmentProfile,
   );
-  if (!calculatedApproval && !appointmentNumeric && !inventoryProfile)
+  const appointmentConsumer = selectAppointmentConsumerProfile(
+    graph,
+    input.compositionLock,
+  );
+  if (
+    !calculatedApproval &&
+    !appointmentNumeric &&
+    !inventoryProfile &&
+    !workOrdersProfile
+  )
     selectNumericApproval(graph, approvalEntity);
   const rendererGraph = compilationInput.rendererGraph;
   const presentationProfile = taskEntity
@@ -4173,10 +4238,12 @@ export function generateApplicationBundle(
   );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
-    ...(inventoryProfile ||
+    ...(workOrdersProfile ||
+    inventoryProfile ||
     directoryProfile ||
     presentationProfile === "approval-v1" ||
-    presentationProfile === "task-v1"
+    presentationProfile === "task-v1" ||
+    !!appointmentConsumer
       ? [
           {
             path: "THIRD_PARTY_NOTICES.md",
@@ -4292,31 +4359,43 @@ export function generateApplicationBundle(
     {
       path: "web/app/page-runtime.tsx",
       render: () =>
-        inventoryProfile
-          ? renderInventoryOperationsWorkspace(
+        workOrdersProfile
+          ? renderServiceWorkOrdersWorkspace(
               graph,
-              inventoryProfile,
+              workOrdersProfile,
               !!identityPolicy,
             )
-          : directoryProfile
-            ? renderContentDirectoryWorkspace(
+          : appointmentConsumer
+            ? renderAppointmentWorkspace(
                 graph,
-                directoryProfile,
+                appointmentConsumer,
                 !!identityPolicy,
               )
-            : restaurantRuntimeEnabled
-              ? renderRestaurantPageRuntime(rendererGraph)
-              : taskEntity
-                ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
-                : renderPageRuntime(
+            : inventoryProfile
+              ? renderInventoryOperationsWorkspace(
+                  graph,
+                  inventoryProfile,
+                  !!identityPolicy,
+                )
+              : directoryProfile
+                ? renderContentDirectoryWorkspace(
                     graph,
-                    orderEntityKey,
+                    directoryProfile,
                     !!identityPolicy,
-                    presentationProfile,
-                    approvalEntity,
-                    appointmentProfile,
-                    input.compositionLock,
-                  ),
+                  )
+                : restaurantRuntimeEnabled
+                  ? renderRestaurantPageRuntime(rendererGraph)
+                  : taskEntity
+                    ? renderTaskWorkspace(graph, taskEntity, !!identityPolicy)
+                    : renderPageRuntime(
+                        graph,
+                        orderEntityKey,
+                        !!identityPolicy,
+                        presentationProfile,
+                        approvalEntity,
+                        appointmentProfile,
+                        input.compositionLock,
+                      ),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -4392,6 +4471,8 @@ export function generateApplicationBundle(
           approvalEntity,
           !!directoryProfile,
           !!inventoryProfile,
+          !!appointmentConsumer,
+          !!workOrdersProfile,
         ),
     },
     {
@@ -4675,10 +4756,38 @@ export function generateApplicationBundle(
     },
   ];
 
+  if (appointmentConsumer)
+    plannedFiles.push({
+      path: "api/src/appointment-consumer-read.ts",
+      render: () => renderAppointmentConsumerRead(appointmentConsumer),
+    });
+  if (appointmentConsumer)
+    plannedFiles.push({
+      path: "api/src/appointment-administrator-setup.ts",
+      render: () =>
+        renderAppointmentAdministratorSetup(
+          appointmentConsumer,
+          identityPolicy!.fixtureSessions,
+        ),
+    });
   assertSafeGeneratedFileSet(plannedFiles);
   const files = plannedFiles.map(({ path, render }) => ({
     path,
-    content: renderInventoryFile(path, render(), inventoryProfile),
+    content: renderAppointmentSetupFile(
+      path,
+      renderAppointmentConsumerFile(
+        path,
+        renderServiceWorkOrdersFile(
+          path,
+          renderInventoryFile(path, render(), inventoryProfile),
+          workOrdersProfile,
+          identityPolicy?.fixtureSessions,
+          renderedDatabaseFiles,
+        ),
+        appointmentConsumer,
+      ),
+      appointmentConsumer,
+    ),
   }));
   return { rootDirectory, graphHash: plan.graphHash, files };
 }

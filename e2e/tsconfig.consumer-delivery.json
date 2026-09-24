@@ -1,0 +1,22 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "baseUrl": "..",
+    "paths": {
+      "@factory/*": ["packages/*/dist/index.d.ts"]
+    }
+  },
+  "files": [
+    "appointment-booking.spec.ts",
+    "content-directory.spec.ts",
+    "inventory-operations.spec.ts",
+    "service-work-orders.spec.ts",
+    "helpers/content-directory.test.ts",
+    "helpers/service-work-orders.test.ts",
+    "helpers/inventory-operations.test.ts"
+  ]
+}

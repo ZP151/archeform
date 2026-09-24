@@ -14,6 +14,7 @@ type DefinitionEntry = {
     | "task"
     | "appointment"
     | "content-directory"
+    | "service-work-orders"
     | "inventory-operations";
   readonly parameterPolicy: "restaurant-menu" | "none";
   readonly selectionSchema: z.ZodEffects<z.AnyZodObject>;
@@ -107,10 +108,14 @@ export const definitionSelectionSchema = z.union(
     ...(typeof schemas)[number][],
   ],
 );
-export const definitionSelectionJsonSchemas = definitionSelectionCatalogue.map(
+// Historical V1 remains registered and projectable, but fresh providers offer its exact replacement only.
+const freshDefinitionSelections = definitionSelectionCatalogue.filter(
+  (entry) => entry.definitionKey !== "appointment-booking-v1",
+);
+export const definitionSelectionJsonSchemas = freshDefinitionSelections.map(
   (entry) => entry.jsonSchema,
 );
-export const definitionSelectionInstructions = definitionSelectionCatalogue.map(
+export const definitionSelectionInstructions = freshDefinitionSelections.map(
   (entry) => entry.instruction,
 );
 export function projectDefinitionSelection(

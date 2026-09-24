@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import {
   CompositionError,
   matchInventoryOperationsGraphV1,
+  matchServiceWorkOrdersBlueprintV1,
+  matchServiceWorkOrdersGraphV1,
   graphKeySchema,
   safeBusinessTextSchema,
   hashRequirementSpec,
@@ -13,6 +15,8 @@ import {
 } from "@factory/graph";
 import {
   composeDefaultCapabilityDraft,
+  isContentDirectoryBlueprint,
+  isAppointmentConsumerWorkspaceBlueprint,
   composeRestaurantProductGraph,
   parseRestaurantMenuParameters,
   getCanonicalRestaurantAuthority,
@@ -235,6 +239,9 @@ const categories = [
 const text = z.string().min(1).max(24000);
 const bp = productBlueprintSchema.shape;
 export const familyGuideSchemas = {
+  "service-work-orders": productBlueprintSchema
+    .extend({ definitionKey: graphKeySchema, identity: text })
+    .strict(),
   "inventory-operations": productBlueprintSchema
     .extend({ definitionKey: graphKeySchema, identity: text })
     .strict(),
@@ -460,6 +467,12 @@ const restaurantLocks = [
   },
 ];
 export const definitionFamilyRegistry = Object.freeze({
+  "service-work-orders": Object.freeze({
+    version: "service-work-orders/v1",
+    parameterPolicy: "none/v1",
+    presentation: { key: "service-work-orders-presentation", version: "1.0.0" },
+    compilerProfile: "service-work-orders@1.0.0",
+  }),
   "inventory-operations": Object.freeze({
     version: "inventory-operations/v1",
     parameterPolicy: "none/v1",
@@ -534,29 +547,33 @@ function slotsFor(entry: ProductDefinitionData): Slots {
   const b = entry.canonical.blueprint,
     f = b.workflows[0]!;
   const roleNames =
-    entry.familyBinding.key === "inventory-operations"
-      ? ["stockkeeper", "observer"]
-      : entry.familyBinding.key === "appointment"
-        ? ["customer", "staff", "administrator"]
-        : entry.familyBinding.key === "approval"
-          ? ["requester", "reviewer", "auditor"]
-          : entry.familyBinding.key === "task"
-            ? ["member", "viewer"]
-            : entry.familyBinding.key === "content-directory"
-              ? ["reader", "curator"]
-              : ["customer"];
+    entry.familyBinding.key === "service-work-orders"
+      ? ["dispatcher", "technician"]
+      : entry.familyBinding.key === "inventory-operations"
+        ? ["stockkeeper", "observer"]
+        : entry.familyBinding.key === "appointment"
+          ? ["customer", "staff", "administrator"]
+          : entry.familyBinding.key === "approval"
+            ? ["requester", "reviewer", "auditor"]
+            : entry.familyBinding.key === "task"
+              ? ["member", "viewer"]
+              : entry.familyBinding.key === "content-directory"
+                ? ["reader", "curator"]
+                : ["customer"];
   return {
     roles: new Map(b.actors.map((a, i) => [a.key, roleNames[i]!])),
     entities: new Map(
       b.entities.map((e, i) => [
         e.key,
-        entry.familyBinding.key === "inventory-operations"
-          ? ["item", "movement"][i]!
-          : entry.familyBinding.key === "appointment"
-            ? ["service", "schedule", "appointment"][i]!
-            : i === 0
-              ? "primary"
-              : "requester-profile",
+        entry.familyBinding.key === "service-work-orders"
+          ? ["order", "history"][i]!
+          : entry.familyBinding.key === "inventory-operations"
+            ? ["item", "movement"][i]!
+            : entry.familyBinding.key === "appointment"
+              ? ["service", "schedule", "appointment"][i]!
+              : i === 0
+                ? "primary"
+                : "requester-profile",
       ]),
     ),
     workflows: new Map([[f.key, "lifecycle"]]),
@@ -647,6 +664,10 @@ const appointmentReferenceScalar = (key: string) =>
 /** ADR-0072's local family witness; keys may be renamed but ordered slots may not. */
 function appointmentPlanningSemantics(entry: ProductDefinitionData): boolean {
   const { spec, blueprint } = entry.canonical;
+  const consumerWorkspace =
+    entry.familyBinding.version === "appointment-booking/v2";
+  if (consumerWorkspace && !isAppointmentConsumerWorkspaceBlueprint(blueprint))
+    return false;
   if (
     spec.productType !== undefined ||
     spec.constraints.length !== 0 ||
@@ -733,14 +754,20 @@ function appointmentPlanningSemantics(entry: ProductDefinitionData): boolean {
         (permission) =>
           `${permission.entityKey}:${permission.actions.join(",")}`,
       ),
-      [`${appointment.key}:create,read,cancel`],
+      [
+        `${appointment.key}:create,read,cancel`,
+        ...(consumerWorkspace ? [`${schedule.key}:read-availability`] : []),
+      ],
     ) ||
     !sameOrdered(
       staff.permissions.map(
         (permission) =>
           `${permission.entityKey}:${permission.actions.join(",")}`,
       ),
-      [`${appointment.key}:read,confirm,reschedule,cancel`],
+      [
+        `${appointment.key}:read,confirm,reschedule,cancel`,
+        ...(consumerWorkspace ? [`${schedule.key}:read-availability`] : []),
+      ],
     ) ||
     !sameOrdered(
       administrator.permissions.map(
@@ -798,43 +825,9 @@ function appointmentPlanningSemantics(entry: ProductDefinitionData): boolean {
 }
 function directoryPlanningSemantics(entry: ProductDefinitionData): boolean {
   const { spec, blueprint: b } = entry.canonical;
-  const [entity] = b.entities,
-    [reader, curator] = b.actors,
-    [workflow] = b.workflows;
-  if (
-    !entity ||
-    !reader ||
-    !curator ||
-    !workflow ||
-    b.entities.length !== 1 ||
-    b.actors.length !== 2 ||
-    reader.key === curator.key
-  )
-    return false;
-  const options = entity.fields[3]?.options;
-  if (
-    !options ||
-    options.length < 2 ||
-    options.length > 12 ||
-    options.some(
-      (value) =>
-        value !== value.trim() ||
-        value.length < 1 ||
-        value.length > 40 ||
-        /[\u0000-\u001f\u007f]/.test(value),
-    )
-  )
-    return false;
-  const normalized = options.map((value) => value.trim().normalize("NFC"));
-  if (
-    normalized.some((value, index) => {
-      const literal = value.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
-      const pattern = new RegExp(`^(?:${literal})$`, "iu");
-      return normalized.slice(index + 1).some((other) => pattern.test(other));
-    })
-  )
-    return false;
-  const semantic = semanticBlueprint(entry);
+  if (!isContentDirectoryBlueprint(b)) return false;
+  const [entity] = b.entities;
+  const [reader, curator] = b.actors;
   return (
     spec.productType === undefined &&
     equal(
@@ -843,62 +836,16 @@ function directoryPlanningSemantics(entry: ProductDefinitionData): boolean {
     ) &&
     equal(
       spec.domainConcepts.map((c) => c.key),
-      [entity.key],
-    ) &&
-    equal(semantic.actors, [
-      {
-        slot: "reader",
-        permissions: [{ entity: "primary", actions: ["read"] }],
-      },
-      {
-        slot: "curator",
-        permissions: [
-          {
-            entity: "primary",
-            actions: ["cancel", "create", "read", "submit", "update"],
-          },
-        ],
-      },
-    ]) &&
-    equal(semantic.entities[0]!.fields, [
-      { key: "title", type: "text", required: true },
-      { key: "summary", type: "text", required: true },
-      { key: "body", type: "long-text", required: true },
-      { key: "category", type: "enum", required: true, options },
-    ]) &&
-    equal(
-      semantic.pages,
-      ["list", "form", "detail"].map((intent) => ({
-        intent,
-        entity: "primary",
-      })),
-    ) &&
-    workflow.entityKey === entity.key &&
-    equal(
-      workflow.states.map((s) => s.key),
-      ["hidden", "listed"],
-    ) &&
-    equal(
-      workflow.transitions.map((t) => [
-        t.key,
-        t.from,
-        t.to,
-        t.actorKey,
-        t.label,
-      ]),
-      [
-        ["submit", "hidden", "listed", curator.key, "Show entry"],
-        ["cancel", "listed", "hidden", curator.key, "Hide entry"],
-      ],
+      [entity!.key],
     ) &&
     equal(entry.primaryJob, {
-      actorKey: curator.key,
-      entityKey: entity.key,
+      actorKey: curator!.key,
+      entityKey: entity!.key,
       operation: "submit",
       successState: "listed",
     }) &&
     b.acceptanceJourneys.every((j) =>
-      j.steps.every((s) => [reader.key, curator.key].includes(s.actorKey)),
+      j.steps.every((s) => [reader!.key, curator!.key].includes(s.actorKey)),
     )
   );
 }
@@ -1059,6 +1006,27 @@ function validatePlanningSemantics(entry: ProductDefinitionData): boolean {
       }) &&
       spec.domainConcepts.length === 1 &&
       spec.domainConcepts[0]!.key === flow.entity
+    );
+  }
+  if (entry.familyBinding.key === "service-work-orders") {
+    const witness = matchServiceWorkOrdersBlueprintV1(b);
+    return (
+      !!witness &&
+      spec.productType === undefined &&
+      equal(
+        spec.actors.map((a) => a.key),
+        b.actors.map((a) => a.key),
+      ) &&
+      equal(
+        spec.domainConcepts.map((e) => e.key),
+        b.entities.map((e) => e.key),
+      ) &&
+      equal(entry.primaryJob, {
+        actorKey: witness.roles.technician,
+        entityKey: witness.orderEntity,
+        operation: "resolve",
+        successState: "resolved",
+      })
     );
   }
   if (entry.familyBinding.key === "inventory-operations")
@@ -1275,6 +1243,61 @@ function validateJourneys(entry: ProductDefinitionData): DefinitionReason[] {
     s: ProductDefinitionData["journeys"]["correction"][number]["steps"][number],
   ) => {
     const flow = flows.find((f) => f.entity === s.entityKey);
+    if (entry.familyBinding.key === "service-work-orders") {
+      const witness = matchServiceWorkOrdersBlueprintV1(b);
+      if (!witness || !roles.includes(s.actorKey)) return false;
+      const granted = grants.some(
+        (p) =>
+          p.role === s.actorKey &&
+          p.resource === s.entityKey &&
+          p.actions.includes(s.operation),
+      );
+      if (s.entityKey === witness.historyEntity)
+        return (
+          s.operation === "read" &&
+          s.fromState === null &&
+          s.toState === null &&
+          (s.expectation === "success" ||
+            (s.actorKey === witness.roles.technician &&
+              s.expectation === "not-found"))
+        );
+      if (
+        s.entityKey !== witness.orderEntity ||
+        !flow ||
+        ![s.fromState, s.toState].every(
+          (state) => state === null || flow.states.includes(state),
+        )
+      )
+        return false;
+      const transition = flow.transitions.some(
+        (t) =>
+          t.event === s.operation &&
+          t.from === s.fromState &&
+          t.to === s.toState &&
+          t.roles?.includes(s.actorKey) === true,
+      );
+      const sameState = s.fromState !== null && s.fromState === s.toState;
+      const ordinary =
+        transition ||
+        (s.operation === "create" &&
+          s.fromState === null &&
+          s.toState === "open") ||
+        (s.operation === "read" && sameState) ||
+        (["update", "reassign"].includes(s.operation) &&
+          sameState &&
+          ["open", "in-progress"].includes(s.fromState!)) ||
+        (s.operation === "assign" && sameState && s.fromState === "open");
+      const known = grants.some(
+        (p) => p.resource === s.entityKey && p.actions.includes(s.operation),
+      );
+      const scoped =
+        s.actorKey === witness.roles.technician &&
+        ["read", "start", "resolve"].includes(s.operation);
+      if (s.expectation === "denied")
+        return known && (!granted || !ordinary || scoped);
+      if (s.expectation === "not-found") return granted && ordinary && scoped;
+      return granted && ordinary;
+    }
     if (
       entry.familyBinding.key === "inventory-operations" &&
       s.entityKey === b.entities[0]?.key
@@ -1396,11 +1419,24 @@ function validateJourneys(entry: ProductDefinitionData): DefinitionReason[] {
     reasons.push("definition.unsupported-semantics");
   return reasons;
 }
+function familyProfileFor(entry: ProductDefinitionData) {
+  if (
+    entry.familyBinding.key === "appointment" &&
+    entry.familyBinding.version === "appointment-booking/v2"
+  ) {
+    return {
+      version: "appointment-booking/v2",
+      parameterPolicy: "none/v1",
+      presentation: { key: "appointment-booking", version: "2.0.0" },
+      compilerProfile: "appointment-booking@2.0.0",
+    };
+  }
+  return definitionFamilyRegistry[
+    entry.familyBinding.key as keyof typeof definitionFamilyRegistry
+  ];
+}
 function executionMatches(entry: ProductDefinitionData): boolean {
-  const row =
-    definitionFamilyRegistry[
-      entry.familyBinding.key as keyof typeof definitionFamilyRegistry
-    ];
+  const row = familyProfileFor(entry);
   const expectedLocks =
     entry.familyBinding.key === "restaurant"
       ? restaurantLocks
@@ -1490,6 +1526,37 @@ function executionMatches(entry: ProductDefinitionData): boolean {
     )
   )
     return false;
+  if (entry.familyBinding.key === "service-work-orders") {
+    const witness = matchServiceWorkOrdersGraphV1(graph);
+    if (!witness) return false;
+    const symbol = (model: string, key: string) => ({
+      graphSymbol: `graph.${model}.${key}`,
+    });
+    const expectedBindings = {
+      "core.crud": {
+        entityKey: symbol("domain", witness.orderEntity),
+        routeKey: symbol("page", witness.pages.list),
+      },
+      "core.workflow": { flowKey: symbol("flow", witness.workflow) },
+      "core.identity-policy": {
+        principalEntity: symbol("domain", witness.principalEntity),
+        sessionEntity: symbol("domain", witness.sessionEntity),
+        defaultRole: symbol("policy", witness.roles.dispatcher),
+        authenticatedRole: symbol("policy", witness.roles.technician),
+      },
+      "core.audit": { actorRole: symbol("policy", witness.roles.dispatcher) },
+      "core.notification": {
+        recipientRole: symbol("policy", witness.roles.dispatcher),
+      },
+      "core.policy-declarations": {},
+    };
+    return actual.every((selection) =>
+      equal(
+        selection.bindings,
+        expectedBindings[selection.lock.key as keyof typeof expectedBindings],
+      ),
+    );
+  }
   if (entry.familyBinding.key === "inventory-operations") {
     const witness = matchInventoryOperationsGraphV1(graph);
     if (!witness) return false;
@@ -1707,6 +1774,10 @@ function executionMatches(entry: ProductDefinitionData): boolean {
 function guideMatches(entry: ProductDefinitionData): boolean {
   const guide = entry.selection.providerGuide,
     b = entry.canonical.blueprint;
+  if (entry.familyBinding.key === "service-work-orders") {
+    const { definitionKey, identity: _identity, ...blueprint } = guide;
+    return definitionKey === entry.definitionKey && equal(blueprint, b);
+  }
   if (entry.familyBinding.key === "restaurant") {
     const intent = restaurantOrderingProductIntent(),
       experience = restaurantOrderingExperienceBrief(),
@@ -1767,10 +1838,7 @@ function guideMatches(entry: ProductDefinitionData): boolean {
 export function validateFamilyDefinition(
   entry: ProductDefinitionData,
 ): DefinitionReason[] {
-  const row =
-    definitionFamilyRegistry[
-      entry.familyBinding.key as keyof typeof definitionFamilyRegistry
-    ];
+  const row = familyProfileFor(entry);
   if (!row) return ["definition.unknown-family"];
   if (entry.familyBinding.version !== row.version)
     return ["definition.unsupported-family-version"];
@@ -1780,6 +1848,7 @@ export function validateFamilyDefinition(
   if (
     entry.familyBinding.key !== "approval" &&
     entry.familyBinding.key !== "inventory-operations" &&
+    entry.familyBinding.key !== "service-work-orders" &&
     entry.familyBinding.key !== "appointment" &&
     entry.canonical.blueprint.entities.some((e) =>
       e.fields.some((f) => f.numericDomain || f.calculation),

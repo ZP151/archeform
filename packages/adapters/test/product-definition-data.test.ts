@@ -49,7 +49,11 @@ describe("Product definition data", () => {
     const data = loadProductDefinitionData();
     expect(
       data.definitions.map((definition) => definition.definitionKey),
-    ).toEqual(admittedDefinitionKeys);
+    ).toEqual([
+      ...admittedDefinitionKeys,
+      "appointment-booking-v2",
+      "facilities-service-desk",
+    ]);
     expect(
       data.definitions
         .slice(0, historicalDefinitionKeys.length)
@@ -70,10 +74,10 @@ describe("Product definition data", () => {
         ),
       ),
     ).toMatchObject({
-      attempted: admittedDefinitionKeys.length,
-      valid: admittedDefinitionKeys.length,
-      distinct: admittedDefinitionKeys.length,
-      admitted: admittedDefinitionKeys.length,
+      attempted: admittedDefinitionKeys.length + 2,
+      valid: admittedDefinitionKeys.length + 2,
+      distinct: admittedDefinitionKeys.length + 2,
+      admitted: admittedDefinitionKeys.length + 2,
     });
   });
   it("admits the distinct reviewed Publication definition with its bounded scope", () => {
@@ -346,7 +350,7 @@ describe("Product definition data", () => {
       distinct: 1,
       admitted: 0,
     });
-    expect(loadProductDefinitionData().definitions).toHaveLength(10);
+    expect(loadProductDefinitionData().definitions).toHaveLength(12);
   });
   it.each([
     '{"apiVersion":"x","apiVersion":"y"}',

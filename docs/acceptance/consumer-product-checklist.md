@@ -84,6 +84,17 @@ framework adds global live regions. Retain the business assertion and verify the
 framework interaction with its installed implementation before an expensive rerun;
 do not weaken the expected outcome to silence a locator failure.
 
+The primary successful business journey must operate the generated interface:
+select actual related records, submit its form, use valid role/state actions,
+and reopen the persisted result and history where required. API calls may prepare
+fixtures and test server denials, concurrency and persistence; they cannot
+substitute for those user interactions. Capture screenshots after asserting the
+named visible state. A filename such as `form`, `history` or `retry`, an API
+success followed by an unchanged screenshot, or command metadata in a bundle
+does not establish that screen or action works. Reuse a focused emitted-control
+test to catch request-envelope and permission mismatches before the expensive
+actual journey. This sharpens the existing business check and adds no gate.
+
 | Dimension                          | Observable acceptance condition                                                                                                                                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                                                                                               |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Need and definition fidelity       | The result satisfies the supported business intent, roles, fields and rules. Defaults are safe; only material unknowns trigger questions. Unsupported requirements remain explicit rather than silently discarded.                                                                                   | Requirement-to-outcome cases, including coarse intent and at least one material ambiguity or unsupported case relevant to the slice.                                                                                                                                                                                                   |

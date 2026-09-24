@@ -96,14 +96,17 @@ function publicExportSurface(source: string) {
   return names.sort();
 }
 
-// Exact later additions authorized by ADR-0074 and ADR-0076; internals stay private.
+// Exact later additions under ADR-0074, ADR-0076 and the accepted ADR-0080
+// Task 1 compiler facade; implementation modules stay private.
 const laterRuntimeExports = [
   "selectContentDirectoryProfile",
   "selectInventoryOperationsProfile",
+  "selectServiceWorkOrdersProfile",
 ];
 const laterTypeExports = [
   "ContentDirectoryProfile",
   "InventoryOperationsProfile",
+  "ServiceWorkOrdersProfile",
 ];
 
 function runtimeExportSurface(source: string) {
@@ -264,6 +267,9 @@ describe("compiler consumer package boundary", () => {
       "@factory/compiler/src/index.ts",
       "@factory/compiler/src/appointment-compilation-admission.ts",
       "@factory/compiler/appointment-compilation-admission",
+      "@factory/compiler/dist/service-work-orders-contract.js",
+      "@factory/compiler/src/service-work-orders-contract.ts",
+      "@factory/compiler/service-work-orders-contract",
     ]) {
       expect(consumerImport(specifier)).toBe("ERR_PACKAGE_PATH_NOT_EXPORTED");
     }

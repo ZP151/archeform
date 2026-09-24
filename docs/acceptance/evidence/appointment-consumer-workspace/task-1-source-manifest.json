@@ -1,0 +1,31 @@
+{
+  "baseCommit": "7a85d6efd946ffd9d1a826771e0e12a187a85b92",
+  "comparisonBaseline": "generated/.appointment-v2-task1-base-7a85d6ef/manifest.json",
+  "state": "task-1-source-review-and-deterministic-qa-passed",
+  "files": [
+    {
+      "path": "packages/graph/src/product-blueprint.ts",
+      "sha256": "f723391cb73c1c998ad5f683aff3d47118349d5acd4d0a73e77afc0b7bb0debe"
+    },
+    {
+      "path": "packages/graph/test/product-blueprint.test.ts",
+      "sha256": "7d35eae1f760162bd8323bb61a46506dec51a3a16248ad60a8156878f0e679ef"
+    },
+    {
+      "path": "packages/capabilities/src/product-composer.ts",
+      "sha256": "360b2ba5b67e2b0ae1be55676009559c8226783138ca9387482a269fe60b8572"
+    },
+    {
+      "path": "packages/capabilities/src/plan-alternatives.ts",
+      "sha256": "f59d4d8d312a22654dbe81a05247cfeca98be14d7f31fefb23f001bee27c7c0e"
+    },
+    {
+      "path": "packages/capabilities/src/index.ts",
+      "sha256": "b093d830e51be728006c938d4f4cfe0601bb078f2ad6434d91d39a4ac5b2e0ee"
+    },
+    {
+      "path": "packages/capabilities/test/appointment-consumer-workspace.test.ts",
+      "sha256": "7f9b54b68309740961552678e1f6d946ba7298249fbc128a3340b6ac7ccfcb04"
+    }
+  ]
+}

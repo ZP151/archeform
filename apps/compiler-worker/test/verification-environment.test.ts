@@ -75,3 +75,96 @@ describe("bounded declared values envelopes", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe("bounded Work Orders correction fixtures", () => {
+  const correction = {
+    expectedVersion: 2,
+    reason: "Correct the reported location",
+    values: {
+      title: "Repair the entrance light",
+      serviceLocation: "East entrance",
+      priority: "high",
+      description: null,
+      dueDate: null,
+    },
+  };
+
+  it.each([
+    correction,
+    {
+      ...correction,
+      expectedVersion: 2147483647,
+      values: {
+        ...correction.values,
+        description: "Light does not turn on",
+        dueDate: "2028-02-29",
+      },
+    },
+  ])("forwards accepted replacement and clearing bytes", async (value) => {
+    const { env, fetch } = environment();
+    await env.boot();
+    const body = JSON.stringify(value, null, 1);
+    await env.request(
+      "POST",
+      "/api/work-order/fixture-order/events/update",
+      "api",
+      {
+        body,
+      },
+    );
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls[0]?.[1]).toMatchObject({ method: "POST", body });
+  });
+
+  it.each([
+    { ...correction, extra: true },
+    { ...correction, expectedVersion: -1 },
+    { ...correction, expectedVersion: 0.5 },
+    { ...correction, expectedVersion: 2147483648 },
+    { ...correction, expectedVersion: "2" },
+    { ...correction, reason: null },
+    { ...correction, reason: "   " },
+    { ...correction, reason: "x".repeat(201) },
+    { ...correction, values: { ...correction.values, title: null } },
+    { ...correction, values: { ...correction.values, title: "x".repeat(161) } },
+    { ...correction, values: { ...correction.values, serviceLocation: "" } },
+    { ...correction, values: { ...correction.values, priority: "urgent" } },
+    { ...correction, values: { ...correction.values, description: false } },
+    {
+      ...correction,
+      values: { ...correction.values, description: "x".repeat(201) },
+    },
+    {
+      ...correction,
+      values: {
+        ...correction.values,
+        description: { secret: "hostile-payload" },
+      },
+    },
+    { ...correction, values: { ...correction.values, dueDate: "2026-02-29" } },
+    {
+      ...correction,
+      values: { ...correction.values, dueDate: "2026-09-24T00:00:00Z" },
+    },
+    { ...correction, values: { ...correction.values, status: "resolved" } },
+    {
+      ...correction,
+      values: { ...correction.values, assigneePrincipalId: "forged" },
+    },
+    { ...correction, values: { title: "Partial replacement" } },
+    { ...correction, values: null },
+  ])("rejects malformed correction without fetching", async (value) => {
+    const { env, fetch } = environment();
+    await env.boot();
+    const body = JSON.stringify(value);
+    await expect(
+      env.request(
+        "POST",
+        "/api/work-order/fixture-order/events/update",
+        "api",
+        { body },
+      ),
+    ).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});

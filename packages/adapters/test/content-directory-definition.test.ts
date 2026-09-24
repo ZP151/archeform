@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { hashRequirementSpec } from "@factory/graph";
+import { isContentDirectoryBlueprint } from "@factory/capabilities";
 import {
   loadProductDefinitionData,
   parseProductDefinitionCatalogue,
@@ -44,6 +45,71 @@ function guide(entry: ReturnType<typeof directory>) {
   };
 }
 describe("Knowledge Resource Directory definition", () => {
+  it("shares blueprint admission while retaining definition-only guards", () => {
+    const mutations: ((entry: ReturnType<typeof directory>) => void)[] = [
+      (entry) => {
+        entry.canonical.spec.actors[0]!.key = "unbound-reader";
+      },
+      (entry) => {
+        entry.canonical.spec.domainConcepts[0]!.key = "unbound-entity";
+      },
+      (entry) => {
+        entry.primaryJob.operation = "read";
+      },
+      (entry) => {
+        entry.journeys.correction = [];
+      },
+      (entry) => {
+        entry.journeys.failure = [];
+      },
+      (entry) => {
+        entry.canonical.blueprint.acceptanceJourneys[0]!.steps[0]!.actorKey =
+          "unknown-reader";
+      },
+      (entry) => {
+        entry.selection.providerGuide.definitionKey = "untrusted-definition";
+      },
+    ];
+    for (const mutate of mutations) {
+      const entry = directory();
+      mutate(entry);
+      expect(isContentDirectoryBlueprint(entry.canonical.blueprint)).toBe(true);
+      expect(validateFamilyDefinition(entry).length).toBeGreaterThan(0);
+    }
+    const untrusted = directory();
+    untrusted.provenance.license =
+      "unreviewed-license" as typeof untrusted.provenance.license;
+    expect(isContentDirectoryBlueprint(untrusted.canonical.blueprint)).toBe(
+      true,
+    );
+    expect(() =>
+      parseProductDefinitionCatalogue(
+        Buffer.from(
+          JSON.stringify({
+            apiVersion: "factory.product-definition-catalogue/v1",
+            definitions: [untrusted],
+          }),
+        ),
+      ),
+    ).toThrow();
+  });
+
+  it("preserves descriptive fields as non-semantic blueprint content", () => {
+    const entry = directory();
+    entry.canonical.blueprint.entities[0]!.fields[0]!.label = "Business title";
+    entry.canonical.blueprint.entities[0]!.fields[0]!.description =
+      "A useful entry title.";
+    guide(entry);
+    expect(isContentDirectoryBlueprint(entry.canonical.blueprint)).toBe(true);
+    expect(validateFamilyDefinition(entry)).toEqual([]);
+    entry.canonical.blueprint.entities[0]!.fields[0]!.required = false;
+    guide(entry);
+    expect(isContentDirectoryBlueprint(entry.canonical.blueprint)).toBe(false);
+    expect(validateFamilyDefinition(entry)).toContain(
+      "definition.unsupported-semantics",
+    );
+  });
+
   it("appends the exact family without changing the historical eight entries", () => {
     const entry = directory();
     expect(entry).toMatchObject({
@@ -251,6 +317,9 @@ describe("Knowledge Resource Directory definition", () => {
       const entry = directory();
       entry.canonical.blueprint.entities[0]!.fields[3]!.options = options;
       guide(entry);
+      expect(isContentDirectoryBlueprint(entry.canonical.blueprint)).toBe(
+        valid,
+      );
       expect(validateFamilyDefinition(entry)).toEqual(
         valid
           ? []
