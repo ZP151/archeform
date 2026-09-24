@@ -14,7 +14,11 @@
     "graphWitnesses": { "passed": 61, "files": 2 },
     "composition": { "passed": 2, "files": 1 },
     "compilerContractAndExports": { "passed": 53, "files": 2 },
-    "noEmitTypechecks": ["@factory/graph", "@factory/capabilities", "@factory/compiler"],
+    "noEmitTypechecks": [
+      "@factory/graph",
+      "@factory/capabilities",
+      "@factory/compiler"
+    ],
     "historicalComparator": {
       "executed": false,
       "reason": "Comparator writes the protected equality receipt; current source and protected receipt hashes match."
