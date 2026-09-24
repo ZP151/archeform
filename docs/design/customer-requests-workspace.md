@@ -90,3 +90,25 @@ recovery state; group any corrections and confirm only affected evidence. Check
 local icon/style delivery and computed geometry, but do not substitute those
 mechanical checks for inspecting the generated screen. Actual PostgreSQL,
 ordinary-user, real-device and hosted claims each still require their own evidence.
+
+## Emitted-style parity in the existing test batch
+
+The inspected Work Orders component harness reconstructs theme CSS and supplies
+its own accent aliases. That is useful component evidence, but does not establish
+that the compiler selects the same workspace or emits the same final stylesheet.
+Do not copy that reconstruction as the final Customer Requests visual witness.
+
+After the serialized style/emitter integration, the existing presentation test
+batch must compile the authored immutable fixture with `generateApplicationBundle`
+and use its actual `web/app/page-runtime.tsx` and `web/app/globals.css` contents.
+Bundle the emitted component with the existing in-memory browser harness; intercept
+all requests and supply authored API fixtures without starting a listener or
+calling a provider. This remains component integration evidence, not an actual
+generated-app or PostgreSQL acceptance run.
+
+Check canonical, dark and explicit Graph-theme rendering against those emitted
+bytes at the already-required viewport sizes. Assert the intended Customer
+Requests workspace and named business state before capture. An isolated helper's
+passing styles cannot compensate for missing compiler routing, absent CSS, a
+generic-page fallback or theme overrides in the harness. Keep these assertions
+in the same review batch; no additional approval stage or new test platform.

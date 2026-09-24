@@ -205,7 +205,7 @@ describe("Customer Requests immutable compiler contract", () => {
       expect(reads).toBe(0);
     },
   );
-  it("blocks public compilation until the family runtime is implemented", () => {
+  it("admits the implemented family at every public compilation boundary", () => {
     const input = {
       ...customerRequestsInput(),
       publishedRevisionId: "customer-requests-published",
@@ -215,7 +215,7 @@ describe("Customer Requests immutable compiler contract", () => {
       buildCompilationPlan,
       buildCompilationInput,
     ])
-      expect(() => boundary(input)).toThrow(/Customer Requests runtime/);
+      expect(() => boundary(input)).not.toThrow();
   });
 });
 

@@ -8,7 +8,7 @@ An unbudgeted Goal now drives the [September 24 execution route](superpowers/pla
 The first new family is Resource Directory, followed by Inventory Operations.
 Work Orders has accepted source evidence and awaits actual acceptance. Customer
 Requests has accepted exact contract source after independent review and QA;
-persisted runtime implementation is next. Event Registration and Sales
+persisted runtime source now passes review, independent QA and final judgment. Event Registration and Sales
 Pipeline remain candidate waves. These
 four waves have not added an accepted delivered product.
 Mobile browsing/field work and desktop
@@ -33,14 +33,21 @@ the [source acceptance](acceptance/evidence/customer-requests/task1-source-accep
 retains the exact scope. Runtime, responsive
 conversation UI, definition/consumer entry and actual delivery are subsequent
 tasks in the [implementation plan](superpowers/plans/2026-09-24-customer-requests.md).
-It adds no delivered definition yet.
+Task 1 source is pushed at `406b53c1`, followed by portable-evidence formatting
+at `18f04312`. Both Node jobs pass in [CI run 35979418711](https://github.com/ZP151/archeform/actions/runs/35979418711)
+at that exact revision; Task 2 is outside that run. Task 2 now has
+[accepted runtime source](acceptance/evidence/customer-requests/task2-source-acceptance.md):
+independent QA passes 147 focused cases, compiler types and twelve-definition
+immutable-output parity. A proxy error-sanitization finding is repaired and
+independently closed. Responsive conversation UI, worker verification and actual
+consumer delivery remain next; no delivered-definition count increases.
 
-| Outcome                       | Current evidence                                                                                                                              | Next acceptance                                                                                              |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Scenario-appropriate surfaces | Work Orders source review and independent QA pass, including 137 runtime/contract and 37 component checks                                     | Run the actual shared-data job; component tests do not establish PostgreSQL acceptance                       |
-| Ordinary-user generation      | Work Orders definition and automatic entry pass independent source review and QA: 513 focused cases plus eight shared helper cases            | Supported brief to useful app without technical lifecycle actions; retain material unsupported requirements  |
-| Reusable regression           | Integrated definition lane passes all eight steps; complete repository formatting passes; CI now selects definition and case-source checks    | Push reviewed source and verify remote CI; execute actual consumer cases when the startup restriction clears |
-| Continuous delivery           | Prior immutable local A/B rehearsal proves compatible update, data retention, failed-readiness recovery, rollback and separate backup restore | One authorized hosted pilot with a stable HTTPS address and the same retention/recovery evidence             |
+| Outcome                       | Current evidence                                                                                                                              | Next acceptance                                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Scenario-appropriate surfaces | Work Orders source review and independent QA pass, including 137 runtime/contract and 37 component checks                                     | Run the actual shared-data job; component tests do not establish PostgreSQL acceptance                      |
+| Ordinary-user generation      | Work Orders definition and automatic entry pass independent source review and QA: 513 focused cases plus eight shared helper cases            | Supported brief to useful app without technical lifecycle actions; retain material unsupported requirements |
+| Reusable regression           | Integrated definition lane passes all eight steps; complete repository formatting passes; CI now selects definition and case-source checks    | Verify CI for each new source checkpoint; execute actual consumer cases when the startup restriction clears |
+| Continuous delivery           | Prior immutable local A/B rehearsal proves compatible update, data retention, failed-readiness recovery, rollback and separate backup restore | One authorized hosted pilot with a stable HTTPS address and the same retention/recovery evidence            |
 
 Component evidence is not actual PostgreSQL or hosted availability. Work Orders
 does not increase delivered counts. The current automatic-approval startup block

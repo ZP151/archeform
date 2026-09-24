@@ -4,6 +4,7 @@ export {
   type CustomerRequestsProfile,
 } from "./customer-requests-contract.js";
 import { renderServiceWorkOrdersFile } from "./service-work-orders-runtime.js";
+import { renderCustomerRequestsFile } from "./customer-requests-runtime.js";
 import {
   renderServiceWorkOrdersWorkspace,
   renderServiceWorkOrdersStyles,
@@ -407,8 +408,7 @@ function assertCanonicalCompositionLock(
 export function buildCompilationPlan(
   input: PublishedGraphInput,
 ): CompilationPlan {
-  if (selectCustomerRequestsProfile(input.graph, input.compositionLock))
-    throw new Error("Customer Requests runtime is not implemented.");
+  selectCustomerRequestsProfile(input.graph, input.compositionLock);
   selectServiceWorkOrdersProfile(input.graph, input.compositionLock);
   if (!input.publishedRevisionId) {
     throw new Error("Published revision id is required for compilation.");
@@ -1138,22 +1138,32 @@ function resolveIdentityPolicyRuntimeContribution(
     input.graph,
     input.compositionLock,
   );
-  const fixtureRoles = workOrders
+  const requests = selectCustomerRequestsProfile(
+    input.graph,
+    input.compositionLock,
+  );
+  const fixtureRoles = requests
     ? [
-        {
-          role: workOrders.roles.dispatcher,
-          suffix: "dispatcher",
-        },
-        {
-          role: workOrders.roles.technician,
-          suffix: "technician-a",
-        },
-        {
-          role: workOrders.roles.technician,
-          suffix: "technician-b",
-        },
+        { role: requests.roles.staff, suffix: "support-staff" },
+        { role: requests.roles.customer, suffix: "customer-a" },
+        { role: requests.roles.customer, suffix: "customer-b" },
       ]
-    : input.graph.policy.roles.map((role) => ({ role, suffix: role }));
+    : workOrders
+      ? [
+          {
+            role: workOrders.roles.dispatcher,
+            suffix: "dispatcher",
+          },
+          {
+            role: workOrders.roles.technician,
+            suffix: "technician-a",
+          },
+          {
+            role: workOrders.roles.technician,
+            suffix: "technician-b",
+          },
+        ]
+      : input.graph.policy.roles.map((role) => ({ role, suffix: role }));
   return Object.freeze({
     fixtureSessions: Object.freeze(
       fixtureRoles.map(({ role, suffix }) =>
@@ -2922,7 +2932,8 @@ function renderPageRuntime(
     calculatedIdentity ||
     appointmentNumeric ||
     selectInventoryOperationsProfile(graph, compositionLock) ||
-    selectServiceWorkOrdersProfile(graph, compositionLock)
+    selectServiceWorkOrdersProfile(graph, compositionLock) ||
+    selectCustomerRequestsProfile(graph, compositionLock)
       ? undefined
       : selectNumericApproval(graph, correctionEntity);
   const recordIdentity =
@@ -3997,8 +4008,7 @@ export function buildCompilationInput(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): PublishedCompilationInput {
-  if (selectCustomerRequestsProfile(input.graph, input.compositionLock))
-    throw new Error("Customer Requests runtime is not implemented.");
+  selectCustomerRequestsProfile(input.graph, input.compositionLock);
   selectServiceWorkOrdersProfile(input.graph, input.compositionLock);
   const graph = assertValidApplicationGraph(input.graph);
   if (
@@ -4112,8 +4122,10 @@ export function generateApplicationBundle(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): GeneratedApplicationBundle {
-  if (selectCustomerRequestsProfile(input.graph, input.compositionLock))
-    throw new Error("Customer Requests runtime is not implemented.");
+  const customerRequestsProfile = selectCustomerRequestsProfile(
+    input.graph,
+    input.compositionLock,
+  );
   const workOrdersProfile = selectServiceWorkOrdersProfile(
     input.graph,
     input.compositionLock,
@@ -4149,7 +4161,8 @@ export function generateApplicationBundle(
     !calculatedApproval &&
     !appointmentNumeric &&
     !inventoryProfile &&
-    !workOrdersProfile
+    !workOrdersProfile &&
+    !customerRequestsProfile
   )
     selectNumericApproval(graph, approvalEntity);
   const rendererGraph = compilationInput.rendererGraph;
@@ -4790,7 +4803,13 @@ export function generateApplicationBundle(
         path,
         renderServiceWorkOrdersFile(
           path,
-          renderInventoryFile(path, render(), inventoryProfile),
+          renderCustomerRequestsFile(
+            path,
+            renderInventoryFile(path, render(), inventoryProfile),
+            customerRequestsProfile,
+            identityPolicy?.fixtureSessions,
+            renderedDatabaseFiles,
+          ),
           workOrdersProfile,
           identityPolicy?.fixtureSessions,
           renderedDatabaseFiles,

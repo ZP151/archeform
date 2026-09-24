@@ -1,0 +1,69 @@
+{
+  "qa": "customer_requests_runtime_qa",
+  "date": "2026-09-24",
+  "scope": "Task 2 frozen compiler source and generated source evidence only",
+  "verdict": {
+    "sourceGate": "PASS",
+    "p0": 0,
+    "p1": 0,
+    "p2": 0
+  },
+  "repairManifestSha256": "ed5e77ddb7b268ff48142423bb8f7a32350e6f84b5736761b7a718663c7a1fcb",
+  "acceptedAdrSha256": "8a78888dd9f1996588f475188b4645664c06bf9e1a49561112cdfa89c6f954c6",
+  "sourceAndEvidenceIdentity": {
+    "before": "all five source hashes and all nine repair/reused evidence hashes matched",
+    "after": "all five source hashes and all nine repair/reused evidence hashes matched",
+    "source": {
+      "packages/compiler/src/customer-requests-runtime.ts": "1ccb1ba40c99f8066913db1d6a7837bb7e5fb16e6e780789051243809144a3f2",
+      "packages/compiler/src/index.ts": "844d6eafb90172315543001dd73053039e41df6b510662bbd4c182a680b22b08",
+      "packages/compiler/test/customer-requests-runtime.test.ts": "f29ac781b8946e8e666fe368ec550674c559a6bc45c01aa169dfd87d88c87ff3",
+      "packages/compiler/test/customer-requests-compilation.test.ts": "8c14e707464b48fb3795130325b22ea595b0598e1c76924bac92589fab474a43",
+      "packages/compiler/test/customer-requests-contract.test.ts": "397b93a524776c4af8f54208da307dc27328d18086d424a2c86b6b9db31a9b82"
+    },
+    "protected": {
+      "generated/.customer-requests-task1/before.json": "c9c6c0245de95ffb7176131e59206aa8ca0bceecb21b5ed70185ae6654f25eba",
+      "generated/.customer-requests-task1/historical-equality.json": "3f6bd2c708c6b4ccd8391a4cfd24ba532e6e680a0f920213d7639124c18e655d",
+      "generated/.customer-requests-task2/historical-equality.json": "3f6bd2c708c6b4ccd8391a4cfd24ba532e6e680a0f920213d7639124c18e655d"
+    }
+  },
+  "commands": [
+    {
+      "command": "pnpm --filter @factory/compiler exec vitest run test/customer-requests-runtime.test.ts test/customer-requests-compilation.test.ts test/customer-requests-contract.test.ts test/index-exports.test.ts",
+      "exitCode": 0,
+      "tests": 147,
+      "breakdown": {
+        "runtime": 56,
+        "compilation": 38,
+        "contract": 46,
+        "indexExports": 7
+      },
+      "log": "generated/.customer-requests-task2-qa/focused-vitest.log",
+      "logSha256": "0b9a1b4a29d0794aca8a80c91b228e08fc8f9b0b1ff044b978937ad53c439963"
+    },
+    {
+      "command": "pnpm --filter @factory/compiler typecheck",
+      "exitCode": 0,
+      "log": "generated/.customer-requests-task2-qa/compiler-typecheck.log",
+      "logSha256": "079b60e51346d74b0fed0cdaa28ca68e4c96f4d1967aff478eeb95289b3410f0"
+    },
+    {
+      "command": "node node_modules/.pnpm/vite-node@2.1.9_@types+node@22.20.1_terser@5.49.0/node_modules/vite-node/vite-node.mjs generated/.customer-requests-task2-qa/verify-historical-qa.ts",
+      "exitCode": 0,
+      "result": "Historical derivation and immutable Published emitted-byte equality: 12/12",
+      "comparator": "generated/.customer-requests-task2-qa/verify-historical-qa.ts",
+      "output": "generated/.customer-requests-task2-qa/historical-equality-qa.json",
+      "outputSha256": "3f6bd2c708c6b4ccd8391a4cfd24ba532e6e680a0f920213d7639124c18e655d",
+      "log": "generated/.customer-requests-task2-qa/historical-parity.log",
+      "logSha256": "b48c7bce4a34ba50cf71de6c66a8e6c67b5639c43e16592d79c865db614f5a21"
+    }
+  ],
+  "inspection": {
+    "proxyRepair": "Non-success upstream responses accept only an own single code property, one of the ten permitted error codes, and its exact HTTP status; every other fulfilled or rejected upstream failure becomes 503 customer_request.unavailable with no-store.",
+    "coverage": "The focused compilation tests cover all ten valid status/code pairs and fifteen malformed, wrong-pair, unsupported-status, and extra-detail response cases."
+  },
+  "limits": [
+    "This is source and emitted-module evidence; it is not actual PostgreSQL CAS, restart, rollback, or fault acceptance.",
+    "No service, database, PostgreSQL, Docker, browser, provider, cloud, startup, cleanup, Git operation, tracked source edit, consumer/UI, hosting, or release acceptance was performed.",
+    "Frontend, consumer admission, worker verification, hosted identity/privacy, durable upgrades, and recovery remain later gates."
+  ]
+}

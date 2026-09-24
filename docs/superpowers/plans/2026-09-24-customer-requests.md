@@ -91,18 +91,18 @@ historical bytes and explicit root ownership first.
 immutable roster/role mapping, mutation and bounded read interfaces frozen before
 presentation or worker consumers start. No generic history write or owner update.
 
-- [ ] RED emitted-runtime tests for two customers of the same role: A creates,
+- [x] RED emitted-runtime tests for two customers of the same role: A creates,
       B cannot list/read/reply/correct/replay A's record, staff replies, A reads it.
-- [ ] Compose existing write protection and store transactions; add owner-aware
+- [x] Compose existing write protection and store transactions; add owner-aware
       CAS and atomic request/event/audit/receipt commits. Implement all six commands
       with exact bounds, linked corrections and authorization before replay.
-- [ ] Implement serializable bounded reads, pagination and nextActor projection;
+- [x] Implement serializable bounded reads, pagination and nextActor projection;
       reject corrupt event evidence and unknown query keys. Walk more than 50
       requests/events and prove owner filters apply before limits.
-- [ ] Test emitted code for stale writes, same-key replay, changed-body conflict,
+- [x] Test emitted code for stale writes, same-key replay, changed-body conflict,
       terminal states, version exhaustion, fault rollback and historical replies.
       Memory witnesses remain source evidence only.
-- [ ] Freeze generated store/route signatures; run focused tests/types/build and
+- [x] Freeze generated store/route signatures; run focused tests/types/build and
       historical parity, then applicable contract review/QA and source delivery.
 
 ## Task 3: responsive customer/staff workspace and verification

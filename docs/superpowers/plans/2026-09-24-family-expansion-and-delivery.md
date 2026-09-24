@@ -64,14 +64,14 @@ rejected operation, waive a runtime gate, or count an unexecuted family as deliv
 
 ## Ordered business waves
 
-| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                                                |
-| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Accepted local journey; delivered at e0c0f467; nine definitions / five families                       |
-| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Accepted actual local journey; ten definitions / six families                                         |
-| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen, correct and cancel with enforced assignment access and retained history                                                                                         | Source and case-source accepted; eight-step regression passes; actual application acceptance pending  |
-| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | ADR-0084 accepted; exact admission/contract source assigned; actual and hosted acceptance remain open |
-| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics                                 |
-| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                                               |
+| Wave | Business slice              | Scenario and surfaces                                               | Required closure                                                                                                                                                                               | Status                                                                                               |
+| ---- | --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| A    | Resource Directory          | Mobile find/read; desktop curator management                        | Create two different entries, find the intended entry, read useful detail, correct it, hide it, prove hidden entries absent from reader list/detail, recover from no results and missing media | Accepted local journey; delivered at e0c0f467; nine definitions / five families                      |
+| B    | Inventory Operations        | Desktop receiving/adjustment/history; mobile stock lookup and issue | Receive, issue and justified adjustment with authoritative quantities, stale/concurrent protection, retained movement history and reload                                                       | Accepted actual local journey; ten definitions / six families                                        |
+| C    | Service Work Orders         | Mobile technician work; desktop dispatcher queue                    | Assign, work, resolve, reopen, correct and cancel with enforced assignment access and retained history                                                                                         | Source and case-source accepted; eight-step regression passes; actual application acceptance pending |
+| D    | Customer Requests / Support | Desktop triage; mobile customer request/status                      | Submit, respond, resolve, reopen with clear ownership and privacy boundary                                                                                                                     | Runtime source accepted; responsive UI/worker next; actual and hosted acceptance remain open         |
+| E    | Event Registration          | Mobile discovery/registration; desktop attendee management          | Capacity, cancellation and actual check-in; payment and notification requirements cannot be silently omitted                                                                                   | Candidate; appointment capacity reuse is not proof of event semantics                                |
+| F    | Sales Pipeline              | Desktop pipeline and detail; mobile follow-up                       | Record lead, qualify, progress, retain outcome and follow-up history                                                                                                                           | Candidate; distinct state and privacy contract required                                              |
 
 After each new reusable family, assess 3-5 real domain briefs. Admit supported,
 semantically distinct jobs through data and bindings. Reject or queue unsupported
@@ -314,3 +314,24 @@ build/verification reuse as a concrete speed investigation after the next family
 baseline is frozen. Measure cold/warm costs before choosing an optimization; keep
 immutable inputs and required business checks. Do not remove correctness checks
 merely to improve the timer or count outer-stack preparation as a user SLA.
+
+The retained Directory attempt `4775a00c-fc89-4d8b-8485-aacf5f818464`
+separates compilation (232 ms, 0.11% of readiness), verification (182,850 ms,
+87.68%) and user Preview startup (21,389 ms, 10.26%). These are one authored local
+journey's phase measurements, not a cold/warm benchmark or a model-generation
+latency claim. Its 22 verification steps pass; no step-level duration breakdown
+is preserved in the portable summary.
+
+Read-only source inspection identifies the next measurement boundary:
+`verification-lifecycle.ts` recompiles immutable inputs and checks their artifact
+digest before booting its isolated environment; `preview-runner.ts` invokes
+Compose with `up --build --detach --wait` for each distinct run. The generated
+API/database/web Dockerfiles have dependency and build layers, so `--build`
+alone does not prove those layers missed cache or that images were rebuilt.
+Do not optimize the inexpensive Graph emitter or remove business probes based
+on this aggregate sample. When actual execution is authorized again, separate
+environment boot/build, business probes and cleanup in a controlled cold/warm
+comparison of the same immutable artifacts. Use that evidence to select either
+artifact reuse, build reuse or a specific slow probe. Image promotion or cache
+authority changes still require the existing operability decision; source
+inspection grants neither that implementation nor a new startup attempt.

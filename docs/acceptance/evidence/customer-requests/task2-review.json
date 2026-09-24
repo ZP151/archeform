@@ -1,0 +1,121 @@
+{
+  "reviewer": "customer_requests_runtime_review",
+  "date": "2026-09-24",
+  "productionBase": "406b53c1c7f94917086bd7f38628978841e2e5ed",
+  "specificationVerdict": "CHANGES_REQUIRED",
+  "qualityVerdict": "CHANGES_REQUIRED",
+  "counts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1
+  },
+  "manifestSha256": "7a611acb8127e7841e34013b30c34e3595b03210f40808a666261070a2674f5a",
+  "reportSha256": "9216fa329d62e218652aa35823ae21bdc559291f59f90b262c32809ca939b063",
+  "reviewPackageSha256": "1c0ee847826bc18276dbaf90564376d83c52505992764a64da11fac01909dcab",
+  "acceptedAdrSha256": "8a78888dd9f1996588f475188b4645664c06bf9e1a49561112cdfa89c6f954c6",
+  "verifiedSourceAndEvidence": [
+    {
+      "path": "packages/compiler/src/customer-requests-runtime.ts",
+      "expectedSha256": "f8f6946c0c683172a4b17a26f2489276d8cc5563f8d22f8b669dfc0adcd9fb24",
+      "actualSha256": "f8f6946c0c683172a4b17a26f2489276d8cc5563f8d22f8b669dfc0adcd9fb24",
+      "matches": true
+    },
+    {
+      "path": "packages/compiler/src/index.ts",
+      "expectedSha256": "844d6eafb90172315543001dd73053039e41df6b510662bbd4c182a680b22b08",
+      "actualSha256": "844d6eafb90172315543001dd73053039e41df6b510662bbd4c182a680b22b08",
+      "matches": true
+    },
+    {
+      "path": "packages/compiler/test/customer-requests-runtime.test.ts",
+      "expectedSha256": "f29ac781b8946e8e666fe368ec550674c559a6bc45c01aa169dfd87d88c87ff3",
+      "actualSha256": "f29ac781b8946e8e666fe368ec550674c559a6bc45c01aa169dfd87d88c87ff3",
+      "matches": true
+    },
+    {
+      "path": "packages/compiler/test/customer-requests-compilation.test.ts",
+      "expectedSha256": "23cd1f7eabb4fadeef43778997a669d73b053fe027e41f2ce74b26e1df9b31dc",
+      "actualSha256": "23cd1f7eabb4fadeef43778997a669d73b053fe027e41f2ce74b26e1df9b31dc",
+      "matches": true
+    },
+    {
+      "path": "packages/compiler/test/customer-requests-contract.test.ts",
+      "expectedSha256": "397b93a524776c4af8f54208da307dc27328d18086d424a2c86b6b9db31a9b82",
+      "actualSha256": "397b93a524776c4af8f54208da307dc27328d18086d424a2c86b6b9db31a9b82",
+      "matches": true
+    },
+    {
+      "path": "generated/.customer-requests-task2/focused-final.log",
+      "expectedSha256": "cd51f9b8eeeaf248ece3fa5f6cb6cc2bf73aba6a6b91b631648585367759b5a9",
+      "actualSha256": "cd51f9b8eeeaf248ece3fa5f6cb6cc2bf73aba6a6b91b631648585367759b5a9",
+      "matches": true
+    },
+    {
+      "path": "generated/.customer-requests-task2/typecheck-final.log",
+      "expectedSha256": "079b60e51346d74b0fed0cdaa28ca68e4c96f4d1967aff478eeb95289b3410f0",
+      "actualSha256": "079b60e51346d74b0fed0cdaa28ca68e4c96f4d1967aff478eeb95289b3410f0",
+      "matches": true
+    },
+    {
+      "path": "generated/.customer-requests-task2/build-final.log",
+      "expectedSha256": "3a6a0a0d18f8760c4821073de61162e70e41bf131e835b591d2d485c9306efb5",
+      "actualSha256": "3a6a0a0d18f8760c4821073de61162e70e41bf131e835b591d2d485c9306efb5",
+      "matches": true
+    },
+    {
+      "path": "generated/.customer-requests-task2/historical-equality.json",
+      "expectedSha256": "3f6bd2c708c6b4ccd8391a4cfd24ba532e6e680a0f920213d7639124c18e655d",
+      "actualSha256": "3f6bd2c708c6b4ccd8391a4cfd24ba532e6e680a0f920213d7639124c18e655d",
+      "matches": true
+    },
+    {
+      "path": "generated/.customer-requests-task2/format-final.log",
+      "expectedSha256": "f20510a9da4717c51c4cffee6d0dd88d6c9a723d0a83711d01216f5b48961283",
+      "actualSha256": "f20510a9da4717c51c4cffee6d0dd88d6c9a723d0a83711d01216f5b48961283",
+      "matches": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "CR-T2-P2-001",
+      "priority": "P2",
+      "path": "packages/compiler/src/customer-requests-runtime.ts",
+      "startLine": 428,
+      "endLine": 428,
+      "title": "Sanitize non-success upstream responses at the Next proxy",
+      "requirement": "ADR-0084 API-007; Task 2 API/proxy sanitization",
+      "impact": "Fulfilled fetch carrying an arbitrary upstream 500/502/503 error leaks its body to the browser and may escape the public status contract.",
+      "evidence": "generated/.customer-requests-task2-review/proxy-error-probe.json",
+      "repair": "Validate allowed upstream error status/code pairs, reconstruct only {code}, map malformed/unrecognized failures to a safe contract error, and add focused emitted-proxy regressions."
+    }
+  ],
+  "probe": {
+    "command": "node node_modules/.pnpm/vite-node@2.1.9_@types+node@22.20.1_terser@5.49.0/node_modules/vite-node/vite-node.mjs generated/.customer-requests-task2-review/proxy-error-probe.ts",
+    "exitCode": 0,
+    "scriptSha256": "071d22706c5df42ac05d0d5f53a6d0f359960517ece2ffa3012512a917b2033c",
+    "resultSha256": "c2c7b485072196db71eb8e8fe2bfbbecd1b323dbc5bcbfaa9d90c70838244bbc",
+    "allThreeSyntheticUnsafeBodiesForwarded": true
+  },
+  "reusedEvidence": {
+    "cases": 122,
+    "runtime": 56,
+    "compilation": 13,
+    "contract": 46,
+    "exports": 7,
+    "compilerTypecheck": "passed",
+    "compilerBuild": "passed",
+    "changedFormatting": "passed",
+    "historicalDefinitions": 12,
+    "historicalDerivationEqual": true,
+    "immutableInputEmittedByteEqual": true,
+    "passingSuitesRerun": false
+  },
+  "protectedTask1": {
+    "equalitySha256": "3f6bd2c708c6b4ccd8391a4cfd24ba532e6e680a0f920213d7639124c18e655d",
+    "comparatorRerun": false,
+    "beforeSha256": "c9c6c0245de95ffb7176131e59206aa8ca0bceecb21b5ed70185ae6654f25eba"
+  },
+  "sourceOnly": true,
+  "trackedEdits": false,
+  "actualRuntimeAcceptance": false
+}

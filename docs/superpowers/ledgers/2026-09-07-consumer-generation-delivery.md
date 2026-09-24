@@ -5,6 +5,181 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
+### Customer Requests Task 2 accepted for source delivery — 2026-09-24
+
+Final independent judgment returns ACCEPTED - SOURCE ONLY, P0/P1/P2 0/0/0,
+at the exact five-source repair manifest `ed5e77dd...7a1fcb`. It reconciles
+the retained Astra task review, scoped repair closure and fresh Terra QA without
+repeating tests or a broad audit. Root PM accepts Task 2 within that scope and
+prepares controller delivery. Portable manifests/reviews/QA/judgment plus the
+source acceptance are in `docs/acceptance/evidence/customer-requests/`.
+
+Current evidence is 147 fresh QA cases, compiler types and 12/12 historical
+immutable-output parity; the proxy repair is closed. No actual PostgreSQL,
+responsive product, consumer, hosting or repository-release acceptance is inferred.
+Task 3 continues with the frozen roster/API/read/write handoff and the existing
+workspace design. Its same presentation batch must use final emitted page/CSS
+after integration; manually reconstructed test styling cannot establish parity.
+Registered, actual-local and hosted counts remain unchanged.
+
+### Customer Requests Task 2 independent QA passed; final source judgment assigned — 2026-09-24
+
+Independent Terra QA returns PASS, P0/P1/P2 0/0/0 at unchanged repair manifest
+`ed5e77dd...7a1fcb`. Fresh execution passes 147 cases (56 runtime,
+38 compilation/transport, 46 contract, 7 exports), compiler no-emit types and
+12/12 current-derivation plus immutable Published emitted-byte equality.
+Its comparator reads the protected original capture and writes only QA-owned
+output. All five source and nine evidence hashes match before/after execution.
+Receipts are in `generated/.customer-requests-task2-qa/`.
+
+Root assigns existing independent final reviewer `work_orders_integrated_review`
+a source-only judgment using the retained task review, scoped repair review and
+fresh Terra QA. No repeated broad review or passing tests are requested.
+Controller delivery remains pending this judgment and PM acceptance. Root
+prepares portable source/review/QA receipts under the existing Customer Requests
+evidence directory; no repository release or actual/hosted outcome is implied.
+
+### Customer Requests Task 2 scoped source review passed; QA assigned — 2026-09-24
+
+Original reviewer marks CR-T2-P2-001 ADDRESSED and returns specification/quality
+PASS, P0/P1/P2 0/0/0. It verifies all five current source hashes, four repair
+receipts and five retained receipts, and inspects the exact repair plus all
+25 new tests without repeating passing suites. Re-review lives at
+`generated/.customer-requests-task2-review/fix-1/re-review.md/json`.
+Prior review remains authoritative for unchanged scope.
+
+The QA role alias failed to resolve an unavailable Spark model before creating
+an agent. Root dispatches the same bounded QA with explicit GPT-5.6-Terra; no
+source operation was retried. Independent Terra QA `customer_requests_runtime_qa` owns the five-path
+freeze in repair manifest `ed5e77dd...7a1fcb`. QA owns only
+`generated/.customer-requests-task2-qa/`, runs the focused runtime/compilation/
+contract/export cases and compiler typechecks, and checks retained historical
+identities. Original capture/equality/review receipts must not be rewritten.
+No Graph/capability/UI/worker source write, actual application, service, database,
+Docker, provider, cloud, startup or cleanup operation is authorized. Final source
+judgment and controller delivery follow QA; Task 3 implementation still waits.
+
+### Customer Requests Task 2 repair frozen for scoped re-review — 2026-09-24
+
+Original owner completes repair 1 within the two assigned paths. Manifest
+`ed5e77ddb7b268ff48142423bb8f7a32350e6f84b5736761b7a718663c7a1fcb`
+at `generated/.customer-requests-task2/fix-1/source-manifest.json` records
+all five current source identities and exactly two changes. Root verifies every
+source, new evidence and reused-evidence hash. Proxy errors now accept only an
+exact one-property code object with its declared status; malformed responses
+return 503 unavailable. All ten valid pairs retain no-store and their semantics.
+
+Focused RED shows 15 malformed cases fail before repair and ten valid pairs pass.
+Fresh compilation/transport GREEN passes 38 cases, including emitted strict types;
+compiler typecheck and changed-file formatting pass. Original 122 aggregate,
+build and twelve-definition equality are retained, not claimed as new runs.
+Root preserves before snapshots and prepares a two-file diff; the original
+reviewer owns scoped re-review in `generated/.customer-requests-task2-review/fix-1/`.
+No unrelated audit or actual execution is added. QA remains the next source gate.
+
+### Customer Requests Task 2 scoped proxy repair assigned — 2026-09-24
+
+Independent reviewer `customer_requests_runtime_review` returns specification
+and quality CHANGES_REQUIRED, P0/P1/P2 0/0/1. Finding CR-T2-P2-001: the emitted
+proxy forwards fulfilled upstream error bodies/statuses without sanitizing them.
+A provider-free substituted-fetch probe reproduces arbitrary content forwarding
+for 500/502/503, contrary to accepted ADR API-007. Review and probe receipts are
+in `generated/.customer-requests-task2-review/`. All other source evidence and
+protected identities remain valid.
+
+Root assigns original owner `customer_requests_runtime` one bounded repair
+round (1/5), only `packages/compiler/src/customer-requests-runtime.ts` and
+`packages/compiler/test/customer-requests-compilation.test.ts`. Preserve valid
+domain status/code pairs, sanitize malformed/unrecognized upstream errors and
+retain no-store. RED/GREEN uses the emitted proxy with substituted fetch; no
+network, startup or service. No new contract, dependency or permission is needed.
+
+Exact pre-repair source/test/report copies are retained in
+`generated/.customer-requests-task2-review/fix-1/`. The original source
+manifest and review remain intact; the repair gets a separate manifest/diff.
+Re-review only the finding and changed proxy/tests, retaining unaffected checks.
+Independent QA waits for the clean source gate. No product count change.
+
+### Customer Requests Task 2 frozen for independent source review — 2026-09-24
+
+Runtime owner completes the five-path source slice at manifest SHA-256
+`7a611acb8127e7841e34013b30c34e3595b03210f40808a666261070a2674f5a`.
+Root verifies every source/evidence hash and reads the final 122-case log
+(56 runtime, 13 compilation/transport, 46 contract, 7 exports), compiler
+typecheck/build and 12/12 original-input parity. The earlier 114-case run
+preceded the final eight receipt-corruption cases; it is not the frozen result.
+
+Read-only Task 2 specification/security/code-quality review is assigned to
+`customer_requests_runtime_review`. Requirements, final report and complete
+five-file diff are `generated/.customer-requests-task2/task-2-brief.md`,
+`generated/.customer-requests-task2/task-2-report.md` and
+`generated/.customer-requests-task2-review/review-package.diff`.
+Base is `406b53c1`; Task 1 unchanged contracts and prior evidence are retained.
+No new broad repository audit is requested. Source is frozen pending any
+specific reviewed repair. Independent QA and final judgment follow this gate;
+presentation writers have not started. All actual/hosted outcomes remain open.
+
+### Task 1 remote CI green; Task 2 first emitted runtime scenario passes — 2026-09-24
+
+Controller observes CI `35979418711` succeeded for both Node 22.11.0 and
+Node 22.x at `18f04312bb03418c4a3026342903202a17b6dd4f`; its existing watch
+session 76674 exits zero. This verifies the delivered Task 1 source plus the
+portable QA-receipt formatting correction. It does not cover active Task 2 edits.
+
+The Task 2 writer remains active. Root inspects `red.log` (explicit missing
+runtime gate) and `initial-green.log` (one generated-runtime customer-isolation,
+receipt-authorization and staff-reply scenario passes). Reused seams are existing
+write protection, transaction coordination, conditional stores, identity resolver
+and declared authorization. No helper ownership extension or contract ambiguity
+has been requested. Remaining mutation/read/fault cases, historical parity and
+the frozen review handoff are not yet complete. No actual database/consumer
+acceptance claim is made from the emitted memory harness.
+
+Root also refines the existing speed investigation from retained Directory
+phase evidence: compilation 232 ms, verification 182,850 ms (87.68% of readiness),
+Preview 21,389 ms. A cold/warm boot/build/probe breakdown remains necessary;
+Compose `--build` does not prove a cache miss. No optimization implementation
+or blocked startup attempt is authorized by this source inspection.
+
+### Task 1 portable evidence formatting follow-up — 2026-09-24
+
+Remote CI `35979255706` stops at format checking in both Node jobs because
+`docs/acceptance/evidence/customer-requests/task1-qa.json` needs array
+formatting. Controller corrects only that tracked JSON formatting after checking
+parsed-value equality; the final-source receipt also receives local newline
+normalization with no Git-content difference. Commit
+`18f04312bb03418c4a3026342903202a17b6dd4f` is pushed with equal local/remote
+tips. CI `35979418711` is running at this exact revision; observation session
+76674 owns its watch. No production source or Task 1 protected evidence changes.
+Task 2 retains source base `406b53c1`; its writer is informed of the docs-only
+follow-up. Prior CI `35978022471` remains valid for its own earlier revision.
+
+### Customer Requests Task 1 delivered; Task 2 ownership — 2026-09-24
+
+Controller commits and pushes Task 1 as
+`406b53c1c7f94917086bd7f38628978841e2e5ed`; local and remote branch tips match.
+Task 1 is complete for accepted source only. Its portable evidence and planning
+handoff ship in the same bounded checkpoint; actual/hosted counts stay unchanged.
+
+Root assigns one serialized strongest-model writer, `customer_requests_runtime`,
+Task 2 from `generated/.customer-requests-task2/task-2-brief.md` at this base.
+Owned paths: new `packages/compiler/src/customer-requests-runtime.ts`,
+new `packages/compiler/test/customer-requests-runtime.test.ts`,
+new `packages/compiler/test/customer-requests-compilation.test.ts`,
+and narrow runtime/storage/route/emitter integration in
+`packages/compiler/src/index.ts`. The existing
+`packages/compiler/test/customer-requests-contract.test.ts` may change only its
+temporary not-implemented assertions when runtime generation becomes valid.
+No Graph, capability, frozen profile, presentation, worker, consumer, dependency,
+provider or topology writes. Any helper extraction needs explicit root path
+ownership and historical parity first. Root alone owns documentation and Git.
+
+The immutable Task 1 before/equality receipts remain protected. Task 2 writes
+its own parity output and consumes original inputs without recapture. Allowed
+verification is provider-free source/build/type/emitted memory witnesses only.
+No service, database, Docker, actual browser, provider, cloud or cleanup action;
+the rejected startup cannot be retried through an alternate route.
+
 ### Remote CI compatibility correction verified — 2026-09-24
 
 CI run `35978022471` completes successfully for Node 22.11.0 and Node 22.x
