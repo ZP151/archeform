@@ -5,6 +5,130 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
+### Remote CI compatibility correction verified — 2026-09-24
+
+CI run `35978022471` completes successfully for Node 22.11.0 and Node 22.x
+at exact pushed commit `8eb82cf21e115d177171cf521aaa5b9408f13a58`.
+Controller observes both success conclusions; watch session 45754 exits zero.
+This closes the two E2E module-format failures. It does not cover the forthcoming
+Customer Requests Task 1 commit or actual product/service/hosted acceptance.
+
+### Customer Requests Task 1 accepted for source delivery — 2026-09-24
+
+PM accepts the unchanged sixteen-path manifest after task review, independent
+Terra QA and final source judgment, each P0/P1/P2 0/0/0. QA passes 61 Graph,
+2 composition, 53 compiler/export cases and three package typechecks. Root
+rechecks all sixteen hashes before controller delivery. The final judgment
+reuses prior review and QA without a repeated broad audit. Portable evidence is
+in `docs/acceptance/evidence/customer-requests/`. Historical twelve-definition
+capture and equality receipts remain unchanged.
+
+This closes Task 1 source scope only. Runtime, responsive conversation UI,
+consumer admission and actual/hosted outcomes remain open; product counts do
+not change. Controller will deliver this coherent checkpoint before assigning
+the serialized Task 2 runtime owner. Root's accompanying workspace handoff and
+compiler product/design fact corrections are planning documentation only.
+
+### Customer Requests contract review passed; independent QA assigned — 2026-09-24
+
+`work_orders_integrated_review` returns specification/code quality PASS and
+P0/P1/P2 0/0/0 against unchanged Task 1 manifest `6c8b57e1...de51eb`, independently
+executes the 53 compiler/export cases and inspects the original twelve-definition
+comparator/evidence. Reports are in `generated/.customer-requests-task1-review/`.
+Root assigns existing independent Terra owner `work_orders_integrated_qa` the
+same sixteen-path frozen source for focused source QA and three package types.
+No broad repository, actual runtime or visual gate is added here. Runtime Task 2
+waits for this contract handoff; its exact ADR business rules are already fixed.
+
+### Scoped cross-directory correction pushed — 2026-09-24
+
+Controller commits/pushes `8eb82cf21e115d177171cf521aaa5b9408f13a58`; local and
+remote tips match. New CI run `35978022471` is live against this exact revision.
+Its six committed paths are the five reviewed test-loading paths and the portable
+correction evidence. Uncommitted Customer Requests source and root's design/status
+documents are excluded. This does not merge main, release or deploy an app.
+
+### Customer Requests Task 1 frozen for independent review — 2026-09-24
+
+Root verifies all sixteen source identities against manifest SHA-256
+`6c8b57e1f481a3957b31aac137c47d885e825c305ab00ffd83fd8a8ddade51eb`.
+Writer handoff reports final new suites Graph 61/61, capability composition 2/2,
+compiler contract/export 53/53, three package builds/typechecks and historical
+12/12 current-derivation plus immutable-input emitted-byte equality. The original
+capture digest remains unchanged; broader affected regression evidence and its
+sequence are in `generated/.customer-requests-task1/handoff.md`.
+
+Existing independent reviewer `work_orders_integrated_review` owns the read-only
+task gate over exactly those sixteen paths. Source remains frozen. Public compile
+entrypoints explicitly reject this recognized family until Task 2 provides the
+runtime; no generic CRUD substitute or consumer admission is permitted. The
+plan's illustrative witness assertion is corrected to the established undefined
+nonmatch convention; actual tests already use that convention. Review/QA and
+actual business acceptance remain separate pending outcomes.
+
+### Cross-directory test module boundary correction — 2026-09-24
+
+CI `35976097920` finishes: Node 22.x passes all steps; Node 22.11.0 passes
+full tests/build and definition checks but rejects named imports from Workbench
+TypeScript modules during full discovery. Root reproduces the exact failure by
+also disabling native type stripping locally. The earlier single-flag check was
+insufficient and is not retroactively called a minimum-version pass.
+
+Root owns the bounded follow-up: `playwright.config.ts`,
+`e2e/workbench-module-loader.mjs`, `e2e/helpers/workbench-module-loading.test.ts`,
+`e2e/tsconfig.consumer-delivery.json` and the existing CI helper selection. The
+test-only Node hook supplies an ESM format hint for exactly five imported
+Workbench TS modules and delegates transformation to Playwright. No production
+package type, dependency, engine range or business source changes. The hook is
+registered as local source in a data URL to avoid reentering Playwright's source-map
+transport during synchronous Node registration; the initial file-URL registration
+waited without output and was interrupted through its exact exec session.
+
+With both native require-module and strip-types disabled, whole discovery now
+finds 92 cases in 37 files; all 20 pure helper cases execute, including two new
+cross-directory import/call smoke cases. These use authored in-memory transports
+and callbacks, not a live service, provider or resource cleanup. Tracked types
+pass. Reuse the same ordinary correction reviewer before pushing; actual remote
+22.11 validation is still required.
+
+The existing ordinary reviewer closes this five-path follow-up at P0/P1/P2
+0/0/0 with strict 92-case discovery, 20 pure helpers, tracked types and stable
+source hashes. Root rechecks those identities and accepts the correction for a
+separate bounded branch commit/push. Customer Requests source is still frozen
+under its own review and is excluded from this CI correction commit.
+
+### CI correction and next-family plan pushed — 2026-09-24
+
+Controller pushes reviewed test correction `45d29355` and accepted decision/plan
+checkpoint `a6022a930d7bca47a63d9010c1f952c0cf455ccf`; local and remote tips match.
+CI run `35976097920` targets the latter exact revision and is in progress.
+`customer_requests_contract` now owns Task 1 source/tests; its uncommitted work
+is excluded from these pushed checkpoints. No main integration, release or
+deployment is performed. Actual local acceptance restrictions remain unchanged.
+
+Task 1 captures all twelve historical physical definition inputs/locks/output
+digests before production edits at `generated/.customer-requests-task1/before.json`,
+SHA-256 `c9c6c0245de95ffb7176131e59206aa8ca0bceecb21b5ed70185ae6654f25eba`.
+Canonical Blueprint RED fails specifically on the currently unsupported `reply`
+action. Root extends this same task's exact ownership to the new authored pure
+composition fixture `packages/compiler/test/fixtures/customer-requests.ts`;
+existing fixtures remain read-only. No contract or task-scope change is implied.
+
+A focused composition RED shows the minimal planner drops a required sixth lock.
+Root authorizes only the new witness import and mandatory-six condition in
+`packages/capabilities/src/plan-alternatives.ts`, with an assertion in the assigned
+composition suite. Consumer family admission remains deferred to Task 4. Root
+also prepares `docs/design/customer-requests-workspace.md` from the approved
+historical visual references and current reusable sources; this is a Task 3
+handoff, not new UI implementation or actual product acceptance.
+
+Root corrects stale compiler `PRODUCT.md`/`DESIGN.md` facts found by the design
+context loader: the catalogue is no longer limited to three definitions, the
+September 12 brand feedback superseded the old unanswered question, and the
+September 13 Approval acceptance proves correction is implemented. These two
+documentation-only paths are root-owned and preserve the approved visual system;
+no additional functional audit is required.
+
 ### Customer Requests decision accepted; Task 1 source assigned — 2026-09-24
 
 PM accepts ADR-0084 exact SHA-256

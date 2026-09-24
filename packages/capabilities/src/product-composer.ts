@@ -1,6 +1,7 @@
 import {
   CompositionError,
   matchServiceWorkOrdersBlueprintV1,
+  matchCustomerRequestsBlueprintV1,
   createCalculatedRequestTotalRuntime,
   isNumericFieldValueAllowed,
   assertCompositionPlan,
@@ -249,7 +250,8 @@ function derivedPages(
   // Inventory movement history is composed inside item detail, never an extra CRUD page.
   if (
     isInventoryOperationsBlueprint(blueprint) ||
-    matchServiceWorkOrdersBlueprintV1(blueprint)
+    matchServiceWorkOrdersBlueprintV1(blueprint) ||
+    matchCustomerRequestsBlueprintV1(blueprint)
   )
     return pages;
   for (const entity of blueprint.entities) {
@@ -368,6 +370,14 @@ function derivedEntities(
     )
       mapped.indexes.push({
         fields: ["workOrderId", "orderVersion"],
+        unique: true,
+      });
+    const customerRequests = matchCustomerRequestsBlueprintV1(blueprint);
+    if (customerRequests?.requestEntity === entity.key)
+      mapped.indexes.push({ fields: ["customerPrincipalId"] });
+    if (customerRequests?.historyEntity === entity.key)
+      mapped.indexes.push({
+        fields: ["requestId", "requestVersion"],
         unique: true,
       });
     entities.push(mapped);
@@ -993,7 +1003,8 @@ function derivedSeedData(
 ): ApplicationGraphV1["domain"]["seedData"] {
   if (
     isInventoryOperationsBlueprint(blueprint) ||
-    matchServiceWorkOrdersBlueprintV1(blueprint)
+    matchServiceWorkOrdersBlueprintV1(blueprint) ||
+    matchCustomerRequestsBlueprintV1(blueprint)
   )
     return [];
   if (
@@ -1219,6 +1230,13 @@ export function deriveProductOperations(
 ): GraphDiffV1 {
   const blueprint = assertProductBlueprint(input.blueprint);
   if (
+    matchCustomerRequestsBlueprintV1(blueprint) &&
+    !isCustomerRequestsBlueprint(blueprint, input.selectedKeys)
+  )
+    throw new CompositionError(
+      "Customer Requests requires exactly six core capability keys.",
+    );
+  if (
     matchServiceWorkOrdersBlueprintV1(blueprint) &&
     !isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys)
   )
@@ -1269,7 +1287,8 @@ export function deriveProductOperations(
     !isAppointmentBookingBlueprint(blueprint, input.selectedKeys) &&
     !isAppointmentConsumerWorkspaceBlueprint(blueprint, input.selectedKeys) &&
     !isInventoryOperationsBlueprint(blueprint, input.selectedKeys) &&
-    !isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys)
+    !isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys) &&
+    !isCustomerRequestsBlueprint(blueprint, input.selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",
@@ -1317,7 +1336,10 @@ export function deriveProductOperations(
     }
   }
 
-  if (isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys))
+  if (
+    isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys) ||
+    isCustomerRequestsBlueprint(blueprint, input.selectedKeys)
+  )
     capabilities.push("audit.record");
   const operations: GraphDiffV1["operations"] = [
     { op: "replace", path: "/metadata/name", value: blueprint.title },
@@ -1570,23 +1592,27 @@ export function composeProductDraft(input: {
     !isAppointmentBookingBlueprint(blueprint, selectedKeys) &&
     !isAppointmentConsumerWorkspaceBlueprint(blueprint, selectedKeys) &&
     !isInventoryOperationsBlueprint(blueprint, selectedKeys) &&
-    !isServiceWorkOrdersBlueprint(blueprint, selectedKeys)
+    !isServiceWorkOrdersBlueprint(blueprint, selectedKeys) &&
+    !isCustomerRequestsBlueprint(blueprint, selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",
     );
   if (
     isAppointmentConsumerWorkspaceBlueprint(blueprint) ||
-    isServiceWorkOrdersBlueprint(blueprint, selectedKeys)
+    isServiceWorkOrdersBlueprint(blueprint, selectedKeys) ||
+    isCustomerRequestsBlueprint(blueprint, selectedKeys)
   ) {
     const catalogue = currentCapabilityCatalogue();
     const assets = [
       ...catalogue.required,
       ...catalogue.optional.map((entry) => entry.asset),
     ];
-    const exactKeys = matchServiceWorkOrdersBlueprintV1(blueprint)
-      ? serviceWorkOrdersLockKeys
-      : appointmentLockKeys;
+    const exactKeys =
+      matchServiceWorkOrdersBlueprintV1(blueprint) ||
+      matchCustomerRequestsBlueprintV1(blueprint)
+        ? serviceWorkOrdersLockKeys
+        : appointmentLockKeys;
     const locks = exactKeys.map((key) => {
       const asset = assets.find((candidate) => candidate.key === key)!;
       return {
@@ -1607,9 +1633,11 @@ export function composeProductDraft(input: {
       )
     )
       throw new CompositionError(
-        matchServiceWorkOrdersBlueprintV1(blueprint)
-          ? "Service Work Orders requires the exact current locks and ordered owner bindings."
-          : "Appointment V2 requires the exact current locks and ordered owner bindings.",
+        matchCustomerRequestsBlueprintV1(blueprint)
+          ? "Customer Requests requires the exact current locks and ordered owner bindings."
+          : matchServiceWorkOrdersBlueprintV1(blueprint)
+            ? "Service Work Orders requires the exact current locks and ordered owner bindings."
+            : "Appointment V2 requires the exact current locks and ordered owner bindings.",
       );
   }
   const derived = deriveProductOperations({
@@ -1752,6 +1780,18 @@ function isServiceWorkOrdersBlueprint(
 ): boolean {
   return (
     matchServiceWorkOrdersBlueprintV1(blueprint) !== undefined &&
+    keys.length === serviceWorkOrdersLockKeys.length &&
+    new Set(keys).size === keys.length &&
+    serviceWorkOrdersLockKeys.every((key) => keys.includes(key))
+  );
+}
+
+function isCustomerRequestsBlueprint(
+  blueprint: ProductBlueprintV1,
+  keys: readonly string[],
+): boolean {
+  return (
+    matchCustomerRequestsBlueprintV1(blueprint) !== undefined &&
     keys.length === serviceWorkOrdersLockKeys.length &&
     new Set(keys).size === keys.length &&
     serviceWorkOrdersLockKeys.every((key) => keys.includes(key))

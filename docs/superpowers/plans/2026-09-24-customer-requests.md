@@ -55,27 +55,27 @@ malformed family candidate. Only that selector and type are compiler root export
 Freeze concrete signatures, fixture coordinates and final source identities for
 the next owner; no caller-supplied witness becomes authority.
 
-- [ ] Capture current historical Published inputs, physical locks and emitted
+- [x] Capture current historical Published inputs, physical locks and emitted
       file digests before changing shared source.
-- [ ] RED a schema-parsed canonical fixture after JSON round trip; malformed
+- [x] RED a schema-parsed canonical fixture after JSON round trip; malformed
       owner/history/grants/roles/pages/numeric bounds/locks must reject. For example:
 
 ```ts
 expect(
   matchCustomerRequestsGraphV1(JSON.parse(JSON.stringify(graph))),
-).not.toBeNull();
-expect(matchCustomerRequestsGraphV1(overgrantedGraph)).toBeNull();
+).toBeDefined();
+expect(matchCustomerRequestsGraphV1(overgrantedGraph)).toBeUndefined();
 ```
 
-- [ ] Add only the `reply` action vocabulary, exact two-entity witness and two
+- [x] Add only the `reply` action vocabulary, exact two-entity witness and two
       witnessed seedless numeric coordinates. Prove old-family rejection of reply
       and preserve unrelated seed/numeric/action validation.
-- [ ] Implement strict profile selection with physical six-lock verification,
+- [x] Implement strict profile selection with physical six-lock verification,
       detached immutable bindings and fail-closed malformed-candidate behavior.
-- [ ] Run the ADR VER-004 Graph/capability/contract tests, affected types/builds
+- [x] Run the ADR VER-004 Graph/capability/contract tests, affected types/builds
       and compiler `test/index-exports.test.ts`; compare old emitted bytes without
       modifying expectations. Test renamed/swapped/max-length roles.
-- [ ] Obtain applicable shared-contract review/QA and record the frozen handoff.
+- [x] Obtain applicable shared-contract review/QA and record the frozen handoff.
       Controller delivers the accepted source checkpoint.
 
 ## Task 2: persisted conversation and isolation
@@ -106,6 +106,10 @@ presentation or worker consumers start. No generic history write or owner update
       historical parity, then applicable contract review/QA and source delivery.
 
 ## Task 3: responsive customer/staff workspace and verification
+
+Use the [workspace handoff](../../design/customer-requests-workspace.md) for
+inspected reuse sources, role-specific composition and the single visual/state
+acceptance batch. It maps the accepted contract without changing its scope.
 
 After Task 2 freezes, presentation owner creates compiler
 `src/customer-requests-presentation.ts` and its focused interaction test. Worker

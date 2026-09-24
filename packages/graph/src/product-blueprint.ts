@@ -1,3 +1,4 @@
+import { matchCustomerRequestsBlueprintV1 } from "./customer-requests-blueprint-witness.js";
 import { matchServiceWorkOrdersBlueprintV1 } from "./service-work-orders-blueprint-witness.js";
 import {
   quantityUnitPriceTotalSchema,
@@ -75,6 +76,7 @@ export const blueprintActionVerbs = [
   "assign",
   "reassign",
   "resolve",
+  "reply",
 ] as const;
 
 /** Approved business actions a blueprint actor may hold over an entity. */
@@ -287,6 +289,28 @@ function assertFieldShape(
 export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
   const blueprint = parseStrict(productBlueprintSchema, input);
   const workOrders = matchServiceWorkOrdersBlueprintV1(blueprint);
+  const customerRequests = matchCustomerRequestsBlueprintV1(blueprint);
+  if (
+    !customerRequests &&
+    (blueprint.entities.some((entity) =>
+      entity.fields.some((field) =>
+        ["customerPrincipalId", "requestVersion", "correctsVersion"].includes(
+          field.key,
+        ),
+      ),
+    ) ||
+      blueprint.actors.some((actor) =>
+        actor.permissions.some((permission) =>
+          permission.actions.includes("reply"),
+        ),
+      ) ||
+      blueprint.workflows.some((workflow) =>
+        workflow.transitions.some((transition) => transition.key === "reply"),
+      ))
+  )
+    throw new CompositionError(
+      "Replies and request ownership require the complete Customer Requests Blueprint.",
+    );
   if (
     !workOrders &&
     (blueprint.actors.some((actor) =>

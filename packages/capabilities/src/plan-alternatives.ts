@@ -1,6 +1,7 @@
 import {
   CompositionError,
   matchServiceWorkOrdersBlueprintV1,
+  matchCustomerRequestsBlueprintV1,
   assertCompositionPlan,
   assertProductBlueprint,
   assertRequirementSpec,
@@ -157,7 +158,8 @@ function selectedKeysFor(
   const required = catalogue.required.map((asset) => asset.key);
   if (
     isInventoryOperationsBlueprint(blueprint) ||
-    matchServiceWorkOrdersBlueprintV1(blueprint)
+    matchServiceWorkOrdersBlueprintV1(blueprint) ||
+    matchCustomerRequestsBlueprintV1(blueprint)
   ) {
     const mandatory = [...required, "core.notification"];
     assertSelectionClosure(catalogue, mandatory);

@@ -1,3 +1,8 @@
+import { selectCustomerRequestsProfile } from "./customer-requests-contract.js";
+export {
+  selectCustomerRequestsProfile,
+  type CustomerRequestsProfile,
+} from "./customer-requests-contract.js";
 import { renderServiceWorkOrdersFile } from "./service-work-orders-runtime.js";
 import {
   renderServiceWorkOrdersWorkspace,
@@ -402,6 +407,8 @@ function assertCanonicalCompositionLock(
 export function buildCompilationPlan(
   input: PublishedGraphInput,
 ): CompilationPlan {
+  if (selectCustomerRequestsProfile(input.graph, input.compositionLock))
+    throw new Error("Customer Requests runtime is not implemented.");
   selectServiceWorkOrdersProfile(input.graph, input.compositionLock);
   if (!input.publishedRevisionId) {
     throw new Error("Published revision id is required for compilation.");
@@ -3990,6 +3997,8 @@ export function buildCompilationInput(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): PublishedCompilationInput {
+  if (selectCustomerRequestsProfile(input.graph, input.compositionLock))
+    throw new Error("Customer Requests runtime is not implemented.");
   selectServiceWorkOrdersProfile(input.graph, input.compositionLock);
   const graph = assertValidApplicationGraph(input.graph);
   if (
@@ -4103,6 +4112,8 @@ export function generateApplicationBundle(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
 ): GeneratedApplicationBundle {
+  if (selectCustomerRequestsProfile(input.graph, input.compositionLock))
+    throw new Error("Customer Requests runtime is not implemented.");
   const workOrdersProfile = selectServiceWorkOrdersProfile(
     input.graph,
     input.compositionLock,

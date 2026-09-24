@@ -98,6 +98,8 @@ contrast, focus, overflow, fallback and real create/submit/decision/reload.
 Mechanical tests and internal review do not establish founder/user acceptance.
 
 Decision history remains permission-gated read/audit behavior with safe retry and
-role-race protection. ADR-0060 return/revision/resubmission/recovery remains a
-separate unimplemented milestone. Do not display illustrative controls for it.
+role-race protection. ADR-0060/0062 return, revision, resubmission and recovery
+have actual Expense/Purchase acceptance recorded in
+`docs/acceptance/approval-correction.md`. Preserve those implemented controls and
+their state rules; do not infer acceptance of a new family from that evidence.
 Actual identity, owner privacy and managed hosting are separate maturity gaps.

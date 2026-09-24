@@ -24,9 +24,12 @@ reviewed definitions; deterministic compilers assemble the published application
 
 ## Capabilities and Constraints
 
-Preserve Draft, Publish and immutable Compilation. Current canonical definitions
-are Restaurant, Expense and Purchase. Expense and Purchase share approval
-behavior. Demo roles are local fixture controls, not production authentication.
+Preserve Draft, Publish and immutable Compilation. Definitions now cover several
+business families; the current catalogue and consumer delivery ledger own their
+exact registered, source-accepted and delivered counts. Expense and Purchase
+share approval behavior. Choose mobile or desktop surfaces by the user's actual
+job, with shared saved data when roles work across both. Demo roles are local
+fixture controls, not production authentication.
 Production identity, managed hosting and ordinary-user validation remain open.
 UI text, source, tests and documentation are English. Preserve Graph custom copy,
 fields, roles, permissions and theme tokens. Do not fabricate currency units,
@@ -34,7 +37,10 @@ people, business records, commercial claims or deployment readiness.
 
 ## Evidence on Hand
 
-Business regression exists in the compiler and actual Purchase acceptance lane.
+Business regression exists in the compiler and family-specific acceptance lanes.
+`docs/acceptance/approval-correction.md` records actual Expense/Purchase correction
+acceptance. The active consumer ledger records newer family evidence and pending
+actual checks; a source-only family is not an accepted usable application.
 The B2 screenshots in `docs/acceptance/evidence/consumer-record-finding` were
 rejected by the founder. Functional success does not establish visual acceptance.
 
@@ -47,8 +53,10 @@ rejected by the founder. Functional success does not establish visual acceptance
 
 ## Open Decisions
 
-No new brand constraint was supplied. The optional clarification remains pending;
-implementation follows the founder's existing request for rapid substantive repair.
+The September 12 feedback below settles the earlier optional brand question.
+Preserve that approved expressive system while choosing each family's composition
+for its business content. Real identity, authorized hosted delivery and measured
+ordinary-user effort remain open outcomes in the active Goal.
 
 ## Confirmed feedback — 2026-09-12
 

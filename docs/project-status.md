@@ -7,8 +7,8 @@ Updated: 2026-09-24
 An unbudgeted Goal now drives the [September 24 execution route](superpowers/plans/2026-09-24-family-expansion-and-delivery.md).
 The first new family is Resource Directory, followed by Inventory Operations.
 Work Orders has accepted source evidence and awaits actual acceptance. Customer
-Requests has an accepted technology decision and its exact contract source task
-is assigned; Event Registration and Sales
+Requests has accepted exact contract source after independent review and QA;
+persisted runtime implementation is next. Event Registration and Sales
 Pipeline remain candidate waves. These
 four waves have not added an accepted delivered product.
 Mobile browsing/field work and desktop
@@ -17,17 +17,23 @@ cross-role journey. The original eight-definition compatibility baseline is unch
 
 ### Immediate product and delivery outcomes
 
-The combined source checkpoint now passes full tests and typechecks (29/29 tasks
-each). A full-suite export-allowlist omission is corrected with an exact scoped
-test update and added to the existing fast regression. The controller pushed
-the explicitly unfinished source checkpoint `22852e92`; local and remote tips
-match at handoff. Its [CI run](https://github.com/ZP151/archeform/actions/runs/35973664121)
-passes on Node 22.x but fails on Node 22.11.0 at CommonJS-to-ESM helper loading.
-The bounded test-module correction now passes local strict ESM helper execution
-(18 cases), full discovery (90 cases in 36 files), tracked types and formatting;
-independent review closes P0/P1/P2 0/0/0 and a new remote run remains pending.
-Actual delivery stays open. See the
-[source checkpoint](acceptance/evidence/consumer-source-checkpoint/README.md).
+The combined source checkpoint passes full tests and typechecks (29/29 tasks
+each). The scoped E2E module-loading corrections at pushed commit
+`8eb82cf21e115d177171cf521aaa5b9408f13a58` pass both remote Node 22.11.0
+and 22.x jobs in
+[CI run 35978022471](https://github.com/ZP151/archeform/actions/runs/35978022471).
+Local strict-mode discovery finds 92 cases and all 20 pure helpers pass.
+See the [preserved failure and correction evidence](acceptance/evidence/consumer-source-checkpoint/e2e-module-correction.md).
+This exact CI revision predates the Customer Requests Task 1 source checkpoint;
+it does not establish actual browser or hosted product acceptance.
+Customer Requests Task 1 preserves all twelve historical physical outputs and
+has accepted exact witnesses/composition/profile. Its independent QA passes
+61 Graph, 2 composition and 53 compiler/export cases plus three package types;
+the [source acceptance](acceptance/evidence/customer-requests/task1-source-acceptance.md)
+retains the exact scope. Runtime, responsive
+conversation UI, definition/consumer entry and actual delivery are subsequent
+tasks in the [implementation plan](superpowers/plans/2026-09-24-customer-requests.md).
+It adds no delivered definition yet.
 
 | Outcome                       | Current evidence                                                                                                                              | Next acceptance                                                                                              |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |

@@ -427,3 +427,6 @@ export {
 
 export * from "./service-work-orders-blueprint-witness.js";
 export * from "./service-work-orders-graph-witness.js";
+
+export * from "./customer-requests-blueprint-witness.js";
+export * from "./customer-requests-graph-witness.js";
