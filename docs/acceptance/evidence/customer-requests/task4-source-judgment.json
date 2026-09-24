@@ -1,0 +1,71 @@
+{
+  "verdict": "ACCEPT_TASK4_SOURCE_WITH_LIMITS",
+  "findingCounts": {
+    "p0": 0,
+    "p1": 0,
+    "p2": 0
+  },
+  "scope": "Task 4 25 frozen definition/consumer/regression/actual-case source paths; source acceptance only",
+  "authority": {
+    "path": "docs/adr/adr-0084-customer-requests-family.md",
+    "sha256": "8a78888dd9f1996588f475188b4645664c06bf9e1a49561112cdfa89c6f954c6"
+  },
+  "manifests": {
+    "definitionConsumerSha256": "01dfd92eb93092500d8f4978b2904a21d5465079697f13fa3dd54dc66777a66b",
+    "actualCaseSha256": "e261e18bce74b2de9d616eeeea83e15206cbf03815b3f86963296b3617f6de50",
+    "sourceCount": 25,
+    "matchingSourceCount": 25
+  },
+  "reviewedEvidence": {
+    "combinedReviewSha256": "db8d1fbdd531f67b83154140b94f987bec078d01b105c93e5ca230c53aa6d4c0",
+    "qaReportSha256": "5aecbb1a4a9094aae1b6d0d0e49d72fc7b87f4d96184edbcae41a18e58d08603",
+    "protectedTask1CaptureSha256": "c9c6c0245de95ffb7176131e59206aa8ca0bceecb21b5ed70185ae6654f25eba",
+    "catalogueBaselineSha256": "b05298aa6de6390910239edf6147af657f792142d37f275576f0c4d7982d4ebf"
+  },
+  "sourceSha256": {
+    "packages/adapters/src/requirements/definition-family-registry.ts": "a543c02bf15db05a62f8f7e9a470c7bc4c391e97ca7509c46d148bbbf88fe747",
+    "packages/adapters/src/requirements/definition-selection-catalogue.ts": "7968860c2c6e1a6e755ac782bc19a6bd9dfe1a6b492d0338b667c38c3def445a",
+    "packages/adapters/src/requirements/definitions/product-definitions.v1.json": "2ab4b04b4cfec69351196a201f84503796142100e5be8ae8083ee821f285156b",
+    "packages/adapters/test/customer-requests-definition.test.ts": "ad270895f1c89b91ce345ee8963786785391f111bb9c891612a25e92ac01eb81",
+    "packages/adapters/test/product-definition-data.test.ts": "9c5b36cb678a85f11b8df25849b1b0aeebcd718acfb47b47e1c41c2ffe6e448d",
+    "packages/adapters/test/requirement-interpreter.test.ts": "8d2bbca510d074c1c758cdcd2a6390ea698d7c0a924061fc52d4ea61a8556543",
+    "packages/adapters/test/service-work-orders-definition.test.ts": "8fa278b5d562494b7ccbbf8a7a874a04f2113d356e1a3c202fee0a38bbede144",
+    "packages/adapters/test/appointment-consumer-definition.test.ts": "5e6496be8fca6671b4df4a72517aa5da5fb6aba72cebbdd2d104aa551aec94d8",
+    "packages/adapters/test/inventory-operations-definition.test.ts": "a50ed635c2518c27fec49961370ad8c277814f546b01bf4dbf7732f91b25c129",
+    "packages/adapters/test/supplies-stockroom-definition.test.ts": "d42074328c2ca3e35d11d440705010838560f48b0b2ae4de75489e574a1e14fc",
+    "packages/capabilities/src/plan-alternatives.ts": "a7c7b78131a58f0580d947df597ffa83f52a70289fbaaf4fb916bf10689914d2",
+    "packages/capabilities/test/plan-alternatives.test.ts": "1164626be68b0f5c2d8001d236e0999c7f764620557906ae7a6fb57d97c79c51",
+    "apps/workbench/lib/product-journey/consumer-family.ts": "96e444c4495c84ada42d066cb8e7f0f3f50fb683f66d974ee905b76373868c1f",
+    "apps/workbench/lib/product-journey/consumer-family.test.ts": "a76981119eac7b946cf03499acf43d53fbe5a28a5b330a8cae3b9bddc15ba23b",
+    "apps/workbench/lib/product-journey/use-consumer-generation.test.tsx": "d6ea843102c653f2bd623e4870a924b3242d0d81e6e35f9bdc12b6a58012ff42",
+    "scripts/regression.mjs": "1d42de5c5e54cc8cbdfee45e985b75eab1722c9da69abdc8901a5ae20f9ae213",
+    "scripts/regression.test.mjs": "a2b5445cdf686d1c50f8acbfd48855ad7e86a879f7611ca569642c5e4b7c2bb6",
+    "scripts/definition-case-bindings.mjs": "4f28c871300412156d9aecea6cbbdbaeeb6c23b40a92e7ef6733ae0a831e58a7",
+    "e2e/helpers/content-directory.ts": "664b1a60507a319a5831dcf10ed73de85700ff0348d4dce3da0db3161ecf1d53",
+    "e2e/helpers/content-directory.test.ts": "6d62a6ecf1c9d869e918c3be2f3d60b292659f4a2615b4de0be8d8a8fddaac42",
+    "e2e/tsconfig.consumer-delivery.json": "d7cd4a99b5aa22b0831c7543e638b0da6e5d73286b803187831fbc65eb61f368",
+    ".github/workflows/ci.yml": "72e47484fa5abacfbebc76442b81c57a78ccee53de6385d1032f76b733efd64f",
+    "e2e/customer-requests.spec.ts": "4123c45ac482ebb430c1308c29632d412f37768a908c80810456df8421d4af28",
+    "e2e/helpers/customer-requests.ts": "d767c630ac631568e51103a466e22998fff9d82242f9b273dfb4e22baa0dab06",
+    "e2e/helpers/customer-requests.test.ts": "b686db2bbb27ca423bfab518024106deae41b84f854618d134b078c5f055fb0a"
+  },
+  "freshQa": {
+    "definitionPassed": 61,
+    "planningPassed": 46,
+    "consumerPassed": 218,
+    "pureHelperPassed": 25,
+    "e2eTypecheckExit": 0,
+    "actualCaseListed": 1,
+    "actualCaseExecuted": 0,
+    "historicalEqual": 12
+  },
+  "counts": {
+    "physicalCatalogueRows": 13,
+    "logicalDefinitions": 12,
+    "registeredFamilies": 8,
+    "historicallyDeliveredDefinitions": 10,
+    "historicallyDeliveredFamilies": 6,
+    "hosted": 0
+  },
+  "limits": "No actual browser, PostgreSQL races/rollback/restart, inspected screenshots, real authentication, hosted, Publish, integration, release or deployment proof; blocked Workbench startup was not retried."
+}

@@ -15,6 +15,7 @@ type DefinitionEntry = {
     | "appointment"
     | "content-directory"
     | "service-work-orders"
+    | "customer-requests"
     | "inventory-operations";
   readonly parameterPolicy: "restaurant-menu" | "none";
   readonly selectionSchema: z.ZodEffects<z.AnyZodObject>;

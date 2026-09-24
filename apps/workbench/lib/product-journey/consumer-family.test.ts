@@ -13,6 +13,7 @@ const families = [
   ["knowledge-resource-directory", "content-directory"],
   ["supplies-stockroom", "inventory-operations"],
   ["facilities-service-desk", "service-work-orders"],
+  ["customer-support-desk", "customer-requests"],
 ] as const;
 
 function accepted(definitionKey: string) {

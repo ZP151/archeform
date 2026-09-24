@@ -210,6 +210,7 @@ describe("useConsumerGeneration", () => {
     ["knowledge-resource-directory", "content-directory", "Directory"],
     ["supplies-stockroom", "inventory-operations", "Inventory"],
     ["facilities-service-desk", "service-work-orders", "Work Orders"],
+    ["customer-support-desk", "customer-requests", "Customer Requests"],
   ] as const;
   function acceptedJourney(definitionKey: string) {
     const interpretation = projectDefinitionSelection({
@@ -239,139 +240,154 @@ describe("useConsumerGeneration", () => {
     });
   }
 
-  it("starts Work Orders delivery from the final business answer without a technical user action", async () => {
-    const definitionKey = "facilities-service-desk";
-    const supported = acceptedJourney(definitionKey);
-    const interpretation = supported.state.interpretation!.interpretation;
-    const unresolved = projectDefinitionSelection({
-      definitionKey,
-      disposition: "needs-clarification",
-      requirementId: interpretation.spec.requirementId,
-      title: interpretation.blueprint.title,
-      outcome: interpretation.spec.outcome,
-      materialQuestions: [
-        {
-          category: "authorization",
-          question:
-            "Is local synthetic staff acceptable instead of private accounts?",
-        },
-      ],
-      businessParameters: null,
-    });
-    const calls: string[] = [];
-    const businessActions: string[] = [];
-    let interpretations = 0;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = new URL(String(input), "http://workbench.test");
-        const method = init?.method ?? "GET";
-        calls.push(`${method} ${url.pathname}`);
-        const json = (value: unknown) =>
-          new Response(JSON.stringify(value), {
-            headers: { "content-type": "application/json" },
-          });
-        if (url.pathname === "/api/requirements/interpret") {
-          interpretations++;
-          if (interpretations === 2) {
-            const request = JSON.parse(String(init?.body));
-            expect(Object.values(request.answers)).toContain(
-              "Use local synthetic staff only.",
-            );
-            expect(request.clarificationContext).toHaveLength(1);
+  it.each([
+    [
+      "facilities-service-desk",
+      "service-work-orders",
+      "Work Orders",
+      "Build a facilities dispatch desk.",
+    ],
+    [
+      "customer-support-desk",
+      "customer-requests",
+      "Customer Requests",
+      "Build a customer support desk.",
+    ],
+  ] as const)(
+    "starts %s delivery from the final business answer without a technical user action",
+    async (definitionKey, family, label, brief) => {
+      const supported = acceptedJourney(definitionKey);
+      const interpretation = supported.state.interpretation!.interpretation;
+      const unresolved = projectDefinitionSelection({
+        definitionKey,
+        disposition: "needs-clarification",
+        requirementId: interpretation.spec.requirementId,
+        title: interpretation.blueprint.title,
+        outcome: interpretation.spec.outcome,
+        materialQuestions: [
+          {
+            category: "authorization",
+            question:
+              "Is local synthetic staff acceptable instead of private accounts?",
+          },
+        ],
+        businessParameters: null,
+      });
+      const calls: string[] = [];
+      const businessActions: string[] = [];
+      let interpretations = 0;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = new URL(String(input), "http://workbench.test");
+          const method = init?.method ?? "GET";
+          calls.push(`${method} ${url.pathname}`);
+          const json = (value: unknown) =>
+            new Response(JSON.stringify(value), {
+              headers: { "content-type": "application/json" },
+            });
+          if (url.pathname === "/api/requirements/interpret") {
+            interpretations++;
+            if (interpretations === 2) {
+              const request = JSON.parse(String(init?.body));
+              expect(Object.values(request.answers)).toContain(
+                "Use local synthetic staff only.",
+              );
+              expect(request.clarificationContext).toHaveLength(1);
+            }
+            return json({
+              apiVersion: "factory.requirement-interpretation-result/v1",
+              interpretation:
+                interpretations === 1 ? unresolved : interpretation,
+              businessParameters: null,
+            });
           }
-          return json({
-            apiVersion: "factory.requirement-interpretation-result/v1",
-            interpretation: interpretations === 1 ? unresolved : interpretation,
-            businessParameters: null,
-          });
-        }
-        if (method === "POST" && url.pathname === "/product/requirements")
-          return json({
-            review: {
-              id: "review-work-orders",
-              applicationGraphId: TARGET.applicationGraphId,
-              status: "planning",
-              requirementChecksum: hashRequirementSpec(interpretation.spec),
-              draftBaseChecksum: "sha256:base",
-            },
-          });
-        if (url.pathname.endsWith("/plan"))
-          return json({ alternatives: supported.state.alternatives });
-        if (url.pathname.endsWith("/choices")) {
-          expect(JSON.parse(String(init?.body))).toEqual({
-            alternativeKey: "standard",
-          });
-          return json({ checksum: "sha256:work-orders-diff" });
-        }
-        if (url.pathname.endsWith("/apply"))
-          return json({
-            draftRevision: {
-              id: TARGET.draftRevisionId,
-              revisionNumber: 2,
-              graph: createBlankApplicationDraft({
-                applicationId: interpretation.spec.requirementId,
-                workspaceId: "local-workspace",
-                name: interpretation.blueprint.title,
-              }).graph,
-            },
-            review: {
-              applicationGraphId: TARGET.applicationGraphId,
-              status: "applied",
-            },
-          });
-        return new Response("Unexpected route", { status: 500 });
-      }),
-    );
-    const release = releaseFor();
-    const apply = vi.fn(async () => {
-      await globalThis.__freshJourney?.applyProduct();
-      return TARGET;
-    });
-    await act(async () =>
-      root.render(
-        <FreshDescribeHarness release={release} applyComposedProduct={apply} />,
-      ),
-    );
-    act(() =>
-      globalThis.__freshJourney?.setBriefDraft(
-        "Build a facilities dispatch desk.",
-      ),
-    );
-    businessActions.push("Create");
-    await act(async () => globalThis.__freshJourney?.submitBrief());
-    expect(globalThis.__freshJourney?.openQuestions).toHaveLength(1);
-    expect(calls).toEqual(["POST /api/requirements/interpret"]);
-    expect(apply).not.toHaveBeenCalled();
-    expect(release.publishRelease).not.toHaveBeenCalled();
-    const question = globalThis.__freshJourney!.openQuestions[0]!;
-    act(() =>
-      globalThis.__freshJourney?.setAnswer(
-        question.key,
-        "Use local synthetic staff only.",
-      ),
-    );
-    businessActions.push("Answer business scope");
-    await act(async () => globalThis.__freshJourney?.answerQuestions());
-    await waitFor(() =>
-      expect(release.publishRelease).toHaveBeenCalledTimes(1),
-    );
-    expect(apply).toHaveBeenCalledTimes(1);
-    expect(globalThis.__consumerGeneration).toMatchObject({
-      active: true,
-      family: "service-work-orders",
-      status: "Preparing your Work Orders app…",
-    });
-    expect(businessActions).toEqual(["Create", "Answer business scope"]);
-    expect(calls).toEqual([
-      "POST /api/requirements/interpret",
-      "POST /api/requirements/interpret",
-      "POST /product/requirements",
-      "POST /product/requirements/review-work-orders/plan",
-      "POST /product/requirements/review-work-orders/choices",
-      "POST /product/requirements/review-work-orders/apply",
-    ]);
-  });
+          if (method === "POST" && url.pathname === "/product/requirements")
+            return json({
+              review: {
+                id: "review-work-orders",
+                applicationGraphId: TARGET.applicationGraphId,
+                status: "planning",
+                requirementChecksum: hashRequirementSpec(interpretation.spec),
+                draftBaseChecksum: "sha256:base",
+              },
+            });
+          if (url.pathname.endsWith("/plan"))
+            return json({ alternatives: supported.state.alternatives });
+          if (url.pathname.endsWith("/choices")) {
+            expect(JSON.parse(String(init?.body))).toEqual({
+              alternativeKey: "standard",
+            });
+            return json({ checksum: "sha256:work-orders-diff" });
+          }
+          if (url.pathname.endsWith("/apply"))
+            return json({
+              draftRevision: {
+                id: TARGET.draftRevisionId,
+                revisionNumber: 2,
+                graph: createBlankApplicationDraft({
+                  applicationId: interpretation.spec.requirementId,
+                  workspaceId: "local-workspace",
+                  name: interpretation.blueprint.title,
+                }).graph,
+              },
+              review: {
+                applicationGraphId: TARGET.applicationGraphId,
+                status: "applied",
+              },
+            });
+          return new Response("Unexpected route", { status: 500 });
+        }),
+      );
+      const release = releaseFor();
+      const apply = vi.fn(async () => {
+        await globalThis.__freshJourney?.applyProduct();
+        return TARGET;
+      });
+      await act(async () =>
+        root.render(
+          <FreshDescribeHarness
+            release={release}
+            applyComposedProduct={apply}
+          />,
+        ),
+      );
+      act(() => globalThis.__freshJourney?.setBriefDraft(brief));
+      businessActions.push("Create");
+      await act(async () => globalThis.__freshJourney?.submitBrief());
+      expect(globalThis.__freshJourney?.openQuestions).toHaveLength(1);
+      expect(calls).toEqual(["POST /api/requirements/interpret"]);
+      expect(apply).not.toHaveBeenCalled();
+      expect(release.publishRelease).not.toHaveBeenCalled();
+      const question = globalThis.__freshJourney!.openQuestions[0]!;
+      act(() =>
+        globalThis.__freshJourney?.setAnswer(
+          question.key,
+          "Use local synthetic staff only.",
+        ),
+      );
+      businessActions.push("Answer business scope");
+      await act(async () => globalThis.__freshJourney?.answerQuestions());
+      await waitFor(() =>
+        expect(release.publishRelease).toHaveBeenCalledTimes(1),
+      );
+      expect(apply).toHaveBeenCalledTimes(1);
+      expect(globalThis.__consumerGeneration).toMatchObject({
+        active: true,
+        family,
+        status: `Preparing your ${label} app…`,
+      });
+      expect(businessActions).toEqual(["Create", "Answer business scope"]);
+      expect(calls).toEqual([
+        "POST /api/requirements/interpret",
+        "POST /api/requirements/interpret",
+        "POST /product/requirements",
+        "POST /product/requirements/review-work-orders/plan",
+        "POST /product/requirements/review-work-orders/choices",
+        "POST /product/requirements/review-work-orders/apply",
+      ]);
+    },
+  );
 
   it.each(acceptedFamilies)(
     "delivers %s once per phase under StrictMode and preserves readiness/recovery gates",

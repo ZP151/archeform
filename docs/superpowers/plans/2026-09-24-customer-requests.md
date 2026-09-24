@@ -161,6 +161,9 @@ identity, runtime or presentation behavior.
    new `packages/adapters/test/customer-requests-definition.test.ts`; existing
    `product-definition-data.test.ts`, `requirement-interpreter.test.ts` and
    `service-work-orders-definition.test.ts` for additive catalogue expectations.
+   The recorded ownership extension also includes additive catalogue totals in
+   `inventory-operations-definition.test.ts`, `supplies-stockroom-definition.test.ts`
+   and `appointment-consumer-definition.test.ts`; historical semantics stay fixed.
    Register `customer-support-desk@1.0.0`, family `customer-requests/v1`,
    `none/v1`, compiler `customer-requests@1.0.0` and presentation
    `customer-requests-presentation@1.0.0`. Use the accepted canonical fixture,
@@ -188,12 +191,12 @@ SHA-256 `b05298aa6de6390910239edf6147af657f792142d37f275576f0c4d7982d4ebf`;
 the older immutable compiler and worker baselines remain untouched. A new row is
 source registration only; actual acceptance and hosted counts stay unchanged.
 
-- [ ] RED canonical admission, semantic deduplication and retained unsupported
+- [x] RED canonical admission, semantic deduplication and retained unsupported
       requirements. Connect exact witness admission to existing automatic immutable
       delivery; a name or provider match is never sufficient.
-- [ ] Author the complete ADR VER-005 consumer journey and pure ownership/evidence
+- [x] Author the complete ADR VER-005 consumer journey and pure ownership/evidence
       helpers. Discovery/types/helpers run without starting the actual application.
-- [ ] Run existing definition regression and affected consumer/worker checks;
+- [x] Run existing definition regression and affected consumer/worker checks;
       retain immutable source identities and focused review evidence.
 - [ ] Once the blocked execution boundary is independently cleared, root runs the
       actual Home-to-application journey, PostgreSQL races/rollback/restart and

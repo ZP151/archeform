@@ -36,6 +36,8 @@ const definitionEmittedControlTestArguments = [
   "test/inventory-operations-presentation.test.ts",
   "test/service-work-orders-presentation.test.ts",
   "test/service-work-orders-compilation.test.ts",
+  "test/customer-requests-presentation.test.ts",
+  "test/customer-requests-compilation.test.ts",
 ];
 const definitionPrismaGenerateArguments = [
   "--filter",
@@ -164,6 +166,7 @@ describe("local regression lanes", () => {
             "test/requirement-interpreter.test.ts",
             "test/supplies-stockroom-definition.test.ts",
             "test/service-work-orders-definition.test.ts",
+            "test/customer-requests-definition.test.ts",
           ],
           id: "definition-adapter-tests",
         },
@@ -185,6 +188,8 @@ describe("local regression lanes", () => {
             "test/inventory-operations-contract.test.ts",
             "test/service-work-orders-contract.test.ts",
             "test/service-work-orders-runtime.test.ts",
+            "test/customer-requests-contract.test.ts",
+            "test/customer-requests-runtime.test.ts",
             "test/index-exports.test.ts",
           ],
           id: "definition-compatibility-tests",

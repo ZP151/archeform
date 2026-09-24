@@ -2,6 +2,8 @@ import { z } from "zod";
 import { createHash } from "node:crypto";
 import {
   CompositionError,
+  matchCustomerRequestsBlueprintV1,
+  matchCustomerRequestsGraphV1,
   matchInventoryOperationsGraphV1,
   matchServiceWorkOrdersBlueprintV1,
   matchServiceWorkOrdersGraphV1,
@@ -239,6 +241,9 @@ const categories = [
 const text = z.string().min(1).max(24000);
 const bp = productBlueprintSchema.shape;
 export const familyGuideSchemas = {
+  "customer-requests": productBlueprintSchema
+    .extend({ definitionKey: graphKeySchema, identity: text })
+    .strict(),
   "service-work-orders": productBlueprintSchema
     .extend({ definitionKey: graphKeySchema, identity: text })
     .strict(),
@@ -467,6 +472,12 @@ const restaurantLocks = [
   },
 ];
 export const definitionFamilyRegistry = Object.freeze({
+  "customer-requests": Object.freeze({
+    version: "customer-requests/v1",
+    parameterPolicy: "none/v1",
+    presentation: { key: "customer-requests-presentation", version: "1.0.0" },
+    compilerProfile: "customer-requests@1.0.0",
+  }),
   "service-work-orders": Object.freeze({
     version: "service-work-orders/v1",
     parameterPolicy: "none/v1",
@@ -547,33 +558,37 @@ function slotsFor(entry: ProductDefinitionData): Slots {
   const b = entry.canonical.blueprint,
     f = b.workflows[0]!;
   const roleNames =
-    entry.familyBinding.key === "service-work-orders"
-      ? ["dispatcher", "technician"]
-      : entry.familyBinding.key === "inventory-operations"
-        ? ["stockkeeper", "observer"]
-        : entry.familyBinding.key === "appointment"
-          ? ["customer", "staff", "administrator"]
-          : entry.familyBinding.key === "approval"
-            ? ["requester", "reviewer", "auditor"]
-            : entry.familyBinding.key === "task"
-              ? ["member", "viewer"]
-              : entry.familyBinding.key === "content-directory"
-                ? ["reader", "curator"]
-                : ["customer"];
+    entry.familyBinding.key === "customer-requests"
+      ? ["staff", "customer"]
+      : entry.familyBinding.key === "service-work-orders"
+        ? ["dispatcher", "technician"]
+        : entry.familyBinding.key === "inventory-operations"
+          ? ["stockkeeper", "observer"]
+          : entry.familyBinding.key === "appointment"
+            ? ["customer", "staff", "administrator"]
+            : entry.familyBinding.key === "approval"
+              ? ["requester", "reviewer", "auditor"]
+              : entry.familyBinding.key === "task"
+                ? ["member", "viewer"]
+                : entry.familyBinding.key === "content-directory"
+                  ? ["reader", "curator"]
+                  : ["customer"];
   return {
     roles: new Map(b.actors.map((a, i) => [a.key, roleNames[i]!])),
     entities: new Map(
       b.entities.map((e, i) => [
         e.key,
-        entry.familyBinding.key === "service-work-orders"
-          ? ["order", "history"][i]!
-          : entry.familyBinding.key === "inventory-operations"
-            ? ["item", "movement"][i]!
-            : entry.familyBinding.key === "appointment"
-              ? ["service", "schedule", "appointment"][i]!
-              : i === 0
-                ? "primary"
-                : "requester-profile",
+        entry.familyBinding.key === "customer-requests"
+          ? ["request", "history"][i]!
+          : entry.familyBinding.key === "service-work-orders"
+            ? ["order", "history"][i]!
+            : entry.familyBinding.key === "inventory-operations"
+              ? ["item", "movement"][i]!
+              : entry.familyBinding.key === "appointment"
+                ? ["service", "schedule", "appointment"][i]!
+                : i === 0
+                  ? "primary"
+                  : "requester-profile",
       ]),
     ),
     workflows: new Map([[f.key, "lifecycle"]]),
@@ -1008,6 +1023,27 @@ function validatePlanningSemantics(entry: ProductDefinitionData): boolean {
       spec.domainConcepts[0]!.key === flow.entity
     );
   }
+  if (entry.familyBinding.key === "customer-requests") {
+    const witness = matchCustomerRequestsBlueprintV1(b);
+    return (
+      !!witness &&
+      spec.productType === undefined &&
+      equal(
+        spec.actors.map((a) => a.key),
+        b.actors.map((a) => a.key),
+      ) &&
+      equal(
+        spec.domainConcepts.map((e) => e.key),
+        b.entities.map((e) => e.key),
+      ) &&
+      equal(entry.primaryJob, {
+        actorKey: witness.roles.staff,
+        entityKey: witness.requestEntity,
+        operation: "complete",
+        successState: "resolved",
+      })
+    );
+  }
   if (entry.familyBinding.key === "service-work-orders") {
     const witness = matchServiceWorkOrdersBlueprintV1(b);
     return (
@@ -1243,6 +1279,59 @@ function validateJourneys(entry: ProductDefinitionData): DefinitionReason[] {
     s: ProductDefinitionData["journeys"]["correction"][number]["steps"][number],
   ) => {
     const flow = flows.find((f) => f.entity === s.entityKey);
+    if (entry.familyBinding.key === "customer-requests") {
+      const witness = matchCustomerRequestsBlueprintV1(b);
+      if (!witness || !roles.includes(s.actorKey)) return false;
+      const customer = s.actorKey === witness.roles.customer;
+      if (s.entityKey === witness.historyEntity)
+        return (
+          s.operation === "read" &&
+          s.fromState === null &&
+          s.toState === null &&
+          (s.expectation === "success" ||
+            (customer && s.expectation === "not-found"))
+        );
+      if (
+        s.entityKey !== witness.requestEntity ||
+        !flow ||
+        ![s.fromState, s.toState].every(
+          (state) => state === null || flow.states.includes(state),
+        )
+      )
+        return false;
+      const granted = grants.some(
+        (p) =>
+          p.role === s.actorKey &&
+          p.resource === s.entityKey &&
+          p.actions.includes(s.operation),
+      );
+      const known = grants.some(
+        (p) => p.resource === s.entityKey && p.actions.includes(s.operation),
+      );
+      const sameState = s.fromState !== null && s.fromState === s.toState;
+      const ordinary =
+        flow.transitions.some(
+          (t) =>
+            t.event === s.operation &&
+            t.from === s.fromState &&
+            t.to === s.toState &&
+            t.roles?.includes(s.actorKey) === true,
+        ) ||
+        (s.operation === "create" &&
+          s.fromState === null &&
+          s.toState === "open") ||
+        (s.operation === "read" && sameState) ||
+        (["update", "reply"].includes(s.operation) &&
+          sameState &&
+          s.fromState === "open");
+      const scoped =
+        customer &&
+        ["read", "update", "reply", "reopen", "cancel"].includes(s.operation);
+      if (s.expectation === "denied")
+        return known && (!granted || !ordinary || scoped);
+      if (s.expectation === "not-found") return granted && ordinary && scoped;
+      return granted && ordinary;
+    }
     if (entry.familyBinding.key === "service-work-orders") {
       const witness = matchServiceWorkOrdersBlueprintV1(b);
       if (!witness || !roles.includes(s.actorKey)) return false;
@@ -1368,6 +1457,73 @@ function validateJourneys(entry: ProductDefinitionData): DefinitionReason[] {
       cases.some((c) => c.steps.some((s) => !supported(s)))
     )
       reasons.push("definition.unsupported-semantics");
+  }
+  if (entry.familyBinding.key === "customer-requests") {
+    const witness = matchCustomerRequestsBlueprintV1(b);
+    if (witness) {
+      const { staff, customer } = witness.roles;
+      const correction = entry.journeys.correction.flatMap(
+        (journey) => journey.steps,
+      );
+      const failure = entry.journeys.failure.flatMap(
+        (journey) => journey.steps,
+      );
+      // Require the complete bounded lifecycle, not a correction-only subset.
+      const requiredOperations = [
+        [customer, "create"],
+        [customer, "update"],
+        [customer, "reply"],
+        [staff, "reply"],
+        [staff, "complete"],
+        [customer, "reopen"],
+        [customer, "cancel"],
+        [customer, "read"],
+        [staff, "read"],
+      ];
+      if (
+        requiredOperations.some(
+          ([actor, operation]) =>
+            !correction.some(
+              (step) =>
+                step.actorKey === actor &&
+                step.entityKey === witness.requestEntity &&
+                step.operation === operation &&
+                step.expectation === "success",
+            ),
+        ) ||
+        [customer, staff].some(
+          (actor) =>
+            !correction.some(
+              (step) =>
+                step.actorKey === actor &&
+                step.entityKey === witness.historyEntity &&
+                step.operation === "read" &&
+                step.expectation === "success",
+            ),
+        )
+      )
+        reasons.push("definition.missing-correction");
+      if (
+        ["read", "update", "reply", "reopen", "cancel"].some(
+          (operation) =>
+            !failure.some(
+              (step) =>
+                step.actorKey === customer &&
+                step.entityKey === witness.requestEntity &&
+                step.operation === operation &&
+                step.expectation === "not-found",
+            ),
+        ) ||
+        !failure.some(
+          (step) =>
+            step.actorKey === customer &&
+            step.entityKey === witness.historyEntity &&
+            step.operation === "read" &&
+            step.expectation === "not-found",
+        )
+      )
+        reasons.push("definition.missing-failure");
+    }
   }
   if (
     !entry.journeys.correction.some(
@@ -1526,6 +1682,37 @@ function executionMatches(entry: ProductDefinitionData): boolean {
     )
   )
     return false;
+  if (entry.familyBinding.key === "customer-requests") {
+    const witness = matchCustomerRequestsGraphV1(graph);
+    if (!witness) return false;
+    const symbol = (model: string, key: string) => ({
+      graphSymbol: `graph.${model}.${key}`,
+    });
+    const expectedBindings = {
+      "core.crud": {
+        entityKey: symbol("domain", witness.requestEntity),
+        routeKey: symbol("page", witness.pages.list),
+      },
+      "core.workflow": { flowKey: symbol("flow", witness.workflow) },
+      "core.identity-policy": {
+        principalEntity: symbol("domain", witness.principalEntity),
+        sessionEntity: symbol("domain", witness.sessionEntity),
+        defaultRole: symbol("policy", witness.roles.staff),
+        authenticatedRole: symbol("policy", witness.roles.customer),
+      },
+      "core.audit": { actorRole: symbol("policy", witness.roles.staff) },
+      "core.notification": {
+        recipientRole: symbol("policy", witness.roles.staff),
+      },
+      "core.policy-declarations": {},
+    };
+    return actual.every((selection) =>
+      equal(
+        selection.bindings,
+        expectedBindings[selection.lock.key as keyof typeof expectedBindings],
+      ),
+    );
+  }
   if (entry.familyBinding.key === "service-work-orders") {
     const witness = matchServiceWorkOrdersGraphV1(graph);
     if (!witness) return false;
@@ -1774,7 +1961,10 @@ function executionMatches(entry: ProductDefinitionData): boolean {
 function guideMatches(entry: ProductDefinitionData): boolean {
   const guide = entry.selection.providerGuide,
     b = entry.canonical.blueprint;
-  if (entry.familyBinding.key === "service-work-orders") {
+  if (
+    entry.familyBinding.key === "service-work-orders" ||
+    entry.familyBinding.key === "customer-requests"
+  ) {
     const { definitionKey, identity: _identity, ...blueprint } = guide;
     return definitionKey === entry.definitionKey && equal(blueprint, b);
   }
@@ -1849,6 +2039,7 @@ export function validateFamilyDefinition(
     entry.familyBinding.key !== "approval" &&
     entry.familyBinding.key !== "inventory-operations" &&
     entry.familyBinding.key !== "service-work-orders" &&
+    entry.familyBinding.key !== "customer-requests" &&
     entry.familyBinding.key !== "appointment" &&
     entry.canonical.blueprint.entities.some((e) =>
       e.fields.some((f) => f.numericDomain || f.calculation),

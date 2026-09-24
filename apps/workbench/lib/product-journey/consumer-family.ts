@@ -20,6 +20,7 @@ export type ConsumerFamily =
   | "appointment"
   | "content-directory"
   | "service-work-orders"
+  | "customer-requests"
   | "inventory-operations";
 
 export function consumerManualReasonFor(
@@ -46,6 +47,7 @@ export function consumerFamilyLabel(family: ConsumerFamily | null): string {
     "content-directory": "Directory",
     "inventory-operations": "Inventory",
     "service-work-orders": "Work Orders",
+    "customer-requests": "Customer Requests",
   };
   return labels[family ?? "restaurant-ordering"];
 }

@@ -11,6 +11,7 @@ import {
   hashApplicationGraph,
   hashRequirementSpec,
   matchServiceWorkOrdersBlueprintV1,
+  matchCustomerRequestsBlueprintV1,
   type CompositionPlanV1,
   type DraftRevisionV1,
 } from "@factory/graph";
@@ -58,6 +59,11 @@ describe("public exact consumer family plan matcher", () => {
       "service-work-orders",
       "matchServiceWorkOrdersBlueprintV1",
     ],
+    [
+      "customer-support-desk",
+      "customer-requests",
+      "matchCustomerRequestsBlueprintV1",
+    ],
   ] as const;
 
   for (const [definitionKey, family, predicate] of families) {
@@ -84,7 +90,9 @@ describe("public exact consumer family plan matcher", () => {
       expect(
         predicate === "matchServiceWorkOrdersBlueprintV1"
           ? !!matchServiceWorkOrdersBlueprintV1(blueprint)
-          : capabilities[predicate](blueprint),
+          : predicate === "matchCustomerRequestsBlueprintV1"
+            ? !!matchCustomerRequestsBlueprintV1(blueprint)
+            : capabilities[predicate](blueprint),
       ).toBe(true);
       expect(
         capabilities.matchExactConsumerFamilyPlan(
@@ -227,7 +235,9 @@ describe("public exact consumer family plan matcher", () => {
       expect(
         predicate === "matchServiceWorkOrdersBlueprintV1"
           ? !!matchServiceWorkOrdersBlueprintV1(changed)
-          : capabilities[predicate](changed),
+          : predicate === "matchCustomerRequestsBlueprintV1"
+            ? !!matchCustomerRequestsBlueprintV1(changed)
+            : capabilities[predicate](changed),
       ).toBe(false);
       expect(
         capabilities.matchExactConsumerFamilyPlan(

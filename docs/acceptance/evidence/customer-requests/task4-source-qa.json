@@ -1,0 +1,81 @@
+{
+  "verdict": "PASS_TASK4_SOURCE_ACCEPTANCE_ONLY",
+  "findingCounts": { "p0": 0, "p1": 0, "p2": 0 },
+  "scope": "Independent source-only QA for Customer Requests Task 4 definition admission, automatic consumer entry, and authored actual-case source.",
+  "authority": {
+    "path": "docs/adr/adr-0084-customer-requests-family.md",
+    "sha256": "8a78888dd9f1996588f475188b4645664c06bf9e1a49561112cdfa89c6f954c6"
+  },
+  "frozenInputs": {
+    "definitionConsumerManifestSha256": "01dfd92eb93092500d8f4978b2904a21d5465079697f13fa3dd54dc66777a66b",
+    "caseManifestSha256": "e261e18bce74b2de9d616eeeea83e15206cbf03815b3f86963296b3617f6de50",
+    "combinedAstraReviewSha256": "db8d1fbdd531f67b83154140b94f987bec078d01b105c93e5ca230c53aa6d4c0",
+    "sourcePaths": 25,
+    "matchingSourcePaths": 25,
+    "protectedTask1CaptureSha256": "c9c6c0245de95ffb7176131e59206aa8ca0bceecb21b5ed70185ae6654f25eba",
+    "catalogueBeforeSha256": "b05298aa6de6390910239edf6147af657f792142d37f275576f0c4d7982d4ebf"
+  },
+  "freshChecks": [
+    {
+      "command": "pnpm --filter @factory/adapters exec vitest run test/customer-requests-definition.test.ts",
+      "exitCode": 0,
+      "result": "1 file; 61 passed; 0 failed"
+    },
+    {
+      "command": "pnpm --filter @factory/capabilities exec vitest run test/plan-alternatives.test.ts",
+      "exitCode": 0,
+      "result": "1 file; 46 passed; 0 failed"
+    },
+    {
+      "command": "pnpm --filter @factory/workbench exec vitest run lib/product-journey/consumer-family.test.ts lib/product-journey/use-consumer-generation.test.tsx",
+      "exitCode": 0,
+      "result": "2 files; 218 passed; 0 failed"
+    },
+    {
+      "command": "pnpm exec playwright test e2e/helpers/content-directory.test.ts e2e/helpers/customer-requests.test.ts e2e/helpers/inventory-operations.test.ts e2e/helpers/service-work-orders.test.ts e2e/helpers/workbench-module-loading.test.ts --workers=1 --output=generated/.customer-requests-task4-qa/helper-test-results",
+      "exitCode": 0,
+      "result": "5 pure helper files; 25 passed; 0 failed"
+    },
+    {
+      "command": "pnpm exec tsc --project e2e/tsconfig.consumer-delivery.json --noEmit",
+      "exitCode": 0,
+      "result": "E2E typecheck completed without diagnostics"
+    },
+    {
+      "command": "pnpm exec playwright test e2e/customer-requests.spec.ts --list",
+      "exitCode": 0,
+      "result": "1 Customer Requests case discovered; not executed"
+    },
+    {
+      "command": "node node_modules/.pnpm/vite-node@2.1.9_@types+node@22.20.1_terser@5.49.0/node_modules/vite-node/vite-node.mjs generated/.customer-requests-task4-qa/verify-historical.ts",
+      "exitCode": 0,
+      "result": "12 current derivations and immutable Published emitted bundles equal the protected baseline"
+    }
+  ],
+  "coverage": [
+    "Definition-adapter admission, malformed candidates, deduplication, retained requirements, and exact definition locks/bindings",
+    "Automatic immutable consumer-family selection, entry latches, delivery/recovery paths, and safe Workbench harness behavior",
+    "Customer Requests execution authorization, local-origin/path guards, cleanup ownership, bounded history evidence, and safe failure packets",
+    "Existing content-directory observer/ownership guards and the remaining pure Playwright helper boundaries"
+  ],
+  "reusedEvidence": [
+    "Root-recorded eight-step definition lane succeeded with eight exit codes 0",
+    "Writer-recorded broader adapter verification, typecheck, build, and formatting evidence remains unchanged",
+    "Root-recorded final actual-case E2E typecheck and discovery receipt remain unchanged"
+  ],
+  "actualCase": {
+    "status": "PENDING",
+    "reason": "Workbench startup remains automatically rejected and is not authorization-bypassable. The actual Customer Requests browser case was listed only."
+  },
+  "limits": "No actual browser journey, listener, server, database, Docker, provider, cloud, cleanup, or Git action was run. This report grants no Product Publish, repository integration, release, deployment, PostgreSQL persistence/race/restart result, hosted availability, or image-inspection result.",
+  "rawLogs": [
+    "adapter-definition.log",
+    "capability-plan.log",
+    "workbench-consumer.log",
+    "playwright-helpers.log",
+    "e2e-types.log",
+    "customer-requests-discovery.log",
+    "historical-equality.log",
+    "source-hash-check.json"
+  ]
+}

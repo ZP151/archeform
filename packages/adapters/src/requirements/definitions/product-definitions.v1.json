@@ -7864,6 +7864,1006 @@
         "reviewedOn": "2026-09-24",
         "decision": "ADR-0065"
       }
+    },
+    {
+      "apiVersion": "factory.product-definition-data/v1",
+      "definitionKey": "customer-support-desk",
+      "definitionVersion": "1.0.0",
+      "familyBinding": {
+        "key": "customer-requests",
+        "version": "customer-requests/v1"
+      },
+      "parameterPolicy": "none/v1",
+      "primaryJob": {
+        "actorKey": "staff",
+        "operation": "complete",
+        "entityKey": "customer-request",
+        "successState": "resolved"
+      },
+      "canonical": {
+        "spec": {
+          "apiVersion": "factory.requirement-spec/v1",
+          "requirementId": "customer-requests-fixture",
+          "outcome": "Submit owned requests and retain customer-visible replies and corrections.",
+          "actors": [
+            {
+              "key": "staff",
+              "label": "Support staff"
+            },
+            {
+              "key": "customer",
+              "label": "Customer"
+            }
+          ],
+          "domainConcepts": [
+            {
+              "key": "customer-request",
+              "label": "Customer request"
+            },
+            {
+              "key": "request-history",
+              "label": "Request history"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "handle-request",
+              "label": "Handle request"
+            }
+          ],
+          "constraints": [],
+          "openQuestions": [],
+          "acceptanceScenarios": [
+            {
+              "key": "resolve-request",
+              "given": "A customer owns an open request",
+              "when": "Staff replies and resolves the request",
+              "then": "The customer reads its attributed conversation and can reopen"
+            }
+          ]
+        },
+        "blueprint": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:d1c86ba698b8d1748193e1b471efe0f6cf27e4f3f9c373cb3846e56f4739e060",
+          "title": "Customer Support Desk",
+          "actors": [
+            {
+              "key": "staff",
+              "label": "Support staff",
+              "permissions": [
+                {
+                  "entityKey": "customer-request",
+                  "actions": ["read", "reply", "complete"]
+                },
+                {
+                  "entityKey": "request-history",
+                  "actions": ["read"]
+                }
+              ]
+            },
+            {
+              "key": "customer",
+              "label": "Customer",
+              "permissions": [
+                {
+                  "entityKey": "customer-request",
+                  "actions": [
+                    "create",
+                    "read",
+                    "update",
+                    "reply",
+                    "reopen",
+                    "cancel"
+                  ]
+                },
+                {
+                  "entityKey": "request-history",
+                  "actions": ["read"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "customer-request",
+              "label": "Customer request",
+              "fields": [
+                {
+                  "key": "subject",
+                  "label": "subject",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "description",
+                  "label": "description",
+                  "type": "long-text",
+                  "required": true
+                },
+                {
+                  "key": "status",
+                  "label": "status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "resolved", "cancelled"]
+                },
+                {
+                  "key": "customerPrincipalId",
+                  "label": "customerPrincipalId",
+                  "type": "text",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "request-history",
+              "label": "Request history",
+              "fields": [
+                {
+                  "key": "request",
+                  "label": "request",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "customer-request"
+                },
+                {
+                  "key": "action",
+                  "label": "action",
+                  "type": "enum",
+                  "required": true,
+                  "options": [
+                    "create",
+                    "update",
+                    "reply",
+                    "complete",
+                    "reopen",
+                    "cancel"
+                  ]
+                },
+                {
+                  "key": "requestVersion",
+                  "label": "requestVersion",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": true
+                    },
+                    "maximum": {
+                      "value": 2147483647,
+                      "inclusive": true
+                    }
+                  }
+                },
+                {
+                  "key": "toStatus",
+                  "label": "toStatus",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "resolved", "cancelled"]
+                },
+                {
+                  "key": "actorPrincipalId",
+                  "label": "actorPrincipalId",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "actorRole",
+                  "label": "actorRole",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "recordedAt",
+                  "label": "recordedAt",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "fromStatus",
+                  "label": "fromStatus",
+                  "type": "enum",
+                  "required": false,
+                  "options": ["open", "resolved", "cancelled"]
+                },
+                {
+                  "key": "message",
+                  "label": "message",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "reason",
+                  "label": "reason",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "correctsVersion",
+                  "label": "correctsVersion",
+                  "type": "number",
+                  "required": false,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": true
+                    },
+                    "maximum": {
+                      "value": 2147483647,
+                      "inclusive": true
+                    }
+                  }
+                },
+                {
+                  "key": "beforeSubject",
+                  "label": "beforeSubject",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "afterSubject",
+                  "label": "afterSubject",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "beforeDescription",
+                  "label": "beforeDescription",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "afterDescription",
+                  "label": "afterDescription",
+                  "type": "long-text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "my-requests",
+              "label": "My requests",
+              "intent": "list",
+              "entityKey": "customer-request"
+            },
+            {
+              "key": "new-request",
+              "label": "New request",
+              "intent": "form",
+              "entityKey": "customer-request"
+            },
+            {
+              "key": "request-detail",
+              "label": "Request detail",
+              "intent": "detail",
+              "entityKey": "customer-request"
+            },
+            {
+              "key": "staff-queue",
+              "label": "Staff queue",
+              "intent": "queue",
+              "entityKey": "customer-request"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "handle-request",
+              "label": "Handle request",
+              "entityKey": "customer-request",
+              "states": [
+                {
+                  "key": "open",
+                  "label": "open"
+                },
+                {
+                  "key": "resolved",
+                  "label": "resolved"
+                },
+                {
+                  "key": "cancelled",
+                  "label": "cancelled"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "complete",
+                  "label": "complete",
+                  "from": "open",
+                  "to": "resolved",
+                  "actorKey": "staff"
+                },
+                {
+                  "key": "reopen",
+                  "label": "reopen",
+                  "from": "resolved",
+                  "to": "open",
+                  "actorKey": "customer"
+                },
+                {
+                  "key": "cancel",
+                  "label": "cancel",
+                  "from": "open",
+                  "to": "cancelled",
+                  "actorKey": "customer"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "resolve-request",
+              "description": "Retain an owned customer conversation.",
+              "steps": [
+                {
+                  "actorKey": "customer",
+                  "action": "Submit a request"
+                },
+                {
+                  "actorKey": "staff",
+                  "action": "Reply and resolve"
+                },
+                {
+                  "actorKey": "customer",
+                  "action": "Reopen with a reason"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selection": {
+        "providerGuide": {
+          "apiVersion": "factory.product-blueprint/v1",
+          "requirementChecksum": "sha256:d1c86ba698b8d1748193e1b471efe0f6cf27e4f3f9c373cb3846e56f4739e060",
+          "title": "Customer Support Desk",
+          "actors": [
+            {
+              "key": "staff",
+              "label": "Support staff",
+              "permissions": [
+                {
+                  "entityKey": "customer-request",
+                  "actions": ["read", "reply", "complete"]
+                },
+                {
+                  "entityKey": "request-history",
+                  "actions": ["read"]
+                }
+              ]
+            },
+            {
+              "key": "customer",
+              "label": "Customer",
+              "permissions": [
+                {
+                  "entityKey": "customer-request",
+                  "actions": [
+                    "create",
+                    "read",
+                    "update",
+                    "reply",
+                    "reopen",
+                    "cancel"
+                  ]
+                },
+                {
+                  "entityKey": "request-history",
+                  "actions": ["read"]
+                }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "key": "customer-request",
+              "label": "Customer request",
+              "fields": [
+                {
+                  "key": "subject",
+                  "label": "subject",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "description",
+                  "label": "description",
+                  "type": "long-text",
+                  "required": true
+                },
+                {
+                  "key": "status",
+                  "label": "status",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "resolved", "cancelled"]
+                },
+                {
+                  "key": "customerPrincipalId",
+                  "label": "customerPrincipalId",
+                  "type": "text",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "request-history",
+              "label": "Request history",
+              "fields": [
+                {
+                  "key": "request",
+                  "label": "request",
+                  "type": "reference",
+                  "required": true,
+                  "referenceTo": "customer-request"
+                },
+                {
+                  "key": "action",
+                  "label": "action",
+                  "type": "enum",
+                  "required": true,
+                  "options": [
+                    "create",
+                    "update",
+                    "reply",
+                    "complete",
+                    "reopen",
+                    "cancel"
+                  ]
+                },
+                {
+                  "key": "requestVersion",
+                  "label": "requestVersion",
+                  "type": "number",
+                  "required": true,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": true
+                    },
+                    "maximum": {
+                      "value": 2147483647,
+                      "inclusive": true
+                    }
+                  }
+                },
+                {
+                  "key": "toStatus",
+                  "label": "toStatus",
+                  "type": "enum",
+                  "required": true,
+                  "options": ["open", "resolved", "cancelled"]
+                },
+                {
+                  "key": "actorPrincipalId",
+                  "label": "actorPrincipalId",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "actorRole",
+                  "label": "actorRole",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "key": "recordedAt",
+                  "label": "recordedAt",
+                  "type": "datetime",
+                  "required": true
+                },
+                {
+                  "key": "fromStatus",
+                  "label": "fromStatus",
+                  "type": "enum",
+                  "required": false,
+                  "options": ["open", "resolved", "cancelled"]
+                },
+                {
+                  "key": "message",
+                  "label": "message",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "reason",
+                  "label": "reason",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "correctsVersion",
+                  "label": "correctsVersion",
+                  "type": "number",
+                  "required": false,
+                  "numericDomain": {
+                    "apiVersion": "factory.numeric-field-domain/v1",
+                    "minimum": {
+                      "value": 0,
+                      "inclusive": true
+                    },
+                    "maximum": {
+                      "value": 2147483647,
+                      "inclusive": true
+                    }
+                  }
+                },
+                {
+                  "key": "beforeSubject",
+                  "label": "beforeSubject",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "afterSubject",
+                  "label": "afterSubject",
+                  "type": "text",
+                  "required": false
+                },
+                {
+                  "key": "beforeDescription",
+                  "label": "beforeDescription",
+                  "type": "long-text",
+                  "required": false
+                },
+                {
+                  "key": "afterDescription",
+                  "label": "afterDescription",
+                  "type": "long-text",
+                  "required": false
+                }
+              ]
+            }
+          ],
+          "pageIntents": [
+            {
+              "key": "my-requests",
+              "label": "My requests",
+              "intent": "list",
+              "entityKey": "customer-request"
+            },
+            {
+              "key": "new-request",
+              "label": "New request",
+              "intent": "form",
+              "entityKey": "customer-request"
+            },
+            {
+              "key": "request-detail",
+              "label": "Request detail",
+              "intent": "detail",
+              "entityKey": "customer-request"
+            },
+            {
+              "key": "staff-queue",
+              "label": "Staff queue",
+              "intent": "queue",
+              "entityKey": "customer-request"
+            }
+          ],
+          "workflows": [
+            {
+              "key": "handle-request",
+              "label": "Handle request",
+              "entityKey": "customer-request",
+              "states": [
+                {
+                  "key": "open",
+                  "label": "open"
+                },
+                {
+                  "key": "resolved",
+                  "label": "resolved"
+                },
+                {
+                  "key": "cancelled",
+                  "label": "cancelled"
+                }
+              ],
+              "transitions": [
+                {
+                  "key": "complete",
+                  "label": "complete",
+                  "from": "open",
+                  "to": "resolved",
+                  "actorKey": "staff"
+                },
+                {
+                  "key": "reopen",
+                  "label": "reopen",
+                  "from": "resolved",
+                  "to": "open",
+                  "actorKey": "customer"
+                },
+                {
+                  "key": "cancel",
+                  "label": "cancel",
+                  "from": "open",
+                  "to": "cancelled",
+                  "actorKey": "customer"
+                }
+              ]
+            }
+          ],
+          "acceptanceJourneys": [
+            {
+              "key": "resolve-request",
+              "description": "Retain an owned customer conversation.",
+              "steps": [
+                {
+                  "actorKey": "customer",
+                  "action": "Submit a request"
+                },
+                {
+                  "actorKey": "staff",
+                  "action": "Reply and resolve"
+                },
+                {
+                  "actorKey": "customer",
+                  "action": "Reopen with a reason"
+                }
+              ]
+            }
+          ],
+          "definitionKey": "customer-support-desk",
+          "identity": "Local public-demo simulation only: one synthetic staff member and two synthetic customers of the same customer role. The server assigns immutable request ownership and checks it before reads, writes and receipt replay. This is not private authentication or private hosting."
+        },
+        "providerInstruction": "Select customer-support-desk for a local Customer Support Desk where customers submit their own subject and description, read a persisted attributed conversation, reply, correct metadata or their own replies, reopen resolved requests with a reason and cancel open requests with a reason; staff read the triage queue, reply, correct their own replies and complete an open request to resolved with a customer-visible resolution message. Use the exact supplied roles, fields, lifecycle, pages and journeys; do not generate a substitute blueprint. The fixed demo has one synthetic staff member and two synthetic customers of the same role; ownership is enforced by the server but it is not private authentication or private hosting. Supported-default is permitted only when this bounded local scope satisfies the material requirements. Required private accounts, attachments or uploads, external intake, outbound messages or notifications, assignment, internal notes and SLA enforcement are unsupported. Retain each such material requirement as a categorized materialQuestion with needs-clarification under ADR-0078; do not silently drop it or treat an affirmative answer as acceptance of a limitation. Clear it only after explicit acceptance that the unsupported feature is not required. The notification lock creates no notification sends. Labels and provider success are never family admission authority."
+      },
+      "journeys": {
+        "correction": [
+          {
+            "key": "correct-request-metadata",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "update",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "read",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "staff",
+                "entityKey": "customer-request",
+                "operation": "read",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "customer-staff-conversation",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "create",
+                "fromState": null,
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "staff",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "request-history",
+                "operation": "read",
+                "fromState": null,
+                "toState": null,
+                "expectation": "success"
+              },
+              {
+                "actorKey": "staff",
+                "entityKey": "request-history",
+                "operation": "read",
+                "fromState": null,
+                "toState": null,
+                "expectation": "success"
+              },
+              {
+                "actorKey": "staff",
+                "entityKey": "customer-request",
+                "operation": "complete",
+                "fromState": "open",
+                "toState": "resolved",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "read",
+                "fromState": "resolved",
+                "toState": "resolved",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "reopen",
+                "fromState": "resolved",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "cancel",
+                "fromState": "open",
+                "toState": "cancelled",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "read",
+                "fromState": "cancelled",
+                "toState": "cancelled",
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "correct-own-customer-reply",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "retry-replay"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "request-history",
+                "operation": "read",
+                "fromState": null,
+                "toState": null,
+                "expectation": "success"
+              }
+            ]
+          },
+          {
+            "key": "correct-own-staff-reply",
+            "steps": [
+              {
+                "actorKey": "staff",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "success"
+              },
+              {
+                "actorKey": "staff",
+                "entityKey": "request-history",
+                "operation": "read",
+                "fromState": null,
+                "toState": null,
+                "expectation": "success"
+              }
+            ]
+          }
+        ],
+        "failure": [
+          {
+            "key": "same-role-other-customer-denied",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "read",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "not-found"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "update",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "not-found"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "not-found"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "reopen",
+                "fromState": "resolved",
+                "toState": "open",
+                "expectation": "not-found"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "cancel",
+                "fromState": "open",
+                "toState": "cancelled",
+                "expectation": "not-found"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "request-history",
+                "operation": "read",
+                "fromState": null,
+                "toState": null,
+                "expectation": "not-found"
+              }
+            ]
+          },
+          {
+            "key": "role-authority-denied",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "complete",
+                "fromState": "open",
+                "toState": "resolved",
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "staff",
+                "entityKey": "customer-request",
+                "operation": "create",
+                "fromState": null,
+                "toState": "open",
+                "expectation": "denied"
+              }
+            ]
+          },
+          {
+            "key": "stale-and-invalid-command",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "update",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "version-conflict"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "open",
+                "toState": "open",
+                "expectation": "validation-error"
+              },
+              {
+                "actorKey": "staff",
+                "entityKey": "customer-request",
+                "operation": "complete",
+                "fromState": "open",
+                "toState": "resolved",
+                "expectation": "validation-error"
+              }
+            ]
+          },
+          {
+            "key": "terminal-request-denied",
+            "steps": [
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "resolved",
+                "toState": "resolved",
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "customer",
+                "entityKey": "customer-request",
+                "operation": "update",
+                "fromState": "cancelled",
+                "toState": "cancelled",
+                "expectation": "denied"
+              },
+              {
+                "actorKey": "staff",
+                "entityKey": "customer-request",
+                "operation": "reply",
+                "fromState": "cancelled",
+                "toState": "cancelled",
+                "expectation": "denied"
+              }
+            ]
+          }
+        ]
+      },
+      "admissionExpectations": {
+        "capabilityLocks": [
+          {
+            "key": "core.crud",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1"
+          },
+          {
+            "key": "core.workflow",
+            "version": "1.0.1",
+            "manifestDigest": "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884"
+          },
+          {
+            "key": "core.identity-policy",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82"
+          },
+          {
+            "key": "core.policy-declarations",
+            "version": "1.0.0",
+            "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54"
+          },
+          {
+            "key": "core.audit",
+            "version": "1.0.2",
+            "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8"
+          },
+          {
+            "key": "core.notification",
+            "version": "1.1.1",
+            "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132"
+          }
+        ],
+        "presentation": {
+          "key": "customer-requests-presentation",
+          "version": "1.0.0"
+        },
+        "compilerProfile": "customer-requests@1.0.0"
+      },
+      "provenance": {
+        "origin": "factory-first-party",
+        "owner": "Archeform Product Definition Owner",
+        "license": "UNLICENSED",
+        "reviewedOn": "2026-09-24",
+        "decision": "ADR-0065"
+      }
     }
   ]
 }

@@ -5,6 +5,170 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
+### Task 4 definition and consumer source accepted for delivery — 2026-09-24
+
+Independent Sol judgment returns `ACCEPT_TASK4_SOURCE_WITH_LIMITS`, P0/P1/P2
+0/0/0, after verifying all 25 source hashes and the independent review/QA
+identities. Original judgment JSON SHA-256 is
+`a6276e581d739f57432262503d3168f22b89ab09c0e0344cf049bb9479d3cf06`.
+PM accepts the exact source slice and prepares a controller commit/push with
+portable evidence under `docs/acceptance/evidence/customer-requests/task4-*`.
+Full repository formatting passes; no runtime/UI/worker source is changed.
+
+The catalogue has 13 physical rows, 12 logical definitions and 8 registered
+families. Actual delivery remains 10 definitions / 6 demonstrated families,
+with the existing Appointment UI qualification; hosted count stays 0. Task 4's
+first three source steps close, while actual Home/browser/PostgreSQL/visual and
+deployment/recovery acceptance and subsequent variant admission remain open.
+The active unbudgeted Goal continues. Preserve the startup restriction and
+pending hosted-environment decision; neither a guard variable nor this source
+acceptance clears them. Main/release integration is not authorized by this slice.
+
+### Task 4 independent QA passed; final judgment assigned — 2026-09-24
+
+Independent Terra returns `PASS_TASK4_SOURCE_ACCEPTANCE_ONLY`, P0/P1/P2 0/0/0.
+Fresh checks pass 61 definition, 46 planning, 218 consumer and 25 pure helper
+cases; E2E types pass, one actual case is listed only, twelve historical
+derivations/bundles remain equal and all 25 frozen source hashes match.
+Reports, raw logs and a separate parity receipt live under
+`generated/.customer-requests-task4-qa/`. No actual service or product ran.
+
+Root assigns independent Sol `customer_requests_verifier_judgment` a new bounded
+Task 4 final judgment using the clean combined source review and fresh QA.
+Only `generated/.customer-requests-task4-judgment/` evidence writes are assigned;
+source/Git/infrastructure remain read-only. Reconcile the exact accepted scope
+and residual actual/hosted work without repeating unchanged tests or reviews.
+PM acceptance and controller delivery still follow that judgment.
+
+### Task 4 combined review clean; independent QA assigned — 2026-09-24
+
+Independent review completes the same 22-plus-3 source review with P0/P1/P2
+0/0/0 and all 25 hashes verified. Final JSON SHA-256 is
+`db8d1fbdd531f67b83154140b94f987bec078d01b105c93e5ca230c53aa6d4c0`, at
+`generated/.customer-requests-task4-entry-review/final-combined-review.json`.
+
+Root assigns independent Terra `customer_requests_verifier_qa` a new Task 4
+source QA scope. Source remains read-only; new evidence belongs only under
+`generated/.customer-requests-task4-qa/`. Exercise focused definition admission,
+public exact planning, consumer phase/recovery and pure case helpers; verify
+frozen identities, protected historical receipts and E2E types. Reuse unchanged
+broader adapter and eight-step lane evidence rather than repeating full gates.
+Actual case, service/database/provider execution and visual/durability acceptance
+remain pending. Final independent judgment and PM acceptance still follow.
+
+### Task 4 case supplement frozen; integrated source lane passed — 2026-09-24
+
+The case author freezes its three assigned files in
+`generated/.customer-requests-task4/case/source-manifest.json`, SHA-256
+`e261e18bce74b2de9d616eeeea83e15206cbf03815b3f86963296b3617f6de50`.
+Five helper RED failures become five passing checks; discovery finds one actual
+case, with actual execution explicitly pending. Root's fresh integrated E2E
+no-emit types pass after final source edits. The existing eight-step definition
+lane succeeds with every exit code 0, including emitted presentation tests;
+receipt is `generated/.customer-requests-task4/definition-lane.log`.
+
+Root resumes `customer_requests_entry_review` for the same combined review,
+adding only the frozen three-file case supplement and new lane/type evidence.
+Reuse its clean 22-path preliminary review and unchanged runtime/UI/worker
+acceptance. No repeated broad review or actual service execution is assigned.
+Independent QA and final judgment follow a clean combined source verdict.
+
+### Verifier CI green; Task 4 preliminary review clean — 2026-09-24
+
+CI `35990939238` passes both Node jobs at exact pushed revision
+`c450af220dee294e568db40158d771e066cbc981`; watch exits 0 and fresh remote status
+confirms both conclusions. Portable receipt is `task3-verifier-ci.json`.
+
+Task 4's independent reviewer verifies all 22 frozen source hashes and reports
+no actionable P0/P1/P2 so far, including an independent 61/61 definition run.
+Its `generated/.customer-requests-task4-entry-review/preliminary.json` explicitly
+defers final combined review until the three actual-case source files are frozen.
+Root's current-definition and immutable-output comparator also passes 12/12
+against the original protected Task 1 capture. No previous baseline is replaced.
+The case author continues on its disjoint paths. Required QA/judgment and actual
+execution remain open; no Task 4 source delivery or product acceptance is claimed.
+
+### Task 4 definition and consumer freeze ready for combined review — 2026-09-24
+
+The definition owner freezes ten adapter paths after 419/419 cases, types/build
+and formatting. Its manifest SHA-256 is
+`1268d6424c344c1c3e43663ce8fbc17d8ad777661a7bbaa8d6368abbb6a78cbf`.
+All twelve original rows and their 305343-byte source prefix remain unchanged.
+Root freezes five consumer paths and seven shared routing/regression paths in
+`generated/.customer-requests-task4/definition-consumer-source-manifest.json`.
+Fresh root checks pass 46 plan cases, 218 consumer cases, eight shared helper
+cases, eighteen script cases, capability build/types and Workbench types.
+
+Root assigns strongest independent `customer_requests_entry_review` read-only
+combined review of those 22 paths, with evidence only under
+`generated/.customer-requests-task4-entry-review/`. It may inspect the frozen
+definition/consumer scope while the three disjoint actual-case files are authored;
+the case supplement will join this same review once frozen. No final Task 4
+acceptance is inferred before that supplement and required QA/judgment. Reuse
+unchanged Task 1-3 evidence, with no broad re-audit of accepted runtime/UI.
+
+### Task 4 shared regression and case routing assignment — 2026-09-24
+
+Root owns the additive case binding in `scripts/definition-case-bindings.mjs`,
+family selections in `scripts/regression.mjs` and its test, the label in
+`e2e/helpers/content-directory.ts` and its test, E2E entries in
+`e2e/tsconfig.consumer-delivery.json` and the pure-helper selection in
+`.github/workflows/ci.yml`. Existing case-index validation is reused without
+changing its authority or schema. No actual-case execution is enabled by these
+source edits; future CI runs only its pure helpers and test discovery. The
+definition lane keeps its existing eight steps, adding the Customer Requests
+checks inside the appropriate existing steps.
+
+### Task 4 consumer source green; actual-case authoring assigned — 2026-09-24
+
+Root reproduces missing consumer admission: capability RED has one failure and
+three passing controls; Workbench RED has seven failures and thirty passing
+controls. The only production changes extend the exact family matcher and
+consumer union/label. Existing hook lifecycle remains unchanged. After rebuilding
+the public capabilities package, all 46 plan tests and 218 consumer tests pass.
+The first post-edit attempt used stale package output and remains retained as
+a failed run; root does not replace that log. Capability types/build pass.
+
+Root assigns `customer_requests_case` only new `e2e/customer-requests.spec.ts`,
+`e2e/helpers/customer-requests.ts`, `e2e/helpers/customer-requests.test.ts` and
+`generated/.customer-requests-task4/case/` evidence. The canonical IDs and accepted
+ADR VER-005 are frozen; the case author reads the emitted presentation contract.
+Root retains all shared bindings/index, helper labels, E2E type configuration,
+regression lane and CI edits. The adapter owner remains disjoint. Author the
+complete phone/customer-to-desktop/staff job with ownership, correction, replay,
+recovery and visual states; helpers must keep safe evidence and exact resource
+ownership. Only no-listener helper tests, discovery and types may run. Actual
+case execution, startup, database, provider, cloud and cleanup remain prohibited.
+
+### Task 4 additive catalogue test ownership extended — 2026-09-24
+
+The definition owner's wider regression exposes three existing catalogue-total
+assertions in unassigned tests. Root extends that same owner only to
+`packages/adapters/test/inventory-operations-definition.test.ts`,
+`supplies-stockroom-definition.test.ts` and `appointment-consumer-definition.test.ts`
+for additive physical/logical/family counts and associated test names. Preserve
+all existing fixture, semantic and historical-output expectations. No other
+source ownership or product scope changes; retain the failed run before repair.
+
+### Verifier delivered; Task 4 consumer integration assigned — 2026-09-24
+
+Controller commits/pushes accepted verifier source and evidence as
+`c450af220dee294e568db40158d771e066cbc981`; remote branch tip equals local HEAD.
+CI `35990939238` starts on that exact revision. Task 4 adapter work is excluded.
+
+The definition owner freezes the canonical projection IDs: staff/customer,
+customer-request/request-history, handle-request, and
+my-requests/new-request/request-detail/staff-queue. Root now owns serial consumer
+integration in capability `plan-alternatives.ts` and test plus Workbench
+`consumer-family.ts`, `consumer-family.test.ts`, `use-consumer-generation.ts` and
+`use-consumer-generation.test.tsx`. Reuse current exact witness/lock validation and
+existing phase latches. Record focused RED before the missing family admission
+and label are added; preserve material questions and manual opt-out, one action
+per phase, readiness/recovery and immutable source identity. No new runtime/UI
+or hook lifecycle is introduced. Evidence belongs under
+`generated/.customer-requests-task4/consumer/`. Adapter writes stay with their
+existing owner; case/shared scripts remain unassigned and untouched.
+
 ### Customer Requests verifier accepted for bounded source delivery — 2026-09-24
 
 Independent Sol final judgment is `ACCEPT_SOURCE_WITH_LIMITS`, P0/P1/P2 0/0/0,

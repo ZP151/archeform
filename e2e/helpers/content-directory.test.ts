@@ -23,7 +23,10 @@ const compilation = {
   inputGraphHash: hash,
 };
 
-test("shared delivery observer identifies Work Orders and retains existing family labels", () => {
+test("shared delivery observer identifies supported families and retains existing labels", () => {
+  expect(consumerDeliveryLabel("customer-support-desk")).toBe(
+    "Customer Requests",
+  );
   expect(consumerDeliveryLabel("facilities-service-desk")).toBe("Work Orders");
   expect(consumerDeliveryLabel("appointment-booking-v2")).toBe("Appointment");
   expect(consumerDeliveryLabel("knowledge-resource-directory")).toBe(

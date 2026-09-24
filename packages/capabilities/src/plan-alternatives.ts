@@ -80,6 +80,7 @@ export function matchExactConsumerFamilyPlan(
   | "content-directory"
   | "inventory-operations"
   | "service-work-orders"
+  | "customer-requests"
   | null {
   const family = isAppointmentConsumerWorkspaceBlueprint(blueprint)
     ? "appointment"
@@ -89,7 +90,9 @@ export function matchExactConsumerFamilyPlan(
         ? "inventory-operations"
         : matchServiceWorkOrdersBlueprintV1(blueprint)
           ? "service-work-orders"
-          : null;
+          : matchCustomerRequestsBlueprintV1(blueprint)
+            ? "customer-requests"
+            : null;
   if (family === null) return null;
   const catalogue = currentCapabilityCatalogue();
   const keys = selectedKeysFor(catalogue, blueprint, "standard");

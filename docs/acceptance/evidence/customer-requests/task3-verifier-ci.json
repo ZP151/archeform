@@ -1,0 +1,14 @@
+{
+  "conclusion": "success",
+  "headSha": "c450af220dee294e568db40158d771e066cbc981",
+  "jobs": [
+    {
+      "conclusion": "success",
+      "name": "verify (22.11.0)",
+      "status": "completed"
+    },
+    { "conclusion": "success", "name": "verify (22.x)", "status": "completed" }
+  ],
+  "status": "completed",
+  "url": "https://github.com/ZP151/archeform/actions/runs/35990939238"
+}

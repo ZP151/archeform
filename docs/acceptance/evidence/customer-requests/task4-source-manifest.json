@@ -1,0 +1,112 @@
+{
+  "scope": "Customer Requests definition, automatic consumer entry and actual-case source",
+  "baseRevision": "c450af220dee294e568db40158d771e066cbc981",
+  "initialManifestSha256": "01dfd92eb93092500d8f4978b2904a21d5465079697f13fa3dd54dc66777a66b",
+  "caseManifestSha256": "e261e18bce74b2de9d616eeeea83e15206cbf03815b3f86963296b3617f6de50",
+  "sources": [
+    {
+      "path": "packages/adapters/src/requirements/definition-family-registry.ts",
+      "sha256": "a543c02bf15db05a62f8f7e9a470c7bc4c391e97ca7509c46d148bbbf88fe747"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definition-selection-catalogue.ts",
+      "sha256": "7968860c2c6e1a6e755ac782bc19a6bd9dfe1a6b492d0338b667c38c3def445a"
+    },
+    {
+      "path": "packages/adapters/src/requirements/definitions/product-definitions.v1.json",
+      "sha256": "2ab4b04b4cfec69351196a201f84503796142100e5be8ae8083ee821f285156b"
+    },
+    {
+      "path": "packages/adapters/test/customer-requests-definition.test.ts",
+      "sha256": "ad270895f1c89b91ce345ee8963786785391f111bb9c891612a25e92ac01eb81"
+    },
+    {
+      "path": "packages/adapters/test/product-definition-data.test.ts",
+      "sha256": "9c5b36cb678a85f11b8df25849b1b0aeebcd718acfb47b47e1c41c2ffe6e448d"
+    },
+    {
+      "path": "packages/adapters/test/requirement-interpreter.test.ts",
+      "sha256": "8d2bbca510d074c1c758cdcd2a6390ea698d7c0a924061fc52d4ea61a8556543"
+    },
+    {
+      "path": "packages/adapters/test/service-work-orders-definition.test.ts",
+      "sha256": "8fa278b5d562494b7ccbbf8a7a874a04f2113d356e1a3c202fee0a38bbede144"
+    },
+    {
+      "path": "packages/adapters/test/appointment-consumer-definition.test.ts",
+      "sha256": "5e6496be8fca6671b4df4a72517aa5da5fb6aba72cebbdd2d104aa551aec94d8"
+    },
+    {
+      "path": "packages/adapters/test/inventory-operations-definition.test.ts",
+      "sha256": "a50ed635c2518c27fec49961370ad8c277814f546b01bf4dbf7732f91b25c129"
+    },
+    {
+      "path": "packages/adapters/test/supplies-stockroom-definition.test.ts",
+      "sha256": "d42074328c2ca3e35d11d440705010838560f48b0b2ae4de75489e574a1e14fc"
+    },
+    {
+      "path": "packages/capabilities/src/plan-alternatives.ts",
+      "sha256": "a7c7b78131a58f0580d947df597ffa83f52a70289fbaaf4fb916bf10689914d2"
+    },
+    {
+      "path": "packages/capabilities/test/plan-alternatives.test.ts",
+      "sha256": "1164626be68b0f5c2d8001d236e0999c7f764620557906ae7a6fb57d97c79c51"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/consumer-family.ts",
+      "sha256": "96e444c4495c84ada42d066cb8e7f0f3f50fb683f66d974ee905b76373868c1f"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/consumer-family.test.ts",
+      "sha256": "a76981119eac7b946cf03499acf43d53fbe5a28a5b330a8cae3b9bddc15ba23b"
+    },
+    {
+      "path": "apps/workbench/lib/product-journey/use-consumer-generation.test.tsx",
+      "sha256": "d6ea843102c653f2bd623e4870a924b3242d0d81e6e35f9bdc12b6a58012ff42"
+    },
+    {
+      "path": "scripts/regression.mjs",
+      "sha256": "1d42de5c5e54cc8cbdfee45e985b75eab1722c9da69abdc8901a5ae20f9ae213"
+    },
+    {
+      "path": "scripts/regression.test.mjs",
+      "sha256": "a2b5445cdf686d1c50f8acbfd48855ad7e86a879f7611ca569642c5e4b7c2bb6"
+    },
+    {
+      "path": "scripts/definition-case-bindings.mjs",
+      "sha256": "4f28c871300412156d9aecea6cbbdbaeeb6c23b40a92e7ef6733ae0a831e58a7"
+    },
+    {
+      "path": "e2e/helpers/content-directory.ts",
+      "sha256": "664b1a60507a319a5831dcf10ed73de85700ff0348d4dce3da0db3161ecf1d53"
+    },
+    {
+      "path": "e2e/helpers/content-directory.test.ts",
+      "sha256": "6d62a6ecf1c9d869e918c3be2f3d60b292659f4a2615b4de0be8d8a8fddaac42"
+    },
+    {
+      "path": "e2e/tsconfig.consumer-delivery.json",
+      "sha256": "d7cd4a99b5aa22b0831c7543e638b0da6e5d73286b803187831fbc65eb61f368"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "72e47484fa5abacfbebc76442b81c57a78ccee53de6385d1032f76b733efd64f"
+    },
+    {
+      "path": "e2e/customer-requests.spec.ts",
+      "sha256": "4123c45ac482ebb430c1308c29632d412f37768a908c80810456df8421d4af28",
+      "nonblankLines": 1088
+    },
+    {
+      "path": "e2e/helpers/customer-requests.ts",
+      "sha256": "d767c630ac631568e51103a466e22998fff9d82242f9b273dfb4e22baa0dab06",
+      "nonblankLines": 352
+    },
+    {
+      "path": "e2e/helpers/customer-requests.test.ts",
+      "sha256": "b686db2bbb27ca423bfab518024106deae41b84f854618d134b078c5f055fb0a",
+      "nonblankLines": 144
+    }
+  ],
+  "actualExecution": "pending"
+}

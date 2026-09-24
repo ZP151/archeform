@@ -141,7 +141,7 @@ describe("Supplies Stockroom canonical admission", () => {
     });
     const raw = readFileSync(cataloguePath, "utf8"),
       data = JSON.parse(raw);
-    expect(data.definitions).toHaveLength(12);
+    expect(data.definitions).toHaveLength(13);
     expect(data.definitions[9].definitionKey).toBe(key);
     expect(
       createHash("sha256")
@@ -153,10 +153,10 @@ describe("Supplies Stockroom canonical admission", () => {
     ).toBe("cca591797f808d3b621031f9853213d1fe7a05dc7958db0006315a4374a95759");
     expect(validateFamilyDefinition(row)).toEqual([]);
     expect(validateDefinitionBatch(Buffer.from(raw))).toMatchObject({
-      attempted: 12,
-      valid: 12,
-      distinct: 12,
-      admitted: 12,
+      attempted: 13,
+      valid: 13,
+      distinct: 13,
+      admitted: 13,
       reasonCounts: {},
     });
     expect(row.canonical.blueprint.requirementChecksum).toBe(

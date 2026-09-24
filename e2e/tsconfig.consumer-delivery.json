@@ -15,8 +15,10 @@
     "content-directory.spec.ts",
     "inventory-operations.spec.ts",
     "service-work-orders.spec.ts",
+    "customer-requests.spec.ts",
     "helpers/content-directory.test.ts",
     "helpers/service-work-orders.test.ts",
+    "helpers/customer-requests.test.ts",
     "helpers/inventory-operations.test.ts",
     "helpers/workbench-module-loading.test.ts"
   ]

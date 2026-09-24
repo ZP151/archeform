@@ -1197,6 +1197,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       ...admittedDefinitionKeys,
       "appointment-booking-v2",
       "facilities-service-desk",
+      "customer-support-desk",
     ]);
     expect(Object.isFrozen(definitionSelectionCatalogue)).toBe(true);
     expect(() =>
@@ -2281,7 +2282,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       };
     };
     expect(schema.properties.definitionSelection.anyOf).toHaveLength(
-      admittedDefinitionKeys.length + 2,
+      admittedDefinitionKeys.length + 3,
     );
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({

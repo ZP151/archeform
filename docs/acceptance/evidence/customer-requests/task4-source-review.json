@@ -1,0 +1,63 @@
+{
+  "verdict": "CLEAR_FOR_INDEPENDENT_TASK4_SOURCE_QA",
+  "scope": "Combined Task4 definition, exact consumer entry, regression routing and authored actual-case source review",
+  "baseRevision": "c450af220dee294e568db40158d771e066cbc981",
+  "authority": "docs/adr/adr-0084-customer-requests-family.md",
+  "authoritySha256": "8a78888dd9f1996588f475188b4645664c06bf9e1a49561112cdfa89c6f954c6",
+  "initialManifestSha256": "01dfd92eb93092500d8f4978b2904a21d5465079697f13fa3dd54dc66777a66b",
+  "supplementManifestSha256": "e261e18bce74b2de9d616eeeea83e15206cbf03815b3f86963296b3617f6de50",
+  "frozenSourceCount": 25,
+  "matchingSourceCount": 25,
+  "priorReview": "preliminary.json",
+  "sourceHashes": "final-source-hashes.json",
+  "P0": 0,
+  "P1": 0,
+  "P2": 0,
+  "findings": [],
+  "independentVerification": {
+    "exitCode": 0,
+    "receipt": "definition-focused.log",
+    "passed": 61,
+    "command": "pnpm --filter @factory/adapters exec vitest run test/customer-requests-definition.test.ts"
+  },
+  "reviewedIntegratedEvidence": [
+    "419 definition checks; adapter types/build/format",
+    "46 capability checks and 218 Workbench checks; affected package types and capability build",
+    "25 pure helper checks across five files",
+    "98 cases discovered in 39 files; actual case not executed",
+    "Final consumer E2E typecheck exit 0 reported by controller; empty diagnostic log",
+    "Existing eight-step definition lane succeeded with eight exit codes 0",
+    "Twelve original catalogue rows and source prefix preserved",
+    "Twelve current historical derivations and immutable compiled outputs equal original protected baseline",
+    "Initial failing RED and stale-dist failures retained"
+  ],
+  "supplementReview": [
+    "VER-005 Home entry uses existing authored-selection observer and automatic immutable delivery; exact Published profile and compilation identities are checked",
+    "Customer phone metadata correction and reload, desktop staff reply/correction, fresh-phone attributed original and correction, customer follow-up and own-message correction",
+    "Committed-response loss with identical command/key/session retry and no duplicate history event",
+    "Stale correction retains draft and requires explicit reapplication using new key and refreshed version",
+    "Two resolution cycles with visible message and reasoned customer reopen; separately cancelled terminal request with retained history",
+    "Same-role B sees neither A request, cannot fetch histories/detail, correct messages/metadata or replay captured commands",
+    "Principal switch removes transcript, editor, uncertain command and unsent draft; reload and event-count checks guard cross-principal replay",
+    "Loading/empty/validation/long-content/uncertain/stale/resolution/cancellation/denied/read-error states captured at relevant 390/768/1440 widths with keyboard/touch/focus and geometry checks",
+    "Measured ready/first-useful-action times and technical handoffs; screenshot inspection remains explicitly pending",
+    "Safe failure location/assertion summaries and history/command digests exclude raw bodies and session values from evidence; traces/video disabled",
+    "Loopback/path guards and exact observed preview/compilation/Compose identity gate cleanup plan; failed or uncertain cleanup remains failure"
+  ],
+  "limitations": [
+    "No actual browser journey, service, listener, database, Docker, provider, cloud or cleanup execution performed by reviewer",
+    "Environment guard is not authorization to bypass the binding startup rejection",
+    "Authored provider selection does not prove live-provider interpretation quality",
+    "Actual local journey, image inspection, PostgreSQL races/rollback/restart, hosted availability, retained-data upgrade and recovery remain pending",
+    "Source review grants no Product Publish, repository release, deployment, integration or acceptance-count increase",
+    "Independent QA and final judgment remain required"
+  ],
+  "counts": {
+    "hosted": 0,
+    "historicallyDeliveredDefinitions": 10,
+    "activeLogicalDefinitions": 12,
+    "registeredFamilies": 8,
+    "historicallyDeliveredFamilies": 6,
+    "physicalRows": 13
+  }
+}

@@ -7,8 +7,9 @@ Updated: 2026-09-24
 An unbudgeted Goal now drives the [September 24 execution route](superpowers/plans/2026-09-24-family-expansion-and-delivery.md).
 The first new family is Resource Directory, followed by Inventory Operations.
 Work Orders has accepted source evidence and awaits actual acceptance. Customer
-Requests has accepted exact contract source after independent review and QA;
-persisted runtime source now passes review, independent QA and final judgment. Event Registration and Sales
+Requests has accepted contract, runtime, responsive UI, worker, definition and
+automatic consumer/case source after independent review, QA and final judgment.
+Its actual product acceptance remains pending. Event Registration and Sales
 Pipeline remain candidate waves. These
 four waves have not added an accepted delivered product.
 Mobile browsing/field work and desktop
@@ -57,8 +58,13 @@ Two findings concerning accessor/prototype validation and negative-zero response
 versions are repaired and independently closed. Fresh independent QA passes 141
 family and 100 generic regression cases, worker types and twelve-plan parity;
 final source judgment has no open findings. Root's worker build also passes.
-Task 4 is implementing the canonical definition and preparing automatic consumer
-entry using the existing family runtime and responsive presentation.
+The verifier is pushed at `c450af22`; both Node jobs pass in
+[CI run 35990939238](https://github.com/ZP151/archeform/actions/runs/35990939238).
+That revision excludes the following Task 4 work.
+Task 4 now has [accepted definition and automatic consumer source](acceptance/evidence/customer-requests/task4-source-acceptance.md).
+Independent QA passes 350 focused cases, E2E types, 25 frozen identities and
+twelve historical derivation/bundle comparisons. The eight-step definition lane
+passes; 98 cases are discoverable, including the new cross-device journey.
 Actual consumer delivery remains open; no delivered-definition count increases.
 
 | Outcome                       | Current evidence                                                                                                                              | Next acceptance                                                                                             |
@@ -84,8 +90,10 @@ locator attempt is preserved. See [Inventory acceptance](acceptance/inventory-op
 
 The delivered baseline remains ten logical definitions across six demonstrated
 runtime families, subject to the reopened Appointment UI acceptance below. The
-working catalogue now has twelve physical rows, representing eleven logical
-definitions with the explicit Appointment V1/V2 replacement. Work Orders is a new
+working catalogue now has thirteen physical rows, representing twelve logical
+definitions across eight registered families with the explicit Appointment V1/V2
+replacement. Customer Support Desk is source-accepted and awaits actual execution.
+Work Orders is a new
 source registration with accepted definition/runtime/UI evidence and does not
 increase delivered counts. Its complete actual-case source passes independent
 review and independent QA, including 18 pure helper cases and tracked no-emit

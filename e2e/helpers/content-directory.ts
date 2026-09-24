@@ -35,6 +35,8 @@ const safeIdentity = (value: unknown): value is string =>
 
 export function consumerDeliveryLabel(definitionKey: string): string {
   switch (definitionKey) {
+    case "customer-support-desk":
+      return "Customer Requests";
     case "facilities-service-desk":
       return "Work Orders";
     case "knowledge-resource-directory":

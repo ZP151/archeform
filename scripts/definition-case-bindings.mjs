@@ -107,6 +107,14 @@ export const definitionCaseBindings = Object.freeze([
     evidencePath: "docs/acceptance/evidence/service-work-orders",
     protectedFixture: false,
   }),
+  binding({
+    definitionKey: "customer-support-desk",
+    runtimeFamily: "customer-requests/v1",
+    caseId: "customer-support-desk-local",
+    casePath: "e2e/customer-requests.spec.ts",
+    evidencePath: "docs/acceptance/evidence/customer-requests",
+    protectedFixture: false,
+  }),
 ]);
 
 export const admittedDefinitionKeys = Object.freeze(

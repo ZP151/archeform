@@ -51,13 +51,13 @@ function standard(definitionKey: string) {
 }
 
 describe("Appointment consumer definition replacement", () => {
-  it("counts one replacement among twelve physical rows, eleven active definitions and seven registered families", () => {
+  it("counts one replacement among thirteen physical rows, twelve active definitions and eight registered families", () => {
     const rows = loadProductDefinitionData().definitions;
-    expect(rows).toHaveLength(12);
+    expect(rows).toHaveLength(13);
     expect(
       rows.filter((row) => row.definitionKey !== historicalKey),
-    ).toHaveLength(11);
-    expect(new Set(rows.map((row) => row.familyBinding.key)).size).toBe(7);
+    ).toHaveLength(12);
+    expect(new Set(rows.map((row) => row.familyBinding.key)).size).toBe(8);
   });
 
   it("compiles a persisted V2 definition through the existing workspace, read and setup seams", () => {

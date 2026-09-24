@@ -104,7 +104,7 @@ describe("Facilities Service Desk authored definition", () => {
     expect(
       parseProductDefinitionCatalogue(bytes(entry)).definitions,
     ).toHaveLength(1);
-    expect(definitionSelectionCatalogue).toHaveLength(12);
+    expect(definitionSelectionCatalogue).toHaveLength(13);
   });
 
   it("preserves all eleven prior rows and their original source prefix", () => {
@@ -132,10 +132,10 @@ describe("Facilities Service Desk authored definition", () => {
       baseline.rowsSha256,
     );
     expect(validateDefinitionBatch(Buffer.from(raw))).toMatchObject({
-      attempted: 12,
-      valid: 12,
-      distinct: 12,
-      admitted: 12,
+      attempted: 13,
+      valid: 13,
+      distinct: 13,
+      admitted: 13,
       reasonCounts: {},
     });
   });
