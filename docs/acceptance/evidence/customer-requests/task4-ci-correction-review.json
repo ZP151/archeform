@@ -1,0 +1,21 @@
+{
+  "verdict": "APPROVE_SCOPED_SOURCE_CORRECTION",
+  "findingCounts": { "p0": 0, "p1": 0, "p2": 0 },
+  "scope": "Three frozen CI correction paths against HEAD 4081594b; no repeat Task 4 QA",
+  "manifestSha256": "9ebd5a4fd75bfe923ea085ab4987287346f936aae300750e33ba7c01a599c3bf",
+  "matchingSourcePaths": 3,
+  "sourceSha256": {
+    "packages/graph/test/customer-requests-blueprint-witness.test.ts": "2552e529f10da62f5c336471d8640ed60c03ca25d54a12c4eb8bb047fb167bb0",
+    "scripts/regression.mjs": "86a06c7a35b4058b2a1e80d4abbff5a518243a48bd51ca95430a8cc8090ce8ae",
+    "scripts/regression.test.mjs": "015f3b388dc4bff78f720419332af809593779d2969fc38b05b5779ded19fdf8"
+  },
+  "evidence": {
+    "witnessBeforeSha256": "5827122f783e8c145c9a28564929f3112ae158f5c8f2b969591a1716d26821c0",
+    "regressionBeforeSha256": "1391fe869f73a09d6333e1910afd7f64a13fc54326719a22d7b161e168dc669b",
+    "toolsAfterSha256": "4180f071f6225d281bd70ce99bde438e58807a43615994aa7923860e0628e158",
+    "graphAfterSha256": "7d1ce4bf21ade55c51ce7b50bb584f5d84a30c35729dfa076599f52475d36925",
+    "toolsPassed": 19,
+    "graphPassed": 984
+  },
+  "pendingControllerReconciliation": "Root-owned definition-lane-after.log was locked by its active writer; final nine-step lane and replacement CI were not claimed."
+}

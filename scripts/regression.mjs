@@ -71,6 +71,14 @@ const definitionPrismaGenerateArguments = [
   "@factory/control-plane",
   "prisma:generate",
 ];
+const definitionWitnessTestArguments = [
+  "--filter",
+  "@factory/graph",
+  "test",
+  "--",
+  "test/customer-requests-blueprint-witness.test.ts",
+  "test/customer-requests-graph-witness.test.ts",
+];
 
 function pnpmCommand(args, platform) {
   return platform === "win32"
@@ -153,6 +161,11 @@ function commandPlan(lane, platform) {
       {
         ...adapterTests,
         id: "definition-adapter-tests",
+        timeoutMilliseconds: productTimeoutMilliseconds,
+      },
+      {
+        ...pnpmCommand(definitionWitnessTestArguments, platform),
+        id: "definition-witness-tests",
         timeoutMilliseconds: productTimeoutMilliseconds,
       },
       {

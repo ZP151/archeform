@@ -1,0 +1,14 @@
+[
+  {
+    "path": "packages/graph/test/customer-requests-blueprint-witness.test.ts",
+    "sha256": "2552e529f10da62f5c336471d8640ed60c03ca25d54a12c4eb8bb047fb167bb0"
+  },
+  {
+    "path": "scripts/regression.mjs",
+    "sha256": "86a06c7a35b4058b2a1e80d4abbff5a518243a48bd51ca95430a8cc8090ce8ae"
+  },
+  {
+    "path": "scripts/regression.test.mjs",
+    "sha256": "015f3b388dc4bff78f720419332af809593779d2969fc38b05b5779ded19fdf8"
+  }
+]

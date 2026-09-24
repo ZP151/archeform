@@ -173,15 +173,28 @@ describe("Customer Requests exact Blueprint witness", () => {
   });
   it.each(
     definitionSelectionCatalogue.map(
-      (e) => [e.definitionKey, e.structure.blueprint] as const,
+      (e) => [e.definitionKey, e.family, e.structure.blueprint] as const,
     ),
-  )("preserves %s and rejects reply there", (_key, original) => {
-    expect(() => assertProductBlueprint(original)).not.toThrow();
-    expect(matchCustomerRequestsBlueprintV1(original)).toBeUndefined();
-    const b = structuredClone(original);
-    b.actors[0]!.permissions[0]!.actions.push("reply");
-    expect(() => assertProductBlueprint(b)).toThrow(/Customer Requests/);
-  });
+  )(
+    "classifies %s by family and rejects invalid reply grants",
+    (_key, family, original) => {
+      expect(() => assertProductBlueprint(original)).not.toThrow();
+      const b = structuredClone(original);
+      if (family === "customer-requests") {
+        expect(matchCustomerRequestsBlueprintV1(original)).toBeDefined();
+        for (const actor of b.actors)
+          for (const permission of actor.permissions)
+            permission.actions = permission.actions.filter(
+              (action) => action !== "reply",
+            );
+        expect(matchCustomerRequestsBlueprintV1(b)).toBeUndefined();
+      } else {
+        expect(matchCustomerRequestsBlueprintV1(original)).toBeUndefined();
+        b.actors[0]!.permissions[0]!.actions.push("reply");
+      }
+      expect(() => assertProductBlueprint(b)).toThrow(/Customer Requests/);
+    },
+  );
   it("ignores display copy and never mutates the Blueprint", () => {
     const b = fixture();
     b.title = "Help Desk";

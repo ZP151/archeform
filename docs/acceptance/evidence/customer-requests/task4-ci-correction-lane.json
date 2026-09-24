@@ -1,0 +1,44 @@
+{
+  "dryRun": false,
+  "lane": "definitions",
+  "schemaVersion": "factory.local-regression-summary/v1",
+  "status": "succeeded",
+  "steps": [
+    {
+      "exitCode": 0,
+      "id": "definition-build"
+    },
+    {
+      "exitCode": 0,
+      "id": "definition-tool-tests"
+    },
+    {
+      "exitCode": 0,
+      "id": "definition-validation"
+    },
+    {
+      "exitCode": 0,
+      "id": "definition-case-index"
+    },
+    {
+      "exitCode": 0,
+      "id": "definition-adapter-tests"
+    },
+    {
+      "exitCode": 0,
+      "id": "definition-witness-tests"
+    },
+    {
+      "exitCode": 0,
+      "id": "definition-prisma-generate"
+    },
+    {
+      "exitCode": 0,
+      "id": "definition-emitted-control-tests"
+    },
+    {
+      "exitCode": 0,
+      "id": "definition-compatibility-tests"
+    }
+  ]
+}

@@ -5,6 +5,70 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
+### CI correction accepted; Event Registration decision review assigned — 2026-09-24
+
+Independent Sol `customer_requests_verifier_judgment` accepts the three frozen
+test/selection files, P0/P1/P2 0/0/0; review JSON SHA-256 is
+`5e43f57e1be354c4bc0ece885edf3583e0fdac59d5f1171705f0ebeb0a2db0c3`.
+Root reconciles the subsequently completed nine-step definition lane: every step
+exits 0, including the newly added Graph witnesses. Graph 984/984, regression and
+case-index 19/19, Graph types and affected formatting pass. Preserve the failed
+CI and prior eight-step receipt; this repair does not alter runtime contracts or
+claim actual-product acceptance. PM accepts this bounded correction for controller
+commit/push and replacement CI verification.
+
+Tech Lead freezes proposed ADR-0086 at SHA-256
+`64fcfd08b629355662ba8ff733bbe46874a9a595fbeb2695d12eed3d377dbdbd`.
+Root assigns separate reviewer `customer_requests_verifier_judgment` the standing
+decision review only, with evidence writes limited to
+`generated/.event-registration-decision-review/`. Read both authorities, the
+exact proposal and concrete reuse/contract sources; report eligibility under the
+standing founder policy, P0/P1, reversibility and unresolved material choices.
+No implementation or execution is assigned. Whole-event cancellation, attendee
+reason/history and check-in correction are included in the proposed local scope.
+
+### Task 4 CI catalogue-partition failure; bounded correction assigned — 2026-09-24
+
+CI `35994274947` fails in both Node jobs at exact `4081594b`. The existing watch
+ends with exit 1; root confirms the terminal remote state and retains failed logs
+under `generated/.customer-requests-task4/ci-35994274947-failed.log`.
+`customer-requests-blueprint-witness.test.ts` iterates every registered definition
+as a non-Customer-Requests family. Task 4's new canonical registration invalidates
+that test assumption; the expected undefined witness is correctly present.
+
+Root owns the bounded test correction in
+`packages/graph/test/customer-requests-blueprint-witness.test.ts` and the concrete
+missing quick-lane coverage in `scripts/regression.mjs`/`scripts/regression.test.mjs`.
+Reproduce locally before edits; distinguish non-family negative witnesses from
+registered-family positive witnesses without skipping the new row. Add the family
+witness suite to the existing definition regression path and prove failures stop
+subsequent steps. This is a test/selection repair, not a runtime or Graph contract
+change. Preserve all original source acceptance manifests, logs and failed CI.
+One scoped independent review follows; unchanged Task 4 QA/judgment is reused.
+Event Registration remains proposal-only on its disjoint ADR path.
+
+### Customer Support Desk source delivered; next candidate decision assigned — 2026-09-24
+
+Controller commits/pushes Task 4 as `4081594b8bb338db05d9817d3837d32c195f99b2`;
+local and remote tips match and the worktree is clean immediately after delivery.
+CI `35994274947` starts at that exact revision. No main, release, actual product
+or hosted operation accompanies this source delivery.
+
+The next roadmap candidate is Event Registration: phone discovery/registration
+and desktop attendee/check-in operations, with capacity and cancellation closure.
+Root dispatches Tech Lead `event_registration_decision` read-only except for one
+new proposal, `docs/adr/adr-0086-event-registration-family.md`. Read both governing
+authorities and actual reuse sources; recommend keep/experiment/migrate/reject.
+The named Tech Lead role fails to start because it resolves to unavailable
+`gpt-5.3-codex-spark`; no agent is created by that attempt. Root dispatches the
+same bounded responsibility with an explicit available strongest-model fallback.
+Specify a bounded genuinely distinct job and exact unsupported payment,
+notification and private-identity requirements. A label-only Appointment variant
+does not establish event semantics. No implementation, package, runtime, Graph,
+provider or deployment mutation is assigned. Independent standing acceptance is
+required before any implementation assignment. This proposal proceeds while the
+new source CI runs; existing actual/hosted restrictions remain unchanged.
+
 ### Task 4 definition and consumer source accepted for delivery — 2026-09-24
 
 Independent Sol judgment returns `ACCEPT_TASK4_SOURCE_WITH_LIMITS`, P0/P1/P2
@@ -9618,3 +9682,14 @@ matching-fixture allowance. Root prepares only ignored local UI ownership at
 Planned UI port is 64087 and unused fixture-only Control Plane origin is 64088.
 No real backend/provider is started. Inventory CI `35931234181` now passes both
 Node jobs at `63c7b12c`.
+
+### CI correction scoped review assignment — 2026-09-24
+
+Root freezes the three assigned test/selection paths in
+`generated/.customer-requests-task4/ci-correction/source-manifest.json`.
+Local RED reproduces the catalogue assertion and four missing-lane checks;
+GREEN passes 984 Graph tests and 19 regression/index tests. Independent reviewer
+`customer_requests_verifier_judgment` owns only new review evidence under
+`generated/.customer-requests-task4/ci-correction/review/`. Review the bounded
+three-file diff and fresh lane receipt; do not repeat Task 4 QA or perform Git,
+service, browser-case, provider, database or hosted operations.

@@ -44,6 +44,14 @@ const definitionPrismaGenerateArguments = [
   "@factory/control-plane",
   "prisma:generate",
 ];
+const definitionWitnessTestArguments = [
+  "--filter",
+  "@factory/graph",
+  "test",
+  "--",
+  "test/customer-requests-blueprint-witness.test.ts",
+  "test/customer-requests-graph-witness.test.ts",
+];
 
 function successfulCommand() {
   return { exitCode: 0, terminationProven: true };
@@ -171,6 +179,10 @@ describe("local regression lanes", () => {
           id: "definition-adapter-tests",
         },
         {
+          args: definitionWitnessTestArguments,
+          id: "definition-witness-tests",
+        },
+        {
           args: definitionPrismaGenerateArguments,
           id: "definition-prisma-generate",
         },
@@ -242,6 +254,7 @@ describe("local regression lanes", () => {
           { exitCode: 0, id: "definition-validation" },
           { exitCode: 0, id: "definition-case-index" },
           { exitCode: 0, id: "definition-adapter-tests" },
+          { exitCode: 0, id: "definition-witness-tests" },
           { exitCode: 0, id: "definition-prisma-generate" },
           { exitCode: 7, id: "definition-emitted-control-tests" },
         ],
@@ -306,9 +319,51 @@ describe("local regression lanes", () => {
           { exitCode: 0, id: "definition-validation" },
           { exitCode: 0, id: "definition-case-index" },
           { exitCode: 0, id: "definition-adapter-tests" },
+          { exitCode: 0, id: "definition-witness-tests" },
           { exitCode: 5, id: "definition-prisma-generate" },
         ],
       });
+    }
+  });
+
+  it("stops definitions admission on a family witness failure on POSIX and Windows", async () => {
+    for (const platform of ["linux", "win32"]) {
+      const output = collector();
+      const calls = [];
+      const expectedCommand = platform === "win32" ? "cmd.exe" : "pnpm";
+      const expectedArgs =
+        platform === "win32"
+          ? ["/d", "/s", "/c", "pnpm", ...definitionWitnessTestArguments]
+          : definitionWitnessTestArguments;
+      const result = await runRegression({
+        argumentsList: ["definitions"],
+        platform,
+        execute: async (command, args) => {
+          calls.push({ command, args });
+          return command === expectedCommand &&
+            isDeepStrictEqual(args, expectedArgs)
+            ? { exitCode: 9, terminationProven: true }
+            : successfulCommand();
+        },
+        writeOutput: output.writeOutput,
+      });
+      assert.equal(result.exitCode, 1);
+      assert.deepEqual(calls.at(-1), {
+        command: expectedCommand,
+        args: expectedArgs,
+      });
+      assert.equal(
+        calls.some(({ args }) => args.includes("prisma:generate")),
+        false,
+      );
+      assert.deepEqual(JSON.parse(output.values[0]).steps, [
+        { exitCode: 0, id: "definition-build" },
+        { exitCode: 0, id: "definition-tool-tests" },
+        { exitCode: 0, id: "definition-validation" },
+        { exitCode: 0, id: "definition-case-index" },
+        { exitCode: 0, id: "definition-adapter-tests" },
+        { exitCode: 9, id: "definition-witness-tests" },
+      ]);
     }
   });
 
