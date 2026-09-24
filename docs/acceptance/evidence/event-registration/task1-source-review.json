@@ -1,0 +1,32 @@
+{
+  "verdict": "PASS_SOURCE_REVIEW",
+  "reviewer": "event_registration_decision",
+  "reviewType": "independent-implementation-review",
+  "scope": "Event Registration Task 1 exact admission and frozen compiler profile only",
+  "baseHead": "3d9c101c9e02949053c0fe12d2d3b557351f02ca",
+  "manifestSha256": "734842dfe54133282e0725c43c300140791a513a4cfecd275b81a980853aab36",
+  "profileHandoffSha256": "390046c56b13a73bec1b4b00fff96f8a4f68e496250016058e2c13d659a5fa25",
+  "adrSha256": "64fcfd08b629355662ba8ff733bbe46874a9a595fbeb2695d12eed3d377dbdbd",
+  "findingCounts": { "P0": 0, "P1": 0, "P2": 0 },
+  "findings": [],
+  "freshTests": {
+    "graph": 49,
+    "composition": 2,
+    "compilerAndExports": 35,
+    "total": 86
+  },
+  "liveHashEvidence": ["hash-before.json", "hash-after.json"],
+  "runtimeBoundariesClosed": [
+    "buildCompilationPlan",
+    "buildCompilationInput",
+    "generateApplicationBundle"
+  ],
+  "remainingGates": [
+    "independent QA",
+    "final source judgment",
+    "root acceptance and delivery"
+  ],
+  "actualProductAcceptance": false,
+  "hostedAcceptance": false,
+  "task2Authorized": false
+}

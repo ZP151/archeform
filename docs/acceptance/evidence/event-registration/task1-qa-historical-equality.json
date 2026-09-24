@@ -1,0 +1,99 @@
+{
+  "physicalDefinitionCount": 13,
+  "currentDerivationEqual": true,
+  "immutableInputOutputEqual": true,
+  "captureSha256": "ea8273865f03f9dcb80779552badfb4b324d3021066a85e144fd5f6fce03664a",
+  "entries": [
+    {
+      "definitionKey": "restaurant-ordering",
+      "graphSha256": "sha256:5b0869cac405d963f0ce775cdffbd43e26b5452cf0eda4b5a5be039e6809cfea",
+      "bundleSha256": "7d1c7f29c6dce3f77fa6a3608792b640adc8b0e5f8b20e528d6da1ea0502b050",
+      "fileCount": 62,
+      "equal": true
+    },
+    {
+      "definitionKey": "expense-approval",
+      "graphSha256": "sha256:2c709937e1c3d40785558518d4af4b85482a16c13c1dc801a01f24a5208d0fa6",
+      "bundleSha256": "4b9d05aaabdaee99a089d4db07416c1c140711a070815f7b67dbdf177112555a",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "purchase-request-approval",
+      "graphSha256": "sha256:efba844e7715b8a19f9e546eb3c952b203733656b3fb47f514c1ac52d022a041",
+      "bundleSha256": "39878e185e07af80160fc2fca6898749bb849c6afaa4abd28fcadba213bb6f78",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "team-task-tracking",
+      "graphSha256": "sha256:144fb26de365f0132bae5dde2ea79e48691f11df559bbb6e850a9a2b604527f6",
+      "bundleSha256": "d3ab37f01acd0e243ab070d60b1ba4d9642a6440a50764c003af44dabbe53c15",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "publication-review",
+      "graphSha256": "sha256:7435eea4654120befeca5711d6f58027a875cc29a79a54320c9dd00aee65975f",
+      "bundleSha256": "62a7ff35fa7103bf2e7cff1f885a1d714597ab8764d91fa269cd2f45a7299f27",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "training-funding-approval",
+      "graphSha256": "sha256:3fc4cf517ed01ef4b3c8b6b02de43557b59032efc1e8692d4d55fd257713583f",
+      "bundleSha256": "d4b302f7cda6a5483d13a73f56e6e8b95b51fe44c79352a078a1b467f0f94053",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "equipment-procurement-approval",
+      "graphSha256": "sha256:72cc7664a73f57dc6df60ad9871e82922a545be8af17d7281a76dc255720cb4a",
+      "bundleSha256": "b6db1d968268a8ede9821f15396897c49efbd83b92a1ffabc9af827ecb5415a1",
+      "fileCount": 67,
+      "equal": true
+    },
+    {
+      "definitionKey": "appointment-booking-v1",
+      "graphSha256": "sha256:2640b305392d3764c43f6f49134f768d737a6300ad4ca26ce32a5da95f08df34",
+      "bundleSha256": "a9c998fb944b1bb165edfba31430be0932de8bfc6fcca3eaa81f962ac4e81351",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "knowledge-resource-directory",
+      "graphSha256": "sha256:11a15c772267c3baf7cdfb462b4947efaa96cf818790abf33876f653818f1658",
+      "bundleSha256": "89b47c96905f3bcb57204d397daa4fee35ffdebdda7e7d879d2ef30a544461f6",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "supplies-stockroom",
+      "graphSha256": "sha256:5b1346c5a83b442210ff8c40e1f031b0e1a9fd10eaf0983d960291e70d8f37d5",
+      "bundleSha256": "4d476ee87df05e9b18d3de31d3dcfd02fe1cff15e58c070687cc4e8650027756",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "appointment-booking-v2",
+      "graphSha256": "sha256:70ab361d51a313e859ad01a4f366c48082fc204269d26e2513803c9a295da91d",
+      "bundleSha256": "d01c3a5ec9df70bb8d23b5688d29ab3b93fc11298d90dac107c3fd6700983df2",
+      "fileCount": 66,
+      "equal": true
+    },
+    {
+      "definitionKey": "facilities-service-desk",
+      "graphSha256": "sha256:54a5318b81a9c7bf355e89c80c2ff7cd97ea5be4047a2b01f3ee81efc3fa69b8",
+      "bundleSha256": "05dca903449ea00843fac3b447ea933c43b4c35ffe299b6a1842d291066cf504",
+      "fileCount": 63,
+      "equal": true
+    },
+    {
+      "definitionKey": "customer-support-desk",
+      "graphSha256": "sha256:a7e20473671bee3878962ba5fe660f25bbd9709d9ccc321e51b2afda026a6b8d",
+      "bundleSha256": "7a95dd2d6576c406720a44a259f463a016a96a5048f92f3dbb29e85f89f811cd",
+      "fileCount": 62,
+      "equal": true
+    }
+  ]
+}

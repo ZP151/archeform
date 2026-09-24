@@ -1,0 +1,90 @@
+{
+  "scope": "Task 1 source-only admission; runtime generation closed at all three public boundaries",
+  "profile": {
+    "key": "event-registration",
+    "version": "1.0.0",
+    "graphHash": "sha256:846adac535447a7201c76517e16e291ef1821cad915a5fb9f378383186adac7b",
+    "eventEntity": "event",
+    "registrationEntity": "registration",
+    "eventHistoryEntity": "event-history",
+    "registrationHistoryEntity": "registration-history",
+    "principalEntity": "event-registration-fixture-principal",
+    "sessionEntity": "event-registration-fixture-session",
+    "eventWorkflow": "manage-event",
+    "registrationWorkflow": "manage-registration",
+    "roles": {
+      "organizer": "organizer",
+      "attendee": "attendee"
+    },
+    "pages": {
+      "list": "events",
+      "form": "event-form",
+      "detail": "event-detail",
+      "myPlaces": "my-places",
+      "attendees": "attendees"
+    },
+    "references": {
+      "event": {
+        "blueprint": "event",
+        "storage": "eventId",
+        "api": "event"
+      },
+      "registration": {
+        "blueprint": "registration",
+        "storage": "registrationId",
+        "api": "registration"
+      }
+    },
+    "versionMaximum": 2147483647,
+    "capacityMaximum": 1000000,
+    "titleMaximum": 160,
+    "venueMaximum": 200,
+    "attendeeNameMaximum": 120,
+    "descriptionMaximum": 2000,
+    "reasonMaximum": 500
+  },
+  "fixture": {
+    "function": "eventRegistrationInput",
+    "path": "packages/compiler/test/fixtures/event-registration.ts",
+    "applicationId": "event-registration-fixture",
+    "graphHash": "sha256:846adac535447a7201c76517e16e291ef1821cad915a5fb9f378383186adac7b",
+    "lockDigest": "sha256:a8bd5a7deb075ae3e9afaa87efe2e0f31143c78187920e9f9eefad73aa6267f5",
+    "immutable": true,
+    "capabilityKeys": [
+      "core.audit",
+      "core.crud",
+      "core.identity-policy",
+      "core.notification",
+      "core.policy-declarations",
+      "core.workflow"
+    ]
+  },
+  "blueprintNumericCoordinates": [
+    {
+      "entityKey": "event",
+      "fieldKey": "capacity"
+    },
+    {
+      "entityKey": "event",
+      "fieldKey": "reservedSeats"
+    },
+    {
+      "entityKey": "event-history",
+      "fieldKey": "eventVersion"
+    },
+    {
+      "entityKey": "event-history",
+      "fieldKey": "beforeCapacity"
+    },
+    {
+      "entityKey": "event-history",
+      "fieldKey": "afterCapacity"
+    },
+    {
+      "entityKey": "registration-history",
+      "fieldKey": "registrationVersion"
+    }
+  ],
+  "references": "event/eventId/event and registration/registrationId/registration; each used by its parent history and event also by registration",
+  "runtimeHandoff": "Task 2 must implement the accepted event-first transaction/ownership/receipt contract before removing generation guards; no runtime source, services or DB acceptance exists in Task 1."
+}

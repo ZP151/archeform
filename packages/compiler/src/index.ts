@@ -1,3 +1,8 @@
+import { selectEventRegistrationProfile } from "./event-registration-contract.js";
+export {
+  selectEventRegistrationProfile,
+  type EventRegistrationProfile,
+} from "./event-registration-contract.js";
 import { selectCustomerRequestsProfile } from "./customer-requests-contract.js";
 export {
   selectCustomerRequestsProfile,
@@ -413,6 +418,8 @@ export function buildCompilationPlan(
   input: PublishedGraphInput,
 ): CompilationPlan {
   selectCustomerRequestsProfile(input.graph, input.compositionLock);
+  if (selectEventRegistrationProfile(input.graph, input.compositionLock))
+    throw new Error("Event Registration runtime is not implemented.");
   selectServiceWorkOrdersProfile(input.graph, input.compositionLock);
   if (!input.publishedRevisionId) {
     throw new Error("Published revision id is required for compilation.");
@@ -4016,6 +4023,8 @@ export function buildCompilationInput(
   options: GenerateApplicationBundleOptions = {},
 ): PublishedCompilationInput {
   selectCustomerRequestsProfile(input.graph, input.compositionLock);
+  if (selectEventRegistrationProfile(input.graph, input.compositionLock))
+    throw new Error("Event Registration runtime is not implemented.");
   selectServiceWorkOrdersProfile(input.graph, input.compositionLock);
   const graph = assertValidApplicationGraph(input.graph);
   if (
@@ -4133,6 +4142,8 @@ export function generateApplicationBundle(
     input.graph,
     input.compositionLock,
   );
+  if (selectEventRegistrationProfile(input.graph, input.compositionLock))
+    throw new Error("Event Registration runtime is not implemented.");
   const workOrdersProfile = selectServiceWorkOrdersProfile(
     input.graph,
     input.compositionLock,

@@ -2,6 +2,7 @@ import {
   CompositionError,
   matchServiceWorkOrdersBlueprintV1,
   matchCustomerRequestsBlueprintV1,
+  matchEventRegistrationBlueprintV1,
   createCalculatedRequestTotalRuntime,
   isNumericFieldValueAllowed,
   assertCompositionPlan,
@@ -251,7 +252,8 @@ function derivedPages(
   if (
     isInventoryOperationsBlueprint(blueprint) ||
     matchServiceWorkOrdersBlueprintV1(blueprint) ||
-    matchCustomerRequestsBlueprintV1(blueprint)
+    matchCustomerRequestsBlueprintV1(blueprint) ||
+    matchEventRegistrationBlueprintV1(blueprint)
   )
     return pages;
   for (const entity of blueprint.entities) {
@@ -278,6 +280,14 @@ function derivedNavigation(
   blueprint: ProductBlueprintV1,
   pages: ApplicationGraphV1["page"]["pages"],
 ): ApplicationGraphV1["page"]["navigation"] {
+  const eventRegistration = matchEventRegistrationBlueprintV1(blueprint);
+  if (eventRegistration)
+    return [0, 3, 4].map((index, i) => ({
+      id: `nav-${pages[index]!.id}`,
+      label: pages[index]!.title,
+      pageId: pages[index]!.id,
+      icon: ["list", "user", "check"][i]!,
+    }));
   const intentOf = (pageId: string): string =>
     blueprint.pageIntents.find((intent) => intent.key === pageId)?.intent ??
     "list";
@@ -380,6 +390,28 @@ function derivedEntities(
         fields: ["requestId", "requestVersion"],
         unique: true,
       });
+    const eventRegistration = matchEventRegistrationBlueprintV1(blueprint);
+    if (eventRegistration) {
+      if (entity.key === eventRegistration.eventEntity)
+        mapped.indexes = [
+          { fields: ["status", "startUtc"] },
+          { fields: ["startUtc"] },
+        ];
+      if (entity.key === eventRegistration.registrationEntity)
+        mapped.indexes = [
+          { fields: ["eventId", "attendeePrincipalId"], unique: true },
+          { fields: ["eventId", "status"] },
+          { fields: ["attendeePrincipalId"] },
+        ];
+      if (entity.key === eventRegistration.eventHistoryEntity)
+        mapped.indexes = [
+          { fields: ["eventId", "eventVersion"], unique: true },
+        ];
+      if (entity.key === eventRegistration.registrationHistoryEntity)
+        mapped.indexes = [
+          { fields: ["registrationId", "registrationVersion"], unique: true },
+        ];
+    }
     entities.push(mapped);
   }
 
@@ -963,38 +995,55 @@ function derivedFlows(
 ): ApplicationGraphV1["flow"]["flows"] {
   const audit = selectedKeys.has("core.audit");
   const notification = selectedKeys.has("core.notification");
+  const eventRegistration = matchEventRegistrationBlueprintV1(blueprint);
   return blueprint.workflows.map((workflow) => ({
     id: workflow.key,
     entity: workflow.entityKey,
     initialState: workflow.states[0].key,
     states: workflow.states.map((state) => state.key),
-    events: matchServiceWorkOrdersBlueprintV1(blueprint)
-      ? [...new Set(workflow.transitions.map((transition) => transition.key))]
-      : workflow.transitions.map((transition) => transition.key),
-    transitions: workflow.transitions.map((transition) => {
-      const effects: { capability: string; operation: string }[] = [];
-      // Audit is locked for every product (identity-policy requires its
-      // interface), but flow effects stay blueprint-driven: only products
-      // with an approval decision record audit events.
-      if (
-        audit &&
-        (hasApprovalDecision(blueprint) ||
-          isInventoryOperationsBlueprint(blueprint))
+    events:
+      matchServiceWorkOrdersBlueprintV1(blueprint) || eventRegistration
+        ? [...new Set(workflow.transitions.map((transition) => transition.key))]
+        : workflow.transitions.map((transition) => transition.key),
+    transitions: workflow.transitions
+      .filter(
+        (_, index) =>
+          !eventRegistration ||
+          workflow.key !== eventRegistration.registrationWorkflow ||
+          index !== 1,
       )
-        effects.push({ capability: "audit.record", operation: "record" });
-      if (notification && isDecisionActor(blueprint, transition.actorKey)) {
-        effects.push({ capability: "notification.send", operation: "send" });
-      }
-      const mapped: ApplicationGraphV1["flow"]["flows"][number]["transitions"][number] =
-        {
-          from: transition.from,
-          event: transition.key,
-          to: transition.to,
-          roles: [transition.actorKey],
-        };
-      if (effects.length > 0) mapped.effects = effects;
-      return mapped;
-    }),
+      .map((transition) => {
+        const effects: { capability: string; operation: string }[] = [];
+        // Audit is locked for every product (identity-policy requires its
+        // interface), but flow effects stay blueprint-driven: only products
+        // with an approval decision record audit events.
+        if (
+          audit &&
+          (hasApprovalDecision(blueprint) ||
+            isInventoryOperationsBlueprint(blueprint))
+        )
+          effects.push({ capability: "audit.record", operation: "record" });
+        if (notification && isDecisionActor(blueprint, transition.actorKey)) {
+          effects.push({ capability: "notification.send", operation: "send" });
+        }
+        const mapped: ApplicationGraphV1["flow"]["flows"][number]["transitions"][number] =
+          {
+            from: transition.from,
+            event: transition.key,
+            to: transition.to,
+            roles:
+              eventRegistration &&
+              workflow.key === eventRegistration.registrationWorkflow &&
+              transition.key === "cancel"
+                ? [
+                    eventRegistration.roles.attendee,
+                    eventRegistration.roles.organizer,
+                  ]
+                : [transition.actorKey],
+          };
+        if (effects.length > 0) mapped.effects = effects;
+        return mapped;
+      }),
   }));
 }
 
@@ -1004,7 +1053,8 @@ function derivedSeedData(
   if (
     isInventoryOperationsBlueprint(blueprint) ||
     matchServiceWorkOrdersBlueprintV1(blueprint) ||
-    matchCustomerRequestsBlueprintV1(blueprint)
+    matchCustomerRequestsBlueprintV1(blueprint) ||
+    matchEventRegistrationBlueprintV1(blueprint)
   )
     return [];
   if (
@@ -1230,6 +1280,13 @@ export function deriveProductOperations(
 ): GraphDiffV1 {
   const blueprint = assertProductBlueprint(input.blueprint);
   if (
+    matchEventRegistrationBlueprintV1(blueprint) &&
+    !isEventRegistrationBlueprint(blueprint, input.selectedKeys)
+  )
+    throw new CompositionError(
+      "Event Registration requires exactly six core capability keys.",
+    );
+  if (
     matchCustomerRequestsBlueprintV1(blueprint) &&
     !isCustomerRequestsBlueprint(blueprint, input.selectedKeys)
   )
@@ -1288,7 +1345,8 @@ export function deriveProductOperations(
     !isAppointmentConsumerWorkspaceBlueprint(blueprint, input.selectedKeys) &&
     !isInventoryOperationsBlueprint(blueprint, input.selectedKeys) &&
     !isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys) &&
-    !isCustomerRequestsBlueprint(blueprint, input.selectedKeys)
+    !isCustomerRequestsBlueprint(blueprint, input.selectedKeys) &&
+    !isEventRegistrationBlueprint(blueprint, input.selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",
@@ -1338,7 +1396,8 @@ export function deriveProductOperations(
 
   if (
     isServiceWorkOrdersBlueprint(blueprint, input.selectedKeys) ||
-    isCustomerRequestsBlueprint(blueprint, input.selectedKeys)
+    isCustomerRequestsBlueprint(blueprint, input.selectedKeys) ||
+    isEventRegistrationBlueprint(blueprint, input.selectedKeys)
   )
     capabilities.push("audit.record");
   const operations: GraphDiffV1["operations"] = [
@@ -1593,7 +1652,8 @@ export function composeProductDraft(input: {
     !isAppointmentConsumerWorkspaceBlueprint(blueprint, selectedKeys) &&
     !isInventoryOperationsBlueprint(blueprint, selectedKeys) &&
     !isServiceWorkOrdersBlueprint(blueprint, selectedKeys) &&
-    !isCustomerRequestsBlueprint(blueprint, selectedKeys)
+    !isCustomerRequestsBlueprint(blueprint, selectedKeys) &&
+    !isEventRegistrationBlueprint(blueprint, selectedKeys)
   )
     throw new CompositionError(
       "Numeric domains require the Approval correction target.",
@@ -1601,7 +1661,8 @@ export function composeProductDraft(input: {
   if (
     isAppointmentConsumerWorkspaceBlueprint(blueprint) ||
     isServiceWorkOrdersBlueprint(blueprint, selectedKeys) ||
-    isCustomerRequestsBlueprint(blueprint, selectedKeys)
+    isCustomerRequestsBlueprint(blueprint, selectedKeys) ||
+    isEventRegistrationBlueprint(blueprint, selectedKeys)
   ) {
     const catalogue = currentCapabilityCatalogue();
     const assets = [
@@ -1610,7 +1671,8 @@ export function composeProductDraft(input: {
     ];
     const exactKeys =
       matchServiceWorkOrdersBlueprintV1(blueprint) ||
-      matchCustomerRequestsBlueprintV1(blueprint)
+      matchCustomerRequestsBlueprintV1(blueprint) ||
+      matchEventRegistrationBlueprintV1(blueprint)
         ? serviceWorkOrdersLockKeys
         : appointmentLockKeys;
     const locks = exactKeys.map((key) => {
@@ -1633,11 +1695,13 @@ export function composeProductDraft(input: {
       )
     )
       throw new CompositionError(
-        matchCustomerRequestsBlueprintV1(blueprint)
-          ? "Customer Requests requires the exact current locks and ordered owner bindings."
-          : matchServiceWorkOrdersBlueprintV1(blueprint)
-            ? "Service Work Orders requires the exact current locks and ordered owner bindings."
-            : "Appointment V2 requires the exact current locks and ordered owner bindings.",
+        matchEventRegistrationBlueprintV1(blueprint)
+          ? "Event Registration requires the exact current locks and ordered owner bindings."
+          : matchCustomerRequestsBlueprintV1(blueprint)
+            ? "Customer Requests requires the exact current locks and ordered owner bindings."
+            : matchServiceWorkOrdersBlueprintV1(blueprint)
+              ? "Service Work Orders requires the exact current locks and ordered owner bindings."
+              : "Appointment V2 requires the exact current locks and ordered owner bindings.",
       );
   }
   const derived = deriveProductOperations({
@@ -1792,6 +1856,18 @@ function isCustomerRequestsBlueprint(
 ): boolean {
   return (
     matchCustomerRequestsBlueprintV1(blueprint) !== undefined &&
+    keys.length === serviceWorkOrdersLockKeys.length &&
+    new Set(keys).size === keys.length &&
+    serviceWorkOrdersLockKeys.every((key) => keys.includes(key))
+  );
+}
+
+function isEventRegistrationBlueprint(
+  blueprint: ProductBlueprintV1,
+  keys: readonly string[],
+): boolean {
+  return (
+    matchEventRegistrationBlueprintV1(blueprint) !== undefined &&
     keys.length === serviceWorkOrdersLockKeys.length &&
     new Set(keys).size === keys.length &&
     serviceWorkOrdersLockKeys.every((key) => keys.includes(key))

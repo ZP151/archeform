@@ -1,0 +1,52 @@
+{
+  "verdict": "PASS_INDEPENDENT_SOURCE_QA",
+  "reviewer": "event_registration_task1_qa",
+  "scope": "Event Registration Task 1 exact admission and frozen compiler profile only",
+  "sourceManifestSha256": "734842dfe54133282e0725c43c300140791a513a4cfecd275b81a980853aab36",
+  "implementationReviewSha256": "fe5a4717a2d00931c3a961df7441b3379bd74be2fbed1cfaf03700098d9fce35",
+  "protectedBeforeSha256": "ea8273865f03f9dcb80779552badfb4b324d3021066a85e144fd5f6fce03664a",
+  "liveManifestFiles": {
+    "expected": 15,
+    "matched": 15
+  },
+  "freshCommands": [
+    {
+      "command": "pnpm --filter @factory/graph test",
+      "result": "30 files, 1033 tests passed"
+    },
+    {
+      "command": "pnpm --filter @factory/capabilities exec vitest run test/event-registration-composition.test.ts test/customer-requests-composition.test.ts",
+      "result": "2 files, 4 tests passed"
+    },
+    {
+      "command": "pnpm --filter @factory/compiler exec vitest run test/event-registration-contract.test.ts test/customer-requests-contract.test.ts test/index-exports.test.ts",
+      "result": "3 files, 81 tests passed"
+    },
+    {
+      "command": "node node_modules/.pnpm/vite-node@2.1.9_@types+node@22.20.1_terser@5.49.0/node_modules/vite-node/vite-node.mjs generated/.event-registration-task1/qa/verify-historical.ts",
+      "result": "Historical derivation and immutable Published emitted-byte equality: 13/13"
+    }
+  ],
+  "adversarialCoverage": [
+    "The Event fixture keeps buildCompilationPlan, buildCompilationInput, and generateApplicationBundle explicitly closed with the unavailable-runtime error.",
+    "The fresh compiler suite covers renamed, swapped, and maximum-length role slots; malformed or reordered locks; physical capability-byte tampering; accessors, inherited properties, cycles, and unknown input; malformed Event markers; and Customer Requests old-family isolation.",
+    "The fresh composition suite covers Event cancellation sources, exact index construction, and Customer Requests composition isolation."
+  ],
+  "historicalParity": {
+    "receipt": "historical-equality.json",
+    "receiptSha256": "3a2bb915b680b9b053fa2d51bc263a1c2b6f15f32893d4d4a358aa631b947a3d",
+    "physicalDefinitionCount": 13,
+    "currentDerivationEqual": true,
+    "immutableInputOutputEqual": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": [],
+  "limitations": [
+    "This source-only QA does not establish runtime, database, browser, hosted, product, deployment, or release acceptance.",
+    "No Task 2 work is authorized."
+  ]
+}

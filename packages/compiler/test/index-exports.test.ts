@@ -103,12 +103,14 @@ const laterRuntimeExports = [
   "selectInventoryOperationsProfile",
   "selectServiceWorkOrdersProfile",
   "selectCustomerRequestsProfile",
+  "selectEventRegistrationProfile",
 ];
 const laterTypeExports = [
   "ContentDirectoryProfile",
   "InventoryOperationsProfile",
   "ServiceWorkOrdersProfile",
   "CustomerRequestsProfile",
+  "EventRegistrationProfile",
 ];
 
 function runtimeExportSurface(source: string) {
@@ -275,6 +277,9 @@ describe("compiler consumer package boundary", () => {
       "@factory/compiler/dist/customer-requests-contract.js",
       "@factory/compiler/src/customer-requests-contract.ts",
       "@factory/compiler/customer-requests-contract",
+      "@factory/compiler/event-registration-contract",
+      "@factory/compiler/dist/event-registration-contract.js",
+      "@factory/compiler/src/event-registration-contract.ts",
     ]) {
       expect(consumerImport(specifier)).toBe("ERR_PACKAGE_PATH_NOT_EXPORTED");
     }

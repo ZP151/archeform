@@ -1,3 +1,4 @@
+import { matchEventRegistrationGraphV1 } from "./event-registration-graph-witness.js";
 import { matchCustomerRequestsGraphV1 } from "./customer-requests-graph-witness.js";
 import { matchServiceWorkOrdersGraphV1 } from "./service-work-orders-graph-witness.js";
 import { matchInventoryOperationsGraphV1 } from "./inventory-operations-graph-witness.js";
@@ -537,6 +538,51 @@ function numericFieldDomainIssues(
   const inventory = matchInventoryOperationsGraphV1(graph);
   const workOrders = matchServiceWorkOrdersGraphV1(graph);
   const customerRequests = matchCustomerRequestsGraphV1(graph);
+  const eventRegistration = matchEventRegistrationGraphV1(graph);
+  const attendanceVerbs = ["check-in", "undo-check-in"];
+  if (
+    !eventRegistration &&
+    (graph.domain.entities.some(
+      (entity) =>
+        [
+          "startUtc",
+          "endUtc",
+          "capacity",
+          "cancellationReason",
+          "cancelledAt",
+        ].every((key) => entity.fields.some((field) => field.key === key)) ||
+        (["event", "eventId", "registration", "registrationId"].some((key) =>
+          entity.fields.some((field) => field.key === key),
+        ) &&
+          entity.fields.some((field) => field.key === "actorPrincipalId")),
+    ) ||
+      graph.domain.entities.some((entity) =>
+        entity.fields.some((field) =>
+          [
+            "attendeePrincipalId",
+            "reservedSeats",
+            "eventVersion",
+            "registrationVersion",
+          ].includes(field.key),
+        ),
+      ) ||
+      graph.policy.permissions.some((permission) =>
+        permission.actions.some((action) => attendanceVerbs.includes(action)),
+      ) ||
+      graph.flow.flows.some(
+        (flow) =>
+          flow.events.some((event) => attendanceVerbs.includes(event)) ||
+          flow.transitions.some((transition) =>
+            attendanceVerbs.includes(transition.event),
+          ),
+      ))
+  )
+    issues.push({
+      code: "event_registration.structural_mismatch",
+      message:
+        "Event ownership and attendance require the complete Event Registration Graph.",
+      path: ["domain", "entities"],
+    });
   graph.domain.entities.forEach((entity, entityIndex) => {
     entity.fields.forEach((field, fieldIndex) => {
       if (field.numericDomain === undefined) return;
@@ -588,6 +634,7 @@ function numericFieldDomainIssues(
           ...(inventory?.numericFields ?? []),
           ...(workOrders?.numericFields ?? []),
           ...(customerRequests?.numericFields ?? []),
+          ...(eventRegistration?.numericFields ?? []),
         ].some(
           (coordinate) =>
             coordinate.entityKey === entity.key &&

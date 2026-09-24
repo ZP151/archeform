@@ -5,6 +5,178 @@ product-scorecard owner. The task and approval started on September 7.
 
 ## Current execution checkpoint
 
+### Event Task 1 source accepted for delivery and founder handoff — 2026-09-24
+
+Independent Sol `event_registration_task1_judgment` returns
+PASS_FINAL_SOURCE_JUDGMENT, P0/P1/P2 0/0/0, after verifying the accepted ADR,
+review, QA, protected baseline and all fifteen live source identities. Original
+verdict SHA-256 is
+`02c2bfe37149c5c6d054b6ebb597ad700a991315ee1b954d5301dd41b0ea3f84`.
+PM accepts only Task 1 source: exact Graph/Blueprint/composition/profile admission,
+with Event runtime generation explicitly blocked at all three public boundaries.
+No new catalogue row, running product, hosted application or release is claimed.
+
+Portable acceptance, source hashes, profile handoff, independent review/QA/judgment
+and dual historical receipts are under `docs/acceptance/evidence/event-registration/`.
+The execution plan marks Task 1 source complete; Tasks 2-5 are not started.
+Root prepares the current task plus the requested workspace/status organization
+for one bounded commit/push, then checks exact remote revision and CI. The final
+handoff records that result. At that point root pauses the long Goal to await the
+founder's acceptance, as explicitly requested. No further product work is queued.
+
+### Event Task 1 independent QA passed; final source judgment assigned — 2026-09-24
+
+Independent Terra `event_registration_task1_qa` returns
+PASS_INDEPENDENT_SOURCE_QA, P0/P1/P2 0/0/0. Fresh Graph 1033/1033, composition
+4/4, compiler/export 81/81 and independent thirteen-row parity pass; all fifteen
+source hashes match. QA verdict SHA-256 is
+`bfe7327ed7f133a561e029ed6cacfd26d7790de535eaecd589f33dbcbe37e570`.
+The protected capture and source manifest remain unchanged.
+
+Root assigns separate Sol `event_registration_task1_judgment` the final source
+judgment using existing accepted ADR, source review and fresh QA. Write only
+`generated/.event-registration-task1/judgment/`; source/Git/infrastructure remain
+read-only. Reconcile identities, scope and residual actual/hosted limitations
+without repeating unchanged tests. This is the existing shared-contract gate,
+not a repository release or another implementation task. After acceptance root
+will organize, commit/push and pause for the user's requested acceptance.
+
+### Event Task 1 source review clean; independent QA assigned — 2026-09-24
+
+Implementation reviewer `event_registration_decision` returns PASS_SOURCE_REVIEW,
+P0/P1/P2 0/0/0; all fifteen hashes match before/after review and 86 fresh focused
+checks pass. Verdict SHA-256 is
+`fe5a4717a2d00931c3a961df7441b3379bd74be2fbed1cfaf03700098d9fce35`.
+Root independently confirms thirteen-row parity and full repository formatting;
+full typecheck passes all 29 tasks, including downstream adapters/Workbench/worker.
+
+Assign independent Terra `event_registration_task1_qa` source-only verification,
+with writes limited to `generated/.event-registration-task1/qa/`. Check the exact
+frozen manifest, accepted ADR/Task 1 and review, full Graph tests, focused
+composition/compiler/export cases and independent thirteen-row parity. Reuse
+unchanged type/build evidence; add a focused case only for a demonstrated gap.
+No source/docs/Git, services, database, provider, actual browser, cloud or cleanup
+actions. Final independent source judgment follows; user-requested stop applies
+after current-task delivery. No Task 2 work is authorized.
+
+### Event Registration Task 1 frozen for required source review — 2026-09-24
+
+Writer freezes fifteen assigned paths in
+`generated/.event-registration-task1/implementation/source-manifest.json`, with
+profile/fixture handoff in the same directory. Graph 111/111, composition 4/4 and
+compiler/export 81/81 pass, as do three package types/builds and thirteen-row
+historical parity. Initial RED is retained. A near-match bug misclassified
+Appointment time/capacity coordinates; it is corrected and covered. Its raw failed
+intermediate log was overwritten, so `near-match-regression.md` explicitly records
+that limitation; do not fabricate a retained full failure log.
+
+Root assigns independent implementation reviewer `event_registration_decision`
+the exact fifteen-path diff against `3d9c101c`, accepted ADR and task plan. The
+reviewer authored the proposal but none of the implementation. Write only new
+review evidence under `generated/.event-registration-task1/review/`; source and
+Git remain read-only. Check complete structural admission, narrow verbs/transitions,
+physical locks, malformed inputs, prior-family isolation and all three runtime
+guards. Do not restart broader unchanged audits. Required independent QA and final
+source judgment follow. User-requested stop remains after this task's delivery.
+
+### Founder requests finish current task, push and wait for acceptance — 2026-09-24
+
+The founder explicitly requests completion of the task already executing, then
+workspace organization, a concise handoff, push and waiting for acceptance.
+Finish Event Registration Task 1 only, including required source review/QA and
+corrections. Do not start Task 2, register additional definitions, launch new
+research or expand the current slice. Root will deliver the accepted current
+changes, verify the remote branch and CI, summarize exact remaining product work
+and pause the long Goal as requested. Preserve unrelated Eval V2, protected
+baselines and historical evidence; organization does not authorize deletion or
+retrying blocked services/cleanup. No main merge, release or hosted action.
+
+### Current status condensed without losing history — 2026-09-24
+
+Root reduces `docs/project-status.md` from 1,906 to 98 lines of current coverage,
+active work, acceptance gaps and delivery order. The prior body is preserved in
+`docs/project-status-history-2026-09-24.md` under an explicit historical banner.
+Its unchanged body SHA-256 is
+`a7c319d6e27294c8d34bcd4a598185d076cab43ceaa5fdb8f7ed8b33ddeaca62`;
+relative links keep the same docs-directory base. Root verifies exact archive
+body equality, all current local links and formatting. No acceptance is removed
+or broadened. Fresh definition validation passes 16 cases and admits thirteen
+physical rows; counts remain 13 physical / 12 logical / 8 registered families,
+10 historical local definitions / 6 demonstrated families with Appointment UI
+qualification, and zero hosted applications. Original Eval V2 stays untouched.
+
+### Customer Requests regression CI closed — 2026-09-24
+
+Watch session `65127` terminates with exit 0. Fresh remote inspection confirms
+CI `35995761289` completed successfully on both Node 22.11.0 and 22.x at exact
+`3d9c101c9e02949053c0fe12d2d3b557351f02ca`. Portable receipt is
+`docs/acceptance/evidence/customer-requests/task4-ci-correction-ci.json`;
+the failed original run and source-only acceptance boundaries remain preserved.
+The watch is terminal: do not resume or restart it. Event Registration Task 1
+continues under its existing serialized source ownership, with no actual/hosted
+count change or main/release integration.
+
+Root clarifies the existing Task 1 runtime-closed requirement: assigned compiler
+index ownership includes explicit guards at buildCompilationPlan,
+buildCompilationInput and generateApplicationBundle, with focused tests. The
+newly admitted Graph cannot fall through to generic CRUD before Task 2 exists.
+This reuses the previous Customer Requests Task 1 boundary pattern and grants
+no additional runtime implementation scope.
+
+### Event task preflight and responsive handoff prepared — 2026-09-24
+
+Task 1 writer has authored the focused Graph/composition/compiler tests and
+retained initial RED under its assigned implementation evidence folder; no source
+acceptance is claimed. Root's protected thirteen-row comparator self-check passes
+in `generated/.event-registration-task1/baseline-self-check.log`. Rerun against
+the same immutable capture after implementation, never recapture it.
+
+Root adds `docs/design/event-registration-workspace.md` and the complete task plan:
+inherit the approved color/icon system, separate attendee phone and organizer
+roster jobs, inspect actual emitted page/CSS, and include whole-event cancellation
+and all recovery states. This is a design handoff, not rendered acceptance.
+Replacement CI `35995761289` has passed Node 22.11.0; Node 22.x remains live.
+Root watch session `65127` is still running and must be resumed, not restarted.
+
+### Event Registration decision accepted; Task 1 implementation assigned — 2026-09-24
+
+Separate qualified reviewer `customer_requests_verifier_judgment` returns
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, P0/P1/P2 0/0/0, for ADR-0086 SHA-256
+`64fcfd08b629355662ba8ff733bbe46874a9a595fbeb2695d12eed3d377dbdbd`.
+The reviewer is neither proposer nor implementation writer. Review JSON SHA-256
+is `2b820fd008dbfc0d6255b9d2a6afbe04bf27797606cf2c0c9a608a5ec1635e67`.
+PM records founder acceptance under the September 1 standing authorization in
+`docs/tech-governance.md`: bounded reversible synthetic-local scope, no unresolved
+material choice or P0/P1 issue, no expanded provider/credential/cloud authority.
+The proposed ADR file remains unchanged; this ledger records acceptance.
+
+Root owns the implementation plan `2026-09-24-event-registration.md`, evidence,
+baseline comparator and Git. Before any new product source changes, root captures
+all thirteen existing physical definitions at `3d9c101c` in
+`generated/.event-registration-task1/before.json`, SHA-256
+`ea8273865f03f9dcb80779552badfb4b324d3021066a85e144fd5f6fce03664a`.
+This and all prior historical captures are immutable; never recapture drift.
+
+Assign `event_registration_contract` only Task 1's enumerated Graph witnesses,
+schema/model/index integration and tests/fixture; capabilities product-composer
+and focused composition test; compiler contract, contract test/fixture, index
+profile facade and export test. Single serialized strongest-model writer, no
+runtime/presentation/worker/adapter/Workbench changes. Freeze the complete profile
+handoff before Task 2. Evidence writes are limited to
+`generated/.event-registration-task1/implementation/`; no other baseline writes.
+Start with focused failing tests, preserve old output and report exact source
+hashes plus RED/GREEN. Source review, applicable QA and PM delivery still follow.
+No service, database, actual browser case, provider, cloud or cleanup is assigned.
+
+### CI correction delivered; replacement CI running — 2026-09-24
+
+Controller commits and pushes the accepted bounded correction as
+`3d9c101c9e02949053c0fe12d2d3b557351f02ca`; local HEAD equals the remote branch tip.
+Replacement CI `35995761289` is in progress at that exact revision. No terminal
+result is claimed yet. ADR-0086 remains an uncommitted proposal under independent
+standing-decision review; no Event Registration implementation is assigned.
+The unbudgeted Goal remains active, with actual/hosted acceptance still pending.
+
 ### CI correction accepted; Event Registration decision review assigned — 2026-09-24
 
 Independent Sol `customer_requests_verifier_judgment` accepts the three frozen

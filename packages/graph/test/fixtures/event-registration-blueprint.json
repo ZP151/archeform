@@ -1,0 +1,672 @@
+{
+  "spec": {
+    "apiVersion": "factory.requirement-spec/v1",
+    "requirementId": "event-registration-fixture",
+    "outcome": "Reserve places and retain event cancellation and attendance history.",
+    "actors": [
+      {
+        "key": "organizer",
+        "label": "Organizer"
+      },
+      {
+        "key": "attendee",
+        "label": "Attendee"
+      }
+    ],
+    "domainConcepts": [
+      {
+        "key": "event",
+        "label": "Event"
+      },
+      {
+        "key": "registration",
+        "label": "Registration"
+      },
+      {
+        "key": "event-history",
+        "label": "Event history"
+      },
+      {
+        "key": "registration-history",
+        "label": "Registration history"
+      }
+    ],
+    "workflows": [
+      {
+        "key": "manage-event",
+        "label": "manage-event"
+      },
+      {
+        "key": "manage-registration",
+        "label": "manage-registration"
+      }
+    ],
+    "constraints": [],
+    "openQuestions": [],
+    "acceptanceScenarios": [
+      {
+        "key": "reserve-place",
+        "given": "An open event",
+        "when": "An attendee reserves a place",
+        "then": "Capacity and owned registration history are retained"
+      }
+    ]
+  },
+  "blueprint": {
+    "apiVersion": "factory.product-blueprint/v1",
+    "requirementChecksum": "sha256:5bc87e731cbdf5cf4668e08d3ef4b3d0c9592fd5c7add125c4e8de334aa2dd99",
+    "title": "Community Events",
+    "actors": [
+      {
+        "key": "organizer",
+        "label": "Organizer",
+        "permissions": [
+          {
+            "entityKey": "event",
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "reopen",
+              "complete",
+              "cancel"
+            ]
+          },
+          {
+            "entityKey": "registration",
+            "actions": ["read", "cancel", "check-in", "undo-check-in"]
+          },
+          {
+            "entityKey": "event-history",
+            "actions": ["read"]
+          },
+          {
+            "entityKey": "registration-history",
+            "actions": ["read"]
+          }
+        ]
+      },
+      {
+        "key": "attendee",
+        "label": "Attendee",
+        "permissions": [
+          {
+            "entityKey": "event",
+            "actions": ["read"]
+          },
+          {
+            "entityKey": "registration",
+            "actions": ["create", "read", "update", "reopen", "cancel"]
+          },
+          {
+            "entityKey": "registration-history",
+            "actions": ["read"]
+          }
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "key": "event",
+        "label": "Event",
+        "fields": [
+          {
+            "key": "title",
+            "label": "title",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "description",
+            "label": "description",
+            "type": "long-text",
+            "required": true
+          },
+          {
+            "key": "venue",
+            "label": "venue",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "startUtc",
+            "label": "startUtc",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "key": "endUtc",
+            "label": "endUtc",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "key": "timezone",
+            "label": "timezone",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "capacity",
+            "label": "capacity",
+            "type": "number",
+            "required": true,
+            "numericDomain": {
+              "apiVersion": "factory.numeric-field-domain/v1",
+              "minimum": {
+                "value": 1,
+                "inclusive": true
+              },
+              "maximum": {
+                "value": 1000000,
+                "inclusive": true
+              }
+            }
+          },
+          {
+            "key": "reservedSeats",
+            "label": "reservedSeats",
+            "type": "number",
+            "required": true,
+            "numericDomain": {
+              "apiVersion": "factory.numeric-field-domain/v1",
+              "minimum": {
+                "value": 0,
+                "inclusive": true
+              },
+              "maximum": {
+                "value": 1000000,
+                "inclusive": true
+              }
+            }
+          },
+          {
+            "key": "status",
+            "label": "status",
+            "type": "enum",
+            "required": true,
+            "options": ["closed", "open", "cancelled"]
+          },
+          {
+            "key": "cancellationReason",
+            "label": "cancellationReason",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "cancelledAt",
+            "label": "cancelledAt",
+            "type": "datetime",
+            "required": false
+          }
+        ]
+      },
+      {
+        "key": "registration",
+        "label": "Registration",
+        "fields": [
+          {
+            "key": "event",
+            "label": "event",
+            "type": "reference",
+            "required": true,
+            "referenceTo": "event"
+          },
+          {
+            "key": "attendeePrincipalId",
+            "label": "attendeePrincipalId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "attendeeName",
+            "label": "attendeeName",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "status",
+            "label": "status",
+            "type": "enum",
+            "required": true,
+            "options": ["registered", "cancelled", "checked-in"]
+          }
+        ]
+      },
+      {
+        "key": "event-history",
+        "label": "Event history",
+        "fields": [
+          {
+            "key": "event",
+            "label": "event",
+            "type": "reference",
+            "required": true,
+            "referenceTo": "event"
+          },
+          {
+            "key": "action",
+            "label": "action",
+            "type": "enum",
+            "required": true,
+            "options": ["create", "update", "reopen", "complete", "cancel"]
+          },
+          {
+            "key": "eventVersion",
+            "label": "eventVersion",
+            "type": "number",
+            "required": true,
+            "numericDomain": {
+              "apiVersion": "factory.numeric-field-domain/v1",
+              "minimum": {
+                "value": 0,
+                "inclusive": true
+              },
+              "maximum": {
+                "value": 2147483647,
+                "inclusive": true
+              }
+            }
+          },
+          {
+            "key": "toStatus",
+            "label": "toStatus",
+            "type": "enum",
+            "required": true,
+            "options": ["closed", "open", "cancelled"]
+          },
+          {
+            "key": "actorPrincipalId",
+            "label": "actorPrincipalId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "actorRole",
+            "label": "actorRole",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "recordedAt",
+            "label": "recordedAt",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "key": "fromStatus",
+            "label": "fromStatus",
+            "type": "enum",
+            "required": false,
+            "options": ["closed", "open", "cancelled"]
+          },
+          {
+            "key": "reason",
+            "label": "reason",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "beforeTitle",
+            "label": "beforetitle",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "afterTitle",
+            "label": "aftertitle",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "beforeDescription",
+            "label": "beforedescription",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "afterDescription",
+            "label": "afterdescription",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "beforeVenue",
+            "label": "beforevenue",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "afterVenue",
+            "label": "aftervenue",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "beforeStartUtc",
+            "label": "beforestartUtc",
+            "type": "datetime",
+            "required": false
+          },
+          {
+            "key": "afterStartUtc",
+            "label": "afterstartUtc",
+            "type": "datetime",
+            "required": false
+          },
+          {
+            "key": "beforeEndUtc",
+            "label": "beforeendUtc",
+            "type": "datetime",
+            "required": false
+          },
+          {
+            "key": "afterEndUtc",
+            "label": "afterendUtc",
+            "type": "datetime",
+            "required": false
+          },
+          {
+            "key": "beforeTimezone",
+            "label": "beforetimezone",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "afterTimezone",
+            "label": "aftertimezone",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "beforeCapacity",
+            "label": "beforecapacity",
+            "type": "number",
+            "required": false,
+            "numericDomain": {
+              "apiVersion": "factory.numeric-field-domain/v1",
+              "minimum": {
+                "value": 1,
+                "inclusive": true
+              },
+              "maximum": {
+                "value": 1000000,
+                "inclusive": true
+              }
+            }
+          },
+          {
+            "key": "afterCapacity",
+            "label": "aftercapacity",
+            "type": "number",
+            "required": false,
+            "numericDomain": {
+              "apiVersion": "factory.numeric-field-domain/v1",
+              "minimum": {
+                "value": 1,
+                "inclusive": true
+              },
+              "maximum": {
+                "value": 1000000,
+                "inclusive": true
+              }
+            }
+          }
+        ]
+      },
+      {
+        "key": "registration-history",
+        "label": "Registration history",
+        "fields": [
+          {
+            "key": "registration",
+            "label": "registration",
+            "type": "reference",
+            "required": true,
+            "referenceTo": "registration"
+          },
+          {
+            "key": "action",
+            "label": "action",
+            "type": "enum",
+            "required": true,
+            "options": [
+              "create",
+              "update",
+              "cancel",
+              "reopen",
+              "check-in",
+              "undo-check-in"
+            ]
+          },
+          {
+            "key": "registrationVersion",
+            "label": "registrationVersion",
+            "type": "number",
+            "required": true,
+            "numericDomain": {
+              "apiVersion": "factory.numeric-field-domain/v1",
+              "minimum": {
+                "value": 0,
+                "inclusive": true
+              },
+              "maximum": {
+                "value": 2147483647,
+                "inclusive": true
+              }
+            }
+          },
+          {
+            "key": "toStatus",
+            "label": "toStatus",
+            "type": "enum",
+            "required": true,
+            "options": ["registered", "cancelled", "checked-in"]
+          },
+          {
+            "key": "actorPrincipalId",
+            "label": "actorPrincipalId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "actorRole",
+            "label": "actorRole",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "recordedAt",
+            "label": "recordedAt",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "key": "fromStatus",
+            "label": "fromStatus",
+            "type": "enum",
+            "required": false,
+            "options": ["registered", "cancelled", "checked-in"]
+          },
+          {
+            "key": "reason",
+            "label": "reason",
+            "type": "long-text",
+            "required": false
+          },
+          {
+            "key": "beforeAttendeeName",
+            "label": "beforeAttendeeName",
+            "type": "text",
+            "required": false
+          },
+          {
+            "key": "afterAttendeeName",
+            "label": "afterAttendeeName",
+            "type": "text",
+            "required": false
+          }
+        ]
+      }
+    ],
+    "pageIntents": [
+      {
+        "key": "events",
+        "label": "Events",
+        "intent": "list",
+        "entityKey": "event"
+      },
+      {
+        "key": "event-form",
+        "label": "Event form",
+        "intent": "form",
+        "entityKey": "event"
+      },
+      {
+        "key": "event-detail",
+        "label": "Event detail",
+        "intent": "detail",
+        "entityKey": "event"
+      },
+      {
+        "key": "my-places",
+        "label": "My places",
+        "intent": "list",
+        "entityKey": "registration"
+      },
+      {
+        "key": "attendees",
+        "label": "Attendees",
+        "intent": "queue",
+        "entityKey": "registration"
+      }
+    ],
+    "workflows": [
+      {
+        "key": "manage-event",
+        "label": "manage-event",
+        "entityKey": "event",
+        "states": [
+          {
+            "key": "closed",
+            "label": "closed"
+          },
+          {
+            "key": "open",
+            "label": "open"
+          },
+          {
+            "key": "cancelled",
+            "label": "cancelled"
+          }
+        ],
+        "transitions": [
+          {
+            "key": "reopen",
+            "label": "Open registration",
+            "to": "open",
+            "actorKey": "organizer",
+            "from": "closed"
+          },
+          {
+            "key": "complete",
+            "label": "Close registration",
+            "to": "closed",
+            "actorKey": "organizer",
+            "from": "open"
+          },
+          {
+            "key": "cancel",
+            "label": "Cancel event",
+            "to": "cancelled",
+            "actorKey": "organizer",
+            "from": "closed"
+          },
+          {
+            "key": "cancel",
+            "label": "Cancel event",
+            "to": "cancelled",
+            "actorKey": "organizer",
+            "from": "open"
+          }
+        ]
+      },
+      {
+        "key": "manage-registration",
+        "label": "manage-registration",
+        "entityKey": "registration",
+        "states": [
+          {
+            "key": "registered",
+            "label": "registered"
+          },
+          {
+            "key": "cancelled",
+            "label": "cancelled"
+          },
+          {
+            "key": "checked-in",
+            "label": "checked-in"
+          }
+        ],
+        "transitions": [
+          {
+            "key": "cancel",
+            "label": "cancel",
+            "to": "cancelled",
+            "actorKey": "attendee",
+            "from": "registered"
+          },
+          {
+            "key": "cancel",
+            "label": "cancel",
+            "to": "cancelled",
+            "actorKey": "organizer",
+            "from": "registered"
+          },
+          {
+            "key": "reopen",
+            "label": "reopen",
+            "to": "registered",
+            "actorKey": "attendee",
+            "from": "cancelled"
+          },
+          {
+            "key": "check-in",
+            "label": "check-in",
+            "to": "checked-in",
+            "actorKey": "organizer",
+            "from": "registered"
+          },
+          {
+            "key": "undo-check-in",
+            "label": "undo-check-in",
+            "to": "registered",
+            "actorKey": "organizer",
+            "from": "checked-in"
+          }
+        ]
+      }
+    ],
+    "acceptanceJourneys": [
+      {
+        "key": "reserve-place",
+        "description": "Reserve and correct attendance.",
+        "steps": [
+          {
+            "actorKey": "organizer",
+            "action": "Open registration"
+          },
+          {
+            "actorKey": "attendee",
+            "action": "Reserve a place"
+          },
+          {
+            "actorKey": "organizer",
+            "action": "Record attendance and cancel the event with a reason"
+          }
+        ]
+      }
+    ]
+  }
+}

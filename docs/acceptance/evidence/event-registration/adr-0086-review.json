@@ -1,0 +1,21 @@
+{
+  "verdict": "APPROVED_FOR_STANDING_ACCEPTANCE",
+  "approvedForStandingAcceptance": "yes",
+  "findingCounts": { "p0": 0, "p1": 0, "p2": 0 },
+  "proposal": {
+    "path": "docs/adr/adr-0086-event-registration-family.md",
+    "sha256": "64fcfd08b629355662ba8ff733bbe46874a9a595fbeb2695d12eed3d377dbdbd",
+    "recommendation": "experiment"
+  },
+  "authorities": {
+    "techGovernanceSha256": "c95f0bdd8cf2f614ae1fd708541ea6590e6439435b54fe48d6430674024d5b2c",
+    "threatModelSha256": "4aa9830cc4129d2faed797f53f3f14f73320a7beb88050abadd8941a4e12fdd5"
+  },
+  "reviewerIndependentOfProposerAndWriter": true,
+  "boundedReversibility": true,
+  "consistentWithAuthorities": true,
+  "unresolvedMaterialProductChoice": false,
+  "scope": "Free synthetic-local fixed Event Registration family with organizer whole-event cancellation, attendee ownership, capacity and manual check-in correction",
+  "executionBoundary": "No implementation, startup, listener, service, database, Docker, provider, cloud, browser case, cleanup or Git action authorized or performed",
+  "decisionNextStep": "PM records exact-hash standing acceptance before any bounded implementation assignment"
+}

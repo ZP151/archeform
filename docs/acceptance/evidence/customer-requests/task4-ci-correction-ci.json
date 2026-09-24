@@ -1,0 +1,21 @@
+{
+  "conclusion": "success",
+  "databaseId": 35995761289,
+  "headSha": "3d9c101c9e02949053c0fe12d2d3b557351f02ca",
+  "jobs": [
+    {
+      "conclusion": "success",
+      "name": "verify (22.11.0)",
+      "status": "completed",
+      "url": "https://github.com/ZP151/archeform/actions/runs/35995761289/job/107620165131"
+    },
+    {
+      "conclusion": "success",
+      "name": "verify (22.x)",
+      "status": "completed",
+      "url": "https://github.com/ZP151/archeform/actions/runs/35995761289/job/107620165486"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/ZP151/archeform/actions/runs/35995761289"
+}

@@ -1,3 +1,4 @@
+import { matchEventRegistrationBlueprintV1 } from "./event-registration-blueprint-witness.js";
 import { matchCustomerRequestsBlueprintV1 } from "./customer-requests-blueprint-witness.js";
 import { matchServiceWorkOrdersBlueprintV1 } from "./service-work-orders-blueprint-witness.js";
 import {
@@ -77,6 +78,8 @@ export const blueprintActionVerbs = [
   "reassign",
   "resolve",
   "reply",
+  "check-in",
+  "undo-check-in",
 ] as const;
 
 /** Approved business actions a blueprint actor may hold over an entity. */
@@ -290,6 +293,49 @@ export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
   const blueprint = parseStrict(productBlueprintSchema, input);
   const workOrders = matchServiceWorkOrdersBlueprintV1(blueprint);
   const customerRequests = matchCustomerRequestsBlueprintV1(blueprint);
+  const eventRegistration = matchEventRegistrationBlueprintV1(blueprint);
+  if (
+    !eventRegistration &&
+    (blueprint.entities.some(
+      (entity) =>
+        [
+          "startUtc",
+          "endUtc",
+          "capacity",
+          "cancellationReason",
+          "cancelledAt",
+        ].every((key) => entity.fields.some((field) => field.key === key)) ||
+        (["event", "eventId", "registration", "registrationId"].some((key) =>
+          entity.fields.some((field) => field.key === key),
+        ) &&
+          entity.fields.some((field) => field.key === "actorPrincipalId")),
+    ) ||
+      blueprint.entities.some((entity) =>
+        entity.fields.some((field) =>
+          [
+            "attendeePrincipalId",
+            "reservedSeats",
+            "eventVersion",
+            "registrationVersion",
+          ].includes(field.key),
+        ),
+      ) ||
+      blueprint.actors.some((actor) =>
+        actor.permissions.some((permission) =>
+          permission.actions.some((action) =>
+            ["check-in", "undo-check-in"].includes(action),
+          ),
+        ),
+      ) ||
+      blueprint.workflows.some((workflow) =>
+        workflow.transitions.some((transition) =>
+          ["check-in", "undo-check-in"].includes(transition.key),
+        ),
+      ))
+  )
+    throw new CompositionError(
+      "Event ownership and attendance require the complete Event Registration Blueprint.",
+    );
   if (
     !customerRequests &&
     (blueprint.entities.some((entity) =>
@@ -408,7 +454,7 @@ export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
     }
     assertUniqueKeys(workflow.states, `state`);
     assertUniqueKeys(
-      workOrders
+      workOrders || eventRegistration
         ? workflow.transitions.filter(
             (transition, index) =>
               transition.key !== "cancel" ||

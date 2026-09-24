@@ -1,0 +1,66 @@
+{
+  "sourceFiles": [
+    {
+      "path": "packages/graph/src/event-registration-blueprint-witness.ts",
+      "sha256": "c98dc543b0b8539f2f9bc6549327f2aae2b77cf963f5de1118fb030d90b241a7"
+    },
+    {
+      "path": "packages/graph/src/event-registration-graph-witness.ts",
+      "sha256": "cba448862e3eb1a0b1917ad2c28b99ea64307f7d4b12b638c42a1579edd89cc4"
+    },
+    {
+      "path": "packages/graph/src/product-blueprint.ts",
+      "sha256": "11f83f2f3f1b949feb2fcb6e13c90fe169fb6a6135c98aa1cdda5a074cefa282"
+    },
+    {
+      "path": "packages/graph/src/model.ts",
+      "sha256": "5d987b20852f69948cc212a9c94ff5ee9cd3044cbb9781c4dd14a54e2abc4b7f"
+    },
+    {
+      "path": "packages/graph/src/index.ts",
+      "sha256": "2838d627c1e2157490d049f2c1a3515140f4730e2611ae08927597d283bff72a"
+    },
+    {
+      "path": "packages/graph/test/event-registration-blueprint-witness.test.ts",
+      "sha256": "d4c67b033ac33aac62e9c68330d751b4891837871ab7866a995aa83305538bfb"
+    },
+    {
+      "path": "packages/graph/test/event-registration-graph-witness.test.ts",
+      "sha256": "cb93f5b3faf97e0528065114dee23d0c0276bf15727fd4f1e6f0e680c85eeeb5"
+    },
+    {
+      "path": "packages/graph/test/fixtures/event-registration-blueprint.json",
+      "sha256": "3fa1cddc9d7047eeb2f5ba162045cc467b952dfdd8041a96fe8fe0b185c64ff5"
+    },
+    {
+      "path": "packages/capabilities/src/product-composer.ts",
+      "sha256": "15e0fc8e332f3b0f10819e96dbf96cd6db109e97a7f90f5f2c077dcca4619d37"
+    },
+    {
+      "path": "packages/capabilities/test/event-registration-composition.test.ts",
+      "sha256": "c402eb4c4c8da447fcd35e79831d9688e4e0c51d16353849615ec1609e6f20f9"
+    },
+    {
+      "path": "packages/compiler/src/event-registration-contract.ts",
+      "sha256": "a5d00250932bb754f90be30f502c0083755a75a6e4eaf98e1f60b94a01225e49"
+    },
+    {
+      "path": "packages/compiler/src/index.ts",
+      "sha256": "93bda0df9d10726446524a13b7b1e31143379f30c7735b4eb4b45703c4a9235c"
+    },
+    {
+      "path": "packages/compiler/test/event-registration-contract.test.ts",
+      "sha256": "1bd9d65a6c7ae64181ab5b616e177bf322c0271d88bc1fe92d1776753a12a78f"
+    },
+    {
+      "path": "packages/compiler/test/fixtures/event-registration.ts",
+      "sha256": "821ae8993003a70d73d4e463936168ff33b583a01ae335dea3813805811b8dd0"
+    },
+    {
+      "path": "packages/compiler/test/index-exports.test.ts",
+      "sha256": "2adaf1cf135f82c430683637d946be5f3e650897946f712fa931a575f0bd93ea"
+    }
+  ],
+  "profileHandoffSha256": "390046c56b13a73bec1b4b00fff96f8a4f68e496250016058e2c13d659a5fa25",
+  "protectedBeforeSha256": "ea8273865f03f9dcb80779552badfb4b324d3021066a85e144fd5f6fce03664a"
+}

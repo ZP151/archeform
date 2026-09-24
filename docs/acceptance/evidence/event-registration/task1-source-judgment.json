@@ -1,0 +1,95 @@
+{
+  "verdict": "PASS_FINAL_SOURCE_JUDGMENT",
+  "reviewer": "event_registration_task1_judgment",
+  "scope": "Event Registration Task 1 exact Graph, Blueprint, composition and frozen compiler profile only",
+  "baseHead": "3d9c101c9e02949053c0fe12d2d3b557351f02ca",
+  "acceptedAdrSha256": "64fcfd08b629355662ba8ff733bbe46874a9a595fbeb2695d12eed3d377dbdbd",
+  "sourceManifestSha256": "734842dfe54133282e0725c43c300140791a513a4cfecd275b81a980853aab36",
+  "profileHandoffSha256": "390046c56b13a73bec1b4b00fff96f8a4f68e496250016058e2c13d659a5fa25",
+  "protectedBeforeSha256": "ea8273865f03f9dcb80779552badfb4b324d3021066a85e144fd5f6fce03664a",
+  "implementationReviewSha256": "fe5a4717a2d00931c3a961df7441b3379bd74be2fbed1cfaf03700098d9fce35",
+  "independentQaSha256": "bfe7327ed7f133a561e029ed6cacfd26d7790de535eaecd589f33dbcbe37e570",
+  "findingCounts": { "P0": 0, "P1": 0, "P2": 0 },
+  "findings": [],
+  "sourceAssessment": [
+    "The actual fifteen-path source diff is confined to Task 1's assigned Graph, capabilities and compiler profile paths; it does not add catalogue, runtime, UI, worker or provider behavior.",
+    "The Blueprint and Graph witnesses compare complete ordered business structure, exact grants, transitions, page routes, indexes, relations, empty seeds and provider-free integration. Event markers and the two new verbs fail closed on near-matches while the existing Appointment shape remains admitted.",
+    "Composition retains both event cancellation source transitions, merges only the two registration cancellation actors, and binds the exact six current physical capability packages.",
+    "The compiler selector independently validates strict JSON data, Graph semantics, physical package bytes and complete ordered lock bindings before returning a detached frozen profile. The compiler facade exports only the approved selector and type.",
+    "buildCompilationPlan, buildCompilationInput and generateApplicationBundle explicitly reject the Event fixture with the unavailable-runtime error, preventing generic CRUD generation before Task 2."
+  ],
+  "testEvidenceReused": {
+    "implementationReview": "86 fresh focused tests passed; P0/P1/P2 0/0/0",
+    "independentQa": "Fresh Graph 1033/1033, composition 4/4, compiler/export 81/81 and thirteen-row historical derivation plus immutable Published emitted-byte parity passed; P0/P1/P2 0/0/0",
+    "root": "Full repository typecheck 29/29, formatting and separate historical parity were reported by root; these commands were not rerun for this judgment",
+    "reasonNoRerun": "The source manifest and all fifteen live file hashes remained identical to the reviewed and QA-tested bytes; no concrete uncovered risk required broader repeat testing"
+  },
+  "liveSourceHashes": [
+    {
+      "path": "packages/graph/src/event-registration-blueprint-witness.ts",
+      "sha256": "c98dc543b0b8539f2f9bc6549327f2aae2b77cf963f5de1118fb030d90b241a7"
+    },
+    {
+      "path": "packages/graph/src/event-registration-graph-witness.ts",
+      "sha256": "cba448862e3eb1a0b1917ad2c28b99ea64307f7d4b12b638c42a1579edd89cc4"
+    },
+    {
+      "path": "packages/graph/src/product-blueprint.ts",
+      "sha256": "11f83f2f3f1b949feb2fcb6e13c90fe169fb6a6135c98aa1cdda5a074cefa282"
+    },
+    {
+      "path": "packages/graph/src/model.ts",
+      "sha256": "5d987b20852f69948cc212a9c94ff5ee9cd3044cbb9781c4dd14a54e2abc4b7f"
+    },
+    {
+      "path": "packages/graph/src/index.ts",
+      "sha256": "2838d627c1e2157490d049f2c1a3515140f4730e2611ae08927597d283bff72a"
+    },
+    {
+      "path": "packages/graph/test/event-registration-blueprint-witness.test.ts",
+      "sha256": "d4c67b033ac33aac62e9c68330d751b4891837871ab7866a995aa83305538bfb"
+    },
+    {
+      "path": "packages/graph/test/event-registration-graph-witness.test.ts",
+      "sha256": "cb93f5b3faf97e0528065114dee23d0c0276bf15727fd4f1e6f0e680c85eeeb5"
+    },
+    {
+      "path": "packages/graph/test/fixtures/event-registration-blueprint.json",
+      "sha256": "3fa1cddc9d7047eeb2f5ba162045cc467b952dfdd8041a96fe8fe0b185c64ff5"
+    },
+    {
+      "path": "packages/capabilities/src/product-composer.ts",
+      "sha256": "15e0fc8e332f3b0f10819e96dbf96cd6db109e97a7f90f5f2c077dcca4619d37"
+    },
+    {
+      "path": "packages/capabilities/test/event-registration-composition.test.ts",
+      "sha256": "c402eb4c4c8da447fcd35e79831d9688e4e0c51d16353849615ec1609e6f20f9"
+    },
+    {
+      "path": "packages/compiler/src/event-registration-contract.ts",
+      "sha256": "a5d00250932bb754f90be30f502c0083755a75a6e4eaf98e1f60b94a01225e49"
+    },
+    {
+      "path": "packages/compiler/src/index.ts",
+      "sha256": "93bda0df9d10726446524a13b7b1e31143379f30c7735b4eb4b45703c4a9235c"
+    },
+    {
+      "path": "packages/compiler/test/event-registration-contract.test.ts",
+      "sha256": "1bd9d65a6c7ae64181ab5b616e177bf322c0271d88bc1fe92d1776753a12a78f"
+    },
+    {
+      "path": "packages/compiler/test/fixtures/event-registration.ts",
+      "sha256": "821ae8993003a70d73d4e463936168ff33b583a01ae335dea3813805811b8dd0"
+    },
+    {
+      "path": "packages/compiler/test/index-exports.test.ts",
+      "sha256": "2adaf1cf135f82c430683637d946be5f3e650897946f712fa931a575f0bd93ea"
+    }
+  ],
+  "limitations": [
+    "This is source judgment for Task 1 only. Event Registration runtime, persistence, authorization enforcement, browser behavior and actual product acceptance remain unimplemented or unproved; all three public generation boundaries remain closed until a separately authorized Task 2.",
+    "No catalogue definition, generated UI, local service/database, hosted application, deployment, main integration or repository release is accepted by this verdict.",
+    "The raw intermediate failing Appointment near-match log was overwritten. The implementation's near-match-regression.md honestly preserves the observed failure and the focused correction; this verdict does not claim possession of that raw log.",
+    "Root still owns ledger reconciliation, bounded task commit/push and remote-tip verification before the user-requested pause."
+  ]
+}

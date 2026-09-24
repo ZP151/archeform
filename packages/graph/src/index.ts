@@ -430,3 +430,12 @@ export * from "./service-work-orders-graph-witness.js";
 
 export * from "./customer-requests-blueprint-witness.js";
 export * from "./customer-requests-graph-witness.js";
+
+export {
+  matchEventRegistrationBlueprintV1,
+  type EventRegistrationBlueprintWitnessV1,
+} from "./event-registration-blueprint-witness.js";
+export {
+  matchEventRegistrationGraphV1,
+  type EventRegistrationGraphWitnessV1,
+} from "./event-registration-graph-witness.js";

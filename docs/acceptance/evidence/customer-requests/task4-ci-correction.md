@@ -25,5 +25,9 @@ Validation on September 24, 2026:
 
 Root reconciled the completed lane after the independent review, which correctly
 left it pending while its process was running. Replacement remote CI is a separate
-delivery checkpoint. This repair establishes no actual browser, PostgreSQL,
+delivery checkpoint. Both Node jobs now pass in
+[replacement CI 35995761289](https://github.com/ZP151/archeform/actions/runs/35995761289)
+at `3d9c101c9e02949053c0fe12d2d3b557351f02ca`; controller verified the terminal
+remote state and watch exit 0. `task4-ci-correction-ci.json` records that outcome.
+This repair establishes no actual browser, PostgreSQL,
 hosted deployment or new delivered-product count.
